@@ -40,3 +40,11 @@ Evidence: `newqa/distributed-ecology.mjs`, `newqa/large-marine.mjs`, `newqa/expa
 - Dive Explorer opens through the existing F/proximity interaction, releases pointer capture and suspends movement. Three sections contain nine public-safe entries. Existing copy and three draft section-introduction styles remain separate; selection persists but does not constitute approval.
 - Desktop 1440x900 and mobile 390x844 browser checks passed: visibility, toggle, air decrease, perspective display, waypoint interaction, section/entry navigation, selected-entry state, draft selection, suspended movement, Escape/close and horizontal overflow. No page or console errors. Rendered desktop and mobile instrument/archive views inspected.
 - Evidence: `newqa/dive-hud.mjs`, `qa/captures/dive-hud.json`, `dive-computer.png`, `dive-explorer.png`, `dive-computer-mobile.png`, `dive-explorer-mobile.png`.
+
+## Wrist computer and richer field archive — completed 11 October 2026
+
+- Computer starts closed for every dive. C or the toggle raises a physical forearm and instrument in first person, with a slight downward glance; third person uses the animated side panel. Raising/lowering supports reduced motion and resets at the surface. Screen texture updates at most five times per second.
+- Four archive sections contain eleven entries, including separate Rae and Rae Engage projects. Icons, section colors, animated transitions, expandable project screenshots and a matching resume preview are present. New Rae Engage wording remains a draft for review.
+- Sage and Rae Engage images were captured from the resume-linked live experiences. Demo credentials and private resume sources are excluded. Resume download is the existing July 2026 portfolio PDF.
+- Desktop 1440x900 and mobile 390x844 checks passed for instrument visibility/animation, perspective switching, archive navigation, image loading, PDF response/download, surface reset, reduced motion, close/Escape and horizontal overflow. No browser errors. Mobile wrist screen bottom was 505px, above swimming controls at 620px.
+- Evidence: newqa/immersive-hud.mjs, newqa/finish-immersive.mjs, qa/captures/immersive-hud.json, wrist-first-person.png, wrist-mobile.png, explorer-sage-v2.png, explorer-rae-v2.png and explorer-resume-v2.png. Software WebGL checks do not measure physical-device frame rate.

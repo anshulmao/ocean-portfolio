@@ -59,8 +59,16 @@ Standard detail now includes 90 coral colonies, 948 meadow tufts and 414 ground-
 
 ### Portfolio instruments
 
-Underwater, the Dive Computer is visible in both camera perspectives. C toggles it, with visibility saved locally. It reports player depth, active dive time, location and simulated air (one percentage point per 24 seconds, with a 25% floor; no gameplay effect). Time resets on a new dive and pauses when the page is hidden or an interface panel is open.
+Underwater, the Dive Computer can be checked in both camera perspectives. C raises or lowers it; it starts closed on every dive. It reports player depth, active dive time, location and simulated air (one percentage point per 24 seconds, with a 25% floor; no gameplay effect). Time resets on a new dive and pauses when the page is hidden or an interface panel is open.
 
 F near a landmark opens Dive Explorer and suspends swimming while releasing the mouse. The archive contains About, Experience and Projects with selectable entries, public-safe existing copy and concise/story/technical draft introductions. Escape or Return to the reef closes it; click the ocean to resume aiming. Selecting a draft is a review preference, not approval. See COPY_REVIEW.md.
 
 HUD check: `node portfolio/site/ocean-refined/newqa/dive-hud.mjs`.
+
+### Wrist instrument and field archive
+
+The computer starts lowered on every dive. C or Check dive computer raises a 3D forearm/instrument in first person with a small downward glance; third person reveals an animated side display. It lowers on another toggle and is hidden during ascent and other interfaces. Narrow-screen framing keeps the instrument above swimming buttons. Canvas readings refresh at most 5 Hz. Reduced motion snaps instrument transitions without ambient sway.
+
+Dive Explorer uses cyan, mint, amber and coral section signals, custom SVG icons, measured entrance/entry animation, and actual project images. Click images to open their full size. F still opens a nearby waypoint; Field archive also opens it underwater. Resume offers the existing July 2026 portfolio PDF with a preview, download and open action. Sage and Rae Engage captures use the linked live demos; see assets/portfolio/PROJECT_MEDIA.md. Demo credentials and existing health records are excluded from screenshots and presentation data.
+
+Current checks: `newqa/immersive-hud.mjs` and `newqa/finish-immersive.mjs` (the older dive-hud entrypoint delegates to the immersive suite).

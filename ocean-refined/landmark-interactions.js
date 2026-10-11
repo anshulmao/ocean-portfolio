@@ -1,6 +1,7 @@
 import * as THREE from './vendor/three.module.min.js';
 import { LANDMARKS } from './reef.js';
 import { PORTFOLIO_CONTENT, COPY_VARIANTS } from './portfolio-content.js';
+import { icon } from './ui-icons.js';
 
 const prompt = document.querySelector('#interact-prompt');
 const panel = document.querySelector('#landmark-dialog');
@@ -10,6 +11,7 @@ const descriptions = {
   about: ['THE ANCHOR', 'An anchor for my story.'],
   experience: ['THE WRECK', 'Explore the chapters of my journey.'],
   projects: ['THE TREASURE', 'Discover what I’ve been building.'],
+  resume: ['THE LOGBOOK', 'The work, on one page.'],
 };
 let eligible = null, opened = null, last = 0, returnFocus = null;
 
@@ -29,20 +31,47 @@ function clearSight(start, end, controls) {
 let sectionId = 'about', entryId = null;
 const index = document.querySelector('#explorer-index');
 const variant = document.querySelector('#copy-variant');
+const archiveToggle = document.querySelector('#archive-toggle');
+const media = {
+  overview:{src:'./assets/portfolio/ocean-world.png',alt:'The living reef in my browser-based portfolio',caption:'A world to explore · This portfolio',kind:'scene'},
+  reengage:{src:'./assets/portfolio/reengage.jpg',alt:'Rae Engage chat widget open on the CelcomDigi business website',caption:'Rae Engage · Live public work sample',kind:'product'},
+  sage:{src:'./assets/portfolio/sage.jpg',alt:'Sage personal health demo interface',caption:'Sage · Live demo interface',kind:'product'},
+  wattmana:{src:'./assets/portfolio/wattmana.png',alt:'WattMana electricity bill explanation interface',caption:'WattMana · Working browser prototype',kind:'product'},
+  'portfolio-resume':{src:'./assets/portfolio/resume.png',alt:'Preview of the existing portfolio resume PDF',caption:'AI Product Manager · July 2026',kind:'document'},
+};
+for (const button of panel.querySelectorAll('[data-section]')) button.prepend(icon(button.dataset.section));
+document.querySelector('.explorer-emblem').replaceChildren(icon('computer'));
+document.querySelector('#dive-computer-toggle > span').replaceChildren(icon('computer'));
+archiveToggle.prepend(icon('resume'));
+
 try { variant.value = localStorage.getItem('ocean-copy-variant') || 'baseline'; } catch {}
 if (!['baseline', ...Object.keys(COPY_VARIANTS)].includes(variant.value)) variant.value = 'baseline';
 function renderEntry(id) {
   const section = PORTFOLIO_CONTENT[sectionId];
   const entry = section.entries.find(item => item.id === id) || section.entries[0]; entryId = entry.id;
   for (const button of index.querySelectorAll('button')) button.setAttribute('aria-current', String(button.dataset.entry === entryId));
+  panel.dataset.section = sectionId;
+  document.querySelector('#entry-number').textContent = `${String(section.entries.indexOf(entry)+1).padStart(2,'0')} / ${String(section.entries.length).padStart(2,'0')}`;
+  const visual = media[entry.id];
+  const figure = document.querySelector('#explorer-media');figure.hidden = !visual;
+  if (visual) {
+    const image = document.querySelector('#entry-image');image.src = visual.src;image.alt = visual.alt;
+    document.querySelector('#entry-image-link').href = visual.src;document.querySelector('#entry-image-link').setAttribute('aria-label', `Open full image: ${visual.caption}`);
+    figure.dataset.kind = visual.kind;document.querySelector('#entry-image-caption').textContent = `${visual.caption} · Click image to expand`;
+  }
+  const reading = panel.querySelector('.explorer-reading');
+  reading.getAnimations().forEach(animation => animation.cancel());
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) reading.animate([{opacity:.1,transform:'translateY(12px)'},{opacity:1,transform:'translateY(0)'}],{duration:340,easing:'cubic-bezier(.16,1,.3,1)'});
   document.querySelector('#landmark-title').textContent = entry.title;
   document.querySelector('#entry-tag').textContent = entry.tag.toUpperCase();
   document.querySelector('#landmark-caption').textContent = variant.value === 'baseline' ? entry.summary : COPY_VARIANTS[variant.value][sectionId];
   const paragraphs = entry.body.map(text => Object.assign(document.createElement('p'), {textContent:text}));
   document.querySelector('#explorer-content').replaceChildren(...paragraphs);
   document.querySelector('#explorer-facts').replaceChildren(...entry.facts.map(text => Object.assign(document.createElement('li'), {textContent:text})));
-  document.querySelector('#explorer-links').replaceChildren(...entry.links.filter(link => /^(https:\/\/|mailto:)/.test(link.url)).map(link => {
-    const a = document.createElement('a'); a.textContent = `${link.label} ↗`; a.href = link.url;
+  document.querySelector('#explorer-links').replaceChildren(...entry.links.filter(link => /^(https:\/\/|mailto:|\.\/assets\/portfolio\/)/.test(link.url)).map(link => {
+    const a = document.createElement('a'); a.append(icon(link.download?'download':'arrow'),document.createTextNode(link.label)); a.href = link.url;
+    if (link.download) a.download = 'Anshul-Ramprasad-Resume.pdf';
+    else if (link.url.endsWith('.pdf')) {a.target = '_blank'; a.rel = 'noopener';}
     if (link.url.startsWith('https:')) {a.target = '_blank'; a.rel = 'noopener noreferrer';} return a;
   }));
 }
@@ -54,7 +83,8 @@ function renderSection(id) {
   }
   index.replaceChildren(...section.entries.map(entry => {
     const button = document.createElement('button'); button.type = 'button'; button.dataset.entry = entry.id;
-    button.append(document.createTextNode(entry.title), Object.assign(document.createElement('span'), {textContent:entry.tag.toUpperCase()}));
+    const text = document.createElement('div');text.append(document.createTextNode(entry.title), Object.assign(document.createElement('span'), {textContent:entry.tag.toUpperCase()}));
+    button.append(icon(entry.id in {rae:1,reengage:1,wattmana:1,sage:1,openclaw:1,overview:1,approach:1}?entry.id:sectionId), text);
     button.addEventListener('click', () => renderEntry(entry.id)); return button;
   }));
   renderEntry(section.entries[0].id);
@@ -62,17 +92,22 @@ function renderSection(id) {
 for (const button of panel.querySelectorAll('[data-section]')) button.addEventListener('click', () => renderSection(button.dataset.section));
 variant.addEventListener('change', () => {renderEntry(entryId); try {localStorage.setItem('ocean-copy-variant', variant.value);} catch {}});
 
+function openArchive(id, fromWaypoint=false) {
+  const controls = window.oceanControls;
+  if (!controls || controls.getMode() !== 'diver' || controls.getTransition() || panel.open || credits.open) return;
+  if (!fromWaypoint) opened = null;
+  returnFocus = document.activeElement;controls.setInterfaceOpen(true);renderSection(id);
+  if (fromWaypoint) controls.models?.interact(id,true);
+  prompt.hidden = true;panel.showModal();
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) panel.animate([{opacity:0,transform:'translateY(24px) scale(.98)'},{opacity:1,transform:'translateY(0) scale(1)'}],{duration:480,easing:'cubic-bezier(.16,1,.3,1)'});
+  window.oceanDiagnostics.interaction = id;panel.querySelector('.dialog-close').focus();
+}
+archiveToggle.addEventListener('click', () => openArchive('about'));
 function interact() {
   const controls = window.oceanControls;
   if (!controls || !eligible || controls.getMode() !== 'diver' || controls.getTransition() || panel.open || credits.open) return;
   opened = eligible;
-  returnFocus = document.activeElement;
-  controls.setInterfaceOpen(true);
-  renderSection(opened.id);
-  controls.models?.interact(opened.id, true);
-  prompt.hidden = true; panel.showModal();
-  window.oceanDiagnostics.interaction = opened.id;
-  panel.querySelector('.dialog-close').focus();
+  openArchive(opened.id,true);
 }
 
 function close(dialog) { if (dialog.open) dialog.close(); }
@@ -122,6 +157,7 @@ function update(now) {
   requestAnimationFrame(update);
   if (now - last < 120) return; last = now;
   const controls = window.oceanControls;
+  archiveToggle.hidden = !window.oceanDiagnostics?.submerged || Boolean(controls?.getTransition());
   eligible = null;
   if (!controls || !window.oceanDiagnostics?.ready || controls.getMode() !== 'diver' || controls.getTransition() || panel.open || credits.open || document.querySelector('#movement-panel')?.hidden === false) {
     prompt.hidden = true; return;

@@ -276,5 +276,5 @@ export function createDiver() {
   }
   mergeRigid(body);
   root.userData.asset = { source: 'procedural', headAxis: '+Y', faceAxis: '+Z', approximateHeight: 3.33 };
-  return { root, arms, legs, regulator };
+  return { root, arms, legs, regulator, materials: { suit, panel, rubber, accent, metal, skin } };
 }

@@ -32,3 +32,11 @@ Review the exact introductions in `portfolio-content.js` before accepting a styl
 - Every entry: `id`, `title`, `tag`, `summary`, `body` (paragraph strings), `facts` (strings), `links` (objects containing `label`, `url`).
 - Named export `COPY_VARIANTS`: keys `concise`, `story`, `technical`; each has `label`, `about`, `experience`, and `projects` strings.
 - This change supplies data only. It does not edit interface files or claim browser, mobile, or physical-device acceptance.
+
+## Resume and project media additions
+
+The Resume section uses the exact PDF already bundled in the existing portfolio (`assets/Anshul_Ramprasad_AI_PM_Resume_20260709_v2.pdf`), copied as `assets/portfolio/portfolio-resume.pdf`. Its July 2026 version is shown explicitly; the preview is rendered from that same PDF. The private Agent Strategist source is used to locate work-sample links, not copied into the client bundle.
+
+Added the verified live Sage and Rae Engage destinations and browser captures; see `assets/portfolio/PROJECT_MEDIA.md`. The Rae image is specifically the Rae Engage public widget, not the enterprise Rae platform. The Sage screenshot is an empty Ramble composer, without existing health records. Existing copy and draft styles retain their approval boundaries.
+
+Rae Engage now has its own entry, distinct from the enterprise Rae platform. Its new short summary is grounded in the experience bank’s Rae Engage pilot ownership and direct build contribution; it remains a draft for user review. It makes no conversion or adoption result claim. The selector’s default is labeled Baseline copy rather than approved copy.

@@ -83,7 +83,14 @@ export const PORTFOLIO_CONTENT = {
           "A broad sales enablement platform needed clearer priorities, stronger response quality, and a repeatable path from feature release to active use."
         ],
         facts: ["Frontline discovery and behavioral evidence", "RAG, search, routing, prompts, and response quality", "Structured activation and enablement around launches"],
-        links: [{ label: "Rae’s public product story", url: "https://explorae.salesrechargekit.ai/#overview" }]
+        links: [{ label: "Rae’s public product story", url: "https://explorae.salesrechargekit.ai/#overview" }, {label:"Rae Engage · Live sample",url:"https://business.celcomdigi.com/plan/postpaid-phone"}]
+      },
+      {
+        id: "reengage", title: "Rae Engage", tag: "Customer-facing AI · Public work sample",
+        summary: "A focused conversational path from plan discovery to a sales conversation.",
+        body: ["I owned the pilot’s problem framing, scope, requirements and stakeholder alignment, and contributed directly to its build.", "The initial experience focused on business mobile-plan questions, guided conversation and lead qualification. The public work sample shows the customer-facing assistant in context."],
+        facts: ["Focused mobile-plan pilot", "Conversation and qualification design", "Product ownership and build contribution"],
+        links: [{label:"Open Rae Engage",url:"https://business.celcomdigi.com/plan/postpaid-phone"}]
       },
       {
         id: "wattmana",
@@ -109,7 +116,7 @@ export const PORTFOLIO_CONTENT = {
           "Designed the agent to support organization and preparation, not replace clinical judgment."
         ],
         facts: ["Voice capture for daily health context", "Check-ins, reminders, documents, visit notes, and a timeline", "Lovable, Supabase, Claude API, and Web Speech API"],
-        links: []
+        links: [{label:"Sage · Live demo",url:"https://sage-personal-health.lovable.app/"}]
       },
       {
         id: "openclaw",
@@ -125,7 +132,19 @@ export const PORTFOLIO_CONTENT = {
         links: [{ label: "GitHub profile", url: "https://github.com/anshulmao" }]
       }
     ]
+  },
+  resume: {
+    title: "Resume",
+    subtitle: "A compact view of the work.",
+    entries: [{
+      id: "portfolio-resume", title: "The work, on one page.", tag: "Resume · Existing portfolio PDF",
+      summary: "Product strategy, applied AI and hands-on delivery.",
+      body: ["Download the resume already included in my portfolio, or open the PDF in a new tab.", "This is the July 2026 AI Product Manager version. The project stories in this archive provide additional context."],
+      facts: ["AI Product Manager resume", "PDF · July 2026", "Existing portfolio document"],
+      links: [{label:"Download resume",url:"./assets/portfolio/portfolio-resume.pdf",download:true},{label:"Open PDF",url:"./assets/portfolio/portfolio-resume.pdf"}]
+    }]
   }
+
 };
 
 // New introduction drafts: selectable for review, awaiting user approval.
@@ -134,18 +153,21 @@ export const COPY_VARIANTS = {
     label: "Concise",
     about: "I build useful AI products around real workflows, evidence, and adoption.",
     experience: "My work grew from consulting research into content operations and AI product leadership.",
-    projects: "Enterprise AI, household energy, health continuity, and persistent-agent experiments."
+    projects: "Enterprise AI, household energy, health continuity, and persistent-agent experiments.",
+    resume: "A concise record of my product and applied AI work."
   },
   story: {
     label: "Story",
     about: "I start with the work people need to do, then connect the product decisions, AI behavior, and feedback that help them do it.",
     experience: "Research taught me to ask better questions. Operating products taught me to turn those questions into useful systems.",
-    projects: "Each project starts with a different human problem and explores what AI or clearer product design can contribute."
+    projects: "Each project starts with a different human problem and explores what AI or clearer product design can contribute.",
+    resume: "The career snapshot; the archive tells the stories behind it."
   },
   technical: {
     label: "Technical",
     about: "My work connects discovery and product strategy with retrieval, routing, evaluation, agent workflows, and human review.",
     experience: "Across research, content operations, and product management, I connect requirements, analytics, system behavior, and enablement.",
-    projects: "Explore RAG product work, bill explanation, voice-first health organization, and persistent-agent workflows."
+    projects: "Explore RAG product work, bill explanation, voice-first health organization, and persistent-agent workflows.",
+    resume: "Product ownership and technical fluency, summarized in a downloadable PDF."
   }
 };

@@ -79,7 +79,8 @@
   </footer>
   <p id="status" class="status" role="status" aria-live="polite">Preparing your quiet corner of the ocean…</p>
   <button id="credits-toggle" class="credits-toggle" type="button">Model credits</button>
-  <button id="dive-computer-toggle" class="dive-computer-toggle" type="button" aria-expanded="true" aria-controls="dive-computer" hidden><span aria-hidden="true">▦</span> Dive computer <kbd>C</kbd></button>
+  <button id="dive-computer-toggle" class="dive-computer-toggle" type="button" aria-expanded="false" aria-controls="dive-computer" hidden><span aria-hidden="true">▦</span> Dive computer <kbd>C</kbd></button>
+  <button id="archive-toggle" class="archive-toggle" type="button" hidden>Field archive <span>↗</span></button>
   <aside id="dive-computer" class="dive-computer" aria-label="Dive computer" hidden>
     <div class="computer-top"><span><i></i> DIVE SYSTEM / 01</span><span id="computer-mode">FIRST PERSON</span></div>
     <div class="computer-readings"><div class="computer-depth"><span>DEPTH</span><strong id="computer-depth">0.0<small>m</small></strong></div><div><span>DIVE TIME</span><strong id="computer-time">00:00</strong></div></div>
@@ -88,10 +89,10 @@
   </aside>
   <dialog id="landmark-dialog" class="ocean-dialog dive-explorer" aria-labelledby="landmark-title">
     <header class="explorer-header"><div class="explorer-identity"><span class="explorer-emblem" aria-hidden="true">◈</span><div><p>DIVE EXPLORER</p><span>ANSHUL / FIELD ARCHIVE</span></div></div><button class="dialog-close" type="button" aria-label="Close Dive Explorer">×</button></header>
-    <nav class="explorer-sections" aria-label="Portfolio sections"><button data-section="about">01 <span>About</span></button><button data-section="experience">02 <span>Experience</span></button><button data-section="projects">03 <span>Projects</span></button></nav>
-    <div class="explorer-toolbar"><p id="landmark-kicker">THE ANCHOR</p><label>Reading style <select id="copy-variant"><option value="baseline">Existing copy</option><option value="concise">Concise draft</option><option value="story">Story draft</option><option value="technical">Technical draft</option></select></label></div>
-    <div class="explorer-body"><nav id="explorer-index" class="explorer-index" aria-label="Archive entries"></nav><article class="explorer-reading"><p id="entry-tag" class="entry-tag"></p><h2 id="landmark-title">About</h2><p id="landmark-caption" class="dialog-caption"></p><div id="explorer-content"></div><ul id="explorer-facts"></ul><div id="explorer-links"></div></article></div>
-    <footer class="explorer-footer"><span><i></i> REEF CONNECTION ESTABLISHED</span><button class="dialog-return" type="button">Return to the reef <kbd>Esc</kbd></button></footer>
+    <nav class="explorer-sections" aria-label="Portfolio sections"><button data-section="about">01 <span>About</span></button><button data-section="experience">02 <span>Experience</span></button><button data-section="projects">03 <span>Projects</span></button><button data-section="resume">04 <span>Resume</span></button></nav>
+    <div class="explorer-toolbar"><p id="landmark-kicker">THE ANCHOR</p><label>Reading style <select id="copy-variant"><option value="baseline">Baseline copy</option><option value="concise">Concise draft</option><option value="story">Story draft</option><option value="technical">Technical draft</option></select></label></div>
+    <div class="explorer-body"><nav id="explorer-index" class="explorer-index" aria-label="Archive entries"></nav><article class="explorer-reading"><figure id="explorer-media" class="explorer-media" hidden><a id="entry-image-link" class="media-full" href="#" target="_blank" rel="noopener"><img id="entry-image" alt=""></a><figcaption id="entry-image-caption"></figcaption></figure><div class="entry-heading"><p id="entry-tag" class="entry-tag"></p><span id="entry-number"></span></div><h2 id="landmark-title">About</h2><p id="landmark-caption" class="dialog-caption"></p><div id="explorer-content"></div><ul id="explorer-facts"></ul><div id="explorer-links"></div></article></div>
+    <footer class="explorer-footer"><span><i></i> <span id="archive-status">REEF CONNECTION ESTABLISHED</span></span><button class="dialog-return" type="button">Return to the reef <kbd>Esc</kbd></button></footer>
   </dialog>
   <dialog id="credits-dialog" class="ocean-dialog credits-dialog" aria-labelledby="credits-title">
     <button class="dialog-close" type="button" aria-label="Close model credits">×</button>
