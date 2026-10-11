@@ -7,7 +7,8 @@
     "test:hud": "node ocean-refined/newqa/dive-hud.mjs",
     "test:schools": "node ocean-refined/newqa/distributed-ecology.mjs",
     "test:navigation": "node ocean-refined/newqa/navigation-refined.mjs",
-    "test:journey": "node ocean-refined/newqa/journey-refined.mjs"
+    "test:journey": "node ocean-refined/newqa/journey-refined.mjs",
+    "test:crt": "node ocean-refined/newqa/crt-expedition.mjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

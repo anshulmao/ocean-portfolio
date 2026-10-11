@@ -49,5 +49,6 @@ function update() {
   state.diveComputer = {elapsed, air, expanded, location:$('#computer-location').textContent};
   if (expanded && state.cameraMode === 'first' && !document.hidden && !document.querySelector('dialog[open]') && document.body.dataset.movementPanel !== 'open') window.oceanControls?.setComputerOpen?.(true);
 }
+addEventListener('oceanmediumchange',update);
 setInterval(update, 200);
 document.addEventListener('visibilitychange', () => {previous = performance.now();});

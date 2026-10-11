@@ -1,0 +1,27 @@
+import {chromium} from 'playwright';
+import assert from 'node:assert/strict';
+import {writeFile} from 'node:fs/promises';
+const browser=await chromium.launch({headless:true,args:['--enable-unsafe-swiftshader']});
+const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[];
+page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});
+await page.goto('http://127.0.0.1:4175/ocean-refined/');await page.waitForFunction(()=>window.oceanDiagnostics?.ready);
+await page.locator('#time-slider').fill('420');await page.waitForTimeout(600);
+assert.ok((await page.evaluate(()=>window.oceanDiagnostics.sunDirection[2]))<0,'morning sun east');
+await page.locator('#time-slider').fill('1110');await page.waitForTimeout(600);
+assert.ok((await page.evaluate(()=>window.oceanDiagnostics.sunDirection[2]))>0,'evening sun west');
+await page.screenshot({path:'ocean-refined/qa/captures/crt-surface.png'});
+await page.evaluate(()=>{window.cameraSamples=[];window.sampleTimer=setInterval(()=>{const c=window.oceanControls.getCamera();window.cameraSamples.push({p:c.position.toArray(),q:c.quaternion.toArray(),mode:window.oceanDiagnostics.cameraMode,step:window.oceanDiagnostics.cameraFrameStep,time:performance.now()});},50);});
+await page.locator('#dive').click();await page.waitForFunction(()=>window.oceanDiagnostics.submerged&&!window.oceanDiagnostics.transition,{timeout:30000});
+await page.evaluate(()=>document.exitPointerLock());await page.waitForTimeout(1500);
+assert.equal(await page.locator('#reef-bathymetry').getAttribute('data-source'),'scene-terrain');
+await page.screenshot({path:'ocean-refined/qa/captures/crt-underwater.png'});
+await page.locator('#archive-toggle').click();for(const id of ['about','experience','projects','resume']){await page.locator(`button[data-section="${id}"]`).click();await page.waitForTimeout(600);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);if(id==='projects')await page.screenshot({path:'ocean-refined/qa/captures/crt-archive.png'});}await page.keyboard.press('Escape');
+await page.locator('#dive').click();await page.waitForFunction(()=>window.oceanControls.getMode()==='surface',{timeout:30000});await page.waitForTimeout(2500);
+assert.equal(await page.evaluate(()=>window.oceanDiagnostics.cameraMode),'third');
+assert.equal(await page.evaluate(()=>document.pointerLockElement),null);
+await page.screenshot({path:'ocean-refined/qa/captures/crt-return.png'});
+const motion=await page.evaluate(()=>{clearInterval(window.sampleTimer);return window.cameraSamples;});
+let maxStep=0,maxAngle=0;for(let i=1;i<motion.length;i++){maxStep=Math.max(maxStep,Math.hypot(...motion[i].p.map((v,j)=>v-motion[i-1].p[j])));let dot=Math.abs(motion[i].q.reduce((s,v,j)=>s+v*motion[i-1].q[j],0));maxAngle=Math.max(maxAngle,2*Math.acos(Math.min(1,dot)));}
+await writeFile('ocean-refined/qa/captures/crt-motion.json',JSON.stringify({maxStep,maxAngle,motion},null,2));assert.ok(maxAngle<1,'no abrupt rotation snap');assert.ok(Math.max(...motion.map(s=>s.step||0))<=4.001,'bounded per-frame camera displacement');
+const mobile=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true,reducedMotion:'reduce'});mobile.on('pageerror',e=>errors.push(e.message));await mobile.goto('http://127.0.0.1:4175/ocean-refined/');await mobile.waitForFunction(()=>window.oceanDiagnostics?.ready);await mobile.locator('#time-slider').fill('420');await mobile.locator('#dive').click();await mobile.waitForFunction(()=>window.oceanDiagnostics.submerged&&!window.oceanDiagnostics.transition);await mobile.evaluate(()=>document.exitPointerLock());await mobile.waitForTimeout(200);assert.equal(await mobile.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await mobile.locator('#map-toggle').click();await mobile.screenshot({path:'ocean-refined/qa/captures/crt-mobile.png'});await mobile.locator('#archive-toggle').click();await mobile.locator('button[data-section="resume"]').click();assert.equal(await mobile.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+await browser.close();assert.deepEqual(errors,[]);const result={passed:true,maxCameraStepMetres:maxStep,maxCameraAngleRadians:maxAngle,errors};await writeFile('ocean-refined/qa/captures/crt-expedition.json',JSON.stringify(result,null,2));console.log(result);

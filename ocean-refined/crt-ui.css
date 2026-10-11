@@ -1,0 +1,37 @@
+/* Phosphor instruments float over a natural ocean. No full-scene CRT filter. */
+:root{--phosphor:#d0f78b;--crt-ink:#101c16;--crt-rule:#a5ce6b66}
+.theme-control{border:1px solid var(--crt-rule);border-radius:5px;background:#101c16e8;color:var(--phosphor);padding:12px 16px;display:block;width:280px;font-family:ui-monospace,Consolas,monospace}
+.theme-control>button{display:none}
+.time-title{display:flex;justify-content:space-between;font-size:9px;letter-spacing:.13em}
+.time-track{position:relative;padding-top:13px;margin:5px 7px 0}
+#time-slider{width:100%;margin:0;accent-color:var(--phosphor);cursor:ew-resize;height:20px}
+#time-orb{position:absolute;top:0;width:12px;height:12px;border-radius:50%;background:#efd58a;box-shadow:0 0 12px #ffcf6570;transform:translate(-50%,var(--rise,0px));pointer-events:none;transition:transform .18s,background .3s}
+#time-orb[data-kind="moon"]{background:#c5e4e0;box-shadow:inset 4px -2px 0 #364f43,0 0 8px #c5e4e070}
+.time-labels{display:flex;justify-content:space-between;font-size:6px;letter-spacing:.05em;opacity:.7}
+.heading-indicator{color:var(--phosphor)!important;opacity:1;text-shadow:0 0 7px #b7ef6e70}
+.heading-indicator strong{font-family:ui-monospace,Consolas,monospace}.compass-ticks{display:block!important}.heading-indicator>span{display:block!important}
+.reef-map{left:var(--pad);right:auto;bottom:105px;width:230px;border-radius:5px;padding:12px;background:#101c16dc;border:1px solid var(--crt-rule);color:var(--phosphor);font-family:ui-monospace,Consolas,monospace;box-shadow:0 8px 28px #00100a80,inset 0 0 20px #a5ce6b08}
+.map-chart{height:190px;margin:16px 8px 14px;border:1px solid #d0f78b88;border-radius:3px;transform:perspective(600px) rotateX(17deg) rotateZ(-2deg);transform-origin:center bottom;box-shadow:0 5px 10px #0007;background:#16373b}
+.map-terrain{position:absolute;width:100%;height:100%;inset:0;border-radius:0}
+.map-chart button{background:#0c2019df;color:var(--phosphor);border:1px solid #a5ce6b88;border-radius:2px;font-family:inherit}
+.map-chart button:before{color:var(--phosphor)}.map-orientation{color:#e7f7b2;background:#101c16c9;padding:3px;z-index:1}
+.chart-key{font-size:6px;letter-spacing:.07em;opacity:.7;text-align:center}.map-player{background:#deff93;box-shadow:0 0 9px #ccff83}
+.map-heading button,.map-legend button{color:var(--phosphor);font-family:inherit}.map-legend button{border-radius:2px;background:#a5ce6b0a;border-color:var(--crt-rule)}
+.dive-explorer{--chapter-accent:#d0f78b!important;--chapter-soft:#18271b!important;color:#e3edcc;background:#101912f5!important;border:1px solid #b2d57388!important;border-radius:7px!important;box-shadow:0 0 0 5px #09100dd9,0 0 0 6px #89985d66,0 30px 100px #000a!important;font-family:ui-monospace,Consolas,monospace!important}
+.dive-explorer:after,.reef-map:after,.dive-computer:after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:repeating-linear-gradient(0deg,#00000016 0 1px,transparent 1px 4px);opacity:.6;z-index:9}
+.dive-explorer h2,.dive-explorer h3,.dive-explorer button,.dive-explorer a,.dive-explorer p,.dive-explorer strong{font-family:ui-monospace,Consolas,monospace!important}
+.dive-explorer h2{text-transform:uppercase;letter-spacing:-.04em;color:var(--phosphor);text-shadow:0 0 12px #afdf6040}
+.dive-explorer button,.dive-explorer a,.dive-explorer .fact-card{border-radius:2px!important;border-color:var(--crt-rule)!important}
+.dive-explorer .chapter-art{background:repeating-radial-gradient(circle at 70% 20%,#b6db7122 0 1px,transparent 1px 4px),#18271b!important;border-radius:2px;color:var(--phosphor)}
+.dive-explorer .explorer-media{border-radius:3px!important;border:1px solid var(--crt-rule)}
+.dive-computer{border-radius:8px!important;background:#101912ef!important;color:var(--phosphor)!important;border-color:#b2d57388!important}
+.dive-computer strong,.dive-computer span{font-family:ui-monospace,Consolas,monospace!important}
+@media(max-width:900px){.heading-indicator{top:119px}.reef-map{width:200px}.theme-control{width:250px}}
+@media(max-width:600px){.theme-control{width:195px;padding:9px 10px}.masthead{gap:8px}.wordmark{font-size:10px}.heading-indicator{top:104px}.heading-indicator .compass-ticks{font-size:10px;line-height:12px}.reef-map{left:auto;right:20px;bottom:60px;width:155px;padding:9px}.reef-map[data-collapsed="false"]{bottom:245px;max-height:calc(100dvh - 390px)}.map-chart{height:125px;margin:8px 3px}.time-labels{font-size:5px}.chart-key{font-size:5px}}
+@media(prefers-reduced-motion:reduce){#time-orb{transition:none}.map-chart{transform:none}}
+
+
+@media(min-width:601px){.archive-toggle{top:245px;bottom:auto;left:var(--pad)}.dive-computer-toggle{top:295px;bottom:auto;left:var(--pad)}.dive-computer{left:auto;right:var(--pad)}}
+.heading-indicator{background:#101c16bb;border:1px solid var(--crt-rule);padding:8px 16px;border-radius:3px}
+
+@media(max-width:600px){body[data-submerged="true"] .heading-indicator{top:290px;left:24px}}

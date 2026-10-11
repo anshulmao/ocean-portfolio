@@ -58,3 +58,15 @@ Evidence: `newqa/distributed-ecology.mjs`, `newqa/large-marine.mjs`, `newqa/expa
 - Imported habitats previously grounded as a whole could leave individual sculptures floating. All 63 rendered coral sculptures now ground independently by root vertices, embedded 6 cm into the local terrain before instancing. Landmark contact, centers and clear interaction approaches verified.
 - Browser checks: all sky presets and solar altitude, Shift-to-dive, four archive sections, desktop/mobile overflow, wrist toggle/animation, resume PDF, screenshot media, landmark travel and safe return. No browser errors. Controller checks passed; five cave corridors are clear in both quality modes, and resident transforms remain finite across 200 seconds of simulated updates.
 - Evidence: newqa/sky-chapters.mjs, newqa/reef-detail.mjs, newqa/immersive-hud.mjs, newqa/journey-refined.mjs and qa/grounded-landmarks.mjs. Reports/screenshots are in qa/captures. Current effects are visual animation; physical-device FPS remains unmeasured.
+
+
+## CRT expedition interface — 12 October 2026
+
+- Two imagegen concept boards saved before implementation in `portfolio/design/ocean-crt`, with exact prompts and a deployment plan. Generated board copy is illustrative; existing evidence-backed portfolio content is retained.
+- Restored numeric heading/tick indicator with cardinal direction. Continuous keyboard-accessible local-time slider with moving sun/crescent icon; automatic 20-minute cycle and real astronomical sky preserved. Surface composition faces east for the eastern solar hemisphere and west for the western hemisphere.
+- Camera position and quaternion ease during diving/returning, with bounded translation and rotation speeds. Final four metres of ascent blend into the original surface framing; surface always reports third person and releases the pointer, retaining underwater perspective preference.
+- Left angled atlas uses depth pixels and 5 m contours sampled from the actual terrain function. Existing waypoint travel works; marker locations are refreshed from loaded landmark positions. Mobile remains collapsible. HUD and archive have phosphor casing, scanlines, restrained glow and monospace; no full-scene CRT filter or flicker.
+- `newqa/crt-expedition.mjs` passed desktop and 390x844 mobile: slider, east/west solar signs, entering/returning, third-person surface, pointer release, terrain-source map, all four archive sections, reduced-motion and overflow. No page/console errors. Rendered surface, underwater, return, archive and mobile views inspected. Motion readings come from software-rendered browser checks, not physical-device FPS.
+- Planned protected Vercel preview followed by runtime-only packaging, public-content review and production promotion. No deployment created.
+
+- Existing `newqa/immersive-hud.mjs` also passed: wrist raise/lower, third-person panel, project media, resume PDF, immediate surface reset and mobile/reduced-motion archive navigation.

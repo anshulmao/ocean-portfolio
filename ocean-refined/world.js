@@ -1,3 +1,4 @@
+import { createExpeditionUI, drawReefChart } from './expedition-ui.js';
 import * as THREE from './vendor/three.module.min.js';
 import { createClouds, seededRandom } from './assets.js';
 import { createDiver } from './diver.js';
@@ -28,7 +29,8 @@ let night=selectedNight?1:0,diveTarget=0,dive=0,frameCount=0,perfDuration=0,perf
 let mobile=innerWidth<600,quality=mobile||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<5)?'economy':'standard';
 let nextBubble=0,bubbleCursor=0,bubbleClock=-1,exploring=false,mapDestination=null;
 let mapCollapsed=mobile;
-let previousMode='surface',surfaceX=0,surfaceZ=0;
+let previousMode='surface',surfaceX=0,surfaceZ=0,surfaceFramingYaw=0,expeditionUI=null;
+const aimObject=new THREE.Object3D(),aimQuaternion=new THREE.Quaternion();
 let wristComputer=null,computerOpen=false,interfaceOpen=false,movementPanelOpen=false;
 const rng=seededRandom(541),dummy=new THREE.Object3D(),lookTarget=new THREE.Vector3(),viewDirection=new THREE.Vector3();
 const emitter=new THREE.Vector3(),relative=new THREE.Vector3(),projected=new THREE.Vector3(),labelDirection=new THREE.Vector3();
@@ -60,7 +62,7 @@ function beginModels(){
   import('./model-scene.js').then(({createModelScene})=>{
     if(!reef)return;modelScene=createModelScene({reef,terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy',onStatus:value=>{diagnostic.modelLoading=value.status==='loading';diagnostic.modelsLoaded=value.loaded??diagnostic.modelsLoaded??0;diagnostic.modelsFailed=value.failed??diagnostic.modelsFailed??0;if(value.status==='fallback'&&value.message&&!exploration.state.transition)status.textContent='Some optional ocean models could not load.';}});
     scene.add(modelScene.root);interactionTargets=modelScene.landmarks||[];
-    return modelScene.load().then(result=>{modelScene.update(0,elapsed,playerPosition,night);diagnostic.modelLoading=false;diagnostic.modelsLoaded=result.loaded;diagnostic.modelsFailed=result.failed;for(const item of reefLabels){const placed=modelScene.landmarks.find(p=>p.id===item.landmark.id);if(placed){item.anchor.fromArray(placed.position).add(new THREE.Vector3(0,1.2,0));item.label.querySelector("span").textContent=`Seafloor landmark · ${Math.round(-placed.position[1])} m`;}}diagnostic.reefFishCount=result.reefFishCount;diagnostic.reefFishGroups=result.reefFishGroups;wake();});
+    return modelScene.load().then(result=>{modelScene.update(0,elapsed,playerPosition,night);diagnostic.modelLoading=false;diagnostic.modelsLoaded=result.loaded;diagnostic.modelsFailed=result.failed;for(const item of reefLabels){const placed=modelScene.landmarks.find(p=>p.id===item.landmark.id);if(placed){item.anchor.fromArray(placed.position).add(new THREE.Vector3(0,1.2,0));const marker=document.querySelector(`[data-landmark="${placed.id}"]`);if(marker){marker.style.left=`${(placed.position[0]+62)/124*100}%`;marker.style.top=`${(placed.position[2]+105)/140*100}%`;}item.label.querySelector("span").textContent=`Seafloor landmark · ${Math.round(-placed.position[1])} m`;}}diagnostic.reefFishCount=result.reefFishCount;diagnostic.reefFishGroups=result.reefFishGroups;wake();});
   }).catch(error=>{console.warn('Optional landmark models could not load:',error);}).finally(()=>{modelsLoading=false;wake();});
 }
 Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayerPosition,getCamera:()=>camera,getMode,getTransition,get models(){return modelScene;},get reef(){return reef;},setInterfaceOpen,setComputerOpen,recapture:()=>exploration.recapture(),toggleCamera}});
@@ -80,9 +82,16 @@ function setSkyPreset(preset,persist=true){
   phaseTarget=phase+Math.atan2(Math.sin(wanted-phase),Math.cos(wanted-phase));
   if(reducedMotion){phase=phaseTarget;phaseTarget=null;night=skySystem?.getNightFactor(phase)??0;}
   paintTheme(preset==='night',preset);
-  if((preset==='dawn'||preset==='dusk')&&exploration.state.mode==='surface'&&skySystem){const sun=skySystem.getState(wanted).sunDirection;exploration.frameSky(Math.atan2(-sun[0],-sun[2]));}
+  frameSurface(wanted);
   if(persist)try{localStorage.setItem('ocean-theme',preset);}catch{}
   wake();
+}
+function frameSurface(phaseValue=phase){
+  if(!skySystem||exploration.state.mode!=='surface')return;
+  const sun=skySystem.getState(phaseValue).sunDirection;
+  // The horizontal sun direction uses east -Z / west +Z, consistent with the star map.
+  surfaceFramingYaw=sun[2]<=0?0:Math.PI;
+  exploration.frameSky(surfaceFramingYaw);
 }
 function updateMotionUI(){
   $('#motion').setAttribute('aria-pressed',String(paused));$('#motion').setAttribute('aria-label',paused?'Resume animation':'Pause animation');
@@ -128,7 +137,7 @@ function resize(){
   const ratio=Math.min(devicePixelRatio||1,quality==='economy'?1:1.5,Math.sqrt(2200000/(innerWidth*innerHeight)));
   renderer.setPixelRatio(ratio);renderer.setSize(innerWidth,innerHeight,false);uniforms.uRatio.value=ratio;
   camera.aspect=innerWidth/innerHeight;camera.fov=settings.cameraFov+(mobile?7:0);camera.updateProjectionMatrix();
-  if(getMode()==='surface'){const sun=skySystem?.getState(phase).sunDirection;exploration.frameSky(sun&&['dawn','dusk'].includes(diagnostic.skyPreset)?Math.atan2(-sun[0],-sun[2]):0);}diagnostic.pixelRatio=ratio;
+  if(getMode()==='surface')frameSurface();diagnostic.pixelRatio=ratio;
 }
 function makeWater(){
   const segments=quality==='economy'?96:160,geo=new THREE.PlaneGeometry(2,2,segments,segments),p=geo.getAttribute('position');
@@ -138,7 +147,7 @@ function makeWater(){
 }
 function makeUnderwater(){
   reef=createReef({economy:quality==='economy'});reef.visible=false;scene.add(reef);
-  exploration.setTerrain(reef.userData.terrainHeightAt);
+  exploration.setTerrain(reef.userData.terrainHeightAt);drawReefChart(reef.userData.terrainHeightAt);
   exploration.setCollisions(reef.userData.collisions);
   diagnostic.collisionPieces=reef.userData.collisions?.count??0;diagnostic.habitats=reef.userData.habitatCounts;
   marine=createMarineLife({economy:quality==='economy',terrainHeightAt:reef.userData.terrainHeightAt});scene.add(marine.root);diagnostic.fishCount=marine.count;extraLife=createUnderwaterLife({economy:quality==='economy',terrainHeightAt:reef.userData.terrainHeightAt});scene.add(extraLife.root);diagnostic.extraLife=extraLife.counts;
@@ -159,7 +168,7 @@ function makeUnderwater(){
     fragmentShader:`varying float vAlpha;void main(){vec2 p=(gl_PointCoord-.5)*vec2(1.,2.8);float a=exp(-dot(p,p)*8.);gl_FragColor=vec4(.68,.86,.91,a*vAlpha);}`}));scene.add(motes);
   for(const [index,landmark] of LANDMARKS.entries()){
     const label=document.createElement('div');label.className='reef-label';label.innerHTML=`${landmark.title}<span>${landmark.description}</span><i></i>`;$('#reef-labels').append(label);reefLabels.push({label,landmark,anchor:new THREE.Vector3(...landmark.position).add(new THREE.Vector3(0,2,0))});
-    const marker=document.createElement('button');marker.type='button';marker.textContent=String(index+1);marker.setAttribute('aria-label',`Map marker ${landmark.title}`);marker.title=landmark.title;
+    const marker=document.createElement('button');marker.type='button';marker.textContent=String(index+1);marker.setAttribute('aria-label',`Map marker ${landmark.title}`);marker.title=landmark.title;marker.dataset.landmark=landmark.id;
     marker.style.left=`${(landmark.position[0]+62)/124*100}%`;marker.style.top=`${(landmark.position[2]+105)/140*100}%`;
     const visit=()=>{if(!diagnostic.submerged)return;mapDestination=landmark;const target=modelScene?.landmarks?.find(item=>item.id===landmark.id);const approach=target?.interactionPosition;exploration.travel(approach||landmark.position,target?.position||landmark.position);setExploring(true);canvas.focus({preventScroll:true});$('#map-caption').textContent=`Swimming toward ${landmark.title}. WASD takes control.`;};
     marker.addEventListener('click',visit);$('#map-chart').append(marker);
@@ -196,14 +205,15 @@ function labelVisible(worldPosition,label,alpha,padding=35){
 }
 function updateWorld(dt,clockDt=dt){
   if(phaseTarget!==null){phase=THREE.MathUtils.lerp(phase,phaseTarget,1-Math.exp(-dt*1.6));if(Math.abs(phase-phaseTarget)<.002){phase=phaseTarget;phaseTarget=null;}}
-  else if(!paused)phase+=clockDt*Math.PI*2/cycleSeconds;
+  else if(!paused&&!expeditionUI?.isScrubbing())phase+=clockDt*Math.PI*2/cycleSeconds;
   night=skySystem.getNightFactor?skySystem.getNightFactor(phase):THREE.MathUtils.smoothstep(-Math.cos(phase),-.15,.3);
   if(phaseTarget===null){const altitude=skySystem.getState(phase).sunAltitude;const rising=skySystem.getState(phase+.0001).sunAltitude>altitude;const preset=altitude>-6&&altitude<8?(rising?'dawn':'dusk'):night>.5?'night':'day';if(diagnostic.skyPreset!==preset)paintTheme(night>.5,preset);}
   dive=THREE.MathUtils.lerp(dive,diveTarget,1-Math.exp(-dt*settings.diveResponse));if(Math.abs(dive-diveTarget)<.002)dive=diveTarget;
-  const easedDive=THREE.MathUtils.smoothstep(dive,0,1);let underwater=THREE.MathUtils.smoothstep(easedDive,.13,.27);
+  let easedDive=THREE.MathUtils.smoothstep(dive,0,1);let underwater=THREE.MathUtils.smoothstep(easedDive,.13,.27);
   uniforms.uTime.value=elapsed;uniforms.uNight.value=night;uniforms.uDive.value=underwater;
   const nav=exploration.update(dt,easedDive>.95,reducedMotion,reef?.userData.safeAscentRoute);
-  if(previousMode==='transition'&&nav.mode==='surface'){diveTarget=0;computerOpen=false;$('#dive-label').textContent='Dive in';status.textContent='Back at the surface.';setTimeout(()=>{if(status.textContent==='Back at the surface.')status.textContent='';},1800);}
+  if(previousMode==='transition'&&nav.mode==='surface'){diveTarget=0;dive=0;frameSurface();computerOpen=false;$('#dive-label').textContent='Dive in';status.textContent='Back at the surface.';setTimeout(()=>{if(status.textContent==='Back at the surface.')status.textContent='';},1800);}
+  if(nav.mode==='surface'&&diveTarget===0)easedDive=0;
   previousMode=nav.mode;
   if(nav.mode==='diver'&&easedDive>.75)beginModels();
   if(mapDestination&&!nav.travelling){$('#map-caption').textContent=nav.travelBlocked?'Coral ahead. Steer around it to continue.':nav.manualInput?'Free swimming. Choose a marker to explore.':`${mapDestination.title} reef · A home for this part of the portfolio.`;mapDestination=null;}
@@ -218,7 +228,7 @@ function updateWorld(dt,clockDt=dt){
   chasePosition.y+=firstPerson?.15:settings.cameraHeight;
   if(easedDive>.95)chasePosition.y=THREE.MathUtils.clamp(chasePosition.y,reef.userData.terrainHeightAt(chasePosition.x,chasePosition.z)+.45,-.4);
   if(easedDive>.95&&!firstPerson&&settings.collisionEnabled&&reef.userData.collisions){const cameraPath=chasePosition.clone().sub(playerPosition),cameraCandidate=playerPosition.clone();for(let fraction=.95;fraction>=.1;fraction-=.1){cameraCandidate.copy(playerPosition).addScaledVector(cameraPath,fraction);if(reef.userData.collisions.segmentClear(playerPosition,cameraCandidate,.28)){chasePosition.copy(cameraCandidate);break;}}}
-  cameraGoal.set(THREE.MathUtils.lerp(playerPosition.x,chasePosition.x,easedDive),THREE.MathUtils.lerp(2.5,chasePosition.y,easedDive)+bob,THREE.MathUtils.lerp(playerPosition.z+10,chasePosition.z,easedDive));
+  cameraGoal.set(THREE.MathUtils.lerp(playerPosition.x+10*Math.sin(surfaceFramingYaw),chasePosition.x,easedDive),THREE.MathUtils.lerp(2.5,chasePosition.y,easedDive)+bob,THREE.MathUtils.lerp(playerPosition.z+10*Math.cos(surfaceFramingYaw),chasePosition.z,easedDive));
   const ascending=nav.mode==='transition';
   if(ascending){
     cameraGoal.copy(playerPosition).add(new THREE.Vector3(7,2.2,6));
@@ -231,15 +241,35 @@ function updateWorld(dt,clockDt=dt){
   if(diveTarget===1&&easedDive>.03&&easedDive<.95&&!ascending){
     const approach=THREE.MathUtils.smoothstep(easedDive,.03,.45)*(1-THREE.MathUtils.smoothstep(easedDive,.45,.95));
     const surfaceOffset=Math.tan(THREE.MathUtils.degToRad(camera.fov*.5))*camera.aspect*7.2*.66;
-    const face=new THREE.Vector3(playerPosition.x+surfaceOffset*(1-easedDive),THREE.MathUtils.lerp(.55,playerPosition.y+.3,easedDive),playerPosition.z+2.8*(1-easedDive));
-    cameraGoal.lerp(face.clone().add(new THREE.Vector3(0,.15,2.3)),approach);
+    const faceOffset=new THREE.Vector3(surfaceOffset,0,2.8).applyAxisAngle(axisY,surfaceFramingYaw).multiplyScalar(1-easedDive);
+    const face=new THREE.Vector3(playerPosition.x+faceOffset.x,THREE.MathUtils.lerp(.55,playerPosition.y+.3,easedDive),playerPosition.z+faceOffset.z);
+    cameraGoal.lerp(face.clone().add(new THREE.Vector3(2.3*Math.sin(surfaceFramingYaw),.15,2.3*Math.cos(surfaceFramingYaw))),approach);
     lookTarget.lerp(face,approach);
   }
-  if(ascending)lookTarget.copy(playerPosition).add(new THREE.Vector3(0,.7,0));
+  if(ascending){
+    lookTarget.copy(playerPosition).add(new THREE.Vector3(0,.7,0));
+    const landing=1-THREE.MathUtils.smoothstep(Math.max(0,-playerPosition.y),0,4);
+    const sun=skySystem.getState(phase).sunDirection;
+    surfaceFramingYaw=sun[2]<=0?0:Math.PI;
+    const surfaceCamera=new THREE.Vector3(playerPosition.x+10*Math.sin(surfaceFramingYaw),2.5,playerPosition.z+10*Math.cos(surfaceFramingYaw));
+    cameraGoal.lerp(surfaceCamera,landing);
+    const surfaceAim=surfaceCamera.clone().add(new THREE.Vector3(-Math.sin(surfaceFramingYaw),-.04,-Math.cos(surfaceFramingYaw)));
+    lookTarget.lerp(surfaceAim,landing);
+  }
   if(reducedMotion||diagnostic.frames===0)camera.position.copy(cameraGoal);
-  else camera.position.lerp(cameraGoal,1-Math.exp(-dt*(ascending?3:settings.cameraResponse)));
+  else {
+    const cameraDelta=cameraGoal.clone().sub(camera.position).multiplyScalar(1-Math.exp(-dt*(ascending||dive!==diveTarget?3:settings.cameraResponse)));
+    const speedLimit=ascending||dive!==diveTarget?12:40;
+    cameraDelta.clampLength(0,dt*speedLimit);camera.position.add(cameraDelta);
+    diagnostic.cameraFrameStep=cameraDelta.length();
+  }
   diagnostic.cameraMoving=camera.position.distanceToSquared(cameraGoal)>.00001;
-  camera.lookAt(lookTarget);if(firstPerson&&wristComputer?.diagnostics.visible)camera.rotateX(-.18*wristComputer.diagnostics.progress);camera.getWorldDirection(viewDirection);camera.updateMatrixWorld(true);
+  aimObject.position.copy(camera.position);aimObject.lookAt(lookTarget);
+  // Object3D looks along +Z; the camera looks along -Z.
+  aimQuaternion.copy(aimObject.quaternion).multiply(new THREE.Quaternion().setFromAxisAngle(axisY,Math.PI));
+  if(firstPerson&&wristComputer?.diagnostics.visible)aimQuaternion.multiply(new THREE.Quaternion().setFromAxisAngle(axisX,-.18*wristComputer.diagnostics.progress));
+  const aimAngle=camera.quaternion.angleTo(aimQuaternion),aimBlend=1-Math.exp(-dt*(ascending||dive!==diveTarget?3:settings.cameraResponse));
+  camera.quaternion.slerp(aimQuaternion,reducedMotion||diagnostic.frames===0?1:Math.min(aimBlend,dt*2.8/Math.max(.0001,aimAngle)));camera.getWorldDirection(viewDirection);camera.updateMatrixWorld(true);
   underwater=THREE.MathUtils.smoothstep(-camera.position.y,-.12,1.2);uniforms.uDive.value=underwater;
   const skyState=skySystem.update(phase,camera.position,night,underwater,elapsed);
   const depthLight=THREE.MathUtils.smoothstep(Math.max(0,-camera.position.y),22,60)*underwater;
@@ -265,15 +295,16 @@ function updateWorld(dt,clockDt=dt){
   sunlight.color.lerp(new THREE.Color('#ffb57c'),golden*.7);distantScenery?.update(elapsed,night,underwater);
   const scale=settings.diverScale*(mobile?1.03/1.35:camera.aspect<1?1.17/1.35:1);
   diver.root.scale.setScalar(scale);
-  diver.root.visible=ascending||!(firstPerson&&easedDive>.92);
+  diver.root.visible=ascending||diveTarget===0||!(firstPerson&&easedDive>.92);
   const surfaceX=Math.tan(THREE.MathUtils.degToRad(camera.fov*.5))*camera.aspect*7.2*.66;
-  const framingYaw=0;
+  const framingYaw=surfaceFramingYaw;
   relative.set(surfaceX,0,-7.2).applyAxisAngle(axisY,framingYaw);
-  const surfaceWorldX=playerPosition.x+relative.x,surfaceWorldZ=playerPosition.z+10+relative.z;
+  const surfaceWorldX=playerPosition.x+10*Math.sin(framingYaw)+relative.x,surfaceWorldZ=playerPosition.z+10*Math.cos(framingYaw)+relative.z;
   const surfaceY=waveHeight(surfaceWorldX,surfaceWorldZ,elapsed)-.06;
-  diver.root.position.set(THREE.MathUtils.lerp(surfaceWorldX,playerPosition.x,easedDive),THREE.MathUtils.lerp(surfaceY,playerPosition.y,easedDive),THREE.MathUtils.lerp(surfaceWorldZ,playerPosition.z,easedDive));
+  const diverBlend=ascending?THREE.MathUtils.smoothstep(Math.max(0,-playerPosition.y),0,4):easedDive;
+  diver.root.position.set(THREE.MathUtils.lerp(surfaceWorldX,playerPosition.x,diverBlend),THREE.MathUtils.lerp(surfaceY,playerPosition.y,diverBlend),THREE.MathUtils.lerp(surfaceWorldZ,playerPosition.z,diverBlend));
   // Deliberate trim change followed by small alternating fin kicks.
-  poseYaw.setFromAxisAngle(axisY,THREE.MathUtils.lerp(framingYaw-.2,Math.PI+nav.yaw,easedDive));posePitch.setFromAxisAngle(axisX,easedDive*(ascending?.22:Math.PI/2-settings.diverTrim-nav.pitch));
+  poseYaw.setFromAxisAngle(axisY,THREE.MathUtils.lerp(framingYaw-.2,Math.PI+nav.yaw,diverBlend));posePitch.setFromAxisAngle(axisX,diverBlend*(ascending?.22:Math.PI/2-settings.diverTrim-nav.pitch));
   diver.root.quaternion.copy(poseYaw).multiply(posePitch);
   diveLamp.position.copy(playerPosition);diveLamp.position.y+=.4;diveLamp.intensity=underwater*((night>.5?12:7)+depthLight*8);
   diveLamp.target.position.copy(playerPosition).addScaledVector(swimDirection,12);
@@ -293,7 +324,7 @@ function updateWorld(dt,clockDt=dt){
     labelVisible(anchor,label,item.clear?underwater*.85:0);
   }
   const submerged=nav.mode==='transition'||underwater>.55;
-  if(diagnostic.submerged!==submerged){diagnostic.submerged=submerged;document.body.dataset.submerged=String(submerged);$('.deep-copy').setAttribute('aria-hidden',String(!submerged));$('.surface-copy').setAttribute('aria-hidden',String(submerged));$('.reef-map').hidden=!submerged;$('.swim-controls').hidden=!submerged;}
+  if(diagnostic.submerged!==submerged){diagnostic.submerged=submerged;document.body.dataset.submerged=String(submerged);$('.deep-copy').setAttribute('aria-hidden',String(!submerged));$('.surface-copy').setAttribute('aria-hidden',String(submerged));$('.reef-map').hidden=!submerged;$('.swim-controls').hidden=!submerged;window.dispatchEvent(new Event('oceanmediumchange'));}
   $('#look-hint').textContent=nav.mode==='transition'?`Ascending · ${Math.ceil(nav.ascentDepth)} m remaining`:nav.pointerLocked?(submerged?'Mouse captured · WASD swim · Space/Shift depth · Esc releases mouse':'Look around · Mouse or arrow keys · Esc releases mouse'):submerged?'Click ocean to swim · WASD · Space/Shift depth':'Click the ocean to look around · Esc releases mouse';
   const depth=Math.max(0,-diver.root.position.y);$('#depth-value').textContent=`${String(Math.round(depth)).padStart(2,'0')} M`;$('#depth-marker').style.top=`${Math.min(depth/60,1)*100}%`;
   const captureHint=$('#capture-hint');if(captureHint)captureHint.hidden=!(submerged&&!nav.exploring&&!nav.pointerLocked&&nav.mode!=='transition');
@@ -308,17 +339,18 @@ function updateWorld(dt,clockDt=dt){
   const bearing=((90-Math.atan2(-viewDirection.x,-viewDirection.z)*180/Math.PI)%360+360)%360;
   $('#heading-value').textContent=`${String(Math.round(bearing)).padStart(3,'0')}°`;
   $('#heading-cardinal').textContent=['N','NE','E','SE','S','SW','W','NW'][Math.round(bearing/45)%8];
-  $('#north-arrow').style.transform=`rotate(${-bearing}deg)`;
+
   $('.heading-indicator').setAttribute('aria-label',`Heading ${Math.round(bearing)} degrees. North is ${Math.round((360-bearing)%360)} degrees clockwise.`);
   $('#speed-value').textContent=`${nav.speed.toFixed(1)} M/S`;
   $('#reef-zone').textContent=nav.colliding?'CORAL NEARBY':nav.atBoundary?'EXPLORATION LIMIT':edge?'OUTER SLOPE':'REEF SHELF';
+  expeditionUI?.update(skyState);
   const skyTime=skyState.date?skyClockFormat.format(skyState.date):'';
   $('#sky-clock').textContent=`KL ${skyTime} · ${paused?'PAUSED':'72× TIME'}`;
   $('#sky-clock').title='Kuala Lumpur sky · current lunar phase · 20 minutes per simulated day';
   projected.copy(diver.root.position).project(camera);
   diagnostic.depth=Number(depth.toFixed(2));diagnostic.transition=nav.transition||dive!==diveTarget||phaseTarget!==null;diagnostic.phase=phase;diagnostic.night=night;diagnostic.position=camera.position.toArray();diagnostic.playerPosition=playerPosition.toArray();diagnostic.diverScreen=projected.toArray();diagnostic.bounds=exploration.bounds;diagnostic.look=[nav.yaw,nav.pitch];diagnostic.sunDirection=uniforms.uSun.value.toArray();diagnostic.moonDirection=uniforms.uMoon.value.toArray();diagnostic.exploring=exploring;diagnostic.swimming=nav.moving;diagnostic.activeBubbles=bubbleData.filter(b=>elapsed-b.birth>=0&&elapsed-b.birth<6).length;
   Object.assign(diagnostic,{simulatedUTC:skyState.simulatedUTC,observer:skyState.observer,moonIllumination:skyState.moonIllumination,moonPhaseAngle:skyState.moonPhaseAngle,sunAltitude:skyState.sunAltitude,moonAltitude:skyState.moonAltitude});
-  Object.assign(diagnostic,{movement:{...settings},colliding:nav.colliding,contacts:nav.contacts,pointerLocked:Boolean(nav.pointerLocked),cameraMode:nav.perspective});
+  Object.assign(diagnostic,{movement:{...settings},colliding:nav.colliding,contacts:nav.contacts,pointerLocked:Boolean(nav.pointerLocked),cameraMode:nav.mode==='surface'?'third':nav.perspective});
 }
 function frame(now){
   if(!focused||!renderer){running=false;return;}
@@ -340,7 +372,8 @@ try{
   ambient=new THREE.HemisphereLight('#c8e7e6','#294e55',1.85);scene.add(ambient);sunlight=new THREE.DirectionalLight('#ffe6bf',2.3);scene.add(sunlight);
   const rim=new THREE.DirectionalLight('#7acecd',.65);rim.position.set(8,3,3);scene.add(rim);
   diveLamp=new THREE.SpotLight('#c4ebe4',0,22,.42,.72,1.35);scene.add(diveLamp,diveLamp.target);
-  skySystem=createSkySystem(uniforms,rng);scene.add(skySystem.root);diagnostic.starCount=skySystem.starCount;diagnostic.constellationCount=skySystem.constellationCount;
+  skySystem=createSkySystem(uniforms,rng);scene.add(skySystem.root);expeditionUI=createExpeditionUI({sky:skySystem,getPhase:()=>phase,setPhase:value=>{phase=value;phaseTarget=null;wake();},frameSurface});
+  diagnostic.starCount=skySystem.starCount;diagnostic.constellationCount=skySystem.constellationCount;
   if(!savedTheme)phase=skySystem.initialPhase;
   else if(skySystem.presets[savedTheme]!==undefined){phase=skySystem.presets[savedTheme];paintTheme(savedTheme==='night',savedTheme);}
   for(const item of skySystem.labels){const label=document.createElement('div');label.className='constellation-label';label.innerHTML=`<i></i>${item.name.toUpperCase()}`;$('#sky-labels').append(label);skyLabels.push({label,anchor:item.anchor});}

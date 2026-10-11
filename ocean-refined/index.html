@@ -10,6 +10,7 @@
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./dive-hud.css">
+  <link rel="stylesheet" href="./crt-ui.css">
 </head>
 <body>
   <canvas id="world" tabindex="0" aria-label="Explore the ocean. Click the ocean to capture the mouse and look around; Escape releases it. WASD swims, Space ascends, Shift descends, V switches first and third person and F interacts. Touch controls and arrow keys are also available."></canvas>
@@ -18,7 +19,8 @@
   <header class="masthead">
     <div class="wordmark">ANSHUL<span>A WORLD TO EXPLORE</span></div>
     <fieldset class="theme-control" aria-label="Time of day">
-      <legend class="sr-only">Choose dawn, day, dusk or night</legend>
+      <legend class="sr-only">Choose the time in Kuala Lumpur</legend>
+      <div class="time-scrubber"><div class="time-title"><label for="time-slider">SKY TIME</label><output id="time-reading" for="time-slider">07:00</output></div><div class="time-track"><i id="time-orb" aria-hidden="true"></i><input id="time-slider" type="range" min="0" max="1439" step="1" value="420" aria-label="Time of day in Kuala Lumpur"></div><div class="time-labels"><span>00</span><span>DAWN</span><span>NOON</span><span>DUSK</span><span>24</span></div></div>
       <button id="dawn" aria-pressed="false" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 17h20M5 13a7 7 0 0 1 14 0M12 2v3M3 6l2 2m16-2-2 2M9 21h6"/></svg><span>Dawn</span></button>
       <button id="day" aria-pressed="true" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg><span>Day</span></button>
       <button id="dusk" aria-pressed="false" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 17h20M5 13a7 7 0 0 1 14 0M12 3v3M3 7l2 2m16-2-2 2M7 21h10"/></svg><span>Dusk</span></button>
@@ -37,7 +39,7 @@
     <div class="movement-fields"></div>
     <footer class="movement-footer"><div class="movement-actions"><button type="button" class="movement-reset">Restore defaults</button><button type="button" class="movement-export">Export JSON</button></div><p class="movement-save-status" role="status" aria-live="polite">Changes apply live</p></footer>
   </aside>
-  <div class="heading-indicator" aria-label="Viewing direction"><span>TRUE NORTH</span><div class="north-dial" aria-hidden="true"><b>N</b><i id="north-arrow">↑</i></div><strong id="heading-cardinal">E</strong><strong id="heading-value">090°</strong></div>
+  <div class="heading-indicator" aria-label="Viewing direction"><span>HEADING</span><div class="compass-ticks" aria-hidden="true">╵ ╷ ╵ ╷ ╵</div><strong id="heading-cardinal">E</strong><strong id="heading-value">090°</strong></div>
   <main class="hero" id="main">
     <div class="surface-copy">
       <p class="eyebrow"><span></span>HELLO, I’M ANSHUL</p>
@@ -57,11 +59,11 @@
   <aside class="reef-map" aria-label="Reef exploration map" hidden>
     <div class="map-heading"><span>REEF ATLAS</span><button id="reset-view" type="button" aria-label="Return to the starting view">Reset view</button><button id="map-toggle" type="button" aria-label="Expand reef atlas" aria-expanded="false" aria-controls="map-chart map-legend">＋</button></div>
     <div class="map-chart" id="map-chart">
-      <svg class="map-terrain" viewBox="0 0 124 140" preserveAspectRatio="none" aria-hidden="true"><path class="map-basin" d="M0 0H124V140H0Z"/><path class="map-slope" d="M22 12C5 26 9 92 20 121S101 140 110 110 124 50 102 22 45 0 22 12Z"/><path class="map-shelf" d="M35 32C22 35 22 92 35 106S86 121 96 88 101 47 86 35 44 20 35 32Z"/><path class="map-contour" d="M28 23C13 27 15 95 27 114S94 132 105 99 115 48 95 27 38 15 28 23ZM41 43C31 47 31 84 40 95S79 104 86 80 90 55 78 44 48 35 41 43Z"/><path class="map-footprint" d="M38 49H86V114H38Z"/></svg>
-      <span class="map-orientation" aria-hidden="true">E ↑</span><span class="map-player" id="map-player" aria-hidden="true"></span>
+      <canvas id="reef-bathymetry" class="map-terrain" aria-label="Depth contours sampled from the reef terrain"></canvas>
+      <span class="map-orientation" aria-hidden="true">N ← · E ↑</span><span class="map-player" id="map-player" aria-hidden="true"></span>
     </div>
     <div class="map-legend" id="map-legend"></div>
-    <div class="map-reading"><span id="reef-zone">REEF SHELF</span><span id="speed-value">0.0 M/S</span></div>
+    <div class="chart-key">SHALLOW ▰ ▰ ▰ DEEP · 5 M CONTOURS</div><div class="map-reading"><span id="reef-zone">REEF SHELF</span><span id="speed-value">0.0 M/S</span></div>
     <p id="map-caption">Choose a marker to swim closer.</p>
   </aside>
   <div class="swim-controls" aria-label="Touch swimming controls" hidden>
