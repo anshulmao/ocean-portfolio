@@ -1,0 +1,23 @@
+import * as THREE from './vendor/three.module.min.js';
+import {terrainHeightAt,LANDMARKS} from './reef.js';
+import {drawReefChart} from './expedition-ui.js';
+import {createMovementPanel} from './movement-panel.js';
+// Reuse the actual interface markup and controllers; no renderer or world is created.
+const source=await fetch('./index.html').then(r=>r.text()),documentSource=new DOMParser().parseFromString(source,'text/html');
+for(const node of [...documentSource.body.children])if(!['SCRIPT','NOSCRIPT'].includes(node.tagName))document.body.append(node);
+document.body.dataset.ready='true';document.body.dataset.submerged='true';document.body.dataset.exploring='true';
+const state={ready:true,submerged:true,transition:false,depth:24.6,cameraMode:'third',wristComputer:{visible:false}};window.oceanDiagnostics=state;
+window.oceanControls={getMode:()=>state.submerged?'diver':'surface',getTransition:()=>false,getPlayerPosition:()=>new THREE.Vector3(50,-24,20),setComputerOpen:()=>{},setInterfaceOpen:()=>{}};
+await import('./landmark-interactions.js');await import('./dive-hud.js');createMovementPanel(()=>{},()=>{});
+drawReefChart(terrainHeightAt);const map=document.querySelector('.reef-map');map.hidden=false;map.dataset.collapsed='false';document.querySelector('.swim-controls').hidden=false;
+LANDMARKS.forEach((item,i)=>{const marker=document.createElement('button');marker.textContent=i+1;marker.style.left=(item.position[0]+62)/124*100+'%';marker.style.top=(item.position[2]+105)/140*100+'%';marker.title=item.title;document.querySelector('#map-chart').append(marker);const legend=document.createElement('button');legend.innerHTML=`<span>0${i+1}</span>${item.title}`;document.querySelector('#map-legend').append(legend);});document.querySelector('#map-player').style.cssText='left:50%;top:65%';
+document.querySelector('#camera-toggle').hidden=false;
+document.querySelector('#depth-marker').style.top='41%';document.querySelector('#depth-value').textContent='25 M';document.querySelector('#dive').disabled=false;document.querySelector('#dive-label').textContent='Back to the surface';
+const tools=document.createElement('nav');tools.className='gallery-tools';tools.setAttribute('aria-label','Interface collection');tools.innerHTML='<label>Component <select id="ui-component"><option value="hud">Complete HUD</option><option value="map">Reef map</option><option value="computer">Dive computer</option><option value="heading">Heading + depth</option><option value="clock">Time selector</option><option value="profile">Profile archive</option><option value="settings">Scene controls</option></select></label><button id="ui-surface">Surface / underwater</button><a href="./world-viewer.html">World viewer</a><a href="./">Live scene</a>';document.body.append(tools);
+const parts=['.masthead','.hero','.heading-indicator','.reef-map','.depth','.scene-footer','.swim-controls','.sky-clock','.view-controls','#movement-toggle','#camera-toggle','#archive-toggle','#dive-computer-toggle'];
+const groups={hud:parts,map:['.reef-map'],computer:['#dive-computer-toggle'],heading:['.heading-indicator','.depth'],clock:['.masthead'],profile:['#archive-toggle'],settings:['#movement-toggle']};
+document.querySelector('#ui-component').onchange=e=>{const choice=e.target.value;for(const selector of parts)document.querySelector(selector).style.visibility=groups[choice].includes(selector)?'visible':'hidden';document.querySelector('#dive-computer').hidden=true;if(choice==='profile')document.querySelector('#archive-toggle').click();if(choice==='settings')document.querySelector('#movement-toggle').click();if(choice==='computer'){state.submerged=true;document.querySelector('#dive-computer-toggle').click();}};
+document.querySelector('#ui-surface').onclick=()=>{state.submerged=!state.submerged;document.body.dataset.submerged=String(state.submerged);document.body.dataset.exploring=String(state.submerged);map.hidden=!state.submerged;document.querySelector('#camera-toggle').hidden=!state.submerged;document.querySelector('#dive-label').textContent=state.submerged?'Back to the surface':'Dive in';window.dispatchEvent(new Event('oceanmediumchange'));};
+document.querySelector('#map-toggle').onclick=()=>{map.dataset.collapsed=String(map.dataset.collapsed!=='true');};
+document.querySelector('#time-slider').oninput=e=>{const minutes=Number(e.target.value);document.querySelector('#time-reading').textContent=String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0');const orb=document.querySelector('#time-orb');orb.style.left=minutes/1440*100+'%';orb.dataset.kind=minutes<360||minutes>1140?'moon':'sun';};
+window.uiGallery={ready:true,renderer:false,components:Object.keys(groups)};

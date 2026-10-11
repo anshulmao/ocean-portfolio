@@ -776,5 +776,25 @@
       "title": "Sunken Ship low Poly",
       "preparation": "Texture resizing and buffer deduplication; geometry, rigs and clips retained."
     }
+  },
+  {
+    "id": "sea_creatures",
+    "file": "sea_creatures.glb",
+    "metadata": {
+      "author": "Lhimo (https://sketchfab.com/Lhimo)",
+      "license": "CC-BY-SA-4.0 (http://creativecommons.org/licenses/by-sa/4.0/)",
+      "source": "https://sketchfab.com/3d-models/sea-creatures-a9e579418f36468ba33902eeb8d9d96a",
+      "title": "Sea creatures"
+    }
+  },
+  {
+    "id": "magic_ocean",
+    "file": "magic_ocean.glb",
+    "metadata": {
+      "author": "mister_monopoly (https://sketchfab.com/mister_monopoly)",
+      "license": "CC-BY-SA-4.0 (http://creativecommons.org/licenses/by-sa/4.0/)",
+      "source": "https://sketchfab.com/3d-models/magic-ocean-f595e1812f0f42e0a4ce16acc0ac7107",
+      "title": "magic ocean"
+    }
   }
 ]

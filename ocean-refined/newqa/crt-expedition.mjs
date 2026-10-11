@@ -5,9 +5,9 @@ const browser=await chromium.launch({headless:true,args:['--enable-unsafe-swifts
 const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[];
 page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});
 await page.goto('http://127.0.0.1:4175/ocean-refined/');await page.waitForFunction(()=>window.oceanDiagnostics?.ready);
-await page.locator('#time-slider').fill('420');await page.waitForTimeout(600);
+await page.locator('#time-slider').fill('420');await page.waitForFunction(()=>window.oceanDiagnostics.sunDirection[2]<0,null,{timeout:30000});
 assert.ok((await page.evaluate(()=>window.oceanDiagnostics.sunDirection[2]))<0,'morning sun east');
-await page.locator('#time-slider').fill('1110');await page.waitForTimeout(600);
+await page.locator('#time-slider').fill('1110');await page.waitForFunction(()=>window.oceanDiagnostics.sunDirection[2]>0,null,{timeout:30000});
 assert.ok((await page.evaluate(()=>window.oceanDiagnostics.sunDirection[2]))>0,'evening sun west');
 await page.screenshot({path:'ocean-refined/qa/captures/crt-surface.png'});
 await page.evaluate(()=>{window.cameraSamples=[];window.sampleTimer=setInterval(()=>{const c=window.oceanControls.getCamera();window.cameraSamples.push({p:c.position.toArray(),q:c.quaternion.toArray(),mode:window.oceanDiagnostics.cameraMode,step:window.oceanDiagnostics.cameraFrameStep,time:performance.now()});},50);});

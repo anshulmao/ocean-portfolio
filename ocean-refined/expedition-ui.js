@@ -31,7 +31,7 @@ export function drawReefChart(terrainHeightAt) {
     const i=y*size+x,d=depths[i],t=Math.max(0,Math.min(1,(d-12)/48));
     const contour=x>0&&y>0&&(Math.floor(d/5)!==Math.floor(depths[i-1]/5)||Math.floor(d/5)!==Math.floor(depths[i-size]/5));
     const grid=x%40===0||y%40===0;
-    const colors=contour?[152,190,102]:[Math.round(155*(1-t)+10*t),Math.round(166*(1-t)+54*t),Math.round(91*(1-t)+60*t)];
+    const colors=contour?[216,244,250]:[Math.round(164*(1-t)+23*t),Math.round(211*(1-t)+68*t),Math.round(220*(1-t)+81*t)];
     image.data.set([...colors.map(c=>grid?Math.min(255,c+18):c),255],i*4);
   }
   context.putImageData(image,0,0);

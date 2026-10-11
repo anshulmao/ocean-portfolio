@@ -8,7 +8,9 @@
     "test:schools": "node ocean-refined/newqa/distributed-ecology.mjs",
     "test:navigation": "node ocean-refined/newqa/navigation-refined.mjs",
     "test:journey": "node ocean-refined/newqa/journey-refined.mjs",
-    "test:crt": "node ocean-refined/newqa/crt-expedition.mjs"
+    "test:crt": "node ocean-refined/newqa/crt-expedition.mjs",
+    "test:studio": "node ocean-refined/newqa/creatures-studio.mjs",
+    "test:rigs": "node ocean-refined/newqa/creature-rigs-export.mjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

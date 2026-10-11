@@ -1,0 +1,10 @@
+<aside class="reef-map" aria-label="Reef exploration map" data-collapsed="false" style="">
+    <div class="map-heading"><span>REEF ATLAS</span><button id="reset-view" type="button" aria-label="Return to the starting view">Reset view</button><button id="map-toggle" type="button" aria-label="Expand reef atlas" aria-expanded="false" aria-controls="map-chart map-legend">＋</button></div>
+    <div class="map-chart" id="map-chart">
+      <canvas id="reef-bathymetry" class="map-terrain" aria-label="Depth contours sampled from the reef terrain" width="248" height="280" data-source="scene-terrain"></canvas>
+      <span class="map-orientation" aria-hidden="true">N ← · E ↑</span><span class="map-player" id="map-player" aria-hidden="true" style="left: 50%; top: 65%;"></span>
+    <button title="About" style="left: 40.3226%; top: 64.2857%;">1</button><button title="Experience" style="left: 64.5161%; top: 47.1429%;">2</button><button title="Projects" style="left: 35.4839%; top: 16.4286%;">3</button></div>
+    <div class="map-legend" id="map-legend"></div>
+    <div class="chart-key">SHALLOW ▰ ▰ ▰ DEEP · 5 M CONTOURS</div><div class="map-reading"><span id="reef-zone">REEF SHELF</span><span id="speed-value">0.0 M/S</span></div>
+    <p id="map-caption">Choose a marker to swim closer.</p>
+  </aside>

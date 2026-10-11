@@ -26,3 +26,10 @@ The heading tape, animated time slider and reef-derived angled chart accompany a
 Concept boards and prompts are in `design/ocean-crt/`. The deployment plan is `design/ocean-crt/DEPLOYMENT.md`; no hosting release has been performed. Exclude design and QA files from the eventual static output.
 
 Run `npm run test:crt` for the new desktop/mobile transition and layout checks.
+
+
+## Independent UI and 3D studios
+
+The active interface uses pale ocean colors and white readings. Open `ocean-refined/ui-gallery.html` for UI alone, `pack-viewer.html` for source/rigged model inspection, or `world-viewer.html` for orbit exploration, placement previews, layer controls and Blender geometry export. See `STUDIO_GUIDE.md` for customization steps and `ui-components/` for sixteen interface fragments.
+
+New creature assets preserve the source CC BY-SA 4.0 licence; see `assets/models/creatures/CREDITS.md`. Animal rigs and clips were created from static source packs. Development validation: `npm run test:studio`, `npm run test:rigs`.

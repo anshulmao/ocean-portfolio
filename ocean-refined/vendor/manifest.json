@@ -26,6 +26,12 @@
         "source": "https://raw.githubusercontent.com/mrdoob/three.js/r180/examples/jsm/utils/SkeletonUtils.js",
         "sha256": "71a05223352ea1927fffea3ccd6ed48143855ca55f672cbd365d061b7ed2931e",
         "transform": "Local relative imports only; same Three.js r180 MIT licence."
+      },
+      {
+        "file": "GLTFExporter.js",
+        "source": "https://raw.githubusercontent.com/mrdoob/three.js/r180/examples/jsm/exporters/GLTFExporter.js",
+        "sha256": "e9bfe974cfc8d3051e211256b09fc0ae91cc876394bb4be2f78fdff92b705c37",
+        "transform": "Local relative import; Three.js r180 MIT licence."
       }
     ]
   },

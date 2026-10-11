@@ -164,7 +164,7 @@ document.querySelector('#credits-toggle').addEventListener('click', async () => 
       const link = document.createElement('a'); link.href = item.metadata.source;
       link.target = '_blank'; link.rel = 'noopener'; link.textContent = item.metadata.title;
       const creator = document.createElement('span'); creator.textContent = item.metadata.author.replace(/\s*\(https?:\/\/[^)]+\)/, '');
-      entry.append(link, creator); container.append(entry);
+      entry.append(link, creator);if(item.metadata.license){const license=document.createElement('small');license.textContent=item.metadata.license;entry.append(license);} container.append(entry);
     }
     creditsLoaded = true;
   } catch { container.textContent = 'Credits could not load. Please try again.'; }

@@ -1,0 +1,68 @@
+[
+  {
+    "id": "fin-whale",
+    "vertices": 10081,
+    "file": "fin-whale.glb",
+    "bytes": 1710920
+  },
+  {
+    "id": "manta-ray",
+    "vertices": 2371,
+    "file": "manta-ray.glb",
+    "bytes": 1530808
+  },
+  {
+    "id": "hammerhead",
+    "vertices": 2568,
+    "file": "hammerhead.glb",
+    "bytes": 1438232
+  },
+  {
+    "id": "orca",
+    "vertices": 3581,
+    "file": "orca.glb",
+    "bytes": 1520772
+  },
+  {
+    "id": "magic-ray-1",
+    "parts": 11,
+    "vertices": 22140,
+    "file": "magic-ray-1.glb",
+    "bytes": 1398392
+  },
+  {
+    "id": "magic-ray-2",
+    "parts": 12,
+    "vertices": 25020,
+    "file": "magic-ray-2.glb",
+    "bytes": 1561932
+  },
+  {
+    "id": "magic-ray-3",
+    "parts": 11,
+    "vertices": 22140,
+    "file": "magic-ray-3.glb",
+    "bytes": 1398392
+  },
+  {
+    "id": "magic-ray-4",
+    "parts": 11,
+    "vertices": 22140,
+    "file": "magic-ray-4.glb",
+    "bytes": 1398516
+  },
+  {
+    "id": "magic-ray-5",
+    "parts": 86,
+    "vertices": 162372,
+    "file": "magic-ray-5.glb",
+    "bytes": 9423756
+  },
+  {
+    "id": "magic-ray-6",
+    "parts": 10,
+    "vertices": 21708,
+    "file": "magic-ray-6.glb",
+    "bytes": 1372120
+  }
+]

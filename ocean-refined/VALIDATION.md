@@ -70,3 +70,15 @@ Evidence: `newqa/distributed-ecology.mjs`, `newqa/large-marine.mjs`, `newqa/expa
 - Planned protected Vercel preview followed by runtime-only packaging, public-content review and production promotion. No deployment created.
 
 - Existing `newqa/immersive-hud.mjs` also passed: wrist raise/lower, third-person panel, project media, resume PDF, immediate surface reset and mobile/reduced-motion archive navigation.
+
+
+## Pale ocean interface and model studios — 12 October 2026
+
+- Removed green CRT presentation from the active stylesheet. White/aqua readings, translucent ocean panels, rounded framing and proportional type restore the earlier ocean visual language. Bathymetry is pale blue with white contours; original section accent colors remain.
+- Supplied Sea creatures and Magic ocean packs contain no skins or clips. Four realistic species and six separated fantasy assets now have six-joint weighted skins and gentle animation loops, exported as independent GLBs. Four realistic species plus two smaller fantasy rays produce seven visitors in full quality, four in economy mode, on slow map-wide routes. The large decorative reef carrier remains review-only. Source metadata identifies both packs as CC BY-SA 4.0; attribution and adaptation terms are preserved.
+- UI-only collection reuses real markup and archive controllers without a renderer. Sixteen HTML fragments are available in `ui-components/`, with shared-style/controller notes. Model studio previews original packs and extracted rigs; downloads their GLBs. World studio uses an independent orbit camera with time/brightness controls, layers, landmark position/ground/reset, layout JSON download and portable reef geometry export.
+- `newqa/creatures-studio.mjs` passed main scene creature load/finite transforms/forward heading, 16-component export, actual archive navigation, desktop and mobile overflow, world viewer, landmark edit/reset and layout JSON download. No page errors.
+- `newqa/creature-rigs-export.mjs` passed all ten exported assets: six joints, one animation clip, finite vertex deformation. Geometry export generated a valid 44,734,328-byte GLB with 118 mesh definitions. This is a geometry snapshot; live sky/water shaders, UI, currents/flocking/collisions and separate animal animation clips remain browser systems/source assets. No Blender installation was used to validate an import. Physical-device FPS remains unmeasured.
+- Studio workflow and file ownership: `STUDIO_GUIDE.md`. Browser captures and reports are in `qa/captures/`; development captures are excluded from the private source repository.
+
+- Final `newqa/crt-expedition.mjs` regression passed after the creature additions: local-time solar hemispheres, smooth dive/return, surface third-person and pointer reset, terrain atlas, archive and desktop/mobile overflow, with no browser errors.
