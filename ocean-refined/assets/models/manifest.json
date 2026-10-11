@@ -1,0 +1,780 @@
+[
+  {
+    "id": "whale_shark_fantasy",
+    "file": "whale_shark_fantasy.glb",
+    "originalBytes": 5164808,
+    "preparedBytes": 1654880,
+    "sourceSHA256": "e88a5ccecc01582004bc7ed0601c70ee8a6ee63cc568049b12d29fc629b28719",
+    "preparedSHA256": "cd71174ef1f2a395fa242c51094dafec7819f18bb8b536d38d90c380833c04eb",
+    "triangles": 4918,
+    "meshes": 5,
+    "skins": 1,
+    "animations": [
+      "Swimming",
+      "Swimming_L",
+      "Swimming_R",
+      "Swimming_U",
+      "Swimming_D",
+      "Idle"
+    ],
+    "textures": [
+      {
+        "original": [
+          2048,
+          2048
+        ],
+        "prepared": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "original": [
+          2048,
+          2048
+        ],
+        "prepared": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "original": [
+          2048,
+          2048
+        ],
+        "prepared": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "original": [
+          1024,
+          512
+        ],
+        "prepared": [
+          1024,
+          512
+        ]
+      },
+      {
+        "original": [
+          128,
+          128
+        ],
+        "prepared": [
+          128,
+          128
+        ]
+      },
+      {
+        "original": [
+          128,
+          128
+        ],
+        "prepared": [
+          128,
+          128
+        ]
+      },
+      {
+        "original": [
+          128,
+          128
+        ],
+        "prepared": [
+          128,
+          128
+        ]
+      }
+    ],
+    "metadata": {
+      "author": "Alenzo (https://sketchfab.com/alextkd2003)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/whale-shark-fantasy-451892c9c18c4d74bf893bea8b626b02",
+      "title": "Whale Shark Fantasy",
+      "preparation": "Texture resizing and buffer deduplication; geometry, rigs and clips retained."
+    }
+  },
+  {
+    "id": "treasure_chest",
+    "file": "treasure_chest.glb",
+    "originalBytes": 4322732,
+    "preparedBytes": 3976360,
+    "sourceSHA256": "3db0f60984d6490510bd00736a867cc7074c0c06bf188b37be5d1855f744b179",
+    "preparedSHA256": "bd8faacc29c400fb30a768d1ffc5eb15984f89cfa344cde5e0034e8f11d966d8",
+    "triangles": 4588,
+    "meshes": 2,
+    "skins": 1,
+    "animations": [
+      "Armature|A_Open",
+      "Armature|A_Close"
+    ],
+    "textures": [
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          1024,
+          1024
+        ]
+      }
+    ],
+    "metadata": {
+      "author": "Multipainkiller Studio (https://sketchfab.com/Multipainkiller_Studio)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/treasure-chest-b124919b7bc3470c82daeef72823f941",
+      "title": "Treasure Chest",
+      "preparation": "Texture resizing and buffer deduplication; geometry, rigs and clips retained."
+    }
+  },
+  {
+    "id": "anchor",
+    "file": "anchor.glb",
+    "originalBytes": 3630184,
+    "preparedBytes": 1750304,
+    "sourceSHA256": "5c604ec0150335af901d348f2069a9427290eb98d28d1e4854865463c07815e0",
+    "preparedSHA256": "0a2c9ac5dc23088a23863dd001cfd4a413288331ac7cfc6383f7d6c9e196842b",
+    "triangles": 2371,
+    "meshes": 3,
+    "skins": 1,
+    "animations": [
+      "2133649996000_TempMotion"
+    ],
+    "textures": [
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          1024,
+          1024
+        ]
+      }
+    ],
+    "metadata": {
+      "author": "bobyoilrig (https://sketchfab.com/bobyoilrig)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/anchor-e2cec738f9b249e1977d60ff719cef18",
+      "title": "Anchor",
+      "preparation": "Texture resizing and buffer deduplication; geometry, rigs and clips retained."
+    }
+  },
+  {
+    "id": "coral_waterverbruik_gezond",
+    "file": "coral_waterverbruik_gezond.glb",
+    "originalBytes": 12427832,
+    "preparedBytes": 4599908,
+    "sourceSHA256": "9f3b32a6f69e2fbabbf804e099044b38c643396519a15389805bd04090ee6125",
+    "preparedSHA256": "25ac773bfe5d8a1228af881863360326c5d03ce6e9c70aeadedd4bf37e44915e",
+    "triangles": 6919,
+    "meshes": 11,
+    "skins": 3,
+    "animations": [
+      "Caranx_idle",
+      "BlueTang_idle",
+      "YellowTang_idle"
+    ],
+    "textures": [
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          512,
+          512
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      }
+    ],
+    "metadata": {
+      "author": "carolienvanbedaf (https://sketchfab.com/carolienvanbedaf)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/coral-waterverbruik-gezond-1464cd8312fc48bdb75aaa3bafaff1f2",
+      "title": "Coral Waterverbruik Gezond",
+      "preparation": "Texture resizing and buffer deduplication; geometry, rigs and clips retained."
+    }
+  },
+  {
+    "id": "coral_landbouw_gezond",
+    "file": "coral_landbouw_gezond.glb",
+    "originalBytes": 11683568,
+    "preparedBytes": 5668008,
+    "sourceSHA256": "34bff069aab42c2b7836e2d653ff7510b72bee51bb7ea8d5ceada123578d451b",
+    "preparedSHA256": "c12281635de5baaa50979f6d17ac6461e58b04e046387a73f2c33e273c25588e",
+    "triangles": 13028,
+    "meshes": 18,
+    "skins": 3,
+    "animations": [
+      "Bannerfish_idle",
+      "DoubleSaddle_idle",
+      "Clownfish_idle"
+    ],
+    "textures": [
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      }
+    ],
+    "metadata": {
+      "author": "carolienvanbedaf (https://sketchfab.com/carolienvanbedaf)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/coral-landbouw-gezond-7cfbf58670974a038dcae5435a66980d",
+      "title": "Coral Landbouw Gezond",
+      "preparation": "Texture resizing and buffer deduplication; geometry, rigs and clips retained."
+    }
+  },
+  {
+    "id": "coral_anker_kleur",
+    "file": "coral_anker_kleur.glb",
+    "originalBytes": 3968600,
+    "preparedBytes": 2061940,
+    "sourceSHA256": "9590d799ed42c7c859b38c0393af1b400cdedd38d1c91318f62dcf0e30ee432d",
+    "preparedSHA256": "010936e0a8c493dd26640adc8701d1e279be020039fc13fe77127d6434f3291f",
+    "triangles": 10478,
+    "meshes": 6,
+    "skins": 1,
+    "animations": [
+      "Clownfish_idle"
+    ],
+    "textures": [
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      }
+    ],
+    "metadata": {
+      "author": "carolienvanbedaf (https://sketchfab.com/carolienvanbedaf)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/coral-anker-kleur-1d1bfae4627b433a9d2324e110538e51",
+      "title": "Coral Anker Kleur",
+      "preparation": "Texture resizing and buffer deduplication; geometry, rigs and clips retained."
+    }
+  },
+  {
+    "id": "coral_uitstoot_gezond",
+    "file": "coral_uitstoot_gezond.glb",
+    "originalBytes": 16479164,
+    "preparedBytes": 6850448,
+    "sourceSHA256": "e80318dca16f8cd3541a6b63df37b5664d866833df501d6e53b82e83da2df2ef",
+    "preparedSHA256": "a907e052c746d93747ab91ac3f443776bd49b535cc24c1044ff310a362664f76",
+    "triangles": 12223,
+    "meshes": 19,
+    "skins": 3,
+    "animations": [
+      "Clownfish_idle",
+      "Bannerfish_idle",
+      "DoubleSaddle_idle"
+    ],
+    "textures": [
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      }
+    ],
+    "metadata": {
+      "author": "carolienvanbedaf (https://sketchfab.com/carolienvanbedaf)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/coral-uitstoot-gezond-8a2b903804a3463fa46abd60c19ac7ff",
+      "title": "Coral Uitstoot Gezond",
+      "preparation": "Texture resizing and buffer deduplication; geometry, rigs and clips retained."
+    }
+  },
+  {
+    "id": "coral_visnet_gezond_fish",
+    "file": "coral_visnet_gezond_fish.glb",
+    "originalBytes": 13783992,
+    "preparedBytes": 4970724,
+    "sourceSHA256": "cbdf5023b7033286dab9f1fec3d4515eed9f4e20c1c009e596772d04f515c35a",
+    "preparedSHA256": "cd189ff088c757908f344076a12257bfff9c9c7a30d669b38912b5b077762032",
+    "triangles": 8469,
+    "meshes": 9,
+    "skins": 2,
+    "animations": [
+      "Caranx_idle",
+      "Bannerfish_idle"
+    ],
+    "textures": [
+      {
+        "original": [
+          512,
+          512
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      },
+      {
+        "original": [
+          1024,
+          1024
+        ],
+        "prepared": [
+          512,
+          512
+        ]
+      }
+    ],
+    "metadata": {
+      "author": "carolienvanbedaf (https://sketchfab.com/carolienvanbedaf)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/coral-visnet-gezond-fish-3ac8a7b131284e84b94f32e459141d41",
+      "title": "Coral Visnet Gezond Fish",
+      "preparation": "Texture resizing and buffer deduplication; geometry, rigs and clips retained."
+    }
+  },
+  {
+    "id": "sunken_ship_low_poly",
+    "file": "sunken_ship_low_poly.glb",
+    "originalBytes": 17575168,
+    "preparedBytes": 2055032,
+    "sourceSHA256": "8f55e8667653d6cdabafa01aa764d79c61419c0f5251643ecf2fc8b33055a5d0",
+    "preparedSHA256": "7626cd722a074b1bbec1c07d92a93112e82bacf784ab614e8c12f5e5a56b6fb1",
+    "triangles": 15040,
+    "meshes": 1,
+    "skins": 0,
+    "animations": [],
+    "textures": [
+      {
+        "original": [
+          4096,
+          4096
+        ],
+        "prepared": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "original": [
+          4096,
+          4096
+        ],
+        "prepared": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "original": [
+          4096,
+          4096
+        ],
+        "prepared": [
+          1024,
+          1024
+        ]
+      }
+    ],
+    "metadata": {
+      "author": "megamaniac (https://sketchfab.com/megamaniac)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/sunken-ship-low-poly-e4e0697a5caf4d4980bb3cdf3c317932",
+      "title": "Sunken Ship low Poly",
+      "preparation": "Texture resizing and buffer deduplication; geometry, rigs and clips retained."
+    }
+  }
+]

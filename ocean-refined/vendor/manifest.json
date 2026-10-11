@@ -1,0 +1,40 @@
+{
+  "three": {
+    "version": "0.180.0",
+    "license": "THREE-LICENSE.txt",
+    "addons": [
+      {
+        "file": "GLTFLoader.js",
+        "source": "https://raw.githubusercontent.com/mrdoob/three.js/r180/examples/jsm/loaders/GLTFLoader.js",
+        "sha256": "ba4d3ac753fe446135d4a3c4d6feb42b826ea2420a400194e2ec7da52c02e9c1",
+        "transform": "Local relative imports only; same Three.js r180 MIT licence."
+      },
+      {
+        "file": "BufferGeometryUtils.js",
+        "source": "https://raw.githubusercontent.com/mrdoob/three.js/r180/examples/jsm/utils/BufferGeometryUtils.js",
+        "sha256": "a34211b841afea271e058713b08b65e007195fef6533aaa4ad961675d6b40839",
+        "transform": "Local relative imports only; same Three.js r180 MIT licence."
+      },
+      {
+        "file": "OrbitControls.js",
+        "source": "https://raw.githubusercontent.com/mrdoob/three.js/r180/examples/jsm/controls/OrbitControls.js",
+        "sha256": "9c090f4d8ea5e294e3d1c251e7544d9fa331e666e19792819fc30a00a5db474d",
+        "transform": "Local relative imports only; same Three.js r180 MIT licence."
+      },
+      {
+        "file": "SkeletonUtils.js",
+        "source": "https://raw.githubusercontent.com/mrdoob/three.js/r180/examples/jsm/utils/SkeletonUtils.js",
+        "sha256": "71a05223352ea1927fffea3ccd6ed48143855ca55f672cbd365d061b7ed2931e",
+        "transform": "Local relative imports only; same Three.js r180 MIT licence."
+      }
+    ]
+  },
+  "astronomy": {
+    "source": "https://github.com/cosinekitty/astronomy",
+    "retrieved": "2026-10-10",
+    "original_sha256": "0276ebbcfc3746cad98417e3082ba510067ae81a92c1f6ad0f43fae8d417fdc7",
+    "runtime_sha256": "b3afb7926af5763d3fb2887b831ffd178025181660aa1381e5107ace4db4a71e",
+    "runtime_transform": "Standalone JSDoc removal only; MIT header retained",
+    "license": "ASTRONOMY-LICENSE.txt"
+  }
+}

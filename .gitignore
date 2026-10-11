@@ -1,0 +1,5 @@
+node_modules/
+ocean-refined/qa/captures/*
+!ocean-refined/qa/captures/.gitkeep
+.DS_Store
+Thumbs.db

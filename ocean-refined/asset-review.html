@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ocean · Model review</title><link rel="icon" href="./favicon.svg">
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#102531;color:#eaf3ed;font:15px/1.5 system-ui,sans-serif}main{display:grid;grid-template-columns:320px 1fr;min-height:100dvh}aside{padding:24px;background:#142f3b;border-right:1px solid #34515b;overflow:auto}h1{font-size:25px;margin:5px 0 8px}h2{font-size:16px;margin:24px 0 8px}p{color:#b4ced0}label{display:block;margin:16px 0 6px}select,button{font:inherit;border:1px solid #637d83;border-radius:7px;background:#203d48;color:#fff;padding:9px;max-width:100%}select{width:100%}button{cursor:pointer}button:disabled{opacity:.45}a{color:#a8e7de}a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #b8e8ca;outline-offset:3px}.buttons{display:flex;gap:8px;margin-top:12px}.buttons button{flex:1}#stage{position:relative;min-width:0;min-height:65dvh}canvas{display:block;width:100%;height:100%;position:absolute;inset:0;touch-action:none}.hint{position:absolute;bottom:16px;left:20px;right:20px;pointer-events:none;color:#d5e4dc;font-size:13px;text-shadow:0 1px 4px #000}#status{min-height:48px;color:#c0e7d7}#stats{font-size:14px}#notes{padding:12px;background:#244650;border-radius:7px;color:#def0ea}.eyebrow{font-size:11px;letter-spacing:.15em;color:#9ac8bb}.check{display:flex;gap:9px;align-items:center}.check input{accent-color:#87cdb7}body.light{background:#dce8e3;color:#14323c}body.light aside{background:#edf3ef}body.light p{color:#47656b}body.light a{color:#145e61}body.light .eyebrow{color:#426b5d}body.light #status{color:#235545}body.light #notes{background:#d5e8df;color:#183d37}body.light .hint{color:#153b41;text-shadow:none}@media(max-width:680px){main{grid-template-columns:1fr}aside{padding:18px;border-right:0}#stage{min-height:65dvh;grid-row:1}.hint{font-size:12px}}
+  </style>
+  <style>
+    main{height:100dvh}aside{max-height:100dvh}#stage{height:100dvh}
+    @media(max-width:680px){main{display:flex;flex-direction:column;height:auto}aside{max-height:none}#stage{order:-1;height:55dvh;min-height:55dvh;width:100%}}
+  </style>
+</head>
+<body>
+<main>
+  <aside>
+    <span class="eyebrow">OCEAN / ASSET WORKBENCH</span><h1>Your new reef pieces</h1>
+    <p>Inspect the prepared models before arranging them in the ocean.</p>
+    <label for="model">Model</label><select id="model"></select>
+    <div id="status" role="status" aria-live="polite">Preparing viewer…</div>
+    <div id="stats"></div>
+    <label for="clip">Animation</label><select id="clip" disabled></select>
+    <div class="buttons"><button id="play" disabled>Pause</button><button id="frame">Frame model</button></div>
+    <label class="check"><input type="checkbox" id="extras"> Show whale shark’s display ocean and particles</label>
+    <label class="check"><input type="checkbox" id="wire"> Wireframe</label>
+    <label class="check"><input type="checkbox" id="theme"> Light background</label>
+    <h2>Fit for this scene</h2><p id="notes"></p>
+    <h2>Credits</h2><div id="credit"></div>
+    <p><a href="./assets/models/CREDITS.md">All model credits</a> · <a href="./">Ocean landing page</a></p>
+  </aside>
+  <section id="stage" aria-label="Interactive 3D model preview"><canvas id="preview" aria-label="Drag to rotate the model. Scroll to zoom."></canvas><div class="hint">Drag to orbit · Scroll / pinch to zoom · Right-drag to pan</div></section>
+</main>
+<script type="module" src="./asset-review.js"></script>
+</body></html>

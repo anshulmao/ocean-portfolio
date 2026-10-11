@@ -1,0 +1,15 @@
+{
+  "name": "ocean-portfolio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:hud": "node ocean-refined/newqa/dive-hud.mjs",
+    "test:schools": "node ocean-refined/newqa/distributed-ecology.mjs",
+    "test:navigation": "node ocean-refined/newqa/navigation-refined.mjs",
+    "test:journey": "node ocean-refined/newqa/journey-refined.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}
