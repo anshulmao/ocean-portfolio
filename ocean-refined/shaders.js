@@ -59,7 +59,10 @@ vec3 skyColor(vec3 ray, bool clouds) {
   float twilight=(1.0-smoothstep(.02,.32,abs(uSun.y)));
   float warmDirection=pow(max(dot(normalize(vec3(ray.x,.03,ray.z)),normalize(vec3(uSun.x,.03,uSun.z))),0.0),6.0);
   float horizonGlow=exp(-h*8.0)*twilight*warmDirection;
-  color=mix(color,vec3(.83,.28,.105),horizonGlow*.47);
+  float belt=exp(-pow((h-.12)/.23,2.0))*twilight;
+  color=mix(color,vec3(.105,.045,.24),belt*.62*(1.0-warmDirection*.65));
+  color=mix(color,vec3(.86,.21,.045),horizonGlow*.93);
+  color+=vec3(.17,.04,.006)*exp(-h*19.0)*twilight*warmDirection;
   if(clouds && ray.y>.005 && uNight<.999) {
     vec2 p=ray.xz/max(ray.y,.035)*2.4;
     p+=vec2(uTime*.014,uTime*.006);
@@ -68,6 +71,7 @@ vec3 skyColor(vec3 ray, bool clouds) {
     float shade=fbm(p*.8+vec2(.17,.32));
     vec3 cloudColor=mix(vec3(.63,.77,.83),vec3(1.0,.96,.85),smoothstep(.40,.68,shade));
     cloudColor=mix(cloudColor,vec3(.077,.105,.18)+shade*.05,uNight);
+    cloudColor=mix(cloudColor,mix(vec3(.52,.22,.32),vec3(1.0,.67,.38),shade),twilight*.68);
     color=mix(color,cloudColor,cloud*(1.0-uNight));
     // Thin high cirrus, distinct from the lower cumulus field.
     float cirrus=pow(fbm(vec2(p.x*.12+p.y*.06,p.y*2.3)),4.0)*.38;
@@ -166,7 +170,7 @@ void main(){
   if(!gl_FrontFacing){
     // View the surface from below as broken, overlapping light sheets rather
     // than one continuous stripe. The calmer front face above is unchanged.
-    vec2 surfaceUv=vWorld.xz;
+    vec2 surfaceUv=vWorld.xz+normal.xz*3.5;
     float warp=noise2(surfaceUv*.075+vec2(uTime*.018,-uTime*.013));
     vec2 rippleA=vec2(surfaceUv.x*.42+surfaceUv.y*.19, surfaceUv.y*.28-surfaceUv.x*.11);
     vec2 rippleB=vec2(-surfaceUv.x*.17+surfaceUv.y*.38, surfaceUv.x*.12+surfaceUv.y*.16);
@@ -174,8 +178,15 @@ void main(){
     float causticB=.5+.5*sin(rippleB.x-warp*1.7-uTime*.2)*sin(rippleB.y+warp*1.2+uTime*.27);
     float caustic=pow(clamp(causticA*.63+causticB*.37,0.0,1.0),3.1);
     float mottling=noise2(surfaceUv*.16+vec2(uTime*.012,uTime*.009));
+    float turbulence=fbm(surfaceUv*.55+vec2(uTime*.22,-uTime*.17));
+    float churn=smoothstep(.58,.76,turbulence+length(normal.xz)*.7);
     vec3 underside=mix(vec3(.018,.19,.23),vec3(.075,.39,.39),caustic*.55+mottling*.17+fresnel*.16);
     underside+=vec3(.018,.046,.045)*pow(caustic,2.0);
+    vec3 transmitted=refract(-view,-normal,1.333);
+    vec3 refractedSky=skyColor(normalize(transmitted+vec3(0.,.0001,0.)),true);
+    float window=step(.01,dot(transmitted,transmitted));
+    underside=mix(underside,refractedSky,window*.56);
+    underside+=vec3(.19,.29,.27)*churn*.65;
     color=mix(underside,vec3(.012,.055,.079),smoothstep(18.0,105.0,distanceToEye)*.66);
     color*=mix(1.0,.38,uNight)*mix(1.0,.3,uDepth);
     vec3 ray=normalize(vWorld-cameraPosition);

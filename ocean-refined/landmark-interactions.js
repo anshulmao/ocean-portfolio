@@ -28,7 +28,7 @@ function clearSight(start, end, controls) {
   return true;
 }
 
-let sectionId = 'about', entryId = null;
+let sectionId = 'about', entryId = null, archiveMotion=null;
 const index = document.querySelector('#explorer-index');
 const variant = document.querySelector('#copy-variant');
 const archiveToggle = document.querySelector('#archive-toggle');
@@ -47,10 +47,12 @@ archiveToggle.prepend(icon('resume'));
 try { variant.value = localStorage.getItem('ocean-copy-variant') || 'baseline'; } catch {}
 if (!['baseline', ...Object.keys(COPY_VARIANTS)].includes(variant.value)) variant.value = 'baseline';
 function renderEntry(id) {
+  archiveMotion?.kill();archiveMotion=null;
   const section = PORTFOLIO_CONTENT[sectionId];
   const entry = section.entries.find(item => item.id === id) || section.entries[0]; entryId = entry.id;
   for (const button of index.querySelectorAll('button')) button.setAttribute('aria-current', String(button.dataset.entry === entryId));
   panel.dataset.section = sectionId;
+  panel.dataset.entry = entry.id;
   document.querySelector('#entry-number').textContent = `${String(section.entries.indexOf(entry)+1).padStart(2,'0')} / ${String(section.entries.length).padStart(2,'0')}`;
   const visual = media[entry.id];
   const figure = document.querySelector('#explorer-media');figure.hidden = !visual;
@@ -61,7 +63,6 @@ function renderEntry(id) {
   }
   const reading = panel.querySelector('.explorer-reading');
   reading.getAnimations().forEach(animation => animation.cancel());
-  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) reading.animate([{opacity:.1,transform:'translateY(12px)'},{opacity:1,transform:'translateY(0)'}],{duration:340,easing:'cubic-bezier(.16,1,.3,1)'});
   document.querySelector('#landmark-title').textContent = entry.title;
   document.querySelector('#entry-tag').textContent = entry.tag.toUpperCase();
   document.querySelector('#landmark-caption').textContent = variant.value === 'baseline' ? entry.summary : COPY_VARIANTS[variant.value][sectionId];
@@ -74,6 +75,22 @@ function renderEntry(id) {
     else if (link.url.endsWith('.pdf')) {a.target = '_blank'; a.rel = 'noopener';}
     if (link.url.startsWith('https:')) {a.target = '_blank'; a.rel = 'noopener noreferrer';} return a;
   }));
+  let chapter=reading.querySelector('.chapter-art');
+  if(!chapter){chapter=document.createElement('div');chapter.className='chapter-art';chapter.setAttribute('aria-hidden','true');reading.prepend(chapter);}
+  chapter.replaceChildren(icon(sectionId));
+  const label=document.createElement('span');label.textContent={about:'The person behind the dive',experience:'Chapters of the journey',projects:'Ideas brought to life',resume:'Take the story with you'}[sectionId];chapter.append(label);
+  if(window.gsap){
+    gsap.killTweensOf(reading.querySelectorAll('*'));
+    gsap.set(reading.querySelectorAll('*'),{clearProps:'transform,opacity'});
+    if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
+      const tl=archiveMotion=gsap.timeline({defaults:{ease:'power3.out'}});
+      tl.fromTo(chapter,{y:12,opacity:0},{y:0,opacity:1,duration:.4})
+        .fromTo(reading.querySelector('h2'),{y:18,opacity:0},{y:0,opacity:1,duration:.5},.06)
+        .fromTo(reading.querySelector('.dialog-caption'),{y:12,opacity:0},{y:0,opacity:1,duration:.42},.14)
+        .fromTo(figure,{scale:.97,y:12,opacity:0},{scale:1,y:0,opacity:1,duration:.58},.1)
+        .fromTo(reading.querySelectorAll('#explorer-content p, #explorer-facts li, #explorer-links a'),{y:10,opacity:0},{y:0,opacity:1,duration:.4,stagger:{amount:.24}},.22);
+    }
+  }
 }
 function renderSection(id) {
   sectionId = id; const section = PORTFOLIO_CONTENT[id];

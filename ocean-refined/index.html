@@ -18,8 +18,10 @@
   <header class="masthead">
     <div class="wordmark">ANSHUL<span>A WORLD TO EXPLORE</span></div>
     <fieldset class="theme-control" aria-label="Time of day">
-      <legend class="sr-only">Choose daylight or moonlight</legend>
+      <legend class="sr-only">Choose dawn, day, dusk or night</legend>
+      <button id="dawn" aria-pressed="false" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 17h20M5 13a7 7 0 0 1 14 0M12 2v3M3 6l2 2m16-2-2 2M9 21h6"/></svg><span>Dawn</span></button>
       <button id="day" aria-pressed="true" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg><span>Day</span></button>
+      <button id="dusk" aria-pressed="false" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 17h20M5 13a7 7 0 0 1 14 0M12 3v3M3 7l2 2m16-2-2 2M7 21h10"/></svg><span>Dusk</span></button>
       <button id="night" aria-pressed="false" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.4A8.7 8.7 0 0 1 8.6 4a8.7 8.7 0 1 0 11.4 11.4Z"/></svg><span>Night</span></button>
     </fieldset>
   </header>
@@ -35,7 +37,7 @@
     <div class="movement-fields"></div>
     <footer class="movement-footer"><div class="movement-actions"><button type="button" class="movement-reset">Restore defaults</button><button type="button" class="movement-export">Export JSON</button></div><p class="movement-save-status" role="status" aria-live="polite">Changes apply live</p></footer>
   </aside>
-  <div class="heading-indicator" aria-label="Viewing direction"><span>HEADING</span><div class="compass-ticks" aria-hidden="true">╵ ╷ ╵ ╷ ╵</div><strong id="heading-value">090°</strong></div>
+  <div class="heading-indicator" aria-label="Viewing direction"><span>TRUE NORTH</span><div class="north-dial" aria-hidden="true"><b>N</b><i id="north-arrow">↑</i></div><strong id="heading-cardinal">E</strong><strong id="heading-value">090°</strong></div>
   <main class="hero" id="main">
     <div class="surface-copy">
       <p class="eyebrow"><span></span>HELLO, I’M ANSHUL</p>
@@ -101,6 +103,7 @@
     <div id="model-credits"></div>
   </dialog>
   <noscript><p class="fallback">Enable JavaScript to explore the 3D ocean.</p></noscript>
+  <script src="./vendor/gsap.min.js"></script>
   <script type="module" src="./world.js"></script>
   <script type="module" src="./landmark-interactions.js"></script>
   <script type="module" src="./dive-hud.js"></script>

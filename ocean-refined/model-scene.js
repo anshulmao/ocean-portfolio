@@ -132,6 +132,30 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     landmark.interactionPosition.splice(0, 3, ...approach.toArray());
     landmark.maxRange = Math.max(landmark.maxRange, approach.distanceTo(center) + .9);
   }
+  function groundCoralBases(coral){
+    // Authored habitats contain separate coral sculptures at different heights.
+    // A single contact for the whole group leaves their other roots suspended.
+    const roots=[];const p=new THREE.Vector3(),worldOffset=new THREE.Vector3();
+    coral.updateWorldMatrix(true,true);
+    coral.traverseVisible(mesh=>{if(mesh.isMesh&&!mesh.isSkinnedMesh&&mesh.geometry?.attributes.position)roots.push(mesh);});
+    for(const mesh of roots){
+      const box=new THREE.Box3().setFromObject(mesh),height=box.max.y-box.min.y;
+      let gap=Infinity,count=0;const contact=new THREE.Vector3();
+      for(let i=0;i<mesh.geometry.attributes.position.count;i++){
+        mesh.getVertexPosition(i,p).applyMatrix4(mesh.matrixWorld);
+        if(p.y>box.min.y+Math.max(.04,height*.10))continue;
+        const candidate=p.y-floorAt(p.x,p.z);if(candidate<gap){gap=candidate;contact.copy(p);}count++;
+      }
+      if(Number.isFinite(gap)){
+        const origin=mesh.getWorldPosition(new THREE.Vector3());worldOffset.copy(origin);worldOffset.y-=gap+.06;
+        mesh.position.copy(mesh.parent.worldToLocal(worldOffset));mesh.updateWorldMatrix(true,true);
+        contact.y-=gap+.06;mesh.userData.baseGrounding={samples:count,previousGap:gap,clearance:-.06,contact:contact.toArray()};
+      }
+    }
+    coral.userData.groundedRoots=roots.length;
+    const box=visibleBounds(coral),first=roots.find(mesh=>mesh.userData.baseGrounding);
+    if(first)coral.userData.grounding={samples:roots.reduce((sum,mesh)=>sum+(mesh.userData.baseGrounding?.samples||0),0),clearance:-.06,contact:first.userData.baseGrounding.contact,min:box.min.toArray(),max:box.max.toArray(),center:box.getCenter(new THREE.Vector3()).toArray()};
+  }
 
   function addStaticProxy(box, name) {
     if (!collisions?.addBox || box.isEmpty()) return;
@@ -324,6 +348,7 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
       root.add(coral);
       coral.updateWorldMatrix(true, true);
       groundModel(coral, x, z);
+      groundCoralBases(coral);
       addCoralProxies(coral, coral.name);
       coralCopies.push(coral);
     }
@@ -337,7 +362,7 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     report(onStatus, 'models', 'loading', { loaded: 0, total: 8 });
     const jobs = [
       () => loadOne('about-anchor', MODEL_FILES.anchor, gltf => {
-        const { wrapper } = addModel('about', gltf, 4.8, Math.PI * .48);
+        const { wrapper } = addModel('about', gltf, 3.6, Math.PI * .48);
         wrapper.rotation.z = -.82;
         const box = groundModel(wrapper, -12, -15);
         updateLandmark('about', box);
@@ -352,7 +377,7 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
         }
       }),
       () => loadOne('experience-ship', MODEL_FILES.ship, gltf => {
-        const { wrapper, box } = addModel('experience', gltf, 14.5, -.28);
+        const { wrapper, box } = addModel('experience', gltf, 20, -.28);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
         const hullBottom = box.min.y, hullTop = box.min.y + Math.min(1.55, Math.max(.85, size.y * .22));

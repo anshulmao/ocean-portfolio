@@ -1763,6 +1763,12 @@ export function createSkySystem(uniforms, rng) {
   const localMidnight=new Date(Date.UTC(localDate.getUTCFullYear(),localDate.getUTCMonth(),localDate.getUTCDate())-8*3600000);
   const reference=Astronomy.SearchHourAngle(Astronomy.Body.Sun,observer,24-70/15,localMidnight).time.date;
   const initialPhase=(now-reference)/DAY_MS*TAU;
+  // Presets use this date's actual rising/setting sun, not fabricated directions.
+  const sunrise=Astronomy.SearchAltitude(Astronomy.Body.Sun,observer,1,localMidnight,1,2);
+  const sunset=Astronomy.SearchAltitude(Astronomy.Body.Sun,observer,-1,localMidnight,1,2);
+  const presets={day:0,night:Math.PI,
+    dawn:(sunrise.date-reference)/DAY_MS*TAU,
+    dusk:(sunset.date-reference)/DAY_MS*TAU};
   const rotationMatrix=new THREE.Matrix4(),sunDirection=new THREE.Vector3(),moonDirection=new THREE.Vector3(),moonLight=new THREE.Vector3();
   let cachedPhase=NaN,cachedState;
   const atPhase=phase=>new Date(reference.getTime()+phase/TAU*DAY_MS);
@@ -1778,7 +1784,7 @@ export function createSkySystem(uniforms, rng) {
     horizontalWorld(Astronomy.RotateVector(horizontal,light),moonLight);
     const altitude=THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(sunDirection.y,-1,1)));
     const illumination=Astronomy.Illumination(Astronomy.Body.Moon,time);
-    cachedState={date,time,night:1-THREE.MathUtils.smoothstep(altitude,-6,4),sunAltitude:altitude,
+    cachedState={date,time,sunDirection:sunDirection.toArray(),night:1-THREE.MathUtils.smoothstep(altitude,-6,4),sunAltitude:altitude,
       moonAltitude:THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(moonDirection.y,-1,1))),
       moonIllumination:illumination.phase_fraction,moonPhaseAngle:Astronomy.MoonPhase(time),
       sunRA:sun.ra,sunDec:sun.dec,moonRA:moon.ra,moonDec:moon.dec,
@@ -1844,6 +1850,6 @@ export function createSkySystem(uniforms, rng) {
     return state;
   }
   return {root,update,labels,starCount:CATALOG.length,constellationCount:PATTERNS.length,
-    initialPhase,referenceUTC:reference.toISOString(),observer:OBSERVER,
+    initialPhase,presets,referenceUTC:reference.toISOString(),observer:OBSERVER,
     getNightFactor:phase=>skyState(phase).night,getState:skyState};
 }

@@ -18,7 +18,7 @@ export function createLargeMarine({terrainHeightAt=()=>-40}={}){
       head.getWorldPosition(a);tail.getWorldPosition(b);forward.subVectors(a,b).setY(0).normalize();
       right.crossVectors(up,forward).normalize();visual.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right,up,forward)).invert();root.updateMatrixWorld(true);
       const bounds=new THREE.Box3();gltf.scene.traverseVisible(n=>{if(n.isMesh){n.computeBoundingBox?.();if(!n.boundingBox)n.geometry.computeBoundingBox();bounds.union((n.boundingBox||n.geometry.boundingBox).clone().applyMatrix4(n.matrixWorld));}});
-      const size=bounds.getSize(a),scale=8/Math.max(size.x,size.y,size.z);const center=bounds.getCenter(b);visual.scale.setScalar(scale);visual.position.copy(center).multiplyScalar(-scale);
+      const size=bounds.getSize(a),scale=12/Math.max(size.x,size.y,size.z);const center=bounds.getCenter(b);visual.scale.setScalar(scale);visual.position.copy(center).multiplyScalar(-scale);
       loaded=true;diagnostics.loaded=true;update(0);return diagnostics;
     }catch(e){diagnostics.error=e.message;root.visible=false;return diagnostics;}
   }
@@ -27,7 +27,7 @@ export function createLargeMarine({terrainHeightAt=()=>-40}={}){
     const angle=clock*.014+.35,x=36*Math.cos(angle),z=-48+27*Math.sin(angle),dx=-36*Math.sin(angle),dz=27*Math.cos(angle);
     // Route stays above the local canopy; sample forward/back for the long body.
     const yaw=Math.atan2(dx,dz),fx=Math.sin(yaw),fz=Math.cos(yaw);
-    const floor=Math.max(terrainHeightAt(x,z),terrainHeightAt(x+fx*5,z+fz*5),terrainHeightAt(x-fx*5,z-fz*5));
+    const floor=Math.max(terrainHeightAt(x,z),terrainHeightAt(x+fx*7,z+fz*7),terrainHeightAt(x-fx*7,z-fz*7));
     const targetY=Math.min(-8,floor+9);
     traveller.position.set(x,clock?THREE.MathUtils.lerp(traveller.position.y||targetY,targetY,1-Math.exp(-Math.max(dt,0)*1.2)):targetY,z);traveller.rotation.set(0,yaw,0);
     root.updateMatrixWorld(true);head.getWorldPosition(a);tail.getWorldPosition(b);forward.subVectors(a,b).normalize();diagnostics.headingDot=forward.dot(right.set(fx,0,fz));diagnostics.position=traveller.position.toArray();

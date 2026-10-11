@@ -72,3 +72,11 @@ The computer starts lowered on every dive. C or Check dive computer raises a 3D 
 Dive Explorer uses cyan, mint, amber and coral section signals, custom SVG icons, measured entrance/entry animation, and actual project images. Click images to open their full size. F still opens a nearby waypoint; Field archive also opens it underwater. Resume offers the existing July 2026 portfolio PDF with a preview, download and open action. Sage and Rae Engage captures use the linked live demos; see assets/portfolio/PROJECT_MEDIA.md. Demo credentials and existing health records are excluded from screenshots and presentation data.
 
 Current checks: `newqa/immersive-hud.mjs` and `newqa/finish-immersive.mjs` (the older dive-hud entrypoint delegates to the immersive suite).
+
+### Golden hours and expedition chapters
+
+Choose Dawn, Day, Dusk or Night. Golden-hour presets follow this date's Kuala Lumpur sun; the accelerated cycle continues when motion is running. The compass arrow points to true north. Press Shift at the surface to dive; underwater Shift descends and Space rises.
+
+The archive uses a mint profile, amber career timeline, project-specific showcases and a coral resume sleeve, with locally bundled GSAP choreography and reduced-motion support. Five additional grottos and map-wide current particles fill out the reef; wave refraction and turbulence are visible from below. Imported coral roots are independently grounded before batching. See VALIDATION.md for checks and ASSETS.md for motion-library attribution.
+
+Focused checks: newqa/sky-chapters.mjs and newqa/reef-detail.mjs.

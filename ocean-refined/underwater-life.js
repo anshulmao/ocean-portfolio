@@ -7,8 +7,8 @@ const UP = new THREE.Vector3(0, 1, 0);
 // and tentacles. Adding a habitat does not add another material or draw call.
 export function createUnderwaterLife({ economy = false, terrainHeightAt = () => -54 } = {}) {
   const root = new THREE.Group(); root.name = 'Turtles, jellyfish and seabed life';
-  const turtleCount = economy ? 3 : 5, jellyCount = economy ? 10 : 20;
-  const starCount = economy ? 25 : 40, urchinCount = economy ? 25 : 40;
+  const turtleCount = economy ? 4 : 7, jellyCount = economy ? 16 : 30;
+  const starCount = economy ? 35 : 60, urchinCount = economy ? 30 : 54;
   const mat = (color, extras = {}) => new THREE.MeshStandardMaterial({ color, roughness: .72, ...extras });
   const sphere = new THREE.SphereGeometry(1, economy ? 12 : 18, economy ? 8 : 12);
   const skin = mat('#8eaa87'), dark = mat('#293d38'), pale = mat('#c5c5a0');
@@ -43,11 +43,11 @@ export function createUnderwaterLife({ economy = false, terrainHeightAt = () => 
   const backs = batch('Turtle hindflippers', paddleGeometry, skin, turtleCount * 2);
   const tails = batch('Small turtle tails', new THREE.ConeGeometry(.07, .32, 7), skin, turtleCount);
 
-  const jellyMat = mat('#a9d6d1', { transparent: true, opacity: .67, depthWrite: false, side: THREE.DoubleSide, emissive: '#36626a', emissiveIntensity: .16 });
+  const jellyMat = mat('#ba83e8', { transparent: true, opacity: .67, depthWrite: false, side: THREE.DoubleSide, emissive: '#7146b3', emissiveIntensity: .16 });
   const bells = batch('Soft translucent jellyfish bells', new THREE.SphereGeometry(1, economy ? 12 : 18, 9, 0, TAU, 0, Math.PI * .54), jellyMat, jellyCount);
-  const oral = batch('Jellyfish oral arms', sphere, mat('#bddbd2', { transparent: true, opacity: .65, depthWrite: false }), jellyCount);
+  const oral = batch('Jellyfish oral arms', sphere, mat('#debdff', { transparent: true, opacity: .65, depthWrite: false }), jellyCount);
   const trail = new THREE.CatmullRomCurve3(Array.from({ length: 9 }, (_, i) => new THREE.Vector3(Math.sin(i * .9) * .055, -i * .15, Math.cos(i * .8) * .035)));
-  const tentacles = batch('Trailing jellyfish tentacles', new THREE.TubeGeometry(trail, economy ? 10 : 14, .012, 4, false), mat('#a4c8c5', { transparent: true, opacity: .72, depthWrite: false }), jellyCount * 6);
+  const tentacles = batch('Trailing jellyfish tentacles', new THREE.TubeGeometry(trail, economy ? 10 : 14, .012, 4, false), mat('#a97cd8', { transparent: true, opacity: .72, depthWrite: false }), jellyCount * 6);
 
   const star = new THREE.Shape();
   for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5, r = i % 2 ? .17 : .48; const x = Math.cos(a) * r, y = Math.sin(a) * r; if (!i) star.moveTo(x,y); else star.lineTo(x,y); }
@@ -108,7 +108,7 @@ export function createUnderwaterLife({ economy = false, terrainHeightAt = () => 
     if (initialized && !(dt > 0)) return;
     const time = Number.isFinite(elapsed) ? Math.max(0,elapsed) : 0;
     for (let i = 0; i < turtleCount; i++) {
-      const h = habitats[i], angle = time * .055 + i * 2.2;
+      const h = habitats[i % habitats.length], angle = time * .055 + i * 2.2;
       const x = h.x + Math.cos(angle) * h.rx, z = h.z + Math.sin(angle) * h.rz;
       const y = floorAt(x,z) + 3.4 + Math.sin(time * .4 + i) * .22;
       animal.position.set(x,y,z); animal.rotation.set(0,Math.atan2(Math.sin(angle) * h.rx,-Math.cos(angle) * h.rz),0);

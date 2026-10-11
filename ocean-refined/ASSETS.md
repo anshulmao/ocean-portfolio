@@ -40,3 +40,5 @@ Rebuild prepared copies from the ocean directory:
 ```powershell
 python tools/prepare-models.py --source C:/Users/ANSHUL/Downloads
 ```
+
+Motion library: locally bundled GSAP 3.13.0 in vendor/gsap.min.js, reused from the existing portfolio vendor library. Its copyright and standard licence link are retained in the source header: https://gsap.com/standard-license.

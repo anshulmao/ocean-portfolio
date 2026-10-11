@@ -281,6 +281,7 @@ export function createReef({ economy = false } = {}) {
     [-49, -15, 2.9], [48, -79, 3.3], [-48, -83, 3.2], [3, -103, 3.1]
   ];
   const archX = 20, archZ = -72, archExitZ = -59;
+  const grottoSites=[[-35,-30,4.5,3.5],[36,-48,5,5],[-33,-73,5.5,5.5],[39,-91,4.5,4],[7,18,4,3]];
   // Broad reef beds consist of overlapping small colonies. Keeping their
   // individual height restrained avoids turning the seabed into giant blobs.
   const coverageRandom = seededRandom(1482);
@@ -341,6 +342,7 @@ export function createReef({ economy = false } = {}) {
     // the full opening width plus the colony's largest outcrop reach.
     const routeZ = THREE.MathUtils.clamp(cz, Math.min(archZ, archExitZ), Math.max(archZ, archExitZ));
     if (Math.hypot(cx - archX, cz - routeZ) < 6.5 + size * 3.5) return;
+    if(grottoSites.some(([x,z,radius,length])=>Math.abs(cx-x)<radius+size*2&&Math.abs(cz-z)<length+3+size*2))return;
     colonyCount++;
     const deep = terrainHeightAt(cx, cz) < -28;
     const floor = terrainHeightAt(cx, cz);
@@ -353,6 +355,7 @@ export function createReef({ economy = false } = {}) {
       const angle = random() * TAU, distance = random() * size * 1.9;
       const s = size * (.55 + random() * .85);
       const x = cx + Math.cos(angle) * distance, z = cz + Math.sin(angle) * distance;
+      if(grottoSites.some(([ax,az,,length])=>Math.abs(x-ax)<3.5+s*2&&Math.abs(z-az)<length+2+s*2))continue;
       rocks.add(new THREE.Vector3(x, terrainHeightAt(x, z) + s * .24, z),
         [s * 1.25, s * (.45 + random() * .25), s], [random() * .3, random() * TAU, random() * .3], r % 3 ? '#416e73' : '#628d8b');
     }
@@ -513,7 +516,7 @@ float fineMottle = sandNoise(sandP * 0.31 + vec2(broadMottle * 1.7));
 float rippleWarp = sandNoise(sandP * 0.055 + vec2(19.0));
 float softRipples = sin(sandP.x * 0.31 + sandP.y * 0.23 + (rippleWarp - 0.5) * 2.0)
   * sin(sandP.x * -0.17 + sandP.y * 0.29 + broadMottle * 1.2);
-diffuseColor.rgb *= 0.965 + broadMottle * 0.07 + fineMottle * 0.018 + softRipples * 0.009;
+diffuseColor.rgb *= 0.91 + broadMottle * 0.12 + fineMottle * 0.075 + softRipples * 0.035;
 vec2 causticP=sandP*.75+vec2(uSandTime*.12,-uSandTime*.08);
 float cells=sin(causticP.x+sin(causticP.y*1.3)) * sin(causticP.y+sin(causticP.x*.8));
 float caustics=pow(max(0.0,1.0-abs(cells)),14.0);
@@ -541,6 +544,36 @@ diffuseColor.rgb+=vec3(.15,.23,.20)*caustics*uSandLight*exp(min(vSandWorldPositi
     mesh.scale.set(piece.sx, piece.sy, piece.sz);
     root.add(mesh);
   }
+  const grottoProxies=[];
+  const archGeometry=new THREE.TorusGeometry(1,.18,economy?7:10,economy?18:26,Math.PI);
+  const grottoRibs=new THREE.InstancedMesh(archGeometry,archMat,grottoSites.length*3);
+  grottoRibs.name='Limestone grotto arches';root.add(grottoRibs);
+  const ribPose=new THREE.Object3D();let ribIndex=0;
+  for(const [x,z,radius,length] of grottoSites){
+    const floor=terrainHeightAt(x,z);
+    // Successive stone ribs make a genuinely open tunnel, with a clear front/back exit.
+    for(let rib=0;rib<3;rib++){
+      const pz=z+(rib-1)*length*.62;
+      ribPose.position.set(x,floor+.45,pz);ribPose.scale.set(radius,radius*.88,1.7);ribPose.updateMatrix();grottoRibs.setMatrixAt(ribIndex++,ribPose.matrix);
+      for(let segment=0;segment<12;segment++){
+        const angle=(segment+.5)/12*Math.PI;
+        const center=new THREE.Vector3(x+Math.cos(angle)*radius,floor+.45+Math.sin(angle)*radius*.88,pz);
+        const half=new THREE.Vector3(radius*.19,radius*.19,.42);
+        grottoProxies.push(new THREE.Box3(center.clone().sub(half),center.clone().add(half)));
+      }
+    }
+    for(const sign of [-1,1]){
+      const px=x+sign*radius,base=terrainHeightAt(px,z);
+      const top=floor+1;rocks.add(new THREE.Vector3(px,(base+top)*.5,z),[1.3,Math.max(.6,(top-base)*.5+.3),length],null,'#547574');
+    }
+    for(let n=0;n<12;n++){
+      const a=n*2.4,px=x+Math.cos(a)*(radius+1.2),pz=z+Math.sin(a)*length;
+      glow.add(new THREE.Vector3(px,terrainHeightAt(px,pz)+.35,pz),[.14,.23,.14],null,n%2?'#ba8fe8':'#81ded1');
+      seaFan(new THREE.Vector3(px,terrainHeightAt(px,pz)-.08,pz),.6+n%3*.18,n%2?'#b187af':'#d39975');
+    }
+  }
+  root.userData.grottoCount=grottoSites.length;
+  grottoRibs.computeBoundingSphere();
   const localLights = [
     { x: archX, y: archFloor + 3.5, z: archZ, color: '#70d9c3', intensity: 7, distance: 15 },
     { x: -39, y: terrainHeightAt(-39, -86) + 5.2, z: -86, color: '#86bfe8', intensity: 5.5, distance: 16 },
@@ -567,6 +600,7 @@ diffuseColor.rgb+=vec3(.15,.23,.20)*caustics*uSandLight*exp(min(vSandWorldPositi
   const colonyProxyMesh = colonyProxies.finish('Hidden rounded coral colony collision volumes', 'solid');
   if (colonyProxyMesh) colonyProxyMesh.visible = false;
   root.userData.collisions = createCollisionWorld(root);
+  for(const box of grottoProxies)root.userData.collisions.addBox(box,{mesh:'Grotto rib',kind:'arch'});
   for (const piece of archPieces) {
     const half = piece.name.includes('roof')
       ? new THREE.Vector3(7.6, 1.35, 7.2)
@@ -578,6 +612,11 @@ diffuseColor.rgb+=vec3(.15,.23,.20)*caustics*uSandLight*exp(min(vSandWorldPositi
   }
   root.userData.safeAscentRoute = position => {
     if (!position?.isVector3) return [];
+    for(const [x,z,radius,length] of grottoSites){
+      if(Math.abs(position.x-x)<radius+1&&Math.abs(position.z-z)<length+1&&position.y<terrainHeightAt(x,z)+radius+2){
+        return [new THREE.Vector3(position.x,position.y,z+length+3),new THREE.Vector3(position.x,position.y+radius+3,z+length+3)];
+      }
+    }
     const dx = position.x - archX, dz = position.z - archZ;
     const underRoof = Math.abs(dx) < 6.4 && Math.abs(dz) < 6.5
       && position.y < archRoofBottom + .8 && position.y > archFloor - 1;
