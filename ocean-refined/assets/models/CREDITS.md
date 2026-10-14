@@ -5,13 +5,6 @@ Prepared copies resize textures and deduplicate embedded buffers. Geometry, rigs
 
 All supplied assets declare [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
-## Whale Shark Fantasy
-
-- Creator: Alenzo (https://sketchfab.com/alextkd2003)
-- Source: https://sketchfab.com/3d-models/whale-shark-fantasy-451892c9c18c4d74bf893bea8b626b02
-- Licence: CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
-- Prepared size: 1.65 MB; 4,918 triangles.
-
 ## Treasure Chest
 
 - Creator: Multipainkiller Studio (https://sketchfab.com/Multipainkiller_Studio)

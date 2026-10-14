@@ -1,24 +1,50 @@
-# User-created life set — 13 October 2026
+# Creature and coral set — 14 October 2026
 
-Source: user-supplied `sets.zip`, preserved under `assets/models/user-sets/sets/`. Its manifests describe metre units, +Y up and +Z forward. All 37 files were parsed and rendered before integration: 24 creatures, 13 coral types, 72 animation clips, 16,833 source triangles and approximately 3.83 MB uncompressed. No external textures, decoder extensions or dependencies are required. The supplied README identifies the assets as original project models.
+The creature set is made in code (`creature-species.js`, built by `creature-kit.js`) and exported to
+`assets/models/user-sets/sets/creature-set/`: 27 animals, each a GLB with skeleton, painted skin and 5 to 9 clips. The
+coral set (`coral-varieties.js`) is exported beside it: 13 colonies. `creature-studio.html` shows both at site scale.
+This replaces the first version of the set and the older attributed creature pack (fin whale, hammerhead, orca,
+manta and magic rays, the fantasy whale shark and their source packs), which are no longer in the repository.
 
-## World behavior
+## Scale
 
-The earlier fin whale, whale shark, orca and hammerhead are no longer loaded by the world. The supplied right whale, whale shark and both orcas replace the large visitors at native sizes. Existing rays, ambient life and procedural boid schools remain.
+Sized for this site, not for life. Small reef fish match the schooling fish of `marine-life.js` (about a metre). Larger
+animals keep their order and rough proportion with the gaps squeezed (`siteLength` in `creature-species.js`):
+blacktip 5.2 m, dolphin 7.3 m, orca bull 13.3 m, whale shark 17 m, right whale 22 m. Corals follow the same rule.
 
-- Full quality adds 10 larger visitors and 216 fish across 32 school habitats. Economy adds 8 visitors and 124 fish. All 24 species remain represented.
-- Large animals use authored swim clips with gentle fast-clip blending, distinct depth lanes, smooth broad routes, player avoidance and bounded separation. Remoras escort the whale shark, flying fish stay shallow, cleaner wrasse stay near coral, rays follow the bottom, nurse sharks cruise low, and pelagic fish roam wider routes.
-- Small animals use 32 sampled authored skeleton poses in compact GPU textures. Each of 16 species uses one instanced draw batch with independent animation phase. Schools keep spacing, turn around approaching swimmers and regroup smoothly. Hidden animals skip expensive visible animation work.
-- All 13 coral types appear in 12 terrain-aligned gardens: 208 colonies in full quality, 91 in economy. Thirteen static instance batches and simple collision proxies keep placement inexpensive. Terrain contact, slope rejection and slight base embedding prevent floating colonies; spawn and landmark approaches stay clear.
+## Behaviour (`user-creatures.js`; numbers in `user-creature-routes.js`)
 
-## Editing
+- **Encounters.** The big animals are visitors, not residents. A director keeps two slots. The giant slot holds a whale far out in the
+  blue, a whale shark with remoras, or an orca family (bull, cow and calf in formation). The pelagic slot holds a dolphin pod, a pair of
+  blacktips or a tuna school. Each comes in from beyond the haze on a line that passes the diver once, swims out of sight and is then
+  switched off entirely. It does not return until its slot's cooldown has passed (giants 80 to 170 s, pelagics 35 to 80 s; longer in
+  economy quality). The same encounter never comes twice in a row.
+- **In passing.** Orcas speed up when the diver is close. A dolphin now and then spins out of the line. A blacktip bolts if the diver
+  gets too near. Remoras ride under the whale shark, and one sometimes lets go, circles its host and returns.
+- **Residents.** These live on the reef:
+  - a bumphead herd that travels and stops together to graze;
+  - a whipray gliding over sand;
+  - bluespotted rays resting on open sand that scoot off when crowded;
+  - a nurse shark asleep on the sand;
+  - a barracuda off the wreck that turns to watch the diver and darts away if crowded;
+  - morays and a ribbon eel at the foot of the tall formations that strike if approached head-on.
+- **Schools** (one instanced draw a species):
+  - anthias and chromis clouds over the formations and coral gardens, sinking into the coral as a diver nears;
+  - sergeant majors in the shallows and cleaner wrasse at the cleaning station;
+  - butterflyfish pairs, moorish idols, powder blue tangs and emperor angelfish working close to the coral;
+  - a garden eel colony that draws into the sand;
+  - a fusilier ribbon along the reef edge, a wheel of young barracuda, trevally hunting the bait ball, and flying fish under the surface.
+- The boid schools of `marine-life.js` are unchanged.
 
-`user-creatures.js` handles clips, schools and visibility; `user-creature-routes.js` sets species routes and depths. `user-corals.js` handles grounded garden placement. Model Studio lists every new asset at native scale and plays only its swim clip. World Viewer exposes a New coral set layer; new animals share the Creatures layer. Geometry exports include the new coral/animal groups, but procedural school animation remains browser code; edit the original species GLBs for authored clips.
+## Cost
 
-## Checks
+Nothing that is out of sight is drawn. Nothing out of sight is animated either, and an encounter that has left costs nothing at all. Far
+skinned animals swap to a lighter mesh and step their clip at half rate. Schools swim in the vertex shader (no pose textures), share one
+shader program, and pack only the groups in view. Loading happens a species per frame; the longest step is about 20 ms. Measured on the
+Radeon Vega 10 (1280×800), against `main`:
 
-At the kit root: `asset-set-check.json`, `model-studio-check.json`, `user-creature-browser-report.json`, `new-life-world-report.json` and their repeatable scripts. `user-corals-qa.mjs` verifies full/economy placements against the real scene. Contact sheet: `asset-set-contact-sheet.png`; scene captures: `qa/refinement-captures/new-life-*.png`.
+- 60 fps at six fixed reef spots, with no frame over 33 ms, including with orcas and dolphins forced into view.
+- Draw calls and triangles equal to or below `main` at most spots.
+- About 0.8 ms of CPU a frame for the whole set.
 
-Checks covered all file counts/bounds/rigs/weights/clips, native size, paused animation, finite simulation, avoidance heading, shader compilation, grounded placement and absence of the four old model requests. Browser tests use software WebGL; render-call counts verify batching but do not establish physical-device FPS.
-
-Final fully prepared daylit scene samples: 101–112 draw calls and approximately 249k–364k triangles, with no shader, WebGL or browser errors. All 24 creature species and 13 coral species loaded successfully. Coral gardens span X −51 to +49 and Z +19 to −86; measured maximum base gap is 6.25 cm with a contact point embedded 2.5 cm.
+Run `npm run perf:reef`, `npm run test:encounters` and `npm run test:creatures` with `npm run dev` serving the site.

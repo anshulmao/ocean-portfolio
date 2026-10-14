@@ -13,7 +13,13 @@
     "test:rigs": "node ocean-refined/newqa/creature-rigs-export.mjs",
     "build": "node tools/build.mjs",
     "dev": "python serve.py --port 4190",
-    "prepare:deploy": "node tools/prepare-output.mjs"
+    "prepare:deploy": "node tools/prepare-output.mjs",
+    "test:creatures": "node ocean-refined/newqa/creature-smoke.mjs ocean-refined && node ocean-refined/newqa/creature-glb-check.mjs",
+    "test:encounters": "node ocean-refined/newqa/creature-encounters.mjs",
+    "perf:reef": "node ocean-refined/newqa/reef-probe.mjs",
+    "export:creatures": "node ocean-refined/tools/export-creature-set.mjs",
+    "test:build": "node tools/build-check.mjs",
+    "test:encounter-lifecycle": "node ocean-refined/newqa/creature-lifecycle.mjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

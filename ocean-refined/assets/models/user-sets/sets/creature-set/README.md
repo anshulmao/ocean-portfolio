@@ -2,14 +2,31 @@
 
 Low-poly models made in code for this project. No third-party assets, so there is nothing to credit or license.
 
-- `creature-set/`: 24 animals, one GLB each. Skinned mesh, skeleton and three looping clips per animal. Vertex colours, no textures.
+- `creature-set/`: 27 animals, one GLB each. A skinned mesh, its skeleton, a painted skin texture embedded in the file, and 5 to 9 clips. Loops for swimming, sprinting, hovering and turning left or right. One-off actions such as `burst`, `strike`, `breach`, `spyhop`, `spin`, `fluke_dive`, `feed`, `ram`, `bury`, `launch`. The manifest marks which clips loop.
 - `coral-set/`: 13 coral colonies, one GLB each. Still meshes with vertex colours, base at y = 0.
-- `manifest.json` in each folder lists names, real sizes, bounds, triangle and bone counts, and clips.
+- `manifest.json` in each folder lists names, sizes on the site and in life, bounds, triangle and bone counts, and clips.
 
-Conventions: one unit is one metre, +Y is up, animals face +Z with the origin at mid-length. Every model is at its real size, so the set is in scale with itself; nothing needs rescaling on import. (The older `creatures/` folder is different: those are normalised to about one unit and scaled in code.)
+Scale: the set is sized for this site, not for life. The schooling fish already in the scene are 1 to 1.5 m long, so the small reef fish match them (sea goldie 0.8 m, powder blue tang 1.3 m). Everything larger keeps its order and rough proportion with the gaps squeezed: blacktip 5.2 m, dolphin 7.3 m, orca bull 13.3 m, whale shark 17 m, right whale 22 m. The rule is `siteLength` in `ocean-refined/creature-species.js`. Corals follow the same rule. Real sizes are kept in the manifests.
 
-The files are an export. The source is `ocean-refined/creature-species.js` (the animals as numbers), `creature-kit.js` (the builder, rig and clips) and `coral-varieties.js` (the corals). After changing a species, rebuild the files from `ocean-refined/` with:
+Conventions: one unit is one metre, +Y is up, animals face +Z with the origin at mid-length. Nothing needs rescaling on import. (The older `creatures/` folder is different: those models are normalised to about one unit and scaled in code.)
 
-    node tools/export-creature-set.mjs
+The files are an export. The source is:
 
-To look at them, open `ocean-refined/creature-studio.html` from the kit launcher: one model at a time with its clips and skeleton, the whole set lined up at true scale beside a diver, and a GLB download for each. `node qa/creature-glb-check.mjs` loads every file back and compares it with its manifest.
+- `ocean-refined/creature-species.js`: each animal as numbers and a painter.
+- `ocean-refined/creature-kit.js`: the builder, skin painting, rig and clips.
+- `ocean-refined/coral-varieties.js`: the corals.
+
+After changing a species, rebuild the files from the repository root with:
+
+    npm run export:creatures
+
+To look at the models, open `ocean-refined/creature-studio.html` from the kit launcher. It shows:
+
+- one model at a time, with every clip and its skeleton;
+- the whole set lined up at site scale beside a diver;
+- contact sheets of the animals and the corals;
+- a GLB download for each model.
+
+Checks:
+
+- `npm run test:creatures` builds every species and plays every clip in Node, then loads every file back in Chrome and compares it with its manifest (with `npm run dev` running).

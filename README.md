@@ -2,7 +2,7 @@
 
 Live site: https://anshul-portfolio-rho.vercel.app/
 
-The full source of Anshul’s browser-based Three.js portfolio, including the ocean world, 24 authored creature species, schooling fish, coral habitats, astronomical sky, first/third-person diving, map, dive instruments and portfolio archive. The repository is private; the hosted site is public.
+The full source of Anshul’s browser-based Three.js portfolio, including the ocean world, 27 authored creature species with encounters and reef behaviour, schooling fish, coral habitats, astronomical sky, first/third-person diving, map, dive instruments and portfolio archive. The repository is private; the hosted site is public.
 
 ## Run and edit
 
@@ -12,6 +12,7 @@ Requirements: Node.js 22+ and Python 3.10+.
 - `ocean-refined/ui-gallery.html` reviews UI separately.
 - `ocean-refined/world-viewer.html` explores and exports the world.
 - `ocean-refined/pack-viewer.html` inspects model packs and rigs.
+- `ocean-refined/creature-studio.html` shows the creature and coral set at site scale with every clip, and downloads each model. `npm run export:creatures` rebuilds the set's GLBs from `creature-species.js`; `ocean-refined/user-creature-routes.js` holds the encounter, resident and school settings.
 - `ocean-refined/portfolio-content.js` contains the portfolio text. Editor-only introduction drafts are excluded by the production build.
 - Model sources, rigs, textures and prepared caches are in `ocean-refined/assets/`. Creator and licence metadata are preserved alongside the models.
 

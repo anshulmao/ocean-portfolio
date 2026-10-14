@@ -1,7 +1,6 @@
 import { toDisplayDepth, DISPLAY_MAX_DEPTH } from './depth-metrics.js';
 import {createDiveScooter} from './scooter.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {createCreaturePack} from './creature-pack.js';
 import { createExpeditionUI, drawReefChart } from './expedition-ui.js';
 import { drawPreparedChart } from './prepared-charts.js';
 import * as THREE from './vendor/three.module.min.js';
@@ -31,7 +30,7 @@ let savedTheme;try{savedTheme=localStorage.getItem('ocean-theme');}catch{}
 let selectedNight=savedTheme?savedTheme==='night':themeMedia.matches;
 let reducedMotion=motionMedia.matches,paused=reducedMotion;
 let renderer,scene,camera,water,waterCalm,waterRough,waterFine,waterCoarse,diver,reef,skySystem,marine,clouds,sunlight,ambient,beamGroup,motes,bubbleMesh,diveLamp;
-let creaturePack=null,viewerOrbit=null,scooterModel=null;
+let viewerOrbit=null,scooterModel=null;
 const beams=[],beamPose=new THREE.Object3D();
 let setPieces=null,heroFormations=null,livingWorld=null;
 // Weather drifts on its own unless the visitor holds it; a locked clock stops the automatic day/night advance only.
@@ -307,8 +306,8 @@ function beginModels(){
   if(modelsLoading||modelScene)return;modelsLoading=true;
   // Three pipelines parse, bake and compile for a few seconds; the frame-rate windows wait for all of them (see frame()).
   const busy=promise=>{modelsBusy++;return promise.finally(()=>{modelsBusy--;scaler.state.settling=1;});};
-  if(!creaturePack){creaturePack=createCreaturePack({terrainHeightAt:reef.userData.terrainHeightAt,economy:quality==='economy'});scene.add(creaturePack.root);diagnostic.creaturePack=creaturePack.diagnostics;busy(creaturePack.load().then(()=>{stylizeImported(creaturePack.root,{saturation:1.1});return prepare(creaturePack.root);}));}
-  busy(import('./user-creatures.js').then(({createUserCreatures})=>{userCreatures=createUserCreatures({terrainHeightAt:reef.userData.terrainHeightAt,economy:quality==='economy'});scene.add(userCreatures.root);userCreatures.root.visible=false;diagnostic.userCreatures=userCreatures.diagnostics;return userCreatures.load();}).then(()=>{stylizeTree(userCreatures.root,{toon:.25,rim:.22,caustics:.45});return prepare(userCreatures.root);}).catch(error=>console.warn('New creature set unavailable:',error)));
+  // The creature set (user-creatures.js): residents on the reef, schools by the coral, and big animals that come and go.
+  busy(import('./user-creatures.js').then(({createUserCreatures})=>{userCreatures=createUserCreatures({terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy',sites:{formations:heroFormations?.sites||[],life:livingWorld?.sites||[],landmarks:LANDMARKS,patches:()=>userCorals?.diagnostics?.patches||[]}});scene.add(userCreatures.root);userCreatures.root.visible=false;diagnostic.userCreatures=userCreatures.diagnostics;return userCreatures.load();}).then(()=>{stylizeTree(userCreatures.root,{toon:.25,rim:.22,caustics:.45});return prepare(userCreatures.root);}).catch(error=>console.warn('New creature set unavailable:',error)));
   busy(import('./user-corals.js').then(({createUserCorals})=>{userCorals=createUserCorals({terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy'});scene.add(userCorals.root);userCorals.root.visible=false;diagnostic.userCorals=userCorals.diagnostics;return userCorals.load();}).then(()=>{stylizeTree(userCorals.root,{toon:.3,rim:.2,caustics:.55});return prepare(userCorals.root);}).catch(error=>console.warn('New coral set unavailable:',error)));
   busy(import('./model-scene.js').then(({createModelScene})=>{
     if(!reef)return;modelScene=createModelScene({reef,terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy',onStatus:value=>{if(value.status==='loading')diagnostic.modelLoading=true;diagnostic.modelsLoaded=value.loaded??diagnostic.modelsLoaded??0;diagnostic.modelsFailed=value.failed??diagnostic.modelsFailed??0;if(value.status==='fallback'&&value.message&&!exploration.state.transition)status.textContent='Some optional ocean models could not load.';}});
@@ -318,7 +317,7 @@ function beginModels(){
 }
 // Set for one frame when the diver is moved at once (start-at-site, tour cuts): the camera cuts with it instead of sweeping.
 let snapCamera=false;
-Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayerPosition,getCamera:()=>camera,getScene:()=>scene,viewer:{get orbit(){return viewerOrbit;},layers:()=>({reef,creatures:[marine?.root,extraLife?.root,creaturePack?.root,userCreatures?.root],corals:userCorals?.root,models:modelScene?.root,diver:diver?.root,water,coast:distantScenery?.root,clouds:clouds?.group,life:livingWorld?.root,formations:heroFormations?.root}),focusPoint(point,distance=30){if(!viewerOrbit)return;viewerOrbit.target.copy(point);camera.position.copy(point).add(new THREE.Vector3(distance*.6,distance*.3,distance));viewerOrbit.update();wake();},focus(preset){const views={surface:[[0,2,0],35],reef:[[0,-18,-35],25],deep:[[0,-40,-82],25],overview:[[0,-15,-45],110]};const [point,distance]=views[preset]||views.reef;this.focusPoint(new THREE.Vector3(...point),distance);}},getMode,getTransition,getRenderer:()=>renderer,
+Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayerPosition,getCamera:()=>camera,getScene:()=>scene,viewer:{get orbit(){return viewerOrbit;},layers:()=>({reef,creatures:[marine?.root,extraLife?.root,userCreatures?.root],corals:userCorals?.root,models:modelScene?.root,diver:diver?.root,water,coast:distantScenery?.root,clouds:clouds?.group,life:livingWorld?.root,formations:heroFormations?.root}),focusPoint(point,distance=30){if(!viewerOrbit)return;viewerOrbit.target.copy(point);camera.position.copy(point).add(new THREE.Vector3(distance*.6,distance*.3,distance));viewerOrbit.update();wake();},focus(preset){const views={surface:[[0,2,0],35],reef:[[0,-18,-35],25],deep:[[0,-40,-82],25],overview:[[0,-15,-45],110]};const [point,distance]=views[preset]||views.reef;this.focusPoint(new THREE.Vector3(...point),distance);}},getMode,getTransition,getRenderer:()=>renderer,
   // Weather: set('clear'|'rain'|'storm') cross-fades to that state and holds it, set('auto') lets it drift again. Time: lock stops the clock advancing by itself; scrubbing and presets still work.
   weather:{get state(){return weather?.state??'clear';},get target(){return weather?.target??'clear';},get locked(){return weather?.locked??false;},set(name){const result=weather?.set(name);wake();return result;},lock(value=true){const result=weather?.lock(value);wake();return result;},states:['clear','rain','storm']},
   time:{get locked(){return timeLocked;},lock(value=true){timeLocked=Boolean(value);diagnostic.timeLocked=timeLocked;try{localStorage.setItem('ocean-time-lock',timeLocked?'1':'0');}catch{}window.dispatchEvent(new CustomEvent('oceantimelockchange',{detail:{locked:timeLocked}}));wake();return timeLocked;}},
@@ -336,12 +335,12 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   // finish() builds whatever is left at once (a stall of a second or so) and whenReady resolves when a dive can go straight under.
   world:{get built(){return built;},get ready(){return underReady;},finish(){finishUnderwater();return built;},get whenReady(){return worldReady;}},
   // QA hook: after placing the camera by hand, cull the scene for it again.
-  recull(){camera.updateMatrixWorld(true);refreshView();creaturePack?.update(0,playerPosition,viewerOrbit?null:view);if(built)cullWorld(0);},
+  recull(){camera.updateMatrixWorld(true);refreshView();userCreatures?.update(0,playerPosition,viewerOrbit?null:view);if(built)cullWorld(0);},
   // Dive planner and guided tour hooks: autopilot, instant placement, dive start / surfacing, and the flashlight and scooter state.
   travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free){exploration.setGuided(value,free);},
   startDive(options){if(!diagnostic.ready||diveTarget===1||getMode()!=='surface')return false;exploration.prepareDive(options);if(options?.at)snapCamera=true;$('#dive').click();return true;},
   surface(){if(diveTarget!==1||exploration.state.mode!=='diver')return false;$('#dive').click();return true;},
-  get nav(){return exploration.state;},get settings(){return settings;},get landmarks(){return modelScene?.landmarks||null;},get formations(){return heroFormations?.sites||[];},get life(){return livingWorld;},
+  get nav(){return exploration.state;},get settings(){return settings;},get landmarks(){return modelScene?.landmarks||null;},get formations(){return heroFormations?.sites||[];},get life(){return livingWorld;},get creatures(){return userCreatures;},
   get flashlight(){return exploration.state.lamp;},set flashlight(value){exploration.setLamp(value);},get scooter(){return exploration.state.scooter;},
   get setPieces(){return setPieces;},get models(){return modelScene;},get reef(){return reef;},setInterfaceOpen,setComputerOpen,recapture:()=>exploration.recapture(),toggleCamera}});
 
@@ -790,7 +789,6 @@ function updateWorld(dt,clockDt=dt){
   livingWorld?.update(paused?0:dt,elapsed,{player:playerPosition,camera,view:viewerOrbit?null:view,underwater,night,depth:depthLight,weather:weather.intensity,lamp:nav.lamp,paused,aim:swimDirection,diver:diver.root.position});
   if(heroFormations){heroFormations.root.visible=Boolean(viewerOrbit)||underwater>.01;if(heroFormations.root.visible)heroFormations.update(elapsed,night,depthLight);}
   if(setPieces){setPieces.root.visible=Boolean(viewerOrbit)||underwater>.01;if(setPieces.root.visible)setPieces.update(elapsed,camera.position,night,depthLight,uniforms.uRatio.value);}
-  if(creaturePack){creaturePack.root.visible=prepared.has(creaturePack.root)&&(Boolean(viewerOrbit)||underwater>.01);if(underwater>.01||viewerOrbit)creaturePack.update(paused?0:dt,playerPosition,viewerOrbit?null:view);}
   if(userCreatures){userCreatures.root.visible=prepared.has(userCreatures.root)&&(Boolean(viewerOrbit)||underwater>.01);if(userCreatures.root.visible)userCreatures.update(paused?0:dt,playerPosition,viewerOrbit?null:view);}
   if(userCorals)userCorals.root.visible=prepared.has(userCorals.root)&&(Boolean(viewerOrbit)||underwater>.01);
   if(built){if(underwater>.01)cullWorld(paused?0:dt);motes.position.y=Math.sin(elapsed*.07)*.2;updateBubbles(underwater);}

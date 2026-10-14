@@ -1,5 +1,11 @@
 import fs from 'node:fs/promises';
-const config=JSON.parse(await fs.readFile('vercel.json'));
-await fs.mkdir('.vercel/output/static',{recursive:true});await fs.cp('dist','.vercel/output/static',{recursive:true});
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const output=path.join(root,'.vercel/output/static');
+if(!output.startsWith(root+path.sep))throw Error('Unexpected deployment output path');
+await fs.rm(output,{recursive:true,force:true});
+const config=JSON.parse(await fs.readFile(path.join(root,'vercel.json')));
+await fs.mkdir(output,{recursive:true});await fs.cp(path.join(root,'dist'),output,{recursive:true});
 const routes=config.headers.map(rule=>({src:rule.source.replaceAll('(.*)','(.*)'),headers:Object.fromEntries(rule.headers.map(h=>[h.key,h.value])),continue:true}));routes.push({handle:'filesystem'},{src:'/(.*)',status:404,dest:'/404.html'});
-await fs.writeFile('.vercel/output/config.json',JSON.stringify({version:3,routes},null,2));console.log('Prepared static deployment output');
+await fs.writeFile(path.join(root,'.vercel/output/config.json'),JSON.stringify({version:3,routes},null,2));console.log('Prepared static deployment output');

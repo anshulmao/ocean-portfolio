@@ -4,7 +4,9 @@ import {createHash} from 'node:crypto';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 const launch=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const source=path.resolve(launch,'ocean-refined');
-const out=path.join(launch,'dist');await fs.mkdir(out,{recursive:true});
+const out=path.join(launch,'dist');
+if(path.dirname(out)!==launch||path.basename(out)!=='dist')throw Error('Unexpected build output path');
+await fs.rm(out,{recursive:true,force:true});await fs.mkdir(out,{recursive:true});
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const written=new Set();
 async function copy(rel){const file=path.join(source,rel),target=path.join(out,rel);await fs.mkdir(path.dirname(target),{recursive:true});await fs.copyFile(file,target);written.add(rel.replaceAll('\\','/'));}
@@ -20,7 +22,6 @@ for(const name of ['ambient-audio.css','expedition-interactions.css','controls.c
 await copy('favicon.svg');await tree('assets/fonts');await tree('assets/portfolio',f=>!f.endsWith('.md'));await tree('assets/prepared/charts',f=>!f.endsWith('.png'));
 const active=['anchor.glb','sunken_ship_low_poly.glb','treasure_chest.glb','coral_waterverbruik_gezond.glb','coral_landbouw_gezond.glb','coral_anker_kleur.glb','coral_uitstoot_gezond.glb','coral_visnet_gezond_fish.glb','manifest.json','CREDITS.md'];
 for(const f of active)await copy('assets/models/'+f);
-for(const f of ['manta-ray.glb','magic-ray-1.glb','magic-ray-2.glb','CREDITS.md'])await copy('assets/models/creatures/'+f);
 await tree('assets/models/user-sets/sets/creature-set',f=>/\.(?:glb|json|md)$/i.test(f));await tree('assets/models/user-sets/sets/coral-set',f=>/\.(?:glb|json|md)$/i.test(f));
 for(const f of ['full.json','economy.json','full-webp.glb','economy-webp.glb'])await copy('assets/models/prepared-corals/'+f);
 // Public hosts assign their own ETags and dates. Hash headers preserve cheap,
