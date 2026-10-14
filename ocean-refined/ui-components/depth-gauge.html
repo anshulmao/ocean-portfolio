@@ -1,5 +1,9 @@
-<aside class="depth" aria-label="Depth below the surface" style="">
-    <span class="depth-title">DEPTH</span>
-    <div class="depth-track"><i id="depth-marker" style="top: 41%;"></i><span style="--tick:0%">0</span><span style="--tick:33.33%">20</span><span style="--tick:66.67%">40</span><span style="--tick:100%">60</span></div>
-    <span class="depth-unit">METRES</span>
-  </aside>
+<!-- Depth scale, down the left edge
+     Source: index.html
+     Styles: styles.css, hologram.css, hud.css (+ motion.css for transitions)
+     Scripts: world.js (moves #depth-marker, 0 to 40 m) -->
+<aside class="depth" aria-label="Depth below the surface">
+  <span class="depth-title">DEPTH</span>
+  <div class="depth-track"><i id="depth-marker"></i><i id="depth-max" class="depth-max" aria-hidden="true"><b>MAX</b></i><i class="depth-stop" aria-hidden="true"><b>STOP</b></i><span style="--tick:0%">0</span><span style="--tick:25%">10</span><span style="--tick:50%">20</span><span style="--tick:75%">30</span><span style="--tick:100%">40</span></div>
+  <span class="depth-unit">METRES</span>
+</aside>

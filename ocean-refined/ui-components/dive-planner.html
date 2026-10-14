@@ -1,0 +1,15 @@
+<!-- Dive planner: site map signboard, site card and dive overview
+     Source: dive-plan.js (built at load and appended to <body>)
+     Styles: styles.css, hologram.css, motion.css, dive-plan.css
+     Scripts: dive-plan.js, guided-dive.js, journey.js, reef.js, portfolio-content.js -->
+<dialog id="dive-plan" class="dive-plan holo-deep" aria-labelledby="dive-plan-title"><div class="plan-wrap">
+  <header class="plan-head"><div><p class="holo-label">Plan your dive</p><h2 id="dive-plan-title">Site map</h2></div><button type="button" class="plan-close holo-chip" aria-label="Close the dive planner">Close <kbd>Esc</kbd></button></header>
+  <div class="plan-main">
+    <div class="plan-sign"><div class="plan-board holo">
+      <div class="plan-chart"><canvas width="372" height="420" role="img" aria-label="Depth chart of the reef with 5 metre contours. Shallow water at the bottom, the deep ledge at the top."></canvas><span class="plan-north" aria-hidden="true"><i></i>N</span><span class="plan-entry" aria-hidden="true"><i></i>Entry</span><div class="plan-marks" role="group" aria-label="Dive sites"><!-- dive-plan.js adds one .plan-mark button per site --></div></div>
+      <p class="plan-key"><span class="key-ramp" aria-hidden="true"></span><span>0 m</span><span>20 m</span><span>40 m</span><span class="key-note">5 m contours</span><span class="key-note"><b class="key-x" aria-hidden="true"></b>Dive site</span><span class="key-note"><b class="key-dot" aria-hidden="true"></b>Reef feature</span></p>
+    </div><i class="plan-post" aria-hidden="true"></i><i class="plan-post" aria-hidden="true"></i></div>
+    <aside class="plan-info holo holo--reading" aria-live="polite" aria-atomic="true"><div class="plan-art"></div><p class="holo-label plan-kicker"></p><h3></h3><dl><div><dt>Depth</dt><dd class="plan-depth"></dd></div><div><dt class="plan-from">From the surface</dt><dd class="plan-swim"></dd></div></dl><ul></ul><button type="button" class="plan-start holo-chip holo-chip--go">Start dive here <span aria-hidden="true">→</span></button></aside>
+  </div>
+  <footer class="plan-overview holo"><p class="holo-label">Dive overview</p><ol></ol><p class="plan-total"></p><button type="button" class="plan-tour holo-chip">Take the guided dive <span aria-hidden="true">→</span></button></footer>
+</div></dialog>

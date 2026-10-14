@@ -1,0 +1,31 @@
+/* Dive Explorer records, printed. While the records are open, archive.js answers the browser's print command
+   (or its own Print button) by adding #arc-print-sheet to the page: the profile, the dive log and the salvage
+   finds as plain text built from the same content, and marks <html class="arc-printing"> until printing ends.
+   Everything else on the page is left out, so the result is one to two ink-friendly pages: black text on white,
+   no images, no backgrounds, and every link written out. Printing with the records closed is not affected. */
+@media print{
+  html.arc-printing,html.arc-printing body{width:auto!important;height:auto!important;overflow:visible!important;background:#fff!important;color:#111!important}
+  html.arc-printing body>:not(#arc-print-sheet){display:none!important;transition:none!important;animation:none!important}
+  html.arc-printing #arc-print-sheet{display:block!important;margin:0;padding:0;font:400 9.5pt/1.42 Outfit,system-ui,sans-serif;color:#111;text-shadow:none;orphans:2;widows:2}
+  #arc-print-sheet *{box-sizing:border-box}
+  #arc-print-sheet :is(h1,h2,h3,p,ol){margin:0;max-width:none;font:inherit;letter-spacing:0;text-transform:none;color:inherit}
+  #arc-print-sheet a{color:inherit;text-decoration:none;overflow-wrap:anywhere}
+  #arc-print-sheet b{font-weight:500}
+  #arc-print-sheet>header{padding-bottom:3.2mm;border-bottom:1.2pt solid #111}
+  #arc-print-sheet .arc-print-kicker{font-size:7.5pt;letter-spacing:.14em;text-transform:uppercase;color:#444}
+  #arc-print-sheet h1{margin-top:1.2mm;font:500 19pt/1.12 Outfit,system-ui,sans-serif;letter-spacing:-.01em}
+  #arc-print-sheet .arc-print-lead{margin-top:1.6mm;font-size:10.5pt;line-height:1.38}
+  #arc-print-sheet .arc-print-meta{margin-top:1.2mm;color:#333}
+  #arc-print-sheet .arc-print-links{margin-top:1.2mm;font-size:8.5pt;color:#222}
+  #arc-print-sheet>section{margin-top:4.2mm}
+  #arc-print-sheet h2{padding-bottom:1mm;border-bottom:.6pt solid #777;font:500 8.5pt/1.3 Outfit,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;break-after:avoid}
+  #arc-print-sheet h3{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:0 4mm;margin-top:2.6mm;font:500 10.5pt/1.3 Outfit,system-ui,sans-serif;break-after:avoid}
+  #arc-print-sheet h3 span{font:400 8.5pt/1.3 Outfit,system-ui,sans-serif;color:#444}
+  #arc-print-sheet :is(section,article)>p{margin-top:1.1mm}
+  #arc-print-sheet ol{margin-top:1.1mm;padding-left:5mm}
+  #arc-print-sheet .arc-print-facts{color:#222}
+  #arc-print-sheet article{break-inside:avoid}
+  #arc-print-sheet article .arc-print-lead{font-size:9.5pt;font-weight:500}
+  #arc-print-sheet>footer{margin-top:4.2mm;padding-top:1.8mm;border-top:.6pt solid #777;font-size:8pt;color:#444}
+  #arc-print-sheet>footer p+p{margin-top:.8mm}
+}

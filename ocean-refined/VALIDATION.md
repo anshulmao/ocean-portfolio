@@ -1,5 +1,7 @@
 # Refinement validation — 11 October 2026
 
+Latest isolated return refinement: see `REFINEMENT_2026-10-13.md`. The historical exposure-based brightness and population counts below describe older checkpoints and have been superseded.
+
 - Original scene: all 64 checkpoint files still match the preserved `/ocean/` copy.
 - Navigation: five controller checks pass, including attached perspective, automatic atlas travel, landmark arrival focus/manual override, frame-rate consistency and cave-route ascent.
 - Terrain: landmark floors, cave traversal/roof collision, safe ascent corridor and CPU/GPU water displacement checks pass.

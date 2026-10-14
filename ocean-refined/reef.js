@@ -1,6 +1,8 @@
 import * as THREE from './vendor/three.module.min.js';
 import { seededRandom } from './assets.js';
-import { createCollisionWorld } from './collisions.js';
+import { collisionWorldSteps } from './collisions.js';
+import { stylize, setLookGlows, nearLookGlow } from './ocean-look.js';
+import { valueTexture } from './shaders.js';
 
 export const LANDMARKS = [
   { id: 'about', title: 'About', description: 'Shallow reef · 8 m', position: [-12, -8, -15] },
@@ -11,6 +13,15 @@ export const LANDMARKS = [
 // Horizontal coordinates are world coordinates; vertical limits are camera
 // offsets from the normal swimming depth, shared with the exploration module.
 export const WORLD_BOUNDS = { x: 62, zMin: -105, zMax: 35, yMin: -56, yMax: 5 };
+
+// Broad, gently blended shelves give each large landmark a grounded
+// approach pad while the surrounding contours remain distinctly deeper.
+const PADS = [
+  { x: 0, z: 0, floor: -13, radiusX: 19, radiusZ: 22, flat: .60 },
+  { x: -12, z: -15, floor: -11, radiusX: 15, radiusZ: 16, flat: .46 },
+  { x: 18, z: -39, floor: -26, radiusX: 18, radiusZ: 22, flat: .55 },
+  { x: -18, z: -82, floor: -48, radiusX: 15, radiusZ: 17, flat: .44 }
+];
 
 export function terrainHeightAt(x, z) {
   const descent = THREE.MathUtils.clamp((35 - z) / 140, 0, 1);
@@ -27,22 +38,31 @@ export function terrainHeightAt(x, z) {
     + Math.exp(-(((x + 31) / 11) ** 2)) * .72;
   const ledge = Math.exp(-(((z + 66) / 9.5) ** 2)) * (1.1 + 1.15 * Math.cos(x * .072));
   let height = shelf + ridge - gullies - ledge;
-  // Broad, gently blended shelves give each large landmark a grounded
-  // approach pad while the surrounding contours remain distinctly deeper.
-  const pads = [
-    { x: 0, z: 0, floor: -13, radiusX: 19, radiusZ: 22, flat: .60 },
-    { x: -12, z: -15, floor: -11, radiusX: 15, radiusZ: 16, flat: .46 },
-    { x: 18, z: -39, floor: -26, radiusX: 18, radiusZ: 22, flat: .55 },
-    { x: -18, z: -82, floor: -48, radiusX: 15, radiusZ: 17, flat: .44 }
-  ];
-  for (const pad of pads) {
-    const radius = Math.hypot((x - pad.x) / pad.radiusX, (z - pad.z) / pad.radiusZ);
+  // Called thousands of times a frame by fish and props: no allocation, and
+  // pads that cannot reach this point (their blend would be exactly 0) are skipped.
+  for (let i = 0; i < PADS.length; i++) {
+    const pad = PADS[i], px = (x - pad.x) / pad.radiusX, pz = (z - pad.z) / pad.radiusZ;
+    if (px * px + pz * pz > 1.001) continue;
+    const radius = Math.hypot(px, pz);
     const blend = 1 - THREE.MathUtils.smoothstep(radius, pad.flat, 1);
     height = THREE.MathUtils.lerp(height, pad.floor, blend);
+  }
+  // A gully swept through the stone arch at (20, -72): it lowers the uphill
+  // mouth by up to 3.2 m so the passage is open end to end over a level floor.
+  // Local by construction: exactly zero 11 m either side of x = 20 and outside
+  // -75 < z < -55, so the pads, landmarks, grottos and formations are untouched.
+  if (z > -75 && z < -55) {
+    const gx = Math.abs(x - 20);
+    if (gx < 11) height -= 3.2 * (1 - THREE.MathUtils.smoothstep(gx, 5, 11)) * THREE.MathUtils.smoothstep(z, -75, -67) * (1 - THREE.MathUtils.smoothstep(z, -63, -55));
   }
   return height;
 }
 
+// Fractions of the haze range at which a layer of the reef stops being drawn.
+// Measured by comparing frames with and without it: bulky coral reads furthest,
+// grass and polyps are lost in the haze well before the range itself. A layer
+// takes the reach of its furthest-reading family.
+const STOUT = .9, BULK = .8, LIGHT = .6, FINE = .55;
 const UP = new THREE.Vector3(0, 1, 0);
 const FORWARD = new THREE.Vector3(1, 0, 0);
 const TAU = Math.PI * 2;
@@ -51,9 +71,29 @@ function material(color, options = {}) {
   return new THREE.MeshStandardMaterial({ color, roughness: .66, ...options });
 }
 
-// Store transforms first so every family costs one draw call, irrespective of
-// the number of coral branches or grass blades. Geometry is reused throughout.
-function batch(root, geometry, mat) {
+// Store transforms first, then bake the reef into static meshes. Each family
+// joins a layer (one material), and the layers are split on a coarse grid of
+// reef cells and merged vertex by vertex: a cell in view costs two to four
+// draw calls however many families and colonies stand in it. Drawn as one
+// instanced mesh per family per cell, the reef was more than half of the
+// frame's draw calls, and draw calls, not triangles, bound the frame on a
+// laptop CPU. The renderer skips the cells outside the view and cull() drops
+// the ones the haze has already swallowed. A family may also name a lighter
+// geometry: a cell is baked a second time with those and drawn that way past a
+// sixth of the haze range (some 23 m beyond the cell), where a coral is a few
+// dozen pixels behind a third of the haze. Collision data always comes from
+// the full geometry of the unmerged list. (The swap used to wait for a third
+// of the range, which left two thirds of the reef in view at full detail: with
+// the frame bound by its vertices, that was the largest single cost.)
+const CELL = 31, LOD = .16, BRIEF = .33;
+// layer: { material, far, cell, name, sway, mapped, lod }, or null for a family that only collides.
+// distant: the lighter geometry, or false for a family too small to draw at that
+// range at all. sides: 2 bakes both faces of an open shape (a table coral seen
+// from below) so it can share the single-sided material of the solid coral; 'up'
+// keeps only the top of a carpet lying on the sand. brief: the lighter geometry
+// is itself dropped past a third of the haze range (it is baked at the tail of
+// the cell's index, so dropping it is a shorter draw range, not another mesh).
+function batch(root, geometry, layer, reef, distant = null, sides = 1, brief = false) {
   const entries = [];
   const dummy = new THREE.Object3D();
   return {
@@ -66,20 +106,127 @@ function batch(root, geometry, mat) {
       entries.push({ matrix: dummy.matrix.clone(), color });
     },
     finish(name, collisionKind) {
-      if (!entries.length) { geometry.dispose(); return; }
-      const mesh = new THREE.InstancedMesh(geometry, mat, entries.length);
-      mesh.name = name;
-      if (collisionKind) mesh.userData.collisionKind = collisionKind;
-      const color = new THREE.Color();
-      entries.forEach((entry, i) => {
-        mesh.setMatrixAt(i, entry.matrix);
-        if (entry.color) mesh.setColorAt(i, color.set(entry.color));
-      });
-      mesh.computeBoundingSphere();
-      root.add(mesh);
-      return mesh;
+      if (!entries.length) { geometry.dispose(); distant?.dispose?.(); return; }
+      // Collisions read one unsplit, never-drawn copy, so the proxies and
+      // their order are the same whatever the cell size.
+      if (collisionKind) {
+        const source = new THREE.InstancedMesh(geometry, layer?.material ?? new THREE.MeshBasicMaterial(), entries.length);
+        source.name = name; source.userData.collisionKind = collisionKind;
+        entries.forEach((entry, i) => source.setMatrixAt(i, entry.matrix));
+        reef.collisionSources.push(source);
+      }
+      if (layer) (layer.families ??= []).push({ name, geometry, distant, entries, sides, brief });
     }
   };
+}
+
+// Bake one layer of one cell: positions and normals in world space, the
+// instance tint multiplied into the vertex colour, bytes where they suffice
+// (plain floats when portable, for the viewer's export). The bytes come four
+// to a vertex: Direct3D has no three-byte vertex format, and a browser
+// drawing through it would convert every buffer on the CPU at first use.
+// A generator: it yields every few thousand vertices, so a cell is baked over as many steps as it needs (see reefSteps).
+const bakeNormal = new THREE.Matrix3(), bakeTint = new THREE.Color();
+function* bakeCell(list, layer, lod, portable) {
+  if (lod) list = list.filter(({ family }) => family.distant !== false).sort((a, b) => a.family.brief - b.family.brief);
+  let vertices = 0, corners = 0;
+  for (const { family } of list) {
+    const geometry = lod && family.distant || family.geometry, count = geometry.getAttribute('position').count, faces = family.sides === 2 ? 2 : 1;
+    vertices += count * faces; corners += (geometry.index ? geometry.index.count : count) * faces;
+  }
+  const width = portable ? 3 : 4;
+  const position = new Float32Array(vertices * 3), normal = portable ? new Float32Array(vertices * 3) : new Int8Array(vertices * 4), color = portable ? new Float32Array(vertices * 3) : new Uint8Array(vertices * 4).fill(255);
+  const unit = portable ? 1 : 127, full = portable ? 1 : 255, snap = portable ? value => value : Math.round;
+  const uv = layer.mapped ? new Float32Array(vertices * 2) : null, sway = layer.sway ? new Float32Array(vertices * 4) : null;
+  const index = vertices > 65535 ? new Uint32Array(corners) : new Uint16Array(corners);
+  let v = 0, k = 0, steady = -1, paused = 0;
+  for (const { family, entry } of list) {
+    if (v - paused > 5000) { paused = v; yield; }
+    if (lod && family.brief && steady < 0) steady = k;
+    const geometry = lod && family.distant || family.geometry, e = entry.matrix.elements, m = bakeNormal.getNormalMatrix(entry.matrix).elements;
+    const p = geometry.getAttribute('position').array, n = geometry.getAttribute('normal').array, c = geometry.getAttribute('color')?.array, t = geometry.getAttribute('uv')?.array;
+    const count = p.length / 3, phase = e[12] * .4 + e[14] * .19;
+    bakeTint.set(entry.color || '#ffffff');
+    for (let i = 0; i < count; i++) {
+      const a = i * 3, o = (v + i) * 3, w = (v + i) * width, x = p[a], y = p[a + 1], z = p[a + 2];
+      position[o] = e[0] * x + e[4] * y + e[8] * z + e[12]; position[o + 1] = e[1] * x + e[5] * y + e[9] * z + e[13]; position[o + 2] = e[2] * x + e[6] * y + e[10] * z + e[14];
+      const nx = m[0] * n[a] + m[3] * n[a + 1] + m[6] * n[a + 2], ny = m[1] * n[a] + m[4] * n[a + 1] + m[7] * n[a + 2], nz = m[2] * n[a] + m[5] * n[a + 1] + m[8] * n[a + 2];
+      const scale = unit / (Math.hypot(nx, ny, nz) || 1);
+      normal[w] = snap(nx * scale); normal[w + 1] = snap(ny * scale); normal[w + 2] = snap(nz * scale);
+      color[w] = snap(full * bakeTint.r * (c ? c[a] : 1)); color[w + 1] = snap(full * bakeTint.g * (c ? c[a + 1] : 1)); color[w + 2] = snap(full * bakeTint.b * (c ? c[a + 2] : 1));
+      if (uv) { uv[(v + i) * 2] = t[i * 2]; uv[(v + i) * 2 + 1] = t[i * 2 + 1]; }
+      // The sway of swayMaterial(), which bent the blade along its own x axis before it was placed.
+      if (sway) { const s = (v + i) * 4, reach = y * .035; sway[s] = e[0] * reach; sway[s + 1] = e[1] * reach; sway[s + 2] = e[2] * reach; sway[s + 3] = phase + y * 2; }
+    }
+    const source = geometry.index?.array, corner = i => v + (source ? source[i] : i), total = source ? source.length : count;
+    // A carpet shows whichever face looks up: wind it that way (its turn about the vertical never flips it).
+    let lift = 0;
+    if (family.sides === 'up') for (let i = 0; i < total; i += 3) {
+      const a = corner(i) * 3, b = corner(i + 1) * 3, c = corner(i + 2) * 3;
+      lift += (position[b + 2] - position[a + 2]) * (position[c] - position[a]) - (position[b] - position[a]) * (position[c + 2] - position[a + 2]);
+    }
+    const flip = lift < 0;
+    if (flip) for (let i = v * width; i < (v + count) * width; i++) normal[i] = -normal[i];
+    // The triangles a disc folds onto its own centre have no area: they are left out.
+    const same = (a, b) => position[a * 3] === position[b * 3] && position[a * 3 + 1] === position[b * 3 + 1] && position[a * 3 + 2] === position[b * 3 + 2], first = k;
+    for (let i = 0; i < total; i += 3) {
+      const a = corner(i), b = corner(flip ? i + 2 : i + 1), c = corner(flip ? i + 1 : i + 2);
+      if (same(a, b) || same(b, c) || same(a, c)) continue;
+      index[k++] = a; index[k++] = b; index[k++] = c;
+    }
+    if (family.sides === 2) {
+      // The back of the shape: the same vertices again, facing the other way.
+      position.copyWithin((v + count) * 3, v * 3, (v + count) * 3); color.copyWithin((v + count) * width, v * width, (v + count) * width);
+      for (let i = v * width; i < (v + count) * width; i++) normal[i + count * width] = -normal[i];
+      for (let i = first, last = k; i < last; i += 3) { index[k++] = index[i] + count; index[k++] = index[i + 2] + count; index[k++] = index[i + 1] + count; }
+      v += count;
+    }
+    v += count;
+  }
+  yield;
+  const baked = new THREE.BufferGeometry();
+  baked.setAttribute('position', new THREE.BufferAttribute(position, 3));
+  baked.setAttribute('normal', new THREE.BufferAttribute(normal, width, !portable));
+  baked.setAttribute('color', new THREE.BufferAttribute(color, width, !portable));
+  if (uv) baked.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  if (sway) baked.setAttribute('aSway', new THREE.BufferAttribute(sway, 4));
+  baked.setIndex(new THREE.BufferAttribute(k < index.length ? index.slice(0, k) : index, 1));
+  baked.computeBoundingSphere();
+  if (sway) baked.boundingSphere.radius += .3;
+  // [corners without the brief families, all corners]
+  baked.userData.corners = [steady < 0 ? k : steady, k];
+  return baked;
+}
+function* bakeLayers(root, layers, reef, keepArrays) {
+  // The page never reads these buffers again once the GPU has them; the orbit viewer exports them, so it keeps its copy.
+  const release = function () { this.array = null; };
+  for (const layer of layers) {
+    const cells = new Map(), lighter = layer.families?.some(family => family.distant !== null);
+    yield;
+    for (const family of layer.families || []) for (const entry of family.entries) {
+      const key = Math.floor(entry.matrix.elements[12] / layer.cell) * 1000 + Math.floor(entry.matrix.elements[14] / layer.cell);
+      if (!cells.has(key)) cells.set(key, []);
+      cells.get(key).push({ family, entry });
+    }
+    for (const list of cells.values()) {
+      yield;
+      const near = yield* bakeCell(list, layer, false, keepArrays);
+      if (lighter) yield;
+      const distant = lighter ? yield* bakeCell(list, layer, true, keepArrays) : null;
+      if (distant) distant.boundingSphere.copy(near.boundingSphere);
+      if (!keepArrays) for (const geometry of [near, distant]) if (geometry) { for (const attribute of Object.values(geometry.attributes)) attribute.onUploadCallback = release; geometry.index.onUploadCallback = release; }
+      const mesh = new THREE.Mesh(near, layer.lit && nearLookGlow(near.boundingSphere.center, near.boundingSphere.radius) ? layer.lit : layer.material); mesh.name = layer.name;
+      root.add(mesh); reef.cells.push({ mesh, far: layer.far, lod: layer.lod ?? LOD, near, distant, corners: distant ? distant.userData.corners : null });
+    }
+    // Triangles per family, near and distant: where the reef's vertex budget goes (read by the performance checks).
+    const size = geometry => geometry ? (geometry.index ? geometry.index.count : geometry.getAttribute('position').count) / 3 : 0;
+    for (const family of layer.families || []) {
+      const faces = family.sides === 2 ? 2 : 1;
+      (reef.families ??= {})[family.name] = { layer: layer.name, count: family.entries.length, near: size(family.geometry) * faces * family.entries.length, distant: family.distant === false ? 0 : size(family.distant || family.geometry) * faces * family.entries.length };
+      family.geometry.dispose(); family.distant?.dispose?.();
+    }
+    layer.families = null;
+  }
 }
 
 function segment(target, start, end, radius, color) {
@@ -88,9 +235,10 @@ function segment(target, start, end, radius, color) {
     [radius, direction.length(), radius], new THREE.Quaternion().setFromUnitVectors(UP, direction.normalize()), color);
 }
 
-function plateGeometry(economy = false, carpet = false) {
+function plateGeometry(economy = false, carpet = false, low = false) {
   const positions = [], indices = [];
-  const rings = carpet ? 2 : economy ? 3 : 4, sides = carpet ? 12 : economy ? 22 : 30;
+  // A carpet is flattened to under 3 cm, so a single ring draws the same disc.
+  const rings = carpet ? 1 : low ? 2 : 3, sides = carpet ? 10 : low ? 12 : 16;
   for (let r = 0; r <= rings; r++) {
     const radius = r / rings;
     for (let i = 0; i <= sides; i++) {
@@ -111,68 +259,54 @@ function plateGeometry(economy = false, carpet = false) {
   return geometry;
 }
 
-function fanGeometry(economy = false) {
-  // A fan is an open lattice, not a filled panel. Build the radial ribs and
-  // fine cross-links into one reusable geometry so each fan remains one draw.
-  const positions = [], indices = [];
-  const ribCount = economy ? 9 : 13, ribSteps = economy ? 6 : 8;
-  const tieRows = economy ? 4 : 6;
-  const point = (angle, radius) => {
-    const scallop = 1 + .035 * Math.sin(angle * 12);
-    return new THREE.Vector3(Math.sin(angle) * radius * scallop,
-      .16 + Math.cos(angle) * radius * scallop,
-      .07 * Math.sin(angle * 3) * radius * radius);
-  };
-  const rod = (start, end, radius) => {
-    const direction = new THREE.Vector3().subVectors(end, start).normalize();
-    const side = new THREE.Vector3(-direction.y, direction.x, 0).normalize();
-    const depth = new THREE.Vector3(0, 0, radius * .62);
-    const first = positions.length / 3;
-    for (const center of [start, end]) {
-      const across = side.clone().multiplyScalar(radius);
-      positions.push(
-        center.x + across.x + depth.x, center.y + across.y + depth.y, center.z + across.z + depth.z,
-        center.x - across.x + depth.x, center.y - across.y + depth.y, center.z - across.z + depth.z,
-        center.x - across.x - depth.x, center.y - across.y - depth.y, center.z - across.z - depth.z,
-        center.x + across.x - depth.x, center.y + across.y - depth.y, center.z + across.z - depth.z
-      );
-    }
-    for (let sideIndex = 0; sideIndex < 4; sideIndex++) {
-      const a = first + sideIndex, b = first + (sideIndex + 1) % 4;
-      indices.push(a, a + 4, b, b, a + 4, b + 4);
-    }
-  };
-  const angleAt = index => -.5 * Math.PI + index / (ribCount - 1) * Math.PI;
-  for (let rib = 0; rib < ribCount; rib++) {
-    const angle = angleAt(rib);
-    for (let step = 0; step < ribSteps; step++) {
-      const a = point(angle, step / ribSteps);
-      const b = point(angle, (step + 1) / ribSteps);
-      rod(a, b, (economy ? .012 : .013) * (1 - step / ribSteps * .28));
-    }
-  }
-  for (let row = 1; row <= tieRows; row++) {
-    const radius = row / (tieRows + 1);
-    for (let rib = 0; rib < ribCount - 1; rib++) {
-      rod(point(angleAt(rib), radius), point(angleAt(rib + 1), radius), .0065);
-    }
-  }
-  for (let rib = 0; rib < ribCount - 1; rib++) {
-    rod(point(angleAt(rib), 1), point(angleAt(rib + 1), 1), .009);
+function fanGeometry() {
+  // A gently cupped half disc. The lattice itself is painted once into a
+  // cut-out texture, so a fan costs a few dozen triangles instead of 1,500.
+  const positions = [], uvs = [], indices = [], rings = 3, spokes = 8;
+  for (let r = 0; r <= rings; r++) for (let i = 0; i <= spokes; i++) {
+    const radius = r / rings, angle = -.5 * Math.PI + i / spokes * Math.PI;
+    positions.push(Math.sin(angle) * radius, .16 + Math.cos(angle) * radius, .07 * Math.sin(angle * 3) * radius * radius);
+    uvs.push(.5 + Math.sin(angle) * radius * .5, Math.cos(angle) * radius);
+    if (r < rings && i < spokes) { const a = r * (spokes + 1) + i, b = a + spokes + 1; indices.push(a, b, a + 1, b, b + 1, a + 1); }
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices); geometry.computeVertexNormals();
   return geometry;
 }
 
-function bladeGeometry() {
+function fanTexture() {
+  const size = 256, canvas = document.createElement('canvas'); canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d'); ctx.strokeStyle = '#fff'; ctx.lineCap = 'round';
+  const at = (angle, radius) => [size / 2 + Math.sin(angle) * radius * size * .5, size - Math.cos(angle) * radius * size];
+  const ribs = 15;
+  for (let rib = 0; rib < ribs; rib++) {
+    const angle = -1.45 + rib / (ribs - 1) * 2.9;
+    ctx.beginPath(); ctx.moveTo(...at(angle * .2, 0));
+    for (let step = 1; step <= 12; step++) { const t = step / 12; ctx.lineTo(...at(angle + Math.sin(t * 7 + rib) * .035, t * .97)); }
+    ctx.lineWidth = 5.5; ctx.stroke();
+    // Each rib forks once toward its neighbour to fill the outer rim.
+    ctx.beginPath(); ctx.moveTo(...at(angle, .5)); ctx.quadraticCurveTo(...at(angle + .07, .72), ...at(angle + .1, .95)); ctx.lineWidth = 4; ctx.stroke();
+  }
+  ctx.lineWidth = 3.2;
+  for (let row = 1; row <= 9; row++) {
+    const radius = row / 9.6;
+    ctx.beginPath();
+    for (let i = 0; i <= 40; i++) { const angle = -1.45 + i / 40 * 2.9, point = at(angle, radius + Math.sin(i * 1.7 + row) * .012); i ? ctx.lineTo(...point) : ctx.moveTo(...point); }
+    ctx.stroke();
+  }
+  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; texture.anisotropy = 4;
+  return texture;
+}
+
+function bladeGeometry(steps = 4) {
   const positions = [], indices = [];
-  for (let i = 0; i <= 7; i++) {
-    const t = i / 7, width = .065 * (1 - t) + .008;
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps, width = .065 * (1 - t) + .008;
     const bend = .3 * t * t;
     positions.push(bend - width, t, .07 * Math.sin(t * Math.PI), bend + width, t, .07 * Math.sin(t * Math.PI));
-    if (i < 7) { const a = i * 2; indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+    if (i < steps) { const a = i * 2; indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -180,8 +314,8 @@ function bladeGeometry() {
   return geometry;
 }
 
-function brainGeometry(economy) {
-  const geometry = new THREE.SphereGeometry(1, economy ? 16 : 24, economy ? 10 : 16);
+function brainGeometry(economy, low = false) {
+  const geometry = new THREE.SphereGeometry(1, low ? 12 : economy ? 14 : 18, low ? 7 : economy ? 8 : 11);
   const p = geometry.getAttribute('position'), colors = [];
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
@@ -196,15 +330,15 @@ function brainGeometry(economy) {
   geometry.computeVertexNormals(); return geometry;
 }
 
-function spongeGeometry(economy) {
+function spongeGeometry(economy, low = false) {
   return new THREE.LatheGeometry([
     new THREE.Vector2(.18, 0), new THREE.Vector2(.29, .55),
     new THREE.Vector2(.34, 1), new THREE.Vector2(.23, 1.01),
     new THREE.Vector2(.18, .76), new THREE.Vector2(.12, .18)
-  ], economy ? 9 : 12);
+  ], low ? 6 : economy ? 7 : 9);
 }
 
-function barrelGeometry(economy) {
+function barrelGeometry(economy, low = false) {
   // One continuous lathe profile forms a broad hollow barrel with a visible
   // rolled rim; the opening stays readable from the swimming camera.
   const profile = [
@@ -215,11 +349,11 @@ function barrelGeometry(economy) {
     new THREE.Vector2(.58, .53), new THREE.Vector2(.42, .16),
     new THREE.Vector2(.34, 0)
   ];
-  return new THREE.LatheGeometry(profile, economy ? 10 : 14);
+  return new THREE.LatheGeometry(profile, low ? 9 : economy ? 10 : 14);
 }
 
-function boulderGeometry(economy) {
-  const geometry = new THREE.IcosahedronGeometry(1, economy ? 1 : 2);
+function boulderGeometry(economy, low = false) {
+  const geometry = new THREE.IcosahedronGeometry(1, low || economy ? 1 : 2);
   const positions = geometry.getAttribute('position');
   for (let i = 0; i < positions.count; i++) {
     const x = positions.getX(i), y = positions.getY(i), z = positions.getZ(i);
@@ -230,45 +364,103 @@ function boulderGeometry(economy) {
   return geometry;
 }
 
+// Faceted limestone: displacement is a function of position, so the separate
+// triangles of the icosahedron stay joined while their faces catch the light.
+function chiselledRock(detail) {
+  const geometry = new THREE.IcosahedronGeometry(1, detail), p = geometry.getAttribute('position');
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    const bump = 1 + .15 * Math.sin(x * 3.7 + y * 2.1) * Math.cos(z * 3.3 - y * 1.7) + .07 * Math.sin(z * 6.9 + x * 5.3) + .05 * Math.cos(y * 8.1 - x * 2.9);
+    p.setXYZ(i, x * bump, y * bump, z * bump);
+  }
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+// A weathered stone arch: an uneven half ring whose thickness swells at the
+// feet and thins over the crown, replacing the former smooth torus.
+function rockArchGeometry(economy) {
+  const geometry = new THREE.TorusGeometry(1, .2, economy ? 6 : 7, economy ? 14 : 20, Math.PI).toNonIndexed(), p = geometry.getAttribute('position');
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i), angle = Math.atan2(y, x), radial = Math.hypot(x, y);
+    const swell = 1 + .55 * Math.pow(Math.abs(Math.cos(angle)), 3) + .28 * Math.sin(angle * 5.0 + 1.3) * Math.sin(angle * 2.0);
+    const lump = .05 * Math.sin(angle * 11 + z * 9) + .04 * Math.cos(angle * 17 - z * 6);
+    const r = 1 + (radial - 1) * swell + lump;
+    p.setXYZ(i, Math.cos(angle) * r, Math.sin(angle) * r + .04 * Math.sin(angle * 7), z * swell + .06 * Math.sin(angle * 6.0));
+  }
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+// aSway = (world-space reach of the vertex, phase), baked per vertex by bakeCell().
 function swayMaterial(color, time) {
-  const mat = material(color, { side: THREE.DoubleSide });
+  const mat = material(color, { side: THREE.DoubleSide, vertexColors: true });
   mat.onBeforeCompile = shader => {
     shader.uniforms.uReefTime = time;
-    shader.vertexShader = `uniform float uReefTime;\n${shader.vertexShader}`.replace('#include <begin_vertex>',
-      `#include <begin_vertex>\n#ifdef USE_INSTANCING\nfloat reefPhase = instanceMatrix[3].x * .4 + instanceMatrix[3].z * .19;\ntransformed.x += sin(uReefTime * .65 + reefPhase + transformed.y * 2.) * transformed.y * .035;\n#endif`);
+    shader.vertexShader = `uniform float uReefTime;\nattribute vec4 aSway;\n${shader.vertexShader}`.replace('#include <begin_vertex>',
+      `#include <begin_vertex>\ntransformed += aSway.xyz * sin(uReefTime * .65 + aSway.w);`);
   };
-  mat.customProgramCacheKey = () => 'reef-gentle-sway-v1';
+  mat.customProgramCacheKey = () => 'reef-gentle-sway-v2';
   return mat;
 }
 
-export function createReef({ economy = false } = {}) {
+// The reef is built in steps: reefSteps() pauses (yields) every few milliseconds of work, so the page can build it
+// between frames; createReef() runs the same steps straight through. Either way the reef is the same.
+export function createReef(options) { const steps = reefSteps(options); let step; while (!(step = steps.next()).done); return step.value; }
+export function* reefSteps({ economy = false } = {}) {
   const root = new THREE.Group(); root.name = 'Living reef garden';
   const random = seededRandom(371);
   const swayTime = { value: 0 };
   const surfaceLight={value:1};root.userData.surfaceLight=surfaceLight;
-  const coralPalette = ['#ea8c70', '#dfb27b', '#bf7d9a', '#c98ca5', '#8bbcaf', '#d4b6a0'];
-  const rocks = batch(root, new THREE.IcosahedronGeometry(1, 2), material('#ffffff', { roughness: .9 }));
-  const branches = batch(root, new THREE.CylinderGeometry(.68, 1, 1, 5), material('#ffffff'));
-  const tips = batch(root, new THREE.SphereGeometry(1, 6, 4), material('#ffffff'));
-  const plates = batch(root, plateGeometry(economy), material('#ffffff', { side: THREE.DoubleSide }));
-  const carpets = batch(root, plateGeometry(true,true), material('#ffffff', {side:THREE.DoubleSide}));
-  const fans = batch(root, fanGeometry(economy), material('#ffffff', { side: THREE.DoubleSide }));
-  const colonyProxies = batch(root, new THREE.SphereGeometry(1, 8, 6), material('#ffffff'));
-  const grass = batch(root, bladeGeometry(), swayMaterial('#ffffff', swayTime));
-  const brains = batch(root, brainGeometry(economy), material('#ffffff', { vertexColors: true, roughness: .7 }));
-  const sponges = batch(root, spongeGeometry(economy), material('#ffffff', { side: THREE.DoubleSide }));
+  const parts = { cells: [], collisionSources: [] };
+  const coralPalette = ['#ff7f6a', '#ffb35c', '#e0609a', '#b987e8', '#5fd0b8', '#ffd27a'];
+  // Four layers. Under the shared look these families shade alike (it lights
+  // matte surfaces without a specular term, and the faceted rock carries its
+  // face normals in its vertices), so one material per layer loses nothing.
+  // Each layer has a twin material, `lit`, for the few cells within reach of the polyp glows (see ocean-look.js):
+  // the rest of the reef does not run them. The twins take the look here, with the defaults the page gives the reef.
+  yield;
+  const fanMap = fanTexture(), polypMaterial = lit => stylize(material('#90e6d7', { emissive: '#54dbc3', emissiveIntensity: .25, roughness: .45, vertexColors: true }), { toon: 0, caustics: 0, glow: lit });
+  const glowMats = [polypMaterial(false), polypMaterial(true)];
+  const twin = make => ({ material: make(), lit: stylize(make(), { glow: true }) });
+  const layers = {
+    solid: { name: 'Reef rock and coral', ...twin(() => material('#ffffff', { vertexColors: true })), far: STOUT, cell: CELL },
+    sway: { name: 'Reef grass, whips and tentacles', ...twin(() => swayMaterial('#ffffff', swayTime)), far: LIGHT, cell: CELL, sway: true },
+    fans: { name: 'Lacy branching sea fans', ...twin(() => material('#ffffff', { vertexColors: true, side: THREE.DoubleSide, map: fanMap, alphaTest: .45 })), far: BULK, cell: CELL * 2, mapped: true },
+    glow: { name: 'Bioluminescent reef polyps', material: glowMats[0], lit: glowMats[1], far: FINE, cell: CELL }
+  };
+  yield;
+  const rocks = batch(root, chiselledRock(1), layers.solid, parts);
+  const branches = batch(root, new THREE.CylinderGeometry(.68, 1, 1, 5), layers.solid, parts, new THREE.CylinderGeometry(.68, 1, 1, 3));
+  // Tips are a few centimetres across: five sides read the same as six, in the
+  // lighter cell they are eight triangles each, and past a third of the haze
+  // range, where one is under a pixel, they are left out. (The glowing polyps
+  // keep theirs: four-sided, a polyp reads as a crystal and its glow shrinks
+  // with it. Whips and tentacles keep four sides up close and only lose rings
+  // along their length.)
+  const tips = batch(root, new THREE.SphereGeometry(1, 5, 3), layers.solid, parts, new THREE.SphereGeometry(1, 4, 2), 1, true);
+  const plates = batch(root, plateGeometry(economy), layers.solid, parts, plateGeometry(economy, false, true), 2);
+  const carpets = batch(root, plateGeometry(true,true), layers.solid, parts, null, 'up');
+  const fans = batch(root, fanGeometry(), layers.fans, parts);
+  const colonyProxies = batch(root, new THREE.SphereGeometry(1, 8, 6), null, parts);
+  const grass = batch(root, bladeGeometry(), layers.sway, parts, bladeGeometry(2));
+  // Brain and barrel corals keep their grooves and rims up close; in a lighter cell they take a third fewer segments (their grooves are painted in the vertex colours too).
+  yield;
+  const brains = batch(root, brainGeometry(economy), layers.solid, parts, brainGeometry(economy, true));
+  // Sponges and barrels are lathed cups, outer wall and inner wall both facing the eye: one side is the whole shape.
+  const sponges = batch(root, spongeGeometry(economy), layers.solid, parts, spongeGeometry(economy, true));
   const whipCurve = new THREE.CatmullRomCurve3([new THREE.Vector3(), new THREE.Vector3(.12, .7, .04), new THREE.Vector3(-.16, 1.4, .08), new THREE.Vector3(.26, 2, 0)]);
-  const whips = batch(root, new THREE.TubeGeometry(whipCurve, economy ? 7 : 10, .035, 4, false), swayMaterial('#ffffff', swayTime));
-  const glowMat = material('#90e6d7', { emissive: '#54dbc3', emissiveIntensity: .25, roughness: .45 });
-  const glow = batch(root, new THREE.SphereGeometry(1, 5, 4), glowMat);
+  const whips = batch(root, new THREE.TubeGeometry(whipCurve, economy ? 7 : 8, .035, 4, false), layers.sway, parts, new THREE.TubeGeometry(whipCurve, 4, .035, 3, false));
+  const glow = batch(root, new THREE.SphereGeometry(1, 5, 4), layers.glow, parts, new THREE.SphereGeometry(1, 5, 3));
   const tentacleCurve = new THREE.CatmullRomCurve3([
     new THREE.Vector3(0, 0, 0), new THREE.Vector3(.07, .24, 0),
     new THREE.Vector3(-.04, .48, .04), new THREE.Vector3(.10, .7, .07)
   ]);
-  const tentacles = batch(root, new THREE.TubeGeometry(tentacleCurve, economy ? 5 : 7, .035, 4, false), swayMaterial('#ffffff', swayTime));
-  const domes = batch(root, new THREE.SphereGeometry(1, 10, 6), material('#ffffff'));
-  const barrels = batch(root, barrelGeometry(economy), material('#ffffff', { side: THREE.DoubleSide, roughness: .72 }));
-  const boulders = batch(root, boulderGeometry(economy), material('#ffffff', { roughness: .76 }));
+  const tentacles = batch(root, new THREE.TubeGeometry(tentacleCurve, 5, .035, 4, false), layers.sway, parts, new THREE.TubeGeometry(tentacleCurve, 2, .035, 3, false));
+  yield;
+  const domes = batch(root, new THREE.SphereGeometry(1, 10, 6), layers.solid, parts, new THREE.SphereGeometry(1, 6, 4));
+  const barrels = batch(root, barrelGeometry(economy), layers.solid, parts, barrelGeometry(economy, true));
+  const boulders = batch(root, boulderGeometry(economy), layers.solid, parts, economy ? null : boulderGeometry(economy, true));
   const clusters = [
     [-8, -5, 1.05], [9, -9, 1.25], [-13, -14, 1.5], [16, -18, 1.5],
     [-5, -8, .9], [6, -8, 1.1], [8, -15, 1.35], [5, -20, 1.2],
@@ -334,15 +526,16 @@ export function createReef({ economy = false } = {}) {
     fans.add(origin, [scale, scale * 1.25, scale], rotation, color);
   }
 
-  clusters.forEach(([cx, cz, size], index) => {
-    if (Math.hypot(cx, cz) < 6 + size * 3.5 || routeDistance(cx, cz) < 3.2 + size * 3.5) return;
-    if (LANDMARKS.some(({ position: [x, , z] }) => Math.hypot(cx - x, cz - z) < 6 + size * 4.2)) return;
+  for (const [index, [cx, cz, size]] of clusters.entries()) {
+    yield;
+    if (Math.hypot(cx, cz) < 6 + size * 3.5 || routeDistance(cx, cz) < 3.2 + size * 3.5) continue;
+    if (LANDMARKS.some(({ position: [x, , z] }) => Math.hypot(cx - x, cz - z) < 6 + size * 4.2)) continue;
     // Keep the entire arch corridor and ascent shaft free of rendered reef
     // and colony proxies. Measure to the horizontal route segment and include
     // the full opening width plus the colony's largest outcrop reach.
     const routeZ = THREE.MathUtils.clamp(cz, Math.min(archZ, archExitZ), Math.max(archZ, archExitZ));
-    if (Math.hypot(cx - archX, cz - routeZ) < 6.5 + size * 3.5) return;
-    if(grottoSites.some(([x,z,radius,length])=>Math.abs(cx-x)<radius+size*2&&Math.abs(cz-z)<length+3+size*2))return;
+    if (Math.hypot(cx - archX, cz - routeZ) < 6.5 + size * 3.5) continue;
+    if(grottoSites.some(([x,z,radius,length])=>Math.abs(cx-x)<radius+size*2&&Math.abs(cz-z)<length+3+size*2))continue;
     colonyCount++;
     const deep = terrainHeightAt(cx, cz) < -28;
     const floor = terrainHeightAt(cx, cz);
@@ -357,7 +550,7 @@ export function createReef({ economy = false } = {}) {
       const x = cx + Math.cos(angle) * distance, z = cz + Math.sin(angle) * distance;
       if(grottoSites.some(([ax,az,,length])=>Math.abs(x-ax)<3.5+s*2&&Math.abs(z-az)<length+2+s*2))continue;
       rocks.add(new THREE.Vector3(x, terrainHeightAt(x, z) + s * .24, z),
-        [s * 1.25, s * (.45 + random() * .25), s], [random() * .3, random() * TAU, random() * .3], r % 3 ? '#416e73' : '#628d8b');
+        [s * 1.25, s * (.45 + random() * .25), s], [random() * .3, random() * TAU, random() * .3], r % 3 ? '#7688a2' : '#99a9ba');
     }
     const plants = deep ? (economy ? 6 : 9) : (economy ? 8 : 12);
     for (let p = 0; p < plants; p++) {
@@ -432,7 +625,7 @@ export function createReef({ economy = false } = {}) {
         grass.add(point, [1.3, h, 1.3], [0, random() * TAU, (random() - .5) * .22], g % 3 ? '#619e8e' : '#90b698');
       }
     }
-  });
+  }
 
   // Connected meadows and encrusting plate carpets fill the spaces between
   // colonies without creating additional solid obstacles. Separate seeding
@@ -440,6 +633,7 @@ export function createReef({ economy = false } = {}) {
   const groundRandom = seededRandom(8293);
   const spacing = economy ? 4.8 : 3.5;
   for (let z = -101; z <= 29; z += spacing) {
+    yield;
     for (let x = -57; x <= 57; x += spacing) {
       const gx = x + (groundRandom() - .5) * spacing * .75;
       const gz = z + (groundRandom() - .5) * spacing * .75;
@@ -470,15 +664,53 @@ export function createReef({ economy = false } = {}) {
       }
     }
   }
-  root.userData.habitatCounts = { colonies: colonyCount, meadowTufts, groundCoverPatches };
+  // Low-detail reef shoulders continue outside the swimming boundary. They
+  // share the existing baked layers/LOD and have no collision proxies.
+  let outerReefPatches=0;
+  const outerRandom=seededRandom(6173);
+  const outerSites=[];
+  for(const x of [-91,-75,75,91])for(let z=-108;z<=36;z+=18)outerSites.push([x+(outerRandom()-.5)*6,z+(outerRandom()-.5)*8]);
+  for(const z of [-121,47])for(let x=-60;x<=60;x+=20)outerSites.push([x+(outerRandom()-.5)*8,z]);
+  for(const [x,z] of outerSites){
+    yield;
+    if(economy&&outerReefPatches%2){outerReefPatches++;continue;}
+    const floor=terrainHeightAt(x,z),scale=1.2+outerRandom()*1.7;
+    rocks.add(new THREE.Vector3(x,floor+scale*.38,z),[scale*1.7,scale*.8,scale*1.4],[0,outerRandom()*TAU,0],'#8aa69f');
+    for(let i=0;i<3;i++){
+      const px=x+(outerRandom()-.5)*scale*3,pz=z+(outerRandom()-.5)*scale*3;
+      plates.add(new THREE.Vector3(px,terrainHeightAt(px,pz)+.22,pz),[scale*.65,.25,scale*.65],[0,outerRandom()*TAU,0],i%2?'#b49da2':'#7fb3a3');
+    }
+    seaFan(new THREE.Vector3(x+scale,terrainHeightAt(x+scale,z)-.06,z),scale*.6,'#af87a9');
+    if(floor< -28)glow.add(new THREE.Vector3(x, floor+.45,z),[.13,.28,.13],null,'#92dfe6');
+    outerReefPatches++;
+  }
+  root.userData.habitatCounts = { colonies: colonyCount, meadowTufts, groundCoverPatches, outerReefPatches };
+  yield;
 
   // The shelf rolls into a deep basin well outside the swim boundary. Vertex
   // colors make sand, cliff faces and abyss readable without texture downloads.
-  const sandGeometry = new THREE.PlaneGeometry(250, 340, economy ? 96 : 128, economy ? 128 : 172);
+  // The swimmable reef keeps the exact ~2 m lattice it was sculpted on, so its
+  // creases catch the light as before. The basin beyond the boundary, four
+  // fifths of the plane and always seen through haze, uses ~7 m cells.
+  const fullX = economy ? 96 : 128, fullZ = economy ? 128 : 172, startX = economy ? 23 : 30, startZ = economy ? 39 : 52;
+  const innerX = fullX - startX * 2, outerX = economy ? 8 : 10, innerZ = economy ? 58 : 76, nearZ = economy ? 9 : 12, farZ = economy ? 10 : 14;
+  const lattice = new THREE.PlaneGeometry(250, 340, fullX, fullZ).rotateX(-Math.PI / 2).translate(0, 0, -45), latticePoints = lattice.getAttribute('position');
+  const latticeX = Array.from({ length: fullX + 1 }, (_, i) => latticePoints.getX(i)), latticeZ = Array.from({ length: fullZ + 1 }, (_, j) => latticePoints.getZ(j * (fullX + 1)));
+  lattice.dispose();
+  const columns = innerX + outerX * 2 + 1;
+  const sandGeometry = new THREE.PlaneGeometry(250, 340, columns - 1, innerZ + nearZ + farZ);
   sandGeometry.rotateX(-Math.PI / 2);
   sandGeometry.translate(0, 0, -45);
   const positions = sandGeometry.getAttribute('position'), sandColors = [], sandColor = new THREE.Color();
-  const shelfColor = new THREE.Color('#b5c2ad'), abyssColor = new THREE.Color('#284d5d'), cliffColor = new THREE.Color('#638582');
+  const band = (index, before, inner, after, line, start) => index < before ? line[0] + (line[start] - line[0]) * index / before
+    : index <= before + inner ? line[start + index - before]
+      : line[start + inner] + (line[line.length - 1] - line[start + inner]) * (index - before - inner) / after;
+  for (let i = 0; i < positions.count; i++) {
+    positions.setX(i, band(i % columns, outerX, innerX, outerX, latticeX, startX));
+    positions.setZ(i, band(Math.floor(i / columns), farZ, innerZ, nearZ, latticeZ, startZ));
+  }
+  yield;
+  const shelfColor = new THREE.Color('#ead9b4'), abyssColor = new THREE.Color('#35557a'), cliffColor = new THREE.Color('#9db9a8');
   for (let i = 0; i < positions.count; i++) {
     const x = positions.getX(i), z = positions.getZ(i);
     const height = terrainHeightAt(x, z);
@@ -488,15 +720,15 @@ export function createReef({ economy = false } = {}) {
     sandColors.push(sandColor.r, sandColor.g, sandColor.b);
   }
   sandGeometry.setAttribute('color', new THREE.Float32BufferAttribute(sandColors, 3));
+  yield;
   sandGeometry.computeVertexNormals();
+  yield;
   const sandMaterial = material('#ffffff', { vertexColors: true, roughness: .93 });
-  sandMaterial.onBeforeCompile = shader => {
-    shader.uniforms.uSandTime=swayTime;shader.uniforms.uSandLight=surfaceLight;
-    shader.vertexShader = `varying vec3 vSandWorldPosition;\n${shader.vertexShader}`
-      .replace('#include <begin_vertex>',
-        '#include <begin_vertex>\nvSandWorldPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-    shader.fragmentShader = `uniform float uSandTime;uniform float uSandLight;varying vec3 vSandWorldPosition;\n${shader.fragmentShader}`
-      .replace('#include <common>', `#include <common>
+  // The two broad noise fields span 13-18 m and the soft ripples 16 m, so they
+  // are evaluated per vertex (vSandBroad: mottle, tone, phase of the ripple
+  // lines); only the fine mottle (one read of the baked value noise) and the
+  // ripple lines themselves are left per pixel.
+  const sandNoiseGLSL = `
 float sandHash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
@@ -508,34 +740,41 @@ float sandNoise(vec2 p) {
   float c = sandHash(cell + vec2(0.0, 1.0));
   float d = sandHash(cell + vec2(1.0, 1.0));
   return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-}`)
+}`;
+  sandMaterial.onBeforeCompile = shader => {
+    shader.vertexShader = `varying vec2 vSandP;varying vec3 vSandBroad;\n${shader.vertexShader}`
+      .replace('#include <common>', `#include <common>${sandNoiseGLSL}`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+vSandP = (modelMatrix * vec4(transformed, 1.0)).xz;
+float broadMottle = sandNoise(vSandP * 0.075), rippleWarp = sandNoise(vSandP * 0.055 + vec2(19.0));
+float softRipples = sin(vSandP.x * 0.31 + vSandP.y * 0.23 + (rippleWarp - 0.5) * 2.0) * sin(vSandP.x * -0.17 + vSandP.y * 0.29 + broadMottle * 1.2);
+vSandBroad = vec3(broadMottle * 1.7, 0.90 + broadMottle * 0.13 + softRipples * 0.04, (rippleWarp - .5) * 9.0 + broadMottle * 4.0);`);
+    shader.uniforms.uSandValue = { value: valueTexture() };
+    shader.fragmentShader = `varying vec2 vSandP;varying vec3 vSandBroad;uniform sampler2D uSandValue;\n${shader.fragmentShader}`
       .replace('#include <color_fragment>', `#include <color_fragment>
-vec2 sandP = vSandWorldPosition.xz;
-float broadMottle = sandNoise(sandP * 0.075);
-float fineMottle = sandNoise(sandP * 0.31 + vec2(broadMottle * 1.7));
-float rippleWarp = sandNoise(sandP * 0.055 + vec2(19.0));
-float softRipples = sin(sandP.x * 0.31 + sandP.y * 0.23 + (rippleWarp - 0.5) * 2.0)
-  * sin(sandP.x * -0.17 + sandP.y * 0.29 + broadMottle * 1.2);
-diffuseColor.rgb *= 0.91 + broadMottle * 0.12 + fineMottle * 0.075 + softRipples * 0.035;
-vec2 causticP=sandP*.75+vec2(uSandTime*.12,-uSandTime*.08);
-float cells=sin(causticP.x+sin(causticP.y*1.3)) * sin(causticP.y+sin(causticP.x*.8));
-float caustics=pow(max(0.0,1.0-abs(cells)),14.0);
-diffuseColor.rgb+=vec3(.15,.23,.20)*caustics*uSandLight*exp(min(vSandWorldPosition.y,0.0)*.043);`);
+float fineMottle = texture2D(uSandValue, (vSandP * 0.31 + vec2(vSandBroad.x)) * .03125).r;
+float ridgeLines = smoothstep(.55, 1.0, sin(vSandP.x * 2.3 + vSandP.y * 1.1 + vSandBroad.z) * .5 + .5);
+diffuseColor.rgb *= vSandBroad.y + fineMottle * 0.06 - ridgeLines * 0.055;`);
   };
-  sandMaterial.customProgramCacheKey = () => 'reef-sand-surface-light-v2';
+  sandMaterial.customProgramCacheKey = () => 'reef-sand-surface-light-v6';
+  stylize(sandMaterial, { toon: .14, rim: .05, caustics: 1.25, glow: true });
   const sand = new THREE.Mesh(sandGeometry, sandMaterial);
-  sand.name = 'Sculpted reef shelf and abyss drop-off'; root.add(sand);
+  // Drawn after the coral standing on it, so its costlier shader skips the covered pixels.
+  sand.name = 'Sculpted reef shelf and abyss drop-off'; sand.renderOrder = 10; root.add(sand);
 
-  // A compact limestone arch encloses an open 8 m swimming corridor. Its
+  // A limestone arch over the gully cut in terrainHeightAt: a swim-through
+  // 8.4 m wide between the columns, 10 m long and at least 6 m high, so a
+  // diver coming level off the gully's upper lip passes under the roof. Its
   // three proxies stay separate so the central passage remains traversable.
+  yield;
   const archFloor = terrainHeightAt(archX, archZ);
-  const archTop = archFloor + 8.4, archRoofBottom = archFloor + 6.1;
-  const rockGeometry = new THREE.IcosahedronGeometry(1, 2);
-  const archMat = material('#547574', { roughness: .94 });
+  const archTop = archFloor + 10.95, archRoofBottom = archFloor + 8.25;
+  const rockGeometry = chiselledRock(2);
+  const archMat = material('#8092aa', { roughness: .96, flatShading: true });
   const archPieces = [
-    { name: 'Arch left column', x: archX - 5.3, y: archFloor + 3.05, z: archZ, sx: 1.6, sy: 3.05, sz: 7.0 },
-    { name: 'Arch right column', x: archX + 5.3, y: archFloor + 3.05, z: archZ, sx: 1.6, sy: 3.05, sz: 7.0 },
-    { name: 'Arch overhang roof', x: archX, y: archFloor + 7.25, z: archZ, sx: 7.6, sy: 1.25, sz: 7.2 }
+    { name: 'Arch left column', x: archX - 5.8, y: archFloor + 4.6, z: archZ, sx: 1.6, sy: 5.4, sz: 4.8 },
+    { name: 'Arch right column', x: archX + 5.8, y: archFloor + 4.6, z: archZ, sx: 1.6, sy: 5.4, sz: 4.8 },
+    { name: 'Arch overhang roof', x: archX, y: archFloor + 9.6, z: archZ, sx: 7.6, sy: 1.25, sz: 5.0 }
   ];
   for (const piece of archPieces) {
     const mesh = new THREE.Mesh(rockGeometry, archMat);
@@ -545,7 +784,7 @@ diffuseColor.rgb+=vec3(.15,.23,.20)*caustics*uSandLight*exp(min(vSandWorldPositi
     root.add(mesh);
   }
   const grottoProxies=[];
-  const archGeometry=new THREE.TorusGeometry(1,.18,economy?7:10,economy?18:26,Math.PI);
+  const archGeometry=rockArchGeometry(economy);
   const grottoRibs=new THREE.InstancedMesh(archGeometry,archMat,grottoSites.length*3);
   grottoRibs.name='Limestone grotto arches';root.add(grottoRibs);
   const ribPose=new THREE.Object3D();let ribIndex=0;
@@ -564,7 +803,7 @@ diffuseColor.rgb+=vec3(.15,.23,.20)*caustics*uSandLight*exp(min(vSandWorldPositi
     }
     for(const sign of [-1,1]){
       const px=x+sign*radius,base=terrainHeightAt(px,z);
-      const top=floor+1;rocks.add(new THREE.Vector3(px,(base+top)*.5,z),[1.3,Math.max(.6,(top-base)*.5+.3),length],null,'#547574');
+      const top=floor+1;rocks.add(new THREE.Vector3(px,(base+top)*.5,z),[1.3,Math.max(.6,(top-base)*.5+.3),length],null,'#8092aa');
     }
     for(let n=0;n<12;n++){
       const a=n*2.4,px=x+Math.cos(a)*(radius+1.2),pz=z+Math.sin(a)*length;
@@ -575,36 +814,40 @@ diffuseColor.rgb+=vec3(.15,.23,.20)*caustics*uSandLight*exp(min(vSandWorldPositi
   root.userData.grottoCount=grottoSites.length;
   grottoRibs.computeBoundingSphere();
   const localLights = [
-    { x: archX, y: archFloor + 3.5, z: archZ, color: '#70d9c3', intensity: 7, distance: 15 },
+    { x: archX, y: archRoofBottom - .1, z: archZ, color: '#70d9c3', intensity: 7, distance: 15 },
     { x: -39, y: terrainHeightAt(-39, -86) + 5.2, z: -86, color: '#86bfe8', intensity: 5.5, distance: 16 },
     { x: 39, y: terrainHeightAt(39, -54) + 4.8, z: -54, color: '#8ce2bf', intensity: 5, distance: 14 },
     { x: -7, y: terrainHeightAt(-7, -100) + 5.5, z: -100, color: '#c1a5e8', intensity: 5.5, distance: 16 }
   ];
+  // Accent glows are shaded per vertex by the shared look instead of four
+  // PointLights, which every lit pixel in the scene had to evaluate.
+  setLookGlows(localLights);
   for (const source of localLights) {
-    const light = new THREE.PointLight(source.color, source.intensity, source.distance, 2);
-    light.position.set(source.x, source.y, source.z);
-    root.add(light);
     const polyp = new THREE.Mesh(new THREE.SphereGeometry(.27, 8, 6),
       material(source.color, { emissive: source.color, emissiveIntensity: 1.35, roughness: .3 }));
     polyp.name = 'Bioluminescent polyp cluster';
-    polyp.position.copy(light.position);
+    polyp.position.set(source.x, source.y, source.z);
     root.add(polyp);
   }
   // Collision proxies focus on substantial masses. Delicate branches, fans,
   // ribs and whips stay swimmable, avoiding thousands of tiny boxes.
+  yield;
   rocks.finish('Limestone outcrops', 'solid'); branches.finish('Branching staghorn coral'); tips.finish('Pale growing coral tips');
   plates.finish('Layered table corals');carpets.finish('Encrusting coral carpets'); fans.finish('Lacy branching sea fans');
   grass.finish('Curved sea grass'); tentacles.finish('Anemone tentacles'); domes.finish('Anemone cushions', 'solid');
   brains.finish('Grooved brain coral', 'solid'); sponges.finish('Hollow tube sponges', 'solid'); barrels.finish('Barrel sponge coral', 'solid');
   boulders.finish('Boulder coral', 'solid'); whips.finish('Swaying sea whips'); glow.finish('Bioluminescent reef polyps');
-  const colonyProxyMesh = colonyProxies.finish('Hidden rounded coral colony collision volumes', 'solid');
-  if (colonyProxyMesh) colonyProxyMesh.visible = false;
-  root.userData.collisions = createCollisionWorld(root);
+  // The colony proxies were never drawn; they exist as collision data only.
+  colonyProxies.finish('Hidden rounded coral colony collision volumes', 'solid');
+  yield;
+  root.userData.collisions = yield* collisionWorldSteps(root, undefined, parts.collisionSources);
+  yield* bakeLayers(root, Object.values(layers), parts, Boolean(globalThis.oceanViewer));
+  yield;
   for(const box of grottoProxies)root.userData.collisions.addBox(box,{mesh:'Grotto rib',kind:'arch'});
   for (const piece of archPieces) {
     const half = piece.name.includes('roof')
-      ? new THREE.Vector3(7.6, 1.35, 7.2)
-      : new THREE.Vector3(1.6, 3.05, 7.0);
+      ? new THREE.Vector3(7.6, 1.35, 5.0)
+      : new THREE.Vector3(1.6, 5.4, 4.8);
     root.userData.collisions.addBox(new THREE.Box3(
       new THREE.Vector3(piece.x, piece.y, piece.z).sub(half),
       new THREE.Vector3(piece.x, piece.y, piece.z).add(half)
@@ -618,20 +861,38 @@ diffuseColor.rgb+=vec3(.15,.23,.20)*caustics*uSandLight*exp(min(vSandWorldPositi
       }
     }
     const dx = position.x - archX, dz = position.z - archZ;
-    const underRoof = Math.abs(dx) < 6.4 && Math.abs(dz) < 6.5
+    const underRoof = Math.abs(dx) < 7.9 && Math.abs(dz) < 5.5
       && position.y < archRoofBottom + .8 && position.y > archFloor - 1;
     if (!underRoof) return [];
-    const exitZ = archZ + 12.5;
+    // Leave by the deep mouth, where the water is open, then rise clear of the roof.
+    const exitZ = archZ - 9.5;
     return [
-      new THREE.Vector3(position.x, Math.min(position.y, archRoofBottom - .6), exitZ),
+      new THREE.Vector3(position.x, Math.min(position.y, archRoofBottom - .9), exitZ),
       new THREE.Vector3(position.x, archTop + 2.5, exitZ)
     ];
   };
   root.userData.terrainHeightAt = terrainHeightAt;
   root.userData.bounds = WORLD_BOUNDS;
+  // range: distance at which the haze has absorbed a surface (Infinity = show all).
+  root.userData.cull = (eye, range = Infinity) => {
+    for (const cell of parts.cells) {
+      const mesh = cell.mesh, sphere = cell.near.boundingSphere, distance = eye.distanceTo(sphere.center) - sphere.radius;
+      mesh.visible = distance < range * cell.far;
+      if (cell.distant) {
+        const geometry = distance > range * cell.lod ? cell.distant : cell.near; if (mesh.geometry !== geometry) mesh.geometry = geometry;
+        if (cell.corners[0] < cell.corners[1]) cell.distant.setDrawRange(0, cell.corners[distance > range * BRIEF ? 0 : 1]);
+      }
+    }
+  };
+  root.userData.cellCount = parts.cells.length; root.userData.families = parts.families;
+  // { mesh, near, distant }: the warm-up draws both geometries of a cell once before the first dive. Not enumerable:
+  // cloning an object copies its userData through JSON, which would write every baked vertex out as text.
+  Object.defineProperty(root.userData, 'cells', { value: parts.cells });
+  // Nothing in the reef moves: compose each matrix once, not every frame.
+  root.traverse(node => { if (node !== root) { node.updateMatrix(); node.matrixAutoUpdate = false; } });
   root.userData.update = (elapsed, night = 0, depth = 0) => {
     swayTime.value = elapsed;
-    glowMat.emissiveIntensity = .1 + depth * .4 + night * (.85 + .12 * Math.sin(elapsed * .6));
+    glowMats[0].emissiveIntensity = glowMats[1].emissiveIntensity = .1 + depth * .4 + night * (.85 + .12 * Math.sin(elapsed * .6));
   };
   return root;
 }

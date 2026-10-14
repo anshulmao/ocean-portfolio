@@ -1,0 +1,15 @@
+<!-- Top row: menu button, wordmark, weather glyph and the sun / moon button
+     Source: index.html
+     Styles: styles.css, hologram.css, hud.css (+ motion.css for transitions)
+     Scripts: hud.js (menu, time button, weather glyph); world.js keeps html[data-sky-preset] current
+     ambient-audio.js adds its speaker button to .sky-cluster at run time. -->
+<header class="masthead">
+  <div class="masthead-start">
+    <button id="menu-toggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="settings-menu" aria-label="Open settings menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg></button>
+    <div class="wordmark">ANSHUL<span>A WORLD TO EXPLORE</span></div>
+  </div>
+  <div class="sky-cluster">
+    <span id="weather-glyph" class="weather-glyph" role="img" aria-label="Weather: clear" data-weather="clear" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><g data-w="clear"><path d="M4 10q4-3.4 8 0t8 0M4 15.5q4-3.4 8 0t8 0"/></g><g data-w="rain"><path d="M7 14h10a3.6 3.6 0 0 0 .3-7.2A5.4 5.4 0 0 0 7 8.2 3 3 0 0 0 7 14ZM9 17l-1 3M13 17l-1 3M17 17l-1 3"/></g><g data-w="storm"><path d="M7 14h10a3.6 3.6 0 0 0 .3-7.2A5.4 5.4 0 0 0 7 8.2 3 3 0 0 0 7 14ZM12.5 15.5 10 19h3l-1.5 3.5"/></g></svg><i class="lock-pip" aria-hidden="true"></i></span>
+    <button id="time-cycle" class="time-cycle" type="button" aria-label="Time of day: day. Switch to dusk."><svg class="sky-glyph" viewBox="0 0 24 24" aria-hidden="true"><g class="sky-day"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></g><g class="sky-low"><path d="M2 16h20M6.5 16a5.5 5.5 0 0 1 11 0M12 5v2.5M4.6 8.6l1.8 1.8M19.4 8.6l-1.8 1.8"/><path class="sky-up" d="m9.5 21 2.5-2 2.5 2"/><path class="sky-down" d="m9.5 19 2.5 2 2.5-2"/></g><g class="sky-night"><path d="M19.5 14.6A7.6 7.6 0 0 1 9.4 4.5a7.6 7.6 0 1 0 10.1 10.1Z"/><path d="M17.5 4v2.4M16.3 5.2h2.4"/></g></svg><i class="lock-pip" aria-hidden="true"></i></button>
+  </div>
+</header>

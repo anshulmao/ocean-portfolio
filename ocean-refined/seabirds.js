@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
+import { intensity } from './weather.js';
 
 // Shared gull anatomy, articulated shoulder/elbow joints and long glides.
 export function createSeabirds({ economy = false } = {}) {
@@ -59,14 +60,17 @@ export function createSeabirds({ economy = false } = {}) {
   const counts = { birds: count, meshes: meshes.length, drawCalls: meshes.length, triangles: 0 };
   for (const mesh of meshes) counts.triangles += mesh.count * (mesh.geometry.index?.count ?? mesh.geometry.attributes.position.count) / 3;
   function update(time, camera, night, underwater) {
-    root.visible = underwater < .4 && night < .85;
+    // Gulls thin out as rain sets in and are gone before a storm arrives.
+    const flying = count * Math.max(0, 1 - .45 * Math.min(1, intensity.rain * 2) - .6 * intensity.storm);
+    root.visible = underwater < .4 && night < .85 && flying > .02;
+    if (!root.visible) return;
     for (let i = 0; i < count; i++) {
       const phase = i * 1.7, radius = 26 + i * 3.2, angle = time * .025 + phase;
       const vx = Math.cos(angle), vz = -Math.sin(angle) * .42;
       bird.position.set(Math.sin(angle) * radius, 17 + Math.sin(time * .12 + phase) * 1.6 + i * .45,
         -64 + Math.cos(angle) * radius * .42);
       bird.rotation.set(.025 * Math.sin(time * .5 + phase), Math.atan2(-vx, -vz), -.16 * Math.sin(angle));
-      bird.scale.setScalar(.92 + (i % 4) * .07);
+      bird.scale.setScalar((.92 + (i % 4) * .07) * Math.min(1, Math.max(0, flying - i)));
       bird.updateMatrixWorld(true);
       bodies.setMatrixAt(i, bird.matrixWorld); beaks.setMatrixAt(i, bird.matrixWorld);
       // A short smoothly enveloped burst every 15 seconds, followed by a glide.

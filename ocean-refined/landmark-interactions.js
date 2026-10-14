@@ -1,19 +1,14 @@
 import * as THREE from './vendor/three.module.min.js';
 import { LANDMARKS } from './reef.js';
-import { PORTFOLIO_CONTENT, COPY_VARIANTS } from './portfolio-content.js';
 import { icon } from './ui-icons.js';
+import * as archive from './archive.js';
+import { onTick, ui } from './ui-ticker.js';
 
 const prompt = document.querySelector('#interact-prompt');
 const panel = document.querySelector('#landmark-dialog');
 const credits = document.querySelector('#credits-dialog');
 const point = new THREE.Vector3(), ray = new THREE.Ray(), direction = new THREE.Vector3(), hit = new THREE.Vector3();
-const descriptions = {
-  about: ['THE ANCHOR', 'An anchor for my story.'],
-  experience: ['THE WRECK', 'Explore the chapters of my journey.'],
-  projects: ['THE TREASURE', 'Discover what I’ve been building.'],
-  resume: ['THE LOGBOOK', 'The work, on one page.'],
-};
-let eligible = null, opened = null, last = 0, returnFocus = null;
+let eligible = null, opened = null, returnFocus = null;
 
 function clearSight(start, end, controls) {
   const world = controls.reef?.userData.collisions;
@@ -28,98 +23,31 @@ function clearSight(start, end, controls) {
   return true;
 }
 
-let sectionId = 'about', entryId = null, archiveMotion=null;
-const index = document.querySelector('#explorer-index');
-const variant = document.querySelector('#copy-variant');
 const archiveToggle = document.querySelector('#archive-toggle');
-const media = {
-  overview:{src:'./assets/portfolio/ocean-world.png',alt:'The living reef in my browser-based portfolio',caption:'A world to explore · This portfolio',kind:'scene'},
-  reengage:{src:'./assets/portfolio/reengage.jpg',alt:'Rae Engage chat widget open on the CelcomDigi business website',caption:'Rae Engage · Live public work sample',kind:'product'},
-  sage:{src:'./assets/portfolio/sage.jpg',alt:'Sage personal health demo interface',caption:'Sage · Live demo interface',kind:'product'},
-  wattmana:{src:'./assets/portfolio/wattmana.png',alt:'WattMana electricity bill explanation interface',caption:'WattMana · Working browser prototype',kind:'product'},
-  'portfolio-resume':{src:'./assets/portfolio/resume.png',alt:'Preview of the existing portfolio resume PDF',caption:'AI Product Manager · July 2026',kind:'document'},
-};
-for (const button of panel.querySelectorAll('[data-section]')) button.prepend(icon(button.dataset.section));
-document.querySelector('.explorer-emblem').replaceChildren(icon('computer'));
-document.querySelector('#dive-computer-toggle > span').replaceChildren(icon('computer'));
+document.querySelector('#dive-computer-toggle > span')?.replaceChildren(icon('computer'));
 archiveToggle.prepend(icon('resume'));
 
-try { variant.value = localStorage.getItem('ocean-copy-variant') || 'baseline'; } catch {}
-if (!['baseline', ...Object.keys(COPY_VARIANTS)].includes(variant.value)) variant.value = 'baseline';
-function renderEntry(id) {
-  archiveMotion?.kill();archiveMotion=null;
-  const section = PORTFOLIO_CONTENT[sectionId];
-  const entry = section.entries.find(item => item.id === id) || section.entries[0]; entryId = entry.id;
-  for (const button of index.querySelectorAll('button')) button.setAttribute('aria-current', String(button.dataset.entry === entryId));
-  panel.dataset.section = sectionId;
-  panel.dataset.entry = entry.id;
-  document.querySelector('#entry-number').textContent = `${String(section.entries.indexOf(entry)+1).padStart(2,'0')} / ${String(section.entries.length).padStart(2,'0')}`;
-  const visual = media[entry.id];
-  const figure = document.querySelector('#explorer-media');figure.hidden = !visual;
-  if (visual) {
-    const image = document.querySelector('#entry-image');image.src = visual.src;image.alt = visual.alt;
-    document.querySelector('#entry-image-link').href = visual.src;document.querySelector('#entry-image-link').setAttribute('aria-label', `Open full image: ${visual.caption}`);
-    figure.dataset.kind = visual.kind;document.querySelector('#entry-image-caption').textContent = `${visual.caption} · Click image to expand`;
-  }
-  const reading = panel.querySelector('.explorer-reading');
-  reading.getAnimations().forEach(animation => animation.cancel());
-  document.querySelector('#landmark-title').textContent = entry.title;
-  document.querySelector('#entry-tag').textContent = entry.tag.toUpperCase();
-  document.querySelector('#landmark-caption').textContent = variant.value === 'baseline' ? entry.summary : COPY_VARIANTS[variant.value][sectionId];
-  const paragraphs = entry.body.map(text => Object.assign(document.createElement('p'), {textContent:text}));
-  document.querySelector('#explorer-content').replaceChildren(...paragraphs);
-  document.querySelector('#explorer-facts').replaceChildren(...entry.facts.map(text => Object.assign(document.createElement('li'), {textContent:text})));
-  document.querySelector('#explorer-links').replaceChildren(...entry.links.filter(link => /^(https:\/\/|mailto:|\.\/assets\/portfolio\/)/.test(link.url)).map(link => {
-    const a = document.createElement('a'); a.append(icon(link.download?'download':'arrow'),document.createTextNode(link.label)); a.href = link.url;
-    if (link.download) a.download = 'Anshul-Ramprasad-Resume.pdf';
-    else if (link.url.endsWith('.pdf')) {a.target = '_blank'; a.rel = 'noopener';}
-    if (link.url.startsWith('https:')) {a.target = '_blank'; a.rel = 'noopener noreferrer';} return a;
-  }));
-  let chapter=reading.querySelector('.chapter-art');
-  if(!chapter){chapter=document.createElement('div');chapter.className='chapter-art';chapter.setAttribute('aria-hidden','true');reading.prepend(chapter);}
-  chapter.replaceChildren(icon(sectionId));
-  const label=document.createElement('span');label.textContent={about:'The person behind the dive',experience:'Chapters of the journey',projects:'Ideas brought to life',resume:'Take the story with you'}[sectionId];chapter.append(label);
-  if(window.gsap){
-    gsap.killTweensOf(reading.querySelectorAll('*'));
-    gsap.set(reading.querySelectorAll('*'),{clearProps:'transform,opacity'});
-    if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
-      const tl=archiveMotion=gsap.timeline({defaults:{ease:'power3.out'}});
-      tl.fromTo(chapter,{y:12,opacity:0},{y:0,opacity:1,duration:.4})
-        .fromTo(reading.querySelector('h2'),{y:18,opacity:0},{y:0,opacity:1,duration:.5},.06)
-        .fromTo(reading.querySelector('.dialog-caption'),{y:12,opacity:0},{y:0,opacity:1,duration:.42},.14)
-        .fromTo(figure,{scale:.97,y:12,opacity:0},{scale:1,y:0,opacity:1,duration:.58},.1)
-        .fromTo(reading.querySelectorAll('#explorer-content p, #explorer-facts li, #explorer-links a'),{y:10,opacity:0},{y:0,opacity:1,duration:.4,stagger:{amount:.24}},.22);
-    }
-  }
-}
-function renderSection(id) {
-  sectionId = id; const section = PORTFOLIO_CONTENT[id];
-  document.querySelector('#landmark-kicker').textContent = descriptions[id][0];
-  for (const button of panel.querySelectorAll('[data-section]')) {
-    if (button.dataset.section === id) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
-  }
-  index.replaceChildren(...section.entries.map(entry => {
-    const button = document.createElement('button'); button.type = 'button'; button.dataset.entry = entry.id;
-    const text = document.createElement('div');text.append(document.createTextNode(entry.title), Object.assign(document.createElement('span'), {textContent:entry.tag.toUpperCase()}));
-    button.append(icon(entry.id in {rae:1,reengage:1,wattmana:1,sage:1,openclaw:1,overview:1,approach:1}?entry.id:sectionId), text);
-    button.addEventListener('click', () => renderEntry(entry.id)); return button;
-  }));
-  renderEntry(section.entries[0].id);
-}
-for (const button of panel.querySelectorAll('[data-section]')) button.addEventListener('click', () => renderSection(button.dataset.section));
-variant.addEventListener('change', () => {renderEntry(entryId); try {localStorage.setItem('ocean-copy-variant', variant.value);} catch {}});
-
-function openArchive(id, fromWaypoint=false) {
+// Opens the records from a landmark (F), the HUD button, the surface link, a URL
+// hash or window.oceanArchive. Reading is allowed at the surface as well as on a
+// dive, and still works when the 3D scene never became available. A landmark or a
+// link opens its own section; the button and the surface link have no target, so
+// they open the at-a-glance view. Nothing here waits on a download before it opens.
+function openArchive(id, fromWaypoint=false, entry=null) {
   const controls = window.oceanControls;
-  if (!controls || controls.getMode() !== 'diver' || controls.getTransition() || panel.open || credits.open) return;
+  if (controls?.getTransition() || controls?.getMode() === 'transition' || panel.open || credits.open) return false;
   if (!fromWaypoint) opened = null;
-  returnFocus = document.activeElement;controls.setInterfaceOpen(true);renderSection(id);
-  if (fromWaypoint) controls.models?.interact(id,true);
+  returnFocus = document.activeElement;controls?.setInterfaceOpen(true);
+  if (fromWaypoint) controls?.models?.interact(id,true);
+  const label = panel.querySelector('#archive-return-label');
+  if (label) label.textContent = window.oceanDiagnostics?.submerged ? 'Return to the reef' : 'Return to the surface';
   prompt.hidden = true;panel.showModal();
-  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) panel.animate([{opacity:0,transform:'translateY(24px) scale(.98)'},{opacity:1,transform:'translateY(0) scale(1)'}],{duration:480,easing:'cubic-bezier(.16,1,.3,1)'});
-  window.oceanDiagnostics.interaction = id;panel.querySelector('.dialog-close').focus();
+  // Rendered after the dialog is laid out so the entry can be scrolled into place.
+  archive.show(id, entry, {force:true});
+  if (window.oceanDiagnostics) window.oceanDiagnostics.interaction = archive.current().section;
+  panel.querySelector('.dialog-close').focus({preventScroll:true});
+  return true;
 }
-archiveToggle.addEventListener('click', () => openArchive('about'));
+archiveToggle.addEventListener('click', () => openArchive(archive.GLANCE));
 function interact() {
   const controls = window.oceanControls;
   if (!controls || !eligible || controls.getMode() !== 'diver' || controls.getTransition() || panel.open || credits.open) return;
@@ -127,18 +55,67 @@ function interact() {
   openArchive(opened.id,true);
 }
 
+// A quiet way in for visitors who would rather read than dive. Appended to the
+// hero so it never depends on which buttons its siblings are.
+const logbookLink = document.createElement('button');
+logbookLink.type = 'button'; logbookLink.id = 'logbook-link'; logbookLink.className = 'logbook-link';
+logbookLink.append(icon('resume'), document.createTextNode('Read the logbook'));
+logbookLink.addEventListener('click', () => openArchive(archive.GLANCE));
+document.querySelector('#main')?.append(logbookLink);
+
+window.oceanArchive = {
+  // open('log', 'product-manager'): section ids or their hash names; the entry is optional.
+  // open() with no section, or 'glance' / 'records', shows the at-a-glance view.
+  open(section=archive.GLANCE, entry=null) {
+    const id = archive.resolveSection(section) || archive.GLANCE;
+    if (panel.open) { archive.show(id, entry); if (window.oceanDiagnostics) window.oceanDiagnostics.interaction = id; return true; }
+    return openArchive(id, false, entry);
+  },
+  close() { if (panel.open) panel.close(); },
+  get isOpen() { return panel.open; },
+  get current() { return panel.open ? archive.current() : null; },
+  // Additions: turn pages across the whole records, list them, link to one, print the summary.
+  step(direction=1) { return panel.open ? archive.step(direction < 0 ? -1 : 1) : false; },
+  get stops() { return archive.stops(); },
+  link(section, entry=null) { return section === undefined ? archive.linkFor() : archive.linkFor(archive.resolveSection(section) || archive.GLANCE, entry); },
+  print() { if (panel.open) archive.print(); },
+};
+// #records, #profile, #log, #finds and #resume open a section once the page is ready; every entry has its
+// own link (#profile/rules, #log/product-manager, #finds/sage). archive.js keeps the address in step while reading.
+let pendingHash = null;
+function readHash() { pendingHash = archive.parseHash(location.hash); }
+// Timer-driven so it does not depend on the render loop; gives up waiting for the scene after 9 s.
+let hashTimer = 0;
+function openFromHash() {
+  clearTimeout(hashTimer);
+  if (!pendingHash) return;
+  const ready = window.oceanDiagnostics?.ready || document.body.dataset.ready === 'true' || document.body.dataset.fallback === 'true' || performance.now() > 9000;
+  if (ready && (window.oceanArchive.open(pendingHash.id, pendingHash.entry) || credits.open)) pendingHash = null;
+  else hashTimer = setTimeout(openFromHash, 200);
+}
+readHash(); openFromHash();
+addEventListener('hashchange', () => { readHash(); openFromHash(); });
+
 function close(dialog) { if (dialog.open) dialog.close(); }
+// HUD buttons are hidden while a dialog is open and take a frame or two to come
+// back, so focus is retried briefly instead of being dropped on the body.
+function restoreFocus(target, attempt=0) {
+  if (!target?.isConnected || panel.open || credits.open) return;
+  target.focus({preventScroll:true});
+  if (document.activeElement !== target && attempt < 6 && [document.body, null].includes(document.activeElement)) setTimeout(() => restoreFocus(target, attempt + 1), 80);
+}
 for (const dialog of [panel, credits]) {
   dialog.querySelector('.dialog-close').addEventListener('click', () => close(dialog));
   dialog.addEventListener('close', () => {
     const controls = window.oceanControls;
+    // A close event can arrive after the records were opened again; that newer session keeps its state.
+    if (dialog === panel && panel.open) return;
     if (dialog === panel && opened) controls?.models?.interact(opened.id, false);
-    opened = null;
+    if (dialog === panel) { opened = null; archive.leave(); }
     if (!panel.open && !credits.open) controls?.setInterfaceOpen(false);
-    if (window.oceanDiagnostics) window.oceanDiagnostics.interaction = null;
+    if (window.oceanDiagnostics && !panel.open) window.oceanDiagnostics.interaction = null;
     // Return to interface mode. Capturing the mouse always needs a fresh click.
-    if (returnFocus?.isConnected && returnFocus !== document.querySelector('#world')) returnFocus.focus({preventScroll:true});
-    else document.querySelector('#capture-hint')?.focus({preventScroll:true});
+    restoreFocus(returnFocus?.isConnected && returnFocus !== document.querySelector('#world') ? returnFocus : document.querySelector('#capture-hint'));
   });
 }
 panel.querySelector('.dialog-return').addEventListener('click', () => close(panel));
@@ -170,33 +147,40 @@ document.querySelector('#credits-toggle').addEventListener('click', async () => 
   } catch { container.textContent = 'Credits could not load. Please try again.'; }
 });
 
-function update(now) {
-  requestAnimationFrame(update);
-  if (now - last < 120) return; last = now;
-  const controls = window.oceanControls;
-  archiveToggle.hidden = !window.oceanDiagnostics?.submerged || Boolean(controls?.getTransition());
+// The proximity check runs eight times a second on the interface clock (ui-ticker.js). It reuses its
+// vectors, and touches the page only when the prompt appears, disappears or names another landmark.
+const player = new THREE.Vector3(), sight = new THREE.Vector3(), promptLabel = prompt.querySelector('span');
+let prompted = null;
+function setHidden(node, value) { if (node.hidden !== value) node.hidden = value; }
+function update() {
+  const controls = window.oceanControls, state = window.oceanDiagnostics;
+  setHidden(archiveToggle, !state?.submerged || Boolean(controls?.getTransition()));
   eligible = null;
-  if (!controls || !window.oceanDiagnostics?.ready || controls.getMode() !== 'diver' || controls.getTransition() || panel.open || credits.open || document.querySelector('#movement-panel')?.hidden === false) {
-    prompt.hidden = true; return;
+  if (!controls || !state?.ready || controls.getMode() !== 'diver' || controls.getTransition() || panel.open || credits.open || ui.panel) {
+    setHidden(prompt, true); return;
   }
-  const player = controls.getPlayerPosition();
+  if (state.playerPosition) player.fromArray(state.playerPosition); else player.copy(controls.getPlayerPosition());
+  const placed = controls.models?.landmarks;
   let nearest = Infinity;
-  for (const item of LANDMARKS) {
-    const modelLandmark = controls.models?.landmarks?.find(landmark => landmark.id === item.id);
+  for (let i = 0; i < LANDMARKS.length; i++) {
+    const item = LANDMARKS[i];
+    let modelLandmark = null;
+    if (placed) for (let j = 0; j < placed.length; j++) if (placed[j].id === item.id) { modelLandmark = placed[j]; break; }
     const target = modelLandmark?.position || item.position;
     if (target?.isVector3) point.copy(target); else point.fromArray(target);
     const range = (modelLandmark?.maxRange || 6) + .6;
     const distance = player.distanceTo(point);
+    if (distance > range || distance >= nearest) continue;
     const approach = modelLandmark?.interactionPosition;
-    const sightTarget = approach ? new THREE.Vector3().fromArray(approach) : point;
-    if (distance > range || distance >= nearest || !clearSight(player, sightTarget, controls)) continue;
+    if (!clearSight(player, approach ? sight.fromArray(approach) : point, controls)) continue;
     eligible = item; nearest = distance;
   }
-  prompt.hidden = !eligible;
-  if (eligible) {
-    prompt.querySelector('span').textContent = `Explore ${eligible.title}`;
+  setHidden(prompt, !eligible);
+  if (eligible && eligible !== prompted) {
+    prompted = eligible;
+    promptLabel.textContent = `Explore ${eligible.title}`;
     prompt.setAttribute('aria-label', `Explore ${eligible.title}. Press F.`);
   }
-  window.oceanDiagnostics.nearbyLandmark = eligible?.id || null;
+  state.nearbyLandmark = eligible?.id || null;
 }
-requestAnimationFrame(update);
+onTick(update, 8);

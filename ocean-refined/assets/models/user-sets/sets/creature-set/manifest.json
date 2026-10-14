@@ -1,0 +1,754 @@
+{
+ "units": "metres",
+ "forward": "+Z",
+ "up": "+Y",
+ "license": "Made in code for this project; no third-party assets",
+ "creatures": [
+  {
+   "id": "right-whale",
+   "name": "Southern right whale",
+   "scientific": "Eubalaena australis",
+   "group": "whale",
+   "lengthMetres": 14,
+   "boundsMetres": [
+    5.495,
+    3.416,
+    14.02
+   ],
+   "triangles": 844,
+   "bones": 9,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 6.4
+    },
+    {
+     "name": "fast",
+     "seconds": 3.6
+    },
+    {
+     "name": "idle",
+     "seconds": 9
+    }
+   ],
+   "note": "No dorsal fin, a head a quarter of its length, pale callosities and broad paddle flippers.",
+   "file": "right-whale.glb",
+   "bytes": 189704
+  },
+  {
+   "id": "whale-shark",
+   "name": "Whale shark",
+   "scientific": "Rhincodon typus",
+   "group": "shark",
+   "lengthMetres": 9.5,
+   "boundsMetres": [
+    3.237,
+    3.344,
+    9.5
+   ],
+   "triangles": 1118,
+   "bones": 10,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 4.6
+    },
+    {
+     "name": "fast",
+     "seconds": 2.8
+    },
+    {
+     "name": "idle",
+     "seconds": 7
+    }
+   ],
+   "note": "A broad flat head with the mouth across its front, pale spots in rows, and a tall crescent tail.",
+   "file": "whale-shark.glb",
+   "bytes": 242572
+  },
+  {
+   "id": "orca",
+   "name": "Orca (bull)",
+   "scientific": "Orcinus orca",
+   "group": "whale",
+   "lengthMetres": 6.6,
+   "boundsMetres": [
+    2.323,
+    2.834,
+    6.542
+   ],
+   "triangles": 712,
+   "bones": 10,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 2.8
+    },
+    {
+     "name": "fast",
+     "seconds": 1.5
+    },
+    {
+     "name": "idle",
+     "seconds": 5
+    }
+   ],
+   "note": "The bull carries a dorsal fin as tall as a diver, with a grey saddle behind it.",
+   "file": "orca.glb",
+   "bytes": 169280
+  },
+  {
+   "id": "orca-cow",
+   "name": "Orca (female)",
+   "scientific": "Orcinus orca",
+   "group": "whale",
+   "lengthMetres": 5.6,
+   "boundsMetres": [
+    1.971,
+    1.707,
+    5.551
+   ],
+   "triangles": 712,
+   "bones": 10,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 2.8
+    },
+    {
+     "name": "fast",
+     "seconds": 1.5
+    },
+    {
+     "name": "idle",
+     "seconds": 5
+    }
+   ],
+   "note": "A shorter, back-curved dorsal fin; the calf swims as a half-size cow.",
+   "file": "orca-cow.glb",
+   "bytes": 169324
+  },
+  {
+   "id": "pink-whipray",
+   "name": "Pink whipray",
+   "scientific": "Pateobatis fai",
+   "group": "ray",
+   "lengthMetres": 3,
+   "discWidthMetres": 1.3,
+   "boundsMetres": [
+    1.296,
+    0.117,
+    3
+   ],
+   "triangles": 448,
+   "bones": 17,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 2.3
+    },
+    {
+     "name": "glide",
+     "seconds": 4.5
+    },
+    {
+     "name": "rest",
+     "seconds": 3.6
+    }
+   ],
+   "note": "A kite-shaped disc a diver could lie on, plain and sandy, trailing a whip twice its own length.",
+   "file": "pink-whipray.glb",
+   "bytes": 144900
+  },
+  {
+   "id": "bottlenose-dolphin",
+   "name": "Bottlenose dolphin",
+   "scientific": "Tursiops aduncus",
+   "group": "whale",
+   "lengthMetres": 2.7,
+   "boundsMetres": [
+    0.691,
+    0.716,
+    2.668
+   ],
+   "triangles": 676,
+   "bones": 9,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 1.15
+    },
+    {
+     "name": "fast",
+     "seconds": 0.62
+    },
+    {
+     "name": "idle",
+     "seconds": 2.6
+    }
+   ],
+   "note": "A short beak under a rounded melon, a hooked dorsal fin and a three-tone grey coat.",
+   "file": "bottlenose-dolphin.glb",
+   "bytes": 159636
+  },
+  {
+   "id": "nurse-shark",
+   "name": "Tawny nurse shark",
+   "scientific": "Nebrius ferrugineus",
+   "group": "shark",
+   "lengthMetres": 2.6,
+   "boundsMetres": [
+    0.653,
+    0.43,
+    2.599
+   ],
+   "triangles": 630,
+   "bones": 10,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 2.6
+    },
+    {
+     "name": "fast",
+     "seconds": 1.4
+    },
+    {
+     "name": "rest",
+     "seconds": 4.2
+    }
+   ],
+   "note": "A wide blunt head with barbels, two dorsal fins set far back, and a long low tail with no lower lobe.",
+   "file": "nurse-shark.glb",
+   "bytes": 154788
+  },
+  {
+   "id": "blacktip-reef-shark",
+   "name": "Blacktip reef shark",
+   "scientific": "Carcharhinus melanopterus",
+   "group": "shark",
+   "lengthMetres": 1.6,
+   "boundsMetres": [
+    0.364,
+    0.499,
+    1.598
+   ],
+   "triangles": 700,
+   "bones": 10,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 1.5
+    },
+    {
+     "name": "fast",
+     "seconds": 0.7
+    },
+    {
+     "name": "idle",
+     "seconds": 2.4
+    }
+   ],
+   "note": "Every fin dipped in black, the dorsal tip underlined in white, and a pale wedge along the flank.",
+   "file": "blacktip-reef-shark.glb",
+   "bytes": 167480
+  },
+  {
+   "id": "yellowfin-tuna",
+   "name": "Yellowfin tuna",
+   "scientific": "Thunnus albacares",
+   "group": "fish",
+   "lengthMetres": 1.5,
+   "boundsMetres": [
+    0.321,
+    0.632,
+    1.5
+   ],
+   "triangles": 902,
+   "bones": 9,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.5
+    },
+    {
+     "name": "fast",
+     "seconds": 0.28
+    },
+    {
+     "name": "idle",
+     "seconds": 0.8
+    }
+   ],
+   "note": "A torpedo with a gold flank stripe, yellow sickle fins and finlets, and a hard crescent tail.",
+   "file": "yellowfin-tuna.glb",
+   "bytes": 195472
+  },
+  {
+   "id": "great-barracuda",
+   "name": "Great barracuda",
+   "scientific": "Sphyraena barracuda",
+   "group": "fish",
+   "lengthMetres": 1.4,
+   "boundsMetres": [
+    0.178,
+    0.392,
+    1.4
+   ],
+   "triangles": 658,
+   "bones": 9,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 1.1
+    },
+    {
+     "name": "fast",
+     "seconds": 0.34
+    },
+    {
+     "name": "hover",
+     "seconds": 2.4
+    }
+   ],
+   "note": "A silver pike of the sea: a long jaw that juts beneath, two small dorsals far apart, dark bars and ink blots.",
+   "file": "great-barracuda.glb",
+   "bytes": 154068
+  },
+  {
+   "id": "bumphead-parrotfish",
+   "name": "Bumphead parrotfish",
+   "scientific": "Bolbometopon muricatum",
+   "group": "fish",
+   "lengthMetres": 1.2,
+   "boundsMetres": [
+    0.261,
+    0.502,
+    1.213
+   ],
+   "triangles": 664,
+   "bones": 8,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 1.25
+    },
+    {
+     "name": "fast",
+     "seconds": 0.6
+    },
+    {
+     "name": "graze",
+     "seconds": 1.8
+    }
+   ],
+   "note": "A wall of a forehead above a pale beak; it rows with its pectoral fins and stops to bite at the reef.",
+   "file": "bumphead-parrotfish.glb",
+   "bytes": 154040
+  },
+  {
+   "id": "giant-trevally",
+   "name": "Giant trevally",
+   "scientific": "Caranx ignobilis",
+   "group": "fish",
+   "lengthMetres": 1.1,
+   "boundsMetres": [
+    0.206,
+    0.465,
+    1.101
+   ],
+   "triangles": 708,
+   "bones": 9,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.78
+    },
+    {
+     "name": "fast",
+     "seconds": 0.36
+    },
+    {
+     "name": "idle",
+     "seconds": 1.3
+    }
+   ],
+   "note": "A deep silver body with a steep blunt forehead, sickle pectorals and a hard forked tail.",
+   "file": "giant-trevally.glb",
+   "bytes": 165548
+  },
+  {
+   "id": "bluespotted-ray",
+   "name": "Bluespotted ribbontail ray",
+   "scientific": "Taeniura lymma",
+   "group": "ray",
+   "lengthMetres": 0.7,
+   "discWidthMetres": 0.3,
+   "boundsMetres": [
+    0.301,
+    0.037,
+    0.7
+   ],
+   "triangles": 568,
+   "bones": 17,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 1.1
+    },
+    {
+     "name": "fast",
+     "seconds": 0.6
+    },
+    {
+     "name": "rest",
+     "seconds": 3
+    }
+   ],
+   "note": "An ochre oval the size of a dinner plate, scattered with electric-blue spots, with a blue-striped tail.",
+   "file": "bluespotted-ray.glb",
+   "bytes": 166612
+  },
+  {
+   "id": "remora",
+   "name": "Live sharksucker",
+   "scientific": "Echeneis naucrates",
+   "group": "fish",
+   "lengthMetres": 0.6,
+   "boundsMetres": [
+    0.096,
+    0.081,
+    0.596
+   ],
+   "triangles": 634,
+   "bones": 9,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.8
+    },
+    {
+     "name": "fast",
+     "seconds": 0.42
+    },
+    {
+     "name": "ride",
+     "seconds": 1.7
+    }
+   ],
+   "note": "A slim hitch-hiker with a sucker plate on its crown and an ink stripe edged in white.",
+   "file": "remora.glb",
+   "bytes": 151972
+  },
+  {
+   "id": "emperor-angelfish",
+   "name": "Emperor angelfish",
+   "scientific": "Pomacanthus imperator",
+   "group": "small",
+   "lengthMetres": 0.35,
+   "boundsMetres": [
+    0.07,
+    0.21,
+    0.35
+   ],
+   "triangles": 598,
+   "bones": 8,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.5
+    },
+    {
+     "name": "fast",
+     "seconds": 0.25
+    },
+    {
+     "name": "idle",
+     "seconds": 1.1
+    }
+   ],
+   "note": "Yellow and royal-blue pinstripes running nose to tail behind a black mask edged in light blue.",
+   "file": "emperor-angelfish.glb",
+   "bytes": 141956
+  },
+  {
+   "id": "flying-fish",
+   "name": "Two-wing flying fish",
+   "scientific": "Exocoetus volitans",
+   "group": "fish",
+   "lengthMetres": 0.3,
+   "boundsMetres": [
+    0.362,
+    0.081,
+    0.3
+   ],
+   "triangles": 536,
+   "bones": 10,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.34
+    },
+    {
+     "name": "glide",
+     "seconds": 1.2
+    },
+    {
+     "name": "taxi",
+     "seconds": 0.16
+    }
+   ],
+   "note": "Pectoral fins as long as its body, held spread to glide; underwater they lie folded along its flanks.",
+   "file": "flying-fish.glb",
+   "bytes": 133012
+  },
+  {
+   "id": "fusilier",
+   "name": "Yellow-and-blueback fusilier",
+   "scientific": "Caesio teres",
+   "group": "small",
+   "lengthMetres": 0.3,
+   "boundsMetres": [
+    0.062,
+    0.086,
+    0.294
+   ],
+   "triangles": 436,
+   "bones": 8,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.36
+    },
+    {
+     "name": "fast",
+     "seconds": 0.18
+    },
+    {
+     "name": "idle",
+     "seconds": 0.792
+    }
+   ],
+   "note": "Streamlined blue fish with a yellow back and tail, pouring along the reef edge in ribbons.",
+   "file": "fusilier.glb",
+   "bytes": 112952
+  },
+  {
+   "id": "moorish-idol",
+   "name": "Moorish idol",
+   "scientific": "Zanclus cornutus",
+   "group": "small",
+   "lengthMetres": 0.2,
+   "boundsMetres": [
+    0.037,
+    0.293,
+    0.2
+   ],
+   "triangles": 496,
+   "bones": 8,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.42
+    },
+    {
+     "name": "fast",
+     "seconds": 0.21
+    },
+    {
+     "name": "idle",
+     "seconds": 0.924
+    }
+   ],
+   "note": "Black, white and yellow bands under a dorsal streamer longer than the fish.",
+   "file": "moorish-idol.glb",
+   "bytes": 123804
+  },
+  {
+   "id": "powder-blue-tang",
+   "name": "Powder blue tang",
+   "scientific": "Acanthurus leucosternon",
+   "group": "small",
+   "lengthMetres": 0.2,
+   "boundsMetres": [
+    0.039,
+    0.116,
+    0.196
+   ],
+   "triangles": 436,
+   "bones": 8,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.38
+    },
+    {
+     "name": "fast",
+     "seconds": 0.19
+    },
+    {
+     "name": "idle",
+     "seconds": 0.836
+    }
+   ],
+   "note": "Powder-blue flanks, a black mask, a white throat and a yellow dorsal fin.",
+   "file": "powder-blue-tang.glb",
+   "bytes": 113004
+  },
+  {
+   "id": "butterflyfish",
+   "name": "Threadfin butterflyfish",
+   "scientific": "Chaetodon auriga",
+   "group": "small",
+   "lengthMetres": 0.16,
+   "boundsMetres": [
+    0.031,
+    0.101,
+    0.16
+   ],
+   "triangles": 438,
+   "bones": 8,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.4
+    },
+    {
+     "name": "fast",
+     "seconds": 0.2
+    },
+    {
+     "name": "idle",
+     "seconds": 0.88
+    }
+   ],
+   "note": "A white disc that turns to yellow at the back, a black bar through the eye and a pointed snout.",
+   "file": "butterflyfish.glb",
+   "bytes": 113356
+  },
+  {
+   "id": "sergeant-major",
+   "name": "Indo-Pacific sergeant",
+   "scientific": "Abudefduf vaigiensis",
+   "group": "small",
+   "lengthMetres": 0.15,
+   "boundsMetres": [
+    0.033,
+    0.089,
+    0.147
+   ],
+   "triangles": 532,
+   "bones": 8,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.32
+    },
+    {
+     "name": "fast",
+     "seconds": 0.16
+    },
+    {
+     "name": "idle",
+     "seconds": 0.704
+    }
+   ],
+   "note": "Five black bars on silver, with a wash of yellow along the back.",
+   "file": "sergeant-major.glb",
+   "bytes": 130292
+  },
+  {
+   "id": "anthias",
+   "name": "Sea goldie",
+   "scientific": "Pseudanthias squamipinnis",
+   "group": "small",
+   "lengthMetres": 0.1,
+   "boundsMetres": [
+    0.02,
+    0.034,
+    0.103
+   ],
+   "triangles": 420,
+   "bones": 8,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.32
+    },
+    {
+     "name": "fast",
+     "seconds": 0.16
+    },
+    {
+     "name": "idle",
+     "seconds": 0.704
+    }
+   ],
+   "note": "Orange clouds over every coral head; they drop into the branches when a shadow passes.",
+   "file": "anthias.glb",
+   "bytes": 110096
+  },
+  {
+   "id": "cleaner-wrasse",
+   "name": "Bluestreak cleaner wrasse",
+   "scientific": "Labroides dimidiatus",
+   "group": "small",
+   "lengthMetres": 0.1,
+   "boundsMetres": [
+    0.019,
+    0.023,
+    0.1
+   ],
+   "triangles": 390,
+   "bones": 8,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.3
+    },
+    {
+     "name": "fast",
+     "seconds": 0.15
+    },
+    {
+     "name": "idle",
+     "seconds": 0.66
+    }
+   ],
+   "note": "A finger of blue with a black stripe that widens to the tail; it dances to advertise its trade.",
+   "file": "cleaner-wrasse.glb",
+   "bytes": 104760
+  },
+  {
+   "id": "chromis",
+   "name": "Blue-green chromis",
+   "scientific": "Chromis viridis",
+   "group": "small",
+   "lengthMetres": 0.08,
+   "boundsMetres": [
+    0.017,
+    0.035,
+    0.078
+   ],
+   "triangles": 420,
+   "bones": 8,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.32
+    },
+    {
+     "name": "fast",
+     "seconds": 0.16
+    },
+    {
+     "name": "idle",
+     "seconds": 0.704
+    }
+   ],
+   "note": "Pale sea-glass fish that hang above branching coral in a loose shimmer.",
+   "file": "chromis.glb",
+   "bytes": 110092
+  }
+ ]
+}

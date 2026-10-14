@@ -1,3 +1,16 @@
-<div class="swim-controls" aria-label="Touch swimming controls" style="">
-    <button data-swim="KeyW" aria-label="Swim forward">W</button><button data-swim="KeyA" aria-label="Strafe left">A</button><button data-swim="KeyS" aria-label="Swim backward">S</button><button data-swim="KeyD" aria-label="Strafe right">D</button><button data-swim="Space" aria-label="Ascend">＋</button><button data-swim="ShiftLeft" aria-label="Descend">−</button><button data-swim="ArrowLeft" aria-label="Aim left">←</button><button data-swim="ArrowRight" aria-label="Aim right">→</button><button data-swim="ArrowUp" aria-label="Look upward">↥</button><button data-swim="ArrowDown" aria-label="Look downward">↧</button>
+<!-- Touch deck: thumb-stick, drag to look, six keys
+     Source: index.html
+     Styles: styles.css, hologram.css, hud.css (+ motion.css for transitions), controls.css
+     Scripts: touch-controls.js, exploration.js
+     Shipped hidden: world.js shows it underwater, and controls.css only lays it out when <html data-input="touch">. -->
+<div class="swim-controls touch-deck" role="group" aria-label="Touch swimming controls" hidden>
+  <div class="touch-stick" role="img" aria-label="Thumb-stick: push up or down to swim forward or back, sideways to turn"><div class="touch-stick-base" aria-hidden="true"><i class="touch-stick-knob"></i></div></div>
+  <div class="touch-actions">
+    <button type="button" class="touch-key" data-action="camera" aria-pressed="false" aria-label="Switch between first person and the camera following the diver"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.4"/></svg></button>
+    <button type="button" class="touch-key" data-lamp aria-pressed="true" aria-label="Flashlight"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8l-1.6 5H9.6zM9.6 8h4.8v10.2a2.4 2.4 0 0 1-4.8 0zM12 12v2.4"/></svg></button>
+    <button type="button" class="touch-key touch-key--hold" data-swim="Space" aria-label="Rise"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
+    <button type="button" class="touch-key" data-action="interact" aria-disabled="true" aria-label="Interact with what is in front of you"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3.5M12 17.5V21M3 12h3.5M17.5 12H21"/></svg></button>
+    <button type="button" class="touch-key touch-key--hold" data-swim="KeyE" aria-label="Scooter: hold while swimming to boost, or by itself to cruise forward"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3 5 13.5h6L10 21l9-11h-6z"/></svg></button>
+    <button type="button" class="touch-key touch-key--hold" data-swim="ShiftLeft" aria-label="Sink"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14m-6-6 6 6 6-6"/></svg></button>
   </div>
+</div>

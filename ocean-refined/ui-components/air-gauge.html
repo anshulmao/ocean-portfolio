@@ -1,0 +1,8 @@
+<!-- Air bar, bottom right
+     Source: index.html
+     Styles: styles.css, hologram.css, hud.css (+ motion.css for transitions)
+     Scripts: dive-hud.js (sets --air on #air-fill, the value and data-level) -->
+<div id="air-gauge" class="air-gauge" role="group" aria-label="Dive console: dive computer and pressure gauge, simulated" hidden>
+  <div class="console-computer" id="console-computer"><div class="console-depth"><span>DEPTH</span><strong id="console-depth">0.0<small>m</small></strong></div><div class="console-ndl" id="console-ndl" data-mode="ndl"><span id="console-ndl-label">NDL</span><strong id="console-ndl-value">99+<small>min</small></strong></div><div class="ascent-bar" id="console-ascent" role="img" aria-label="Ascent rate: steady" data-level="0"><i></i><i></i><i></i><i></i><i></i><em>SLOW</em></div><div class="console-row"><span>TIME</span><b id="console-time">00:00</b><span>MAX</span><b id="console-max">0.0 m</b></div></div>
+  <div class="spg" id="spg" data-level="ok"><i class="spg-needle" id="air-fill" aria-hidden="true"></i><b class="spg-hub" aria-hidden="true"></b><span class="spg-title" aria-hidden="true">AIR</span><strong id="air-value">200<small>bar</small></strong><em id="air-flag" class="spg-flag"></em></div>
+</div>

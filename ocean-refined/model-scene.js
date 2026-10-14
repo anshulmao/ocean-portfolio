@@ -1,6 +1,8 @@
 import * as THREE from './vendor/three.module.min.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
 import { clone as cloneSkinned } from './vendor/SkeletonUtils.js';
+import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
+import { simplify, breathe, turn as nextTask, floatSkinIndices } from './assets.js';
 
 const ASSET = new URL('./assets/models/', import.meta.url);
 const MODEL_FILES = {
@@ -11,6 +13,11 @@ const MODEL_FILES = {
   ]
 };
 const GLOW_COLOR = new THREE.Color('#e3c585');
+const CORAL_CACHE_SCHEMA = 1;
+const CORAL_CACHE = new URL('./assets/models/prepared-corals/', import.meta.url);
+// Placing a model walks every triangle of it over the terrain: tens of milliseconds for a hull, and it may happen while
+// the visitor is still looking at the surface. The long loops hand the frame loop a turn every few milliseconds:
+// breathe() where a slice may be over, nextTask() (turn, in assets.js) to end one outright.
 
 function visibleBounds(object) {
   object.updateWorldMatrix(true, true);
@@ -46,13 +53,16 @@ function report(onStatus, id, status, extra = {}) {
   onStatus?.({ id, status, ...extra });
 }
 
-export function createModelScene({ reef, terrainHeightAt, collisions, economy = false, onStatus } = {}) {
+export function createModelScene({ reef, terrainHeightAt, collisions, economy = false, onStatus, preparedCorals = true } = {}) {
   const root = new THREE.Group();
   root.name = 'Uploaded ocean landmarks';
   const loader = new GLTFLoader();
   const landmarkGroups = new Map();
   const chests = new Map();
   const coralCopies = [];
+  const coralBatches = [];
+  const coralProxyRecords = [];
+  const coralCache = { status: 'idle', reason: '', bytes: 0, habitats: 0, batches: 0, durationMs: 0 };
   const mixers = [];
   let loadPromise = null;
   let disposed = false;
@@ -80,7 +90,7 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
   // Imported origins are arbitrary. Place the transformed visible geometry,
   // then find its first contact with the actual terrain across its footprint.
   // Triangle interiors matter: a wide hull/base may have only corner vertices.
-  function groundModel(object, x, z, clearance = .015) {
+  async function groundModel(object, x, z, clearance = .015) {
     let box = visibleBounds(object);
     const center = box.getCenter(new THREE.Vector3());
     object.position.x += x - center.x;
@@ -94,11 +104,13 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
       if (offset > lift) { lift = offset; contact.copy(p); }
       samples++;
     };
-    object.traverseVisible(node => {
-      if (!node.isMesh || !node.geometry?.attributes.position) return;
+    const meshes = [];
+    object.traverseVisible(node => { if (node.isMesh && node.geometry?.attributes.position) meshes.push(node); });
+    for (const node of meshes) {
       const geometry = node.geometry, count = geometry.index?.count ?? geometry.attributes.position.count;
       const vertex = (index, out) => node.getVertexPosition(geometry.index ? geometry.index.getX(index) : index, out).applyMatrix4(node.matrixWorld);
       for (let i = 0; i + 2 < count; i += 3) {
+        if (i % 192 === 0) { const pause = breathe(); if (pause) await pause; }
         vertex(i, a); vertex(i + 1, b); vertex(i + 2, c);
         sample(a); sample(b); sample(c);
         const span = Math.max(Math.hypot(a.x-b.x,a.z-b.z),Math.hypot(a.x-c.x,a.z-c.z),Math.hypot(b.x-c.x,b.z-c.z));
@@ -110,7 +122,7 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
           }
         }
       }
-    });
+    }
     if (Number.isFinite(lift)) { object.position.y += lift + clearance; contact.y += lift + clearance; }
     object.updateWorldMatrix(true, true);
     box = visibleBounds(object);
@@ -132,7 +144,7 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     landmark.interactionPosition.splice(0, 3, ...approach.toArray());
     landmark.maxRange = Math.max(landmark.maxRange, approach.distanceTo(center) + .9);
   }
-  function groundCoralBases(coral){
+  async function groundCoralBases(coral){
     // Authored habitats contain separate coral sculptures at different heights.
     // A single contact for the whole group leaves their other roots suspended.
     const roots=[];const p=new THREE.Vector3(),worldOffset=new THREE.Vector3();
@@ -142,6 +154,7 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
       const box=new THREE.Box3().setFromObject(mesh),height=box.max.y-box.min.y;
       let gap=Infinity,count=0;const contact=new THREE.Vector3();
       for(let i=0;i<mesh.geometry.attributes.position.count;i++){
+        if(i%512===0){const pause=breathe();if(pause)await pause;}
         mesh.getVertexPosition(i,p).applyMatrix4(mesh.matrixWorld);
         if(p.y>box.min.y+Math.max(.04,height*.10))continue;
         const candidate=p.y-floorAt(p.x,p.z);if(candidate<gap){gap=candidate;contact.copy(p);}count++;
@@ -165,6 +178,7 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     if (scale.y < .18) { bounds.min.y -= .09; bounds.max.y += .09; }
     if (scale.z < .18) { bounds.min.z -= .09; bounds.max.z += .09; }
     collisions.addBox(bounds, { mesh: name, imported: true });
+    if (name.startsWith('Coral habitat')) coralProxyRecords.push({ min: bounds.min.toArray(), max: bounds.max.toArray(), mesh: name, imported: true });
   }
 
   function addCoralProxies(object, habitatName) {
@@ -190,53 +204,88 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     visit(object);
   }
 
-  function batchCoralMeshes() {
-    const identity = new WeakMap();
-    let nextIdentity = 1;
-    const idFor = object => {
-      let id = identity.get(object);
-      if (!id) { id = nextIdentity++; identity.set(object, id); }
-      return id;
-    };
-    const batches = new Map();
+  // The three copies of a habitat stand within a few metres of each other and
+  // share their materials, so each trio is baked into one static mesh per
+  // material: a dozen meshes for the fifteen habitats, each culled as a
+  // cluster, where instancing every sculpture cost a draw call per sculpture.
+  // (Baked, not instanced: each sculpture is grounded on its own terrain.)
+  // Between one mesh and the next the page gets a frame: baked in one go, this was the longest stall of the load.
+  async function batchCoralMeshes() {
     const rootInverse = root.matrixWorld.clone().invert();
-    const localMatrix = new THREE.Matrix4();
+    const localMatrix = new THREE.Matrix4(), groups = new Map();
     for (const habitat of coralCopies) {
       habitat.updateWorldMatrix(true, true);
       habitat.traverseVisible(node => {
         if (node.isLight) { node.visible = false; return; }
         if (!node.isMesh || node.isSkinnedMesh || node.isInstancedMesh || node.morphTargetInfluences?.length) return;
-        const materials = Array.isArray(node.material) ? node.material : [node.material];
-        if (!materials.length || materials.some(material => !material)) return;
-        const key = [idFor(node.geometry), ...materials.map(idFor), node.renderOrder || 0,
-          node.castShadow ? 1 : 0, node.receiveShadow ? 1 : 0].join(':');
-        let batch = batches.get(key);
-        if (!batch) {
-          batch = { geometry: node.geometry, material: node.material, name: node.name || 'coral mesh', nodes: [], matrices: [], castShadow: node.castShadow, receiveShadow: node.receiveShadow, renderOrder: node.renderOrder, layers: node.layers.mask };
-          batches.set(key, batch);
-        }
-        localMatrix.multiplyMatrices(rootInverse, node.matrixWorld);
-        batch.nodes.push(node);
-        batch.matrices.push(localMatrix.clone());
+        if (Array.isArray(node.material) || !node.material || !node.geometry.getAttribute('normal')) return;
+        const key = `${node.material.uuid}:${node.renderOrder || 0}`;
+        if (!groups.has(key)) groups.set(key, { material: node.material, renderOrder: node.renderOrder, layers: node.layers.mask, nodes: [] });
+        groups.get(key).nodes.push(node);
       });
     }
-    for (const batch of batches.values()) {
-      if (!batch.matrices.length) continue;
-      const instances = new THREE.InstancedMesh(batch.geometry, batch.material, batch.matrices.length);
-      instances.name = `Coral habitat batch · ${batch.name}`;
-      instances.castShadow = batch.castShadow;
-      instances.receiveShadow = batch.receiveShadow;
-      instances.renderOrder = batch.renderOrder;
-      instances.layers.mask = batch.layers;
-      instances.instanceMatrix.setUsage(THREE.StaticDrawUsage);
-      batch.matrices.forEach((matrix, index) => instances.setMatrixAt(index, matrix));
-      instances.computeBoundingSphere();
-      root.add(instances);
-      batch.nodes.forEach(node => { node.visible = false; });
+    for (const group of groups.values()) {
+      // Only the attributes every sculpture of the group carries are kept.
+      const names = ['position', 'normal', 'uv', 'color'].filter(name => group.nodes.every(node => node.geometry.getAttribute(name)));
+      const pieces = group.nodes.map(node => {
+        const piece = new THREE.BufferGeometry();
+        // Plain float copies: the files pack some attributes interleaved or as normalized integers.
+        for (const name of names) {
+          const source = node.geometry.getAttribute(name), size = source.itemSize;
+          let data;
+          if (source.isInterleavedBufferAttribute || source.normalized || !(source.array instanceof Float32Array)) {
+            data = new Float32Array(source.count * size);
+            for (let i = 0; i < source.count; i++) for (let j = 0; j < size; j++) data[i * size + j] = source.getComponent(i, j);
+          } else data = source.array.slice(0, source.count * size);
+          piece.setAttribute(name, new THREE.BufferAttribute(data, size));
+        }
+        const index = node.geometry.index ? Array.from(node.geometry.index.array) : Array.from({ length: node.geometry.getAttribute('position').count }, (_, i) => i);
+        localMatrix.multiplyMatrices(rootInverse, node.matrixWorld);
+        // A mirrored placement turns its triangles inside out; wind them back.
+        if (localMatrix.determinant() < 0) for (let i = 0; i < index.length; i += 3) { const swap = index[i + 1]; index[i + 1] = index[i + 2]; index[i + 2] = swap; }
+        piece.setIndex(index); piece.applyMatrix4(localMatrix);
+        return piece;
+      });
+      const geometry = pieces.length > 1 ? mergeGeometries(pieces, false) : pieces[0];
+      if (!geometry) continue;
+      if (pieces.length > 1) pieces.forEach(piece => piece.dispose());
+      geometry.computeBoundingSphere();
+      const mesh = new THREE.Mesh(geometry, group.material);
+      mesh.name = `Coral habitat batch · ${group.material.name || 'coral'}`;
+      mesh.renderOrder = group.renderOrder; mesh.layers.mask = group.layers;
+      mesh.matrixAutoUpdate = false;
+      root.add(mesh);
+      group.nodes.forEach(node => { node.visible = false; });
+      // A lighter copy stands in once the whole cluster is ten metres off: the sculptures are dense, and mostly seen far away.
+      const batch = { mesh, sphere: geometry.boundingSphere.clone().applyMatrix4(root.matrixWorld), full: geometry, light: null };
+      coralBatches.push(batch);
+      await nextTask();
+      if (disposed) return;
+      batch.light = await simplify(geometry, .4, 2500, breathe);
+      await nextTask();
+      if (disposed) return;
+    }
+    // The batches now draw every static coral mesh. A habitat with nothing
+    // left to show (its rigged fish are hidden) still carried ~180 nodes and
+    // ~120 bones through every frame's matrix update, so it leaves the graph.
+    for (const habitat of coralCopies) {
+      let drawn = false;
+      habitat.traverseVisible(node => { if (node.isMesh || node.isPoints || node.isLine) drawn = true; });
+      if (!drawn) root.remove(habitat);
     }
   }
 
-  function addModel(id, gltf, targetLength, rotationY = 0, bottom = true, positionOverride = null) {
+  // view: { frustum, eye, range }, or null to show everything. The renderer
+  // culls each habitat against the view; the haze range is tested here.
+  function cull(view = null) {
+    for (const { mesh, sphere, full, light } of coralBatches) {
+      const distance = view ? view.eye.distanceTo(sphere.center) - sphere.radius : 0;
+      mesh.visible = distance < (view ? view.range : Infinity);
+      if (light) { const geometry = distance > 10 ? light : full; if (mesh.geometry !== geometry) mesh.geometry = geometry; }
+    }
+  }
+
+  async function addModel(id, gltf, targetLength, rotationY = 0, bottom = true, positionOverride = null) {
     const wrapper = new THREE.Group();
     wrapper.name = `${id} placement wrapper`;
     const model = gltf.scene;
@@ -249,7 +298,7 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     root.add(wrapper);
     landmarkGroups.set(id, wrapper);
     wrapper.updateMatrixWorld(true);
-    const box = bottom ? groundModel(wrapper, pos.x, pos.z) : visibleBounds(wrapper);
+    const box = bottom ? await groundModel(wrapper, pos.x, pos.z) : visibleBounds(wrapper);
     updateLandmark(id, box);
     return { wrapper, model, box };
   }
@@ -279,10 +328,10 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
 
   function loadOne(key, file, place) {
     return new Promise(resolve => {
-      loader.load(new URL(file, ASSET).href, gltf => {
+      loader.load(new URL(file, ASSET).href, async gltf => {
         if (disposed) { resolve(null); return; }
         try {
-          place(gltf);
+          await nextTask(); floatSkinIndices(gltf.scene); await nextTask(); await place(gltf);
           loaded++;
           report(onStatus, key, 'loaded', { loaded, total: 8 });
         } catch (error) {
@@ -305,6 +354,7 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
       if (!gltf) { failed++; report(onStatus, key, 'fallback', { loaded, total: 8 }); }
       return;
     }
+    await nextTask(); floatSkinIndices(gltf.scene); await nextTask();
     // Coral GLBs can carry animated fish along with the reef sculpture.
     // Hide those branches; schooling fish use the stable instanced marine-life scene.
     gltf.scene.traverse(node => {
@@ -347,24 +397,113 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
       }
       root.add(coral);
       coral.updateWorldMatrix(true, true);
-      groundModel(coral, x, z);
-      groundCoralBases(coral);
+      await groundModel(coral, x, z);
+      await groundCoralBases(coral);
       addCoralProxies(coral, coral.name);
       coralCopies.push(coral);
+      // Each copy is grounded triangle by triangle: let a frame through before the next.
+      await nextTask();
+      if (disposed) return;
     }
     coralLoaded++;
     loaded++;
     report(onStatus, key, 'loaded', { loaded, total: 8 });
   }
 
+  async function loadPreparedCorals() {
+    if (!preparedCorals) { coralCache.status = 'disabled'; return false; }
+    const started = performance.now();
+    coralCache.status = 'checking';
+    const sha256 = async bytes => [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(n => n.toString(16).padStart(2, '0')).join('');
+    try {
+      const variant = economy ? 'economy' : 'full';
+      const response = await fetch(new URL(`${variant}.json`, CORAL_CACHE), { cache: 'no-cache' });
+      if (!response.ok) throw Error('Prepared coral metadata unavailable');
+      const metadata = await response.json();
+      if (metadata.schema !== CORAL_CACHE_SCHEMA || metadata.variant !== variant || metadata.habitats.length !== 15 || metadata.coralLoaded !== 5) throw Error('Prepared coral recipe mismatch');
+      if (metadata.sources?.length !== 2 || !['reef.js', 'model-scene.js'].every(file => metadata.sources.some(source => source.file === file)) || metadata.assets?.length !== MODEL_FILES.coral.length || !MODEL_FILES.coral.every(file => metadata.assets.some(asset => asset.file === file))) throw Error('Incomplete prepared coral input validators');
+      if (!globalThis.crypto?.subtle) throw Error('Source checks unavailable');
+      // Code hashes catch changes to the terrain and grounding/LOD recipe.
+      // Cheap HEAD validators catch replacement source models without fetching
+      // the original 24 MB merely to decide whether the cache is current.
+      await Promise.all([
+        ...metadata.sources.map(async source => {
+          const sourceResponse = await fetch(new URL(source.file, import.meta.url), { cache: 'force-cache' });
+          if (!sourceResponse.ok || await sha256(await sourceResponse.arrayBuffer()) !== source.sha256) throw Error(`Coral source changed: ${source.file}`);
+        }),
+        ...metadata.assets.map(async asset => {
+          const head = await fetch(new URL(asset.file, ASSET), { method: 'HEAD', cache: 'no-cache' });
+          const length = head.headers.get('content-length'), modified = head.headers.get('last-modified'), etag = head.headers.get('etag');
+          // Compression servers may omit HEAD length or report encoded bytes.
+          // Their unchanged opaque ETag plus modification date is still a
+          // build-recorded validator; absent validators decline the cache.
+          const sizeMatches = length !== null && !head.headers.get('content-encoding') && Number(length) === asset.bytes;
+          const tagMatches = Boolean(asset.etag && etag === asset.etag);
+          if (!head.ok || (!sizeMatches && !tagMatches) || !modified || modified !== asset.lastModified) throw Error(`Coral asset validator changed or unavailable: ${asset.file}`);
+        })
+      ]);
+      const bytesResponse = await fetch(new URL(metadata.glb.file, CORAL_CACHE));
+      if (!bytesResponse.ok) throw Error('Prepared coral geometry unavailable');
+      const bytes = await bytesResponse.arrayBuffer();
+      if (bytes.byteLength !== metadata.glb.bytes || await sha256(bytes) !== metadata.glb.sha256) throw Error('Prepared coral geometry checksum mismatch');
+      const gltf = await loader.parseAsync(bytes, CORAL_CACHE.href);
+      const imported = new Map(); gltf.scene.traverse(node => { if (node.isMesh) imported.set(node.name, node); });
+      const prepared = [];
+      for (const spec of metadata.batches) {
+        const mesh = imported.get(spec.full), lightMesh = imported.get(spec.light);
+        if (!mesh?.geometry || !lightMesh?.geometry || Array.isArray(mesh.material)) throw Error('Prepared coral batch missing');
+        mesh.name = spec.name; mesh.renderOrder = spec.renderOrder; mesh.layers.mask = spec.layers;
+        mesh.material.flatShading = spec.material.flatShading;
+        mesh.material.depthWrite = spec.material.depthWrite;
+        mesh.material.depthTest = spec.material.depthTest;
+        mesh.material.alphaTest = spec.material.alphaTest;
+        mesh.material.side = spec.material.side;
+        mesh.matrixAutoUpdate = false; mesh.visible = true;
+        mesh.geometry.computeBoundingSphere(); lightMesh.geometry.computeBoundingSphere();
+        prepared.push({ mesh, sphere: new THREE.Sphere(new THREE.Vector3().fromArray(spec.sphere.center), spec.sphere.radius), full: mesh.geometry, light: spec.lightTriangles ? lightMesh.geometry : null });
+      }
+      if (disposed) return false;
+      for (const batch of prepared) { root.add(batch.mesh); coralBatches.push(batch); }
+      for (const proxy of metadata.proxies) {
+        collisions?.addBox?.(new THREE.Box3(new THREE.Vector3().fromArray(proxy.min), new THREE.Vector3().fromArray(proxy.max)), { mesh: proxy.mesh, imported: true });
+        coralProxyRecords.push(proxy);
+      }
+      root.userData.preparedCoralHabitats = metadata.habitats;
+      coralLoaded = metadata.coralLoaded; loaded += metadata.coralLoaded;
+      Object.assign(coralCache, { status: 'hit', bytes: bytes.byteLength, habitats: metadata.habitats.length, batches: prepared.length, durationMs: Math.round(performance.now() - started) });
+      report(onStatus, 'prepared-corals', 'loaded', { loaded, total: 8, cache: coralCache });
+      return true;
+    } catch (error) {
+      Object.assign(coralCache, { status: 'fallback', reason: String(error.message || error), durationMs: Math.round(performance.now() - started) });
+      return false;
+    }
+  }
+
+  // Offline preparation uses the same placement, grounding and simplification
+  // functions as the live fallback, without loading the interactive landmarks.
+  async function prepareCoralCache() {
+    const jobs = MODEL_FILES.coral.map((file, index) => () => loadCoral(file, index));
+    let cursor = 0;
+    const worker = async () => { while (cursor < jobs.length) await jobs[cursor++](); };
+    await Promise.all([worker(), worker()]);
+    root.updateWorldMatrix(true, true); await batchCoralMeshes();
+    if (failed || coralLoaded !== 5 || coralCopies.length !== 15 || !coralBatches.length) throw Error('Incomplete offline coral preparation');
+    return {
+      batches: coralBatches, proxies: coralProxyRecords,
+      habitats: coralCopies.map(habitat => ({ name: habitat.name, position: habitat.position.toArray(), groundedRoots: habitat.userData.groundedRoots, grounding: habitat.userData.grounding })),
+      coralLoaded
+    };
+  }
+
   function load() {
     if (loadPromise) return loadPromise;
     report(onStatus, 'models', 'loading', { loaded: 0, total: 8 });
+    const preparedPromise = loadPreparedCorals();
     const jobs = [
-      () => loadOne('about-anchor', MODEL_FILES.anchor, gltf => {
-        const { wrapper } = addModel('about', gltf, 3.6, Math.PI * .48);
+      () => loadOne('about-anchor', MODEL_FILES.anchor, async gltf => {
+        const { wrapper } = await addModel('about', gltf, 3.6, Math.PI * .48);
         wrapper.rotation.z = -.82;
-        const box = groundModel(wrapper, -12, -15);
+        const box = await groundModel(wrapper, -12, -15);
         updateLandmark('about', box);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
@@ -376,8 +515,8 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
           addStaticProxy(new THREE.Box3(center.clone().add(new THREE.Vector3(-size.x * .12, -size.y * .16, -size.z * .46)), center.clone().add(new THREE.Vector3(size.x * .12, size.y * .16, size.z * .46))), 'fallen anchor arms');
         }
       }),
-      () => loadOne('experience-ship', MODEL_FILES.ship, gltf => {
-        const { wrapper, box } = addModel('experience', gltf, 20, -.28);
+      () => loadOne('experience-ship', MODEL_FILES.ship, async gltf => {
+        const { wrapper, box } = await addModel('experience', gltf, 20, -.28);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
         const hullBottom = box.min.y, hullTop = box.min.y + Math.min(1.55, Math.max(.85, size.y * .22));
@@ -392,15 +531,15 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
           addStaticProxy(new THREE.Box3(new THREE.Vector3(center.x + halfX, hullBottom, center.z - halfZ), new THREE.Vector3(center.x + size.x * .46, hullTop, center.z + halfZ)), 'ship stern hull');
         }
       }),
-      () => loadOne('projects-chest-a', MODEL_FILES.chest, gltf => {
-        addChest('projects', gltf, 2.45, -.3);
+      () => loadOne('projects-chest-a', MODEL_FILES.chest, async gltf => {
+        await addChest('projects', gltf, 2.45, -.3);
         const secondScene = cloneSkinned(gltf.scene);
         const floor = groundPosition('projects');
         const offset = new THREE.Vector3(2.9, 0, -1.35);
         const secondPosition = floor.add(offset);
-        addChest('projects-second', { scene: secondScene, animations: gltf.animations }, 2.05, 1.0, secondPosition);
+        await addChest('projects-second', { scene: secondScene, animations: gltf.animations }, 2.05, 1.0, secondPosition);
       }),
-      ...MODEL_FILES.coral.map((file, index) => () => loadCoral(file, index))
+      ...MODEL_FILES.coral.map((file, index) => async () => { if (!await preparedPromise) await loadCoral(file, index); })
     ];
     let cursor = 0;
     const worker = async () => {
@@ -415,15 +554,16 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     };
     loadPromise = Promise.all([worker(), worker()]).then(() => {
       root.updateWorldMatrix(true, true);
-      batchCoralMeshes();
+      if (coralCache.status !== 'hit') return batchCoralMeshes();
+    }).then(() => {
       report(onStatus, 'models', 'ready', { loaded, failed, coralLoaded, reefFishGroups, reefFishCount, total: 8 });
       return { loaded, failed, coralLoaded, reefFishGroups, reefFishCount };
     });
     return loadPromise;
   }
 
-  function addChest(id, gltf, target, yaw, positionOverride = null) {
-    const { wrapper, box } = addModel(id, gltf, target, yaw, true, positionOverride);
+  async function addChest(id, gltf, target, yaw, positionOverride = null) {
+    const { wrapper, box } = await addModel(id, gltf, target, yaw, true, positionOverride);
     const center = box.getCenter(new THREE.Vector3());
     addStaticProxy(new THREE.Box3(center.clone().add(new THREE.Vector3(-.8, -.55, -.72)), center.clone().add(new THREE.Vector3(.8, .72, .72))), `${id} chest`);
     const emissiveMaterials = new Set();
@@ -461,9 +601,10 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     chests.set(id, chest);
   }
 
-  function update(dt, elapsed, playerPosition, night = 0) {
+  function update(dt, elapsed, playerPosition, night = 0, view = null) {
     const step = Math.min(Math.max(dt || 0, 0), .05);
     motionEnabled = step > 0;
+    cull(view);
     for (const mixer of mixers) mixer.update(step);
     chests.forEach(chest => {
       const near = playerPosition?.isVector3
@@ -485,16 +626,20 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
   function dispose() {
     disposed = true;
     mixers.forEach(mixer => mixer.stopAllAction());
-    root.traverse(object => {
+    const release = object => {
       if (!object.isMesh) return;
       object.geometry?.dispose?.();
       const materials = Array.isArray(object.material) ? object.material : [object.material];
       materials.forEach(material => material?.dispose?.());
-    });
+    };
+    root.traverse(release);
+    for (const batch of coralBatches) { batch.full.dispose(); batch.light?.dispose(); }
+    // Habitats detached after batching still own their hidden meshes.
+    for (const habitat of coralCopies) if (!habitat.parent) habitat.traverse(release);
   }
 
   return {
-    root, load, update, interact, dispose, landmarks,
+    root, load, update, interact, dispose, landmarks, prepareCoralCache, loadPreparedCorals, coralCache,
     get fishCount() { return reefFishCount; },
     get reefFishGroups() { return reefFishGroups; }
   };

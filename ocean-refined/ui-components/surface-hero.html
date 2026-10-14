@@ -1,14 +1,20 @@
-<main class="hero" id="main" style="">
-    <div class="surface-copy">
-      <p class="eyebrow"><span></span>HELLO, I’M ANSHUL</p>
-      <h1>Go a little<br><em>deeper.</em></h1>
-      <p class="lede">There’s always more beneath the surface.</p>
-    </div>
-    <div class="deep-copy" aria-hidden="true">
-      <p class="eyebrow"><span></span>A DIFFERENT PERSPECTIVE</p>
-      <h2>A little<br><em>closer to calm.</em></h2>
-      <p class="lede">A reef full of stories. Take your time exploring.</p>
-    </div>
-    <button class="dive-button" id="dive" type="button"><span id="dive-label">Back to the surface</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15m-6-6 6 6 6-6"></path></svg></button>
-    <button class="explore-button" id="explore" type="button" aria-pressed="false">Look around <span>↗</span></button>
-  </main>
+<!-- Surface hero: headline, Dive in, the two entry buttons, Look around and the logbook link
+     Source: index.html; dive-plan.js inserts .dive-entry, landmark-interactions.js appends #logbook-link
+     Styles: styles.css, hologram.css, hud.css (+ motion.css for transitions), dive-plan.css (entry buttons), archive.css (logbook link)
+     Scripts: world.js (#dive, #explore); dive-plan.js; guided-dive.js; landmark-interactions.js -->
+<main class="hero" id="main">
+  <div class="surface-copy">
+    <p class="eyebrow"><span></span>HELLO, I’M ANSHUL</p>
+    <h1>Go a little<br><em>deeper.</em></h1>
+    <p class="lede">There’s always more beneath the surface.</p>
+  </div>
+  <div class="deep-copy" aria-hidden="true">
+    <p class="eyebrow"><span></span>A DIFFERENT PERSPECTIVE</p>
+    <h2>A little<br><em>closer to calm.</em></h2>
+    <p class="lede">A reef full of stories. Take your time exploring.</p>
+  </div>
+  <button class="dive-button" id="dive" type="button" disabled><i class="dive-flag" aria-hidden="true"></i><span id="dive-label">Preparing the ocean</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15m-6-6 6 6 6-6"/></svg></button>
+  <div class="dive-entry"><button type="button" id="guided-dive" class="holo-chip">Take a guided dive <span aria-hidden="true">→</span></button><button type="button" id="plan-dive" class="holo-chip" aria-haspopup="dialog">Plan your dive <span aria-hidden="true">→</span></button></div>
+  <button class="explore-button" id="explore" type="button" aria-pressed="false">Look around <span>↗</span></button>
+  <button type="button" id="logbook-link" class="logbook-link"><svg viewBox="0 0 24 24" aria-hidden="true" class="hud-icon"><path d="M6 3h9l4 4v14H6V3ZM14 3v5h5M9 12h7M9 16h7"/></svg>Read the logbook</button>
+</main>

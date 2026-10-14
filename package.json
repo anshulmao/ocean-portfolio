@@ -1,6 +1,6 @@
 {
   "name": "ocean-portfolio",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,10 @@
     "test:journey": "node ocean-refined/newqa/journey-refined.mjs",
     "test:crt": "node ocean-refined/newqa/crt-expedition.mjs",
     "test:studio": "node ocean-refined/newqa/creatures-studio.mjs",
-    "test:rigs": "node ocean-refined/newqa/creature-rigs-export.mjs"
+    "test:rigs": "node ocean-refined/newqa/creature-rigs-export.mjs",
+    "build": "node tools/build.mjs",
+    "dev": "python serve.py --port 4190",
+    "prepare:deploy": "node tools/prepare-output.mjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

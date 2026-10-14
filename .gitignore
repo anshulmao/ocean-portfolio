@@ -3,3 +3,19 @@ ocean-refined/qa/captures/*
 !ocean-refined/qa/captures/.gitkeep
 .DS_Store
 Thumbs.db
+
+# Credentials and generated output
+.vercel/
+.env
+.env.*
+dist/
+.http-cache/
+__pycache__/
+*.zip
+build-report.json
+release-files.json
+# Browser reports and captures
+**/*-qa.png
+**/*-qa.json
+**/*-report.json
+ocean-refined/assets/models/indexed-creatures/

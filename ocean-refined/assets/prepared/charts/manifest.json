@@ -1,0 +1,20 @@
+{
+  "sources": {
+    "reef.js": "dd6d388832f8ff7556aa6592ee782d3f8e1ced6154bdc09f2508bb7c9d14adf1",
+    "expedition-ui.js": "4687a9d9c08e4b66ed6a660e71f526286819226854452177e8352ef7e8d0a26c",
+    "dive-plan.js": "28b8c4390fdd4d49d086d5e03cdeab6a50fd057561d45e4d6486fb6f9cbdca30",
+    "depth-metrics.js": "a1e9348e3da8f3e419dd6dce32c5db65f1d063c93abde4499fafb9c1364a2f07"
+  },
+  "charts": {
+    "hud": {
+      "file": "hud.rgba",
+      "width": 400,
+      "height": 400
+    },
+    "planner": {
+      "file": "planner.rgba",
+      "width": 372,
+      "height": 420
+    }
+  }
+}

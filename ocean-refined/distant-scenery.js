@@ -1,9 +1,9 @@
 import * as THREE from './vendor/three.module.min.js';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
-import { waveHeight } from './shaders.js';
+import { waveHeight, sea } from './shaders.js';
 
 // Original low-detail coastal geometry. All distances are world metres.
-export function createDistantScenery({ economy = false } = {}) {
+export function createDistantScenery({ economy = false, skyMap } = {}) {
   const root = new THREE.Group();
   root.name = 'Distant islands and passing ships';
   const rock = new THREE.MeshStandardMaterial({ color: '#577268', roughness: 1 });
@@ -13,6 +13,26 @@ export function createDistantScenery({ economy = false } = {}) {
   const metal = new THREE.MeshStandardMaterial({ color: '#586569', roughness: .8 });
   const cargo = new THREE.MeshStandardMaterial({ color: '#796b5e', roughness: 1 });
   const sail = new THREE.MeshStandardMaterial({ color: '#f1ebdc', roughness: .95, side: THREE.DoubleSide });
+
+  // Blend distant silhouettes into the actual directional sky, before tone
+  // mapping. A fixed cyan fog color made islands glow against dusk/night skies.
+  if (skyMap) for (const material of [rock, green, hull, cream, metal, cargo, sail]) {
+    material.fog = false;
+    material.onBeforeCompile = shader => {
+      shader.uniforms.uCoastSky = skyMap;
+      shader.vertexShader = 'varying vec3 vCoastRay;\n' + shader.vertexShader;
+      shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\nvCoastRay=(modelMatrix*vec4(transformed,1.0)).xyz-cameraPosition;');
+      shader.fragmentShader = 'uniform sampler2D uCoastSky; varying vec3 vCoastRay;\n' + shader.fragmentShader;
+      shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>', `
+        vec3 coastRay=normalize(vec3(vCoastRay.x,max(vCoastRay.y,0.0),vCoastRay.z));
+        vec2 coastP=coastRay.xz/(abs(coastRay.x)+coastRay.y+abs(coastRay.z));
+        vec3 coastSky=texture2D(uCoastSky,vec2(coastP.x+coastP.y,coastP.x-coastP.y)*.498047+.5).rgb;
+        float coastHaze=1.0-exp(-length(vCoastRay)*.0019);
+        outgoingLight=mix(outgoingLight,coastSky*coastSky*4.0,coastHaze);
+        #include <opaque_fragment>`);
+    };
+    material.customProgramCacheKey = () => 'directional-coast-haze-v1';
+  }
 
   function mesh(geometry, material, parent = root) {
     const result = new THREE.Mesh(geometry, material);
@@ -130,12 +150,16 @@ export function createDistantScenery({ economy = false } = {}) {
   });
   function update(elapsed, night, underwater) {
     root.visible = underwater < .4;
+    if (!root.visible) return;
     // Very slow bounded crossings avoid jumps on long-running previews.
     yacht.position.set(89 + Math.sin(elapsed * .0018) * 23, 0, -188);
     freighter.position.set(-83 - Math.sin(elapsed * .0009) * 36, 0, -355);
     for (const boat of [yacht, freighter]) {
       boat.position.y = waveHeight(boat.position.x, boat.position.z, elapsed) * .16;
-      boat.rotation.z = Math.sin(elapsed * .25) * .003;
+      // A heavier sea rolls and pitches the hulls; rain haze (scene fog) hides them with the islands.
+      const heave = 1 + (sea.gain - 1) * 9 + sea.swell * 14;
+      boat.rotation.z = Math.sin(elapsed * .25 + boat.position.x) * .003 * heave;
+      boat.rotation.x = Math.sin(elapsed * .19 + boat.position.z) * .0016 * (heave - 1);
     }
   }
   update(0, 0, 0);

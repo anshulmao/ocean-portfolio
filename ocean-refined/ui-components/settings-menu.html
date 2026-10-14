@@ -1,0 +1,41 @@
+<!-- Settings menu (opens under the menu button)
+     Source: index.html
+     Styles: styles.css, hologram.css, hud.css (+ motion.css for transitions)
+     Scripts: hud.js (open / close, locks, weather picker); world.js + expedition-ui.js (time scrubber, presets, Pause motion); movement-panel.js (Scene controls); landmark-interactions.js (Model credits)
+     Shipped hidden: hud.js removes the hidden attribute. ambient-audio.js inserts a Sound group at run time. -->
+<aside id="settings-menu" class="settings-menu holo holo--reading" aria-label="Settings" hidden>
+  <header class="settings-head"><span class="holo-label">Settings</span><button type="button" class="settings-close" aria-label="Close settings menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>
+  <div class="settings-body">
+  <section class="settings-group" aria-labelledby="settings-sky-title">
+    <h3 id="settings-sky-title" class="holo-label">Sky time</h3>
+    <fieldset class="theme-control" aria-label="Time of day">
+    <legend class="sr-only">Choose the time in Kuala Lumpur</legend>
+    <div class="time-scrubber"><div class="time-title"><label for="time-slider">KUALA LUMPUR</label><output id="time-reading" for="time-slider">07:00</output></div><div class="time-track"><i id="time-orb" aria-hidden="true"></i><input id="time-slider" type="range" min="0" max="1439" step="1" value="420" aria-label="Time of day in Kuala Lumpur"></div><div class="time-labels"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div></div>
+    <button id="dawn" aria-pressed="false" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 17h20M5 13a7 7 0 0 1 14 0M12 2v3M3 6l2 2m16-2-2 2M9 21h6"/></svg><span>Dawn</span></button>
+    <button id="day" aria-pressed="true" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg><span>Day</span></button>
+    <button id="dusk" aria-pressed="false" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 17h20M5 13a7 7 0 0 1 14 0M12 3v3M3 7l2 2m16-2-2 2M7 21h10"/></svg><span>Dusk</span></button>
+    <button id="night" aria-pressed="false" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.4A8.7 8.7 0 0 1 8.6 4a8.7 8.7 0 1 0 11.4 11.4Z"/></svg><span>Night</span></button>
+    </fieldset>
+    <div class="sky-clock" id="sky-clock">DAYLIGHT · 20 MIN CYCLE</div>
+    <label class="holo-switch" id="time-lock-row" hidden><input id="time-lock" type="checkbox" role="switch"><i aria-hidden="true"></i><span>Lock time</span><small>Hold the sky where it is</small></label>
+  </section>
+  <section class="settings-group" id="weather-settings" aria-labelledby="settings-weather-title" hidden>
+    <h3 id="settings-weather-title" class="holo-label">Weather</h3>
+    <div class="weather-picker" role="group" aria-label="Weather"><button type="button" data-weather="clear" aria-pressed="false">Clear</button><button type="button" data-weather="rain" aria-pressed="false">Light rain</button><button type="button" data-weather="storm" aria-pressed="false">Storm</button><button type="button" data-weather="auto" aria-pressed="false">Auto</button></div>
+    <label class="holo-switch"><input id="weather-lock" type="checkbox" role="switch"><i aria-hidden="true"></i><span>Lock weather</span><small>Stop it drifting</small></label>
+  </section>
+  <section class="settings-group" aria-labelledby="settings-view-title">
+    <h3 id="settings-view-title" class="holo-label">View</h3>
+    <div class="settings-actions">
+    <button id="camera-toggle" class="camera-toggle" type="button" aria-pressed="false" hidden>Third-person view <kbd>V</kbd></button>
+    <button id="motion" class="motion-control" type="button" aria-pressed="false" aria-label="Pause animation"><svg viewBox="0 0 24 24" aria-hidden="true" id="motion-icon"><path d="M9 5v14M15 5v14"/></svg><span id="motion-label">Pause motion</span></button>
+    <button id="movement-toggle" class="movement-toggle" type="button" aria-expanded="false" aria-controls="movement-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M9 4v6m6 4v6"/></svg><span>Scene controls</span></button>
+    <button id="credits-toggle" class="credits-toggle" type="button">Model credits</button>
+    </div>
+  </section>
+  <section class="settings-group" aria-labelledby="settings-keys-title">
+    <h3 id="settings-keys-title" class="holo-label">Controls</h3>
+    <dl class="key-reference"><div><dt><kbd>W</kbd><kbd>S</kbd></dt><dd>Forward / back</dd></div><div><dt><kbd>A</kbd><kbd>D</kbd></dt><dd>Turn</dd></div><div><dt><kbd>Space</kbd></dt><dd>Rise</dd></div><div><dt><kbd>Shift</kbd></dt><dd>Sink</dd></div><div><dt><kbd>E</kbd></dt><dd>Scooter boost while swimming</dd></div><div><dt><kbd>Q</kbd></dt><dd>Flashlight</dd></div><div><dt><kbd>F</kbd></dt><dd>Interact</dd></div><div><dt><kbd>C</kbd></dt><dd>Dive computer</dd></div><div><dt><kbd>V</kbd></dt><dd>Camera</dd></div><div><dt><kbd>Esc</kbd></dt><dd>Release mouse</dd></div><div><dt>Touch</dt><dd>Thumb-stick swims · drag to look</dd></div><div><dt>Gamepad</dt><dd>Sticks swim and look · triggers rise / sink</dd></div></dl>
+  </section>
+  </div>
+</aside>

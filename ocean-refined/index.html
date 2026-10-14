@@ -7,39 +7,127 @@
   <meta name="theme-color" content="#b9dfea">
   <meta name="description" content="Anshul's quiet corner of the ocean. An interactive 3D landing scene.">
   <title>Refined · Anshul · Beneath the surface</title>
+  <script>document.documentElement.classList.add('js');try{window.oceanGpuProbe=new Promise(function(done){var worker=new Worker(URL.createObjectURL(new Blob(["try{var gl=new OffscreenCanvas(1,1).getContext('webgl2',{powerPreference:'high-performance'}),info=gl.getExtension('WEBGL_debug_renderer_info');postMessage(String(gl.getParameter(info?info.UNMASKED_RENDERER_WEBGL:gl.RENDERER)||''));var lose=gl.getExtension('WEBGL_lose_context');lose&&lose.loseContext()}catch(error){postMessage(null)}close()"],{type:'text/javascript'})));worker.onmessage=function(event){done(event.data)};worker.onerror=function(){done(null)};setTimeout(function(){done(null)},2000)})}catch(error){}</script>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./dive-hud.css">
   <link rel="stylesheet" href="./ocean-ui.css">
+  <link rel="stylesheet" href="./hologram.css">
+  <link rel="stylesheet" href="./hud.css">
+  <link rel="stylesheet" href="./journey.css">
+  <link rel="stylesheet" href="./dive-plan.css">
+  <link rel="stylesheet" href="./instruments.css">
+  <link rel="stylesheet" href="./motion.css">
+  <link rel="stylesheet" href="./archive.css">
+  <link rel="stylesheet" media="print" href="./archive-print.css">
+  <link rel="stylesheet" href="./ambient-audio.css">
+  <link rel="stylesheet" href="./controls.css">
+  <!-- The four faces the first view is set in: requested with the stylesheets, not after the first layout. -->
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="./assets/fonts/outfit-400.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="./assets/fonts/outfit-500.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="./assets/fonts/montserrat-400.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="./assets/fonts/montserrat-500.woff2">
+  <!-- Every module the scripts below import statically, so they download side by side instead of being discovered
+       one level of imports at a time. Deepest and largest first. Keep in step with the import statements; a module
+       missing from this list still loads, only later. -->
+  <link rel="modulepreload" href="./vendor/three.core.min.js">
+  <link rel="modulepreload" href="./vendor/three.module.min.js">
+  <link rel="modulepreload" href="./vendor/astronomy-engine.runtime.js">
+  <link rel="modulepreload" href="./vendor/GLTFLoader.js">
+  <link rel="modulepreload" href="./vendor/BufferGeometryUtils.js">
+  <link rel="modulepreload" href="./vendor/SkeletonUtils.js">
+  <link rel="modulepreload" href="./collisions.js">
+  <link rel="modulepreload" href="./sky-system.js">
+  <link rel="modulepreload" href="./reef.js">
+  <link rel="modulepreload" href="./vendor/OrbitControls.js">
+  <link rel="modulepreload" href="./hero-formations.js">
+  <link rel="modulepreload" href="./shaders.js">
+  <link rel="modulepreload" href="./exploration.js">
+  <link rel="modulepreload" href="./touch-controls.js">
+  <link rel="modulepreload" href="./gamepad.js">
+  <link rel="modulepreload" href="./marine-life.js">
+  <link rel="modulepreload" href="./diver.js">
+  <link rel="modulepreload" href="./set-pieces.js">
+  <link rel="modulepreload" href="./ocean-look.js">
+  <link rel="modulepreload" href="./assets.js">
+  <link rel="modulepreload" href="./underwater-life.js">
+  <link rel="modulepreload" href="./weather.js">
+  <link rel="modulepreload" href="./creature-pack.js">
+  <link rel="modulepreload" href="./distant-scenery.js">
+  <link rel="modulepreload" href="./wrist-computer.js">
+  <link rel="modulepreload" href="./seabirds.js">
+  <link rel="modulepreload" href="./movement-settings.js">
+  <link rel="modulepreload" href="./movement-panel.js">
+  <link rel="modulepreload" href="./expedition-ui.js">
+  <link rel="modulepreload" href="./ui-ticker.js">
+  <link rel="modulepreload" href="./archive.js">
+  <link rel="modulepreload" href="./archive-lightbox.js">
+  <link rel="modulepreload" href="./portfolio-content.js">
+  <link rel="modulepreload" href="./ui-icons.js">
+  <link rel="modulepreload" href="./instruments.js">
 </head>
 <body>
-  <canvas id="world" tabindex="0" aria-label="Explore the ocean. Click the ocean to capture the mouse and look around; Escape releases it. WASD swims, Space ascends, Shift descends, V switches first and third person and F interacts. Touch controls and arrow keys are also available."></canvas>
+  <canvas id="world" tabindex="0" aria-label="Explore the ocean. Click the ocean to capture the mouse and look around; Escape releases it. W and S swim, A and D turn, Space ascends, Shift descends, hold E while swimming for a scooter boost, Q toggles the flashlight, V switches first and third person and F interacts. The arrow keys also look around. On a touch screen a thumb-stick swims and a drag on the water looks; a gamepad works too."></canvas>
   <div class="scene-shade" aria-hidden="true"></div>
   <div class="underwater-tint" aria-hidden="true"></div>
+  <div class="mask-frame" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
   <header class="masthead">
-    <div class="wordmark">ANSHUL<span>A WORLD TO EXPLORE</span></div>
-    <fieldset class="theme-control" aria-label="Time of day">
+    <div class="masthead-start">
+      <button id="menu-toggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="settings-menu" aria-label="Open settings menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg></button>
+      <div class="wordmark">ANSHUL<span>A WORLD TO EXPLORE</span></div>
+    </div>
+    <div class="sky-cluster">
+      <span id="weather-glyph" class="weather-glyph" role="img" aria-label="Weather: clear" data-weather="clear" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><g data-w="clear"><path d="M4 10q4-3.4 8 0t8 0M4 15.5q4-3.4 8 0t8 0"/></g><g data-w="rain"><path d="M7 14h10a3.6 3.6 0 0 0 .3-7.2A5.4 5.4 0 0 0 7 8.2 3 3 0 0 0 7 14ZM9 17l-1 3M13 17l-1 3M17 17l-1 3"/></g><g data-w="storm"><path d="M7 14h10a3.6 3.6 0 0 0 .3-7.2A5.4 5.4 0 0 0 7 8.2 3 3 0 0 0 7 14ZM12.5 15.5 10 19h3l-1.5 3.5"/></g></svg><i class="lock-pip" aria-hidden="true"></i></span>
+      <button id="time-cycle" class="time-cycle" type="button" aria-label="Time of day: day. Switch to dusk."><svg class="sky-glyph" viewBox="0 0 24 24" aria-hidden="true"><g class="sky-day"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></g><g class="sky-low"><path d="M2 16h20M6.5 16a5.5 5.5 0 0 1 11 0M12 5v2.5M4.6 8.6l1.8 1.8M19.4 8.6l-1.8 1.8"/><path class="sky-up" d="m9.5 21 2.5-2 2.5 2"/><path class="sky-down" d="m9.5 19 2.5 2 2.5-2"/></g><g class="sky-night"><path d="M19.5 14.6A7.6 7.6 0 0 1 9.4 4.5a7.6 7.6 0 1 0 10.1 10.1Z"/><path d="M17.5 4v2.4M16.3 5.2h2.4"/></g></svg><i class="lock-pip" aria-hidden="true"></i></button>
+    </div>
+  </header>
+  <aside id="settings-menu" class="settings-menu holo holo--reading" aria-label="Settings" hidden>
+    <header class="settings-head"><span class="holo-label">Settings</span><button type="button" class="settings-close" aria-label="Close settings menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>
+    <div class="settings-body">
+    <section class="settings-group" aria-labelledby="settings-sky-title">
+      <h3 id="settings-sky-title" class="holo-label">Sky time</h3>
+      <fieldset class="theme-control" aria-label="Time of day">
       <legend class="sr-only">Choose the time in Kuala Lumpur</legend>
-      <div class="time-scrubber"><div class="time-title"><label for="time-slider">SKY TIME</label><output id="time-reading" for="time-slider">07:00</output></div><div class="time-track"><i id="time-orb" aria-hidden="true"></i><input id="time-slider" type="range" min="0" max="1439" step="1" value="420" aria-label="Time of day in Kuala Lumpur"></div><div class="time-labels"><span>00</span><span>DAWN</span><span>NOON</span><span>DUSK</span><span>24</span></div></div>
+      <div class="time-scrubber"><div class="time-title"><label for="time-slider">KUALA LUMPUR</label><output id="time-reading" for="time-slider">07:00</output></div><div class="time-track"><i id="time-orb" aria-hidden="true"></i><input id="time-slider" type="range" min="0" max="1439" step="1" value="420" aria-label="Time of day in Kuala Lumpur"></div><div class="time-labels"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div></div>
       <button id="dawn" aria-pressed="false" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 17h20M5 13a7 7 0 0 1 14 0M12 2v3M3 6l2 2m16-2-2 2M9 21h6"/></svg><span>Dawn</span></button>
       <button id="day" aria-pressed="true" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg><span>Day</span></button>
       <button id="dusk" aria-pressed="false" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 17h20M5 13a7 7 0 0 1 14 0M12 3v3M3 7l2 2m16-2-2 2M7 21h10"/></svg><span>Dusk</span></button>
       <button id="night" aria-pressed="false" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.4A8.7 8.7 0 0 1 8.6 4a8.7 8.7 0 1 0 11.4 11.4Z"/></svg><span>Night</span></button>
-    </fieldset>
-  </header>
-  <button id="movement-toggle" class="movement-toggle" type="button" aria-expanded="false" aria-controls="movement-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M9 4v6m6 4v6"/></svg><span>Scene controls</span></button>
-  <button id="camera-toggle" class="camera-toggle" type="button" aria-pressed="false" hidden>Third-person view <kbd>V</kbd></button>
+      </fieldset>
+      <div class="sky-clock" id="sky-clock">DAYLIGHT · 20 MIN CYCLE</div>
+      <label class="holo-switch" id="time-lock-row" hidden><input id="time-lock" type="checkbox" role="switch"><i aria-hidden="true"></i><span>Lock time</span><small>Hold the sky where it is</small></label>
+    </section>
+    <section class="settings-group" id="weather-settings" aria-labelledby="settings-weather-title" hidden>
+      <h3 id="settings-weather-title" class="holo-label">Weather</h3>
+      <div class="weather-picker" role="group" aria-label="Weather"><button type="button" data-weather="clear" aria-pressed="false">Clear</button><button type="button" data-weather="rain" aria-pressed="false">Light rain</button><button type="button" data-weather="storm" aria-pressed="false">Storm</button><button type="button" data-weather="auto" aria-pressed="false">Auto</button></div>
+      <label class="holo-switch"><input id="weather-lock" type="checkbox" role="switch"><i aria-hidden="true"></i><span>Lock weather</span><small>Stop it drifting</small></label>
+    </section>
+    <section class="settings-group" aria-labelledby="settings-view-title">
+      <h3 id="settings-view-title" class="holo-label">View</h3>
+      <div class="settings-actions">
+      <button id="camera-toggle" class="camera-toggle" type="button" aria-pressed="false" hidden>Third-person view <kbd>V</kbd></button>
+      <button id="motion" class="motion-control" type="button" aria-pressed="false" aria-label="Pause animation"><svg viewBox="0 0 24 24" aria-hidden="true" id="motion-icon"><path d="M9 5v14M15 5v14"/></svg><span id="motion-label">Pause motion</span></button>
+      <button id="movement-toggle" class="movement-toggle" type="button" aria-expanded="false" aria-controls="movement-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M9 4v6m6 4v6"/></svg><span>Scene controls</span></button>
+      <button id="credits-toggle" class="credits-toggle" type="button">Model credits</button>
+      </div>
+    </section>
+    <section class="settings-group" aria-labelledby="settings-keys-title">
+      <h3 id="settings-keys-title" class="holo-label">Controls</h3>
+      <dl class="key-reference"><div><dt><kbd>W</kbd><kbd>S</kbd></dt><dd>Forward / back</dd></div><div><dt><kbd>A</kbd><kbd>D</kbd></dt><dd>Turn</dd></div><div><dt><kbd>Space</kbd></dt><dd>Rise</dd></div><div><dt><kbd>Shift</kbd></dt><dd>Sink</dd></div><div><dt><kbd>E</kbd></dt><dd>Scooter boost while swimming</dd></div><div><dt><kbd>Q</kbd></dt><dd>Flashlight</dd></div><div><dt><kbd>F</kbd></dt><dd>Interact</dd></div><div><dt><kbd>C</kbd></dt><dd>Dive computer</dd></div><div><dt><kbd>V</kbd></dt><dd>Camera</dd></div><div><dt><kbd>Esc</kbd></dt><dd>Release mouse</dd></div><div><dt>Touch</dt><dd>Thumb-stick swims · drag to look</dd></div><div><dt>Gamepad</dt><dd>Sticks swim and look · triggers rise / sink</dd></div></dl>
+    </section>
+    </div>
+  </aside>
   <div id="crosshair" class="crosshair" aria-hidden="true" hidden><i></i><b></b></div>
-  <button id="capture-hint" class="capture-hint" type="button" hidden><strong>Click to swim</strong><span>Mouse to aim · WASD to move · Esc for cursor</span></button>
-  <div id="ascent-status" class="ascent-status" role="status" aria-live="polite" hidden></div>
-  <button id="interact-prompt" class="interact-prompt" type="button" hidden><kbd>F</kbd><span>Explore</span></button>
-  <aside id="movement-panel" class="movement-panel" role="dialog" aria-modal="true" aria-labelledby="movement-title" aria-describedby="movement-intro" hidden>
+  <button id="capture-hint" class="capture-hint holo" type="button" hidden><strong>Click to swim</strong><span>Mouse to aim · W/S swim · A/D turn · hold E to boost · Esc for cursor</span></button>
+  <div id="ascent-status" class="ascent-status holo" role="status" aria-live="polite" hidden></div>
+  <button id="interact-prompt" class="interact-prompt holo" type="button" hidden><kbd>F</kbd><span>Explore</span></button>
+  <aside id="movement-panel" class="movement-panel holo holo--reading" role="dialog" aria-modal="true" aria-labelledby="movement-title" aria-describedby="movement-intro" hidden>
     <header class="movement-header"><div><p>MAKE IT YOUR OWN</p><h2 id="movement-title">Lighting & movement</h2></div><button type="button" class="movement-close" aria-label="Close movement settings">×</button></header>
-    <p id="movement-intro" class="movement-intro">Tune while you explore. Click the ocean to aim above or below the surface; Esc frees your cursor. WASD moves, Space rises and Shift descends. V switches between first person and a camera following the diver.</p>
+    <p id="movement-intro" class="movement-intro">Tune while you explore. Click the ocean to aim above or below the surface; Esc frees your cursor. W and S swim, A and D turn, Space rises and Shift descends. Hold E while swimming for a scooter boost; Q toggles the flashlight. V switches between first person and a camera following the diver. On a touch screen the thumb-stick swims and a drag looks; a gamepad's sticks do the same. Pick a control feel below, then fine-tune it.</p>
     <div class="movement-fields"></div>
     <footer class="movement-footer"><div class="movement-actions"><button type="button" class="movement-reset">Restore defaults</button><button type="button" class="movement-export">Export JSON</button></div><p class="movement-save-status" role="status" aria-live="polite">Changes apply live</p></footer>
   </aside>
-  <div class="heading-indicator" aria-label="Viewing direction"><span>HEADING</span><div class="compass-ticks" aria-hidden="true">╵ ╷ ╵ ╷ ╵</div><strong id="heading-cardinal">E</strong><strong id="heading-value">090°</strong></div>
+  <div class="heading-indicator" role="group" aria-label="Viewing direction"><div class="heading-window" aria-hidden="true"><div class="heading-tape" id="heading-tape"></div></div><i class="heading-lubber" aria-hidden="true"></i><i class="heading-caret" aria-hidden="true"></i><i class="heading-turn" aria-hidden="true"></i><div class="heading-readout"><span>HDG</span><strong id="heading-cardinal">E</strong><strong id="heading-value">090°</strong></div></div>
   <main class="hero" id="main">
     <div class="surface-copy">
       <p class="eyebrow"><span></span>HELLO, I’M ANSHUL</p>
@@ -51,52 +139,68 @@
       <h2>A little<br><em>closer to calm.</em></h2>
       <p class="lede">A reef full of stories. Take your time exploring.</p>
     </div>
-    <button class="dive-button" id="dive" type="button" disabled><span id="dive-label">Preparing the ocean</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15m-6-6 6 6 6-6"/></svg></button>
+    <button class="dive-button" id="dive" type="button" disabled><i class="dive-flag" aria-hidden="true"></i><span id="dive-label">Preparing the ocean</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15m-6-6 6 6 6-6"/></svg></button>
     <button class="explore-button" id="explore" type="button" aria-pressed="false">Look around <span>↗</span></button>
   </main>
   <div id="sky-labels" aria-hidden="true"></div>
   <div id="reef-labels"></div>
-  <aside class="reef-map" aria-label="Reef exploration map" hidden>
-    <div class="map-heading"><span>REEF ATLAS</span><button id="reset-view" type="button" aria-label="Return to the starting view">Reset view</button><button id="map-toggle" type="button" aria-label="Expand reef atlas" aria-expanded="false" aria-controls="map-chart map-legend">＋</button></div>
-    <div class="map-chart" id="map-chart">
-      <canvas id="reef-bathymetry" class="map-terrain" aria-label="Depth contours sampled from the reef terrain"></canvas>
-      <span class="map-orientation" aria-hidden="true">N ← · E ↑</span><span class="map-player" id="map-player" aria-hidden="true"></span>
+  <aside class="reef-map" aria-label="Reef exploration map" data-view="round" hidden>
+    <div class="map-heading"><span>REEF ATLAS</span><button id="reset-view" type="button" aria-label="Return to the starting view">Reset view</button><button id="map-toggle" type="button" aria-label="Expand reef atlas" aria-expanded="false" aria-controls="map-chart map-legend" hidden>＋</button></div>
+    <div class="map-lens">
+      <div class="map-chart" id="map-chart">
+        <canvas id="reef-bathymetry" class="map-terrain" aria-label="Depth contours sampled from the reef terrain"></canvas>
+        <span class="map-orientation" aria-hidden="true">N ← · E ↑</span><span class="map-player" id="map-player" aria-hidden="true"></span>
+      </div>
+      <i class="map-sweep" aria-hidden="true"></i><i class="map-rose" aria-hidden="true"><b>N</b></i><span class="map-range" aria-hidden="true">50 m</span>
     </div>
+    <i class="map-lubber" aria-hidden="true"></i>
+    <button id="map-expand" class="map-expand" type="button" aria-expanded="false" aria-controls="map-legend" aria-label="Expand reef map"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="map-expand-out" d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/><path class="map-expand-in" d="M20 10h-6V4M4 14h6v6M14 10l6-6M10 14l-6 6"/></svg></button>
     <div class="map-legend" id="map-legend"></div>
     <div class="chart-key">SHALLOW ▰ ▰ ▰ DEEP · 5 M CONTOURS</div><div class="map-reading"><span id="reef-zone">REEF SHELF</span><span id="speed-value">0.0 M/S</span></div>
     <p id="map-caption">Choose a marker to swim closer.</p>
   </aside>
-  <div class="swim-controls" aria-label="Touch swimming controls" hidden>
-    <button data-swim="KeyW" aria-label="Swim forward">W</button><button data-swim="KeyA" aria-label="Strafe left">A</button><button data-swim="KeyS" aria-label="Swim backward">S</button><button data-swim="KeyD" aria-label="Strafe right">D</button><button data-swim="Space" aria-label="Ascend">＋</button><button data-swim="ShiftLeft" aria-label="Descend">−</button><button data-swim="ArrowLeft" aria-label="Aim left">←</button><button data-swim="ArrowRight" aria-label="Aim right">→</button><button data-swim="ArrowUp" aria-label="Look upward">↥</button><button data-swim="ArrowDown" aria-label="Look downward">↧</button>
+  <!-- Touch deck (controls.css, touch-controls.js): a thumb-stick on the left, held and tapped keys on the right; drag the water anywhere else to look. Shown only while touch is the input in use. -->
+  <div class="swim-controls touch-deck" role="group" aria-label="Touch swimming controls" hidden>
+    <div class="touch-stick" role="img" aria-label="Thumb-stick: push up or down to swim forward or back, sideways to turn"><div class="touch-stick-base" aria-hidden="true"><i class="touch-stick-knob"></i></div></div>
+    <div class="touch-actions">
+      <button type="button" class="touch-key" data-action="camera" aria-pressed="false" aria-label="Switch between first person and the camera following the diver"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.4"/></svg></button>
+      <button type="button" class="touch-key" data-lamp aria-pressed="true" aria-label="Flashlight"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8l-1.6 5H9.6zM9.6 8h4.8v10.2a2.4 2.4 0 0 1-4.8 0zM12 12v2.4"/></svg></button>
+      <button type="button" class="touch-key touch-key--hold" data-swim="Space" aria-label="Rise"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
+      <button type="button" class="touch-key" data-action="interact" aria-disabled="true" aria-label="Interact with what is in front of you"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3.5M12 17.5V21M3 12h3.5M17.5 12H21"/></svg></button>
+      <button type="button" class="touch-key touch-key--hold" data-swim="KeyE" aria-label="Scooter: hold while swimming to boost, or by itself to cruise forward"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3 5 13.5h6L10 21l9-11h-6z"/></svg></button>
+      <button type="button" class="touch-key touch-key--hold" data-swim="ShiftLeft" aria-label="Sink"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14m-6-6 6 6 6-6"/></svg></button>
+    </div>
   </div>
-  <div class="view-controls" aria-label="Sky viewing controls"><button data-swim="ArrowLeft" aria-label="Look left">←</button><button data-swim="ArrowUp" aria-label="Look up at the sky">↑</button><button data-swim="ArrowDown" aria-label="Look down toward the ocean">↓</button><button data-swim="ArrowRight" aria-label="Look right">→</button></div>
-  <div class="sky-clock" id="sky-clock">DAYLIGHT · 20 MIN CYCLE</div>
+  <div class="view-controls holo-deep" aria-label="Sky viewing controls"><button data-swim="ArrowLeft" aria-label="Look left">←</button><button data-swim="ArrowUp" aria-label="Look up at the sky">↑</button><button data-swim="ArrowDown" aria-label="Look down toward the ocean">↓</button><button data-swim="ArrowRight" aria-label="Look right">→</button></div>
   <aside class="depth" aria-label="Depth below the surface">
     <span class="depth-title">DEPTH</span>
-    <div class="depth-track"><i id="depth-marker"></i><span style="--tick:0%">0</span><span style="--tick:33.33%">20</span><span style="--tick:66.67%">40</span><span style="--tick:100%">60</span></div>
+    <div class="depth-track"><i id="depth-marker"></i><i id="depth-max" class="depth-max" aria-hidden="true"><b>MAX</b></i><i class="depth-stop" aria-hidden="true"><b>STOP</b></i><span style="--tick:0%">0</span><span style="--tick:25%">10</span><span style="--tick:50%">20</span><span style="--tick:75%">30</span><span style="--tick:100%">40</span></div>
     <span class="depth-unit">METRES</span>
   </aside>
-  <footer class="scene-footer">
+  <div id="air-gauge" class="air-gauge" role="group" aria-label="Dive console: dive computer and pressure gauge, simulated" hidden>
+    <div class="console-computer" id="console-computer"><div class="console-depth"><span>DEPTH</span><strong id="console-depth">0.0<small>m</small></strong></div><div class="console-ndl" id="console-ndl" data-mode="ndl"><span id="console-ndl-label">NDL</span><strong id="console-ndl-value">99+<small>min</small></strong></div><div class="ascent-bar" id="console-ascent" role="img" aria-label="Ascent rate: steady" data-level="0"><i></i><i></i><i></i><i></i><i></i><em>SLOW</em></div><div class="console-row"><span>TIME</span><b id="console-time">00:00</b><span>MAX</span><b id="console-max">0.0 m</b></div></div>
+    <div class="spg" id="spg" data-level="ok"><i class="spg-needle" id="air-fill" aria-hidden="true"></i><b class="spg-hub" aria-hidden="true"></b><span class="spg-title" aria-hidden="true">AIR</span><strong id="air-value">200<small>bar</small></strong><em id="air-flag" class="spg-flag"></em></div>
+  </div>
+  <footer class="scene-footer holo-deep">
     <div class="location"><span class="location-dot"></span><span id="scene-location">AT THE SURFACE</span><span class="separator">/</span><span id="depth-value">00 M</span></div>
-    <p class="look-hint" id="look-hint">Click to swim · WASD · Space / Shift · V camera · F explore</p>
-    <button id="motion" class="motion-control" type="button" aria-pressed="false" aria-label="Pause animation"><svg viewBox="0 0 24 24" aria-hidden="true" id="motion-icon"><path d="M9 5v14M15 5v14"/></svg><span id="motion-label">Pause motion</span></button>
+    <p class="look-hint" id="look-hint">Click to swim · W/S swim · A/D turn · Space / Shift · E scooter · Q light</p>
   </footer>
-  <p id="status" class="status" role="status" aria-live="polite">Preparing your quiet corner of the ocean…</p>
-  <button id="credits-toggle" class="credits-toggle" type="button">Model credits</button>
+  <p id="status" class="status holo holo-deep" role="status" aria-live="polite">Preparing your quiet corner of the ocean…</p>
+  <button id="archive-toggle" class="archive-toggle" type="button" hidden>Dive records <span>↗</span></button>
   <button id="dive-computer-toggle" class="dive-computer-toggle" type="button" aria-expanded="false" aria-controls="dive-computer" hidden><span aria-hidden="true">▦</span> Dive computer <kbd>C</kbd></button>
-  <button id="archive-toggle" class="archive-toggle" type="button" hidden>Field archive <span>↗</span></button>
-  <aside id="dive-computer" class="dive-computer" aria-label="Dive computer" hidden>
-    <div class="computer-top"><span><i></i> DIVE SYSTEM / 01</span><span id="computer-mode">FIRST PERSON</span></div>
-    <div class="computer-readings"><div class="computer-depth"><span>DEPTH</span><strong id="computer-depth">0.0<small>m</small></strong></div><div><span>DIVE TIME</span><strong id="computer-time">00:00</strong></div></div>
-    <div class="computer-air"><div><span>AIR · SIMULATED</span><strong id="computer-air">100<small>%</small></strong></div><div class="air-track"><i id="computer-air-fill"></i></div></div>
+  <aside id="dive-computer" class="dive-computer holo" aria-label="Dive computer" hidden>
+    <div class="computer-top"><span><i></i> AIR 21% · SIMULATED</span><span id="computer-mode">DIVE</span></div>
+    <div class="computer-readings"><div class="computer-depth"><span>DEPTH</span><strong id="computer-depth">0.0<small>m</small></strong></div><div class="computer-ndl" id="computer-ndl" data-mode="ndl"><span id="computer-ndl-label">NO-DECO LIMIT</span><strong id="computer-ndl-value">99+<small>min</small></strong></div><div class="ascent-bar" id="computer-ascent" aria-hidden="true" data-level="0"><i></i><i></i><i></i><i></i><i></i><em>SLOW</em></div></div>
+    <div class="computer-row"><div><span>DIVE TIME</span><strong id="computer-time">00:00</strong></div><div><span>MAX DEPTH</span><strong id="computer-max">0.0<small>m</small></strong></div><div><span>WATER</span><strong id="computer-temp">28<small>°C</small></strong></div><div><span>TANK</span><strong id="computer-air">200<small>bar</small></strong></div></div>
+    <div class="computer-profile"><span>PROFILE</span><svg viewBox="0 0 240 44" preserveAspectRatio="none" role="img" aria-label="Dive profile: depth against time"><path class="profile-grid" d="M0 .5H240M0 22H240M0 43.5H240"/><polyline id="computer-profile" points="0,0 240,0"/></svg><b id="computer-profile-scale">20 m</b></div>
     <div class="computer-bottom"><span>LOCATION</span><strong id="computer-location">Coral gardens</strong></div>
   </aside>
   <dialog id="landmark-dialog" class="ocean-dialog dive-explorer" aria-labelledby="landmark-title">
-    <header class="explorer-header"><div class="explorer-identity"><span class="explorer-emblem" aria-hidden="true">◈</span><div><p>DIVE EXPLORER</p><span>ANSHUL / FIELD ARCHIVE</span></div></div><button class="dialog-close" type="button" aria-label="Close Dive Explorer">×</button></header>
-    <nav class="explorer-sections" aria-label="Portfolio sections"><button data-section="about">01 <span>About</span></button><button data-section="experience">02 <span>Experience</span></button><button data-section="projects">03 <span>Projects</span></button><button data-section="resume">04 <span>Resume</span></button></nav>
-    <div class="explorer-toolbar"><p id="landmark-kicker">THE ANCHOR</p><label>Reading style <select id="copy-variant"><option value="baseline">Baseline copy</option><option value="concise">Concise draft</option><option value="story">Story draft</option><option value="technical">Technical draft</option></select></label></div>
-    <div class="explorer-body"><nav id="explorer-index" class="explorer-index" aria-label="Archive entries"></nav><article class="explorer-reading"><figure id="explorer-media" class="explorer-media" hidden><a id="entry-image-link" class="media-full" href="#" target="_blank" rel="noopener"><img id="entry-image" alt=""></a><figcaption id="entry-image-caption"></figcaption></figure><div class="entry-heading"><p id="entry-tag" class="entry-tag"></p><span id="entry-number"></span></div><h2 id="landmark-title">About</h2><p id="landmark-caption" class="dialog-caption"></p><div id="explorer-content"></div><ul id="explorer-facts"></ul><div id="explorer-links"></div></article></div>
-    <footer class="explorer-footer"><span><i></i> <span id="archive-status">REEF CONNECTION ESTABLISHED</span></span><button class="dialog-return" type="button">Return to the reef <kbd>Esc</kbd></button></footer>
+    <div class="arc-scan" aria-hidden="true"></div>
+    <header class="arc-header"><div class="arc-identity"><span class="arc-emblem" aria-hidden="true">◈</span><div><h2 id="landmark-title">Dive Explorer</h2><nav id="archive-crumbs" class="arc-crumbs" aria-label="You are here"></nav></div></div><div class="arc-tools"><button id="archive-copy" class="arc-tool" type="button"><span>Copy link</span></button><button id="archive-print" class="arc-tool" type="button"><span>Print</span></button><button class="dialog-close" type="button" aria-label="Close Dive Explorer">×</button></div></header>
+    <div class="arc-body"><nav id="explorer-index" class="arc-index" aria-label="Records contents"></nav><div class="arc-reading holo holo--reading"><article id="archive-page" class="arc-page" tabindex="0" aria-label="Record"></article></div></div>
+    <footer class="arc-footer"><label class="arc-variant">Reading style <select id="copy-variant"><option value="baseline">Baseline copy</option><option value="concise">Concise draft</option><option value="story">Story draft</option><option value="technical">Technical draft</option></select></label><div class="arc-pager"><button id="archive-prev" type="button"><span>Previous</span></button><div class="arc-progress"><span id="entry-number"></span><span id="archive-progress" class="arc-progress-track" aria-hidden="true"></span></div><button id="archive-next" type="button"><span>Next</span></button></div><button class="dialog-return" type="button"><span id="archive-return-label">Return to the reef</span> <kbd>Esc</kbd></button></footer>
+    <p id="archive-live" class="arc-live" role="status" aria-live="polite"></p>
   </dialog>
   <dialog id="credits-dialog" class="ocean-dialog credits-dialog" aria-labelledby="credits-title">
     <button class="dialog-close" type="button" aria-label="Close model credits">×</button>
@@ -105,10 +209,16 @@
     <div id="model-credits"></div>
   </dialog>
   <noscript><p class="fallback">Enable JavaScript to explore the 3D ocean.</p></noscript>
-  <script src="./vendor/gsap.min.js"></script>
   <script type="module" src="./world.js"></script>
   <script type="module" src="./landmark-interactions.js"></script>
   <script type="module" src="./dive-hud.js"></script>
+  <script type="module" src="./hud.js"></script>
+  <script type="module" src="./journey.js"></script>
+  <script type="module" src="./guided-dive.js"></script>
+  <script type="module" src="./dive-plan.js"></script>
+  <script type="module" src="./motion.js"></script>
+  <script type="module" src="./ambient-audio.js"></script>
+  <script type="module" src="./expedition-interactions.js"></script>
 </body>
 </html>
 

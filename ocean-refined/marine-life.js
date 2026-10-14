@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
+import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 
 const TAU = Math.PI * 2;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -17,7 +18,7 @@ function bodyGeometry(kind, economy) {
     : kind === 'tang'
       ? [[-.72,.012,.012],[-.56,.12,.07],[-.35,.205,.115],[-.04,.245,.145],[.25,.20,.12],[.47,.12,.075],[.60,.055,.042],[.68,.006,.006]]
       : [[-.72,.01,.01],[-.56,.08,.052],[-.34,.145,.09],[-.04,.18,.105],[.26,.15,.09],[.49,.09,.06],[.61,.045,.03],[.68,.005,.005]];
-  const radialSegments = economy ? 8 : 12;
+  const radialSegments = 10;
   const positions = [], indices = [];
   profile.forEach(([x, ry, rz]) => {
     for (let j = 0; j <= radialSegments; j++) {
@@ -58,83 +59,124 @@ function finGeometry(kind) {
   return geometry;
 }
 
+// Every body flexes from the shoulders back, faster as the fish travels, so
+// a school reads as swimming rather than sliding. Patterns are painted in the
+// shader: a pale lateral line, clownfish bands, and a tang's mask and tail.
 function bodyMaterial(type) {
-  const mat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: type === 'silver' ? .34 : .4, metalness: type === 'silver' ? .13 : 0, side: THREE.DoubleSide });
-  if (type === 'silver' || type === 'clown') {
-    mat.onBeforeCompile = shader => {
-      shader.vertexShader = `varying float vFishX;\nvarying float vFishY;\n${shader.vertexShader}`
-        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvFishX = position.x;\nvFishY = position.y;');
-      let pattern = '';
-      if (type === 'silver') {
-        pattern = 'float lateralStripe = 1.0 - smoothstep(0.018, 0.055, abs(vFishY - 0.035));\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.83, 0.92, 0.91), lateralStripe * 0.5);';
-      } else {
-        pattern = 'float bandDistance = min(abs(vFishX + 0.38), min(abs(vFishX - 0.015), abs(vFishX - 0.36)));\nfloat bandEdge = 1.0 - smoothstep(0.05, 0.082, bandDistance);\nfloat bandWhite = 1.0 - smoothstep(0.025, 0.043, bandDistance);\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.12, 0.20, 0.21), bandEdge * 0.84);\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.94, 0.86), bandWhite);';
-      }
-      shader.fragmentShader = `varying float vFishX;\nvarying float vFishY;\n${shader.fragmentShader}`
-        .replace('#include <color_fragment>', `#include <color_fragment>\n${pattern}`);
-    };
-    mat.customProgramCacheKey = () => `marine-fish-body-${type}-v1`;
-  }
+  const mat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: type === 'silver' ? .34 : .42, metalness: type === 'silver' ? .1 : 0, side: THREE.DoubleSide });
+  const pattern = type === 'silver'
+    ? `float lateralStripe = 1.0 - smoothstep(0.018, 0.055, abs(vFishY - 0.035));
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.86, 0.95, 0.94), lateralStripe * 0.55);
+diffuseColor.rgb *= mix(.72, 1.0, smoothstep(-.02, .09, -vFishY + .06));`
+    : type === 'clown'
+      ? `float bandDistance = min(abs(vFishX + 0.38), min(abs(vFishX - 0.015), abs(vFishX - 0.36)));
+float bandEdge = 1.0 - smoothstep(0.05, 0.082, bandDistance);
+float bandWhite = 1.0 - smoothstep(0.025, 0.043, bandDistance);
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.12, 0.20, 0.21), bandEdge * 0.84);
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.95, 0.96, 0.88), bandWhite);`
+      : `float mask = 1.0 - smoothstep(0.03, 0.07, abs(vFishX - 0.4 + vFishY * .5));
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.07, 0.13, 0.24), mask * .8);
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.98, 0.83, 0.33), 1.0 - smoothstep(-0.52, -0.40, vFishX));
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.06, 0.12, 0.25), (1.0 - smoothstep(0.012, 0.04, abs(abs(vFishY) - 0.2))) * .45);`;
+  mat.onBeforeCompile = shader => {
+    shader.uniforms.uSwimTime = swimTime;
+    shader.vertexShader = `uniform float uSwimTime;
+varying float vFishX;
+varying float vFishY;
+${shader.vertexShader}`
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+vFishX = position.x; vFishY = position.y;
+#ifdef USE_INSTANCING
+float swimPhase = dot(instanceMatrix[3].xyz, vec3(3.1, 1.7, 2.3));
+transformed.z += sin(position.x * 4.2 - uSwimTime * 5.5 + swimPhase) * .085 * (1.0 - smoothstep(-.72, .45, position.x));
+#endif`);
+    shader.fragmentShader = `varying float vFishX;
+varying float vFishY;
+${shader.fragmentShader}`
+      .replace('#include <color_fragment>', `#include <color_fragment>
+${pattern}`);
+  };
+  mat.customProgramCacheKey = () => `marine-fish-body-${type}-v2`;
   return mat;
 }
+const swimTime = { value: 0 };
 
-export function createMarineLife({ economy = false, terrainHeightAt = () => -54, debug = false } = {}) {
+// The dorsal fin, pectoral fin and both eyes ride on the body transform, so
+// they are one mesh with painted eyes: one matrix per fish instead of four.
+function trimGeometry() {
+  const paint = (geometry, hex) => {
+    const color = new THREE.Color(hex), count = geometry.getAttribute('position').count, data = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) color.toArray(data, i * 3);
+    geometry.setAttribute('color', new THREE.BufferAttribute(data, 3));
+    return geometry;
+  };
+  const parts = [paint(finGeometry('dorsal'), '#ffffff'), paint(finGeometry('pectoral').translate(-.02, -.02, .12), '#ffffff'),
+    paint(new THREE.SphereGeometry(.022, 4, 2).translate(.37, .045, -.087), '#102a35'),
+    paint(new THREE.SphereGeometry(.022, 4, 2).translate(.37, .045, .087), '#102a35')];
+  const geometry = mergeGeometries(parts, false);
+  parts.forEach(part => part.dispose());
+  return geometry;
+}
+
+export function createMarineLife(options) { const steps = marineLifeSteps(options); let step; while (!(step = steps.next()).done); return step.value; }
+// The same build, pausing (yielding) between its parts so the page can do it between frames.
+export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54, debug = false } = {}) {
   const root = new THREE.Group(); root.name = 'Schooling reef fish';
   const random = seededRandom(906);
-  // Twenty-five small habitats keep neighbor work local while covering every depth
-  // and both outer reefs. Coral residents stay close; pelagic schools roam.
+  // Forty-nine small habitats keep neighbor work local. The outer row lives
+  // beyond the swim boundary so the reef continues into the haze.
   const schools = [];
-  for (let row = 0; row < 5; row++) for (let column = 0; column < 5; column++) {
-    const index = row * 5 + column;
-    const x = [-53, -26, 0, 26, 53][column];
-    const z = row===1&&column===2 ? -12 : [27, -4, -35, -66, -97][row] + (column % 2 ? -1 : 1);
+  for (let row = 0; row < 7; row++) for (let column = 0; column < 7; column++) {
+    const index = row * 7 + column;
+    const x = [-73, -49, -25, 0, 25, 49, 73][column];
+    const z = row===2&&column===3 ? -12 : [43, 20, -3, -26, -51, -78, -116][row] + (column % 2 ? -1 : 1);
     const type = ['silver', 'tang', 'clown'][index % 3];
     const resident = type === 'clown';
     const floor = terrainHeightAt(x, z);
     const clearance = Math.max(resident ? 3.1 : 4.5 + index % 3 * .8, (resident ? -53 : -49) - floor);
-    schools.push({ center: new THREE.Vector3(x, Math.min(-2.5, floor + clearance), z), color: type,
-      count: economy ? 6 : 11, resident, clearance,
+    const center = new THREE.Vector3(x, Math.min(-2.5, floor + clearance), z);
+    schools.push({ center, color: type,
+      count: economy ? 5 : 10, resident, clearance,
       spread: resident ? 2.3 : 4.4, radius: resident ? 3.4 : 7.5, members: [],
-      fear: 0, away: new THREE.Vector3(), travel: new THREE.Vector3(), target: new THREE.Vector3() });
+      fear: 0, away: new THREE.Vector3(), travel: new THREE.Vector3(), target: center.clone(),
+      near: true, shown: true, dt: 0, idle: 0, wake: 0 });
   }
   const count = schools.reduce((sum, school) => sum + school.count, 0);
   const familyCounts = { silver: 0, tang: 0, clown: 0 };
   schools.forEach(school => { familyCounts[school.color] += school.count; });
-  const families = {};
   const material = (color, options = {}) => new THREE.MeshStandardMaterial({ color, roughness: .48, metalness: 0, side: THREE.DoubleSide, ...options });
   const palettes = {
-    silver: ['#b9d5d6', '#d1e1dc', '#96bdc8'],
-    tang: ['#559ab5', '#78b6c2', '#477c9e'],
-    clown: ['#e9985f', '#f0b06a', '#d98958']
+    silver: ['#c4dfe2', '#dcebe6', '#a2c9d6'],
+    tang: ['#3f8fd6', '#55a8e0', '#3a74c4'],
+    clown: ['#ff8a4a', '#ffa25a', '#f2783f']
+  };
+  // Five draw calls for every fish on the reef: a body mesh per species, one
+  // mesh of tails and one of fins and eyes shared by all of them.
+  const families = {}, meshes = [], white = new THREE.Color('#ffffff');
+  const moving = (mesh, name) => {
+    mesh.name = name; mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    // Schools are culled one by one in draw(); the mesh itself spans the reef.
+    for (let i = 0; i < mesh.count; i++) mesh.setColorAt(i, white);
+    mesh.frustumCulled = false; root.add(mesh); meshes.push(mesh); return mesh;
   };
   for (const type of Object.keys(familyCounts)) {
-    families[type] = {
-      bodies: new THREE.InstancedMesh(bodyGeometry(type, economy), bodyMaterial(type), familyCounts[type]),
-      tails: new THREE.InstancedMesh(finGeometry('tail'), material('#ffffff', { roughness: .52 }), familyCounts[type]),
-      dorsal: new THREE.InstancedMesh(finGeometry('dorsal'), material('#ffffff', { roughness: .52 }), familyCounts[type]),
-      pectorals: new THREE.InstancedMesh(finGeometry('pectoral'), material('#ffffff', { roughness: .55 }), familyCounts[type]),
-      cursor: 0
-    };
-    for (const mesh of [families[type].bodies, families[type].tails, families[type].dorsal, families[type].pectorals]) {
-      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-      mesh.frustumCulled = false;
-      root.add(mesh);
-    }
+    yield;
+    families[type] = { bodies: moving(new THREE.InstancedMesh(bodyGeometry(type, economy), bodyMaterial(type), familyCounts[type]), `${type} fish bodies`), drawn: 0 };
   }
-  const eyeGeometry = new THREE.SphereGeometry(1, economy ? 5 : 7, 5);
-  const eyes = new THREE.InstancedMesh(eyeGeometry, material('#102a35', { roughness: .26 }), count * 2);
-  eyes.instanceMatrix.setUsage(THREE.DynamicDrawUsage); eyes.frustumCulled = false; eyes.name = 'Small fish eyes'; root.add(eyes);
+  yield;
+  const tails = moving(new THREE.InstancedMesh(finGeometry('tail'), material('#ffffff', { roughness: .52 }), count), 'Fish tails');
+  const trim = moving(new THREE.InstancedMesh(trimGeometry(), material('#ffffff', { roughness: .52, vertexColors: true }), count), 'Fish fins and eyes');
 
+  yield;
   const fish = [];
   for (let school = 0; school < schools.length; school++) {
-    const habitat = schools[school], family = families[habitat.color];
+    const habitat = schools[school];
     for (let member = 0; member < habitat.count; member++) {
-      const slot = family.cursor++;
       const angle = random() * TAU, radial = Math.sqrt(random()) * habitat.spread;
       const f = {
         position: habitat.center.clone().add(new THREE.Vector3(Math.cos(angle) * radial, (random() - .5) * 1.5, Math.sin(angle) * radial)),
         velocity: new THREE.Vector3(.65 + random() * .35, (random() - .5) * .08, (random() - .5) * .2),
-        acceleration: new THREE.Vector3(), school, type: habitat.color, slot, fear: 0,
+        acceleration: new THREE.Vector3(), school, type: habitat.color, fear: 0,
         side: Math.cos(angle) >= 0 ? 1 : -1,
         size: (habitat.color === 'silver' ? .64 : habitat.color === 'clown' ? .55 : .84) * (.88 + random() * .24) * (.9 + school % 4 * .1),
         phase: random() * TAU,
@@ -142,55 +184,86 @@ export function createMarineLife({ economy = false, terrainHeightAt = () => -54,
       };
       f.position.y = Math.max(f.position.y, terrainHeightAt(f.position.x, f.position.z) + 1.7);
       fish.push(f); habitat.members.push(f);
-      const color = new THREE.Color(fish[fish.length - 1].tint);
-      family.bodies.setColorAt(slot, color);
-      family.tails.setColorAt(slot, habitat.color === 'tang'
+      f.bodyColor = new THREE.Color(f.tint);
+      f.tailColor = habitat.color === 'tang'
         ? new THREE.Color('#e6c66f').offsetHSL((random() - .5) * .015, 0, (random() - .5) * .05)
-        : color.clone().multiplyScalar(.84));
-      family.dorsal.setColorAt(slot, color.clone().multiplyScalar(.82));
-      family.pectorals.setColorAt(slot, color.clone().multiplyScalar(.8));
+        : f.bodyColor.clone().multiplyScalar(.84);
+      f.trimColor = f.bodyColor.clone().multiplyScalar(.81);
     }
+  }
+
+  // Fish only need the seabed to within a hand's width. A 2 m height grid
+  // replaces two analytic terrain evaluations per fish per step.
+  yield;
+  const GRID_X = -86, GRID_Z = -130, GRID_STEP = 2, GRID_W = 87, GRID_H = 95, floorGrid = new Float32Array(GRID_W * GRID_H);
+  for (let gz = 0; gz < GRID_H; gz++) for (let gx = 0; gx < GRID_W; gx++) floorGrid[gz * GRID_W + gx] = terrainHeightAt(GRID_X + gx * GRID_STEP, GRID_Z + gz * GRID_STEP);
+  function floorAt(x, z) {
+    const fx = Math.min(Math.max((x - GRID_X) / GRID_STEP, 0), GRID_W - 1.001), fz = Math.min(Math.max((z - GRID_Z) / GRID_STEP, 0), GRID_H - 1.001);
+    const ix = fx | 0, iz = fz | 0, tx = fx - ix, tz = fz - iz, i = iz * GRID_W + ix;
+    return (floorGrid[i] * (1 - tx) + floorGrid[i + 1] * tx) * (1 - tz) + (floorGrid[i + GRID_W] * (1 - tx) + floorGrid[i + GRID_W + 1] * tx) * tz;
   }
 
   const dummy = new THREE.Object3D(), orientation = new THREE.Quaternion();
   const heading = new THREE.Euler(0, 0, 0, 'YZX');
-  const tailWag = new THREE.Quaternion();
-  const direction = new THREE.Vector3(), center = new THREE.Vector3(), alignment = new THREE.Vector3();
-  const separation = new THREE.Vector3(), offset = new THREE.Vector3(), target = new THREE.Vector3(), steering = new THREE.Vector3();
+  const tailWag = new THREE.Quaternion(), bounds3 = new THREE.Sphere();
+  const direction = new THREE.Vector3();
+  const offset = new THREE.Vector3(), steering = new THREE.Vector3();
   const swimmerPrevious = new THREE.Vector3(), swimmerVelocity = new THREE.Vector3();
   const swimmerAhead = new THREE.Vector3(), swimmerSegment = new THREE.Vector3(), closest = new THREE.Vector3();
   const tangent = new THREE.Vector3(), avoidance = new THREE.Vector3();
-  let hadSwimmer = false;
-  const bounds = { x: [-61, 61], y: [-68, -1.6], z: [-104, 34] };
+  let hadSwimmer = false, frame = 0, painted = -1;
+  const bounds = { x: [-84, 84], y: [-85, -1.6], z: [-128, 56] };
+  // Beyond this distance from the diver a school cannot feel them (its
+  // members stay within ~20 m of the roaming target; avoidance reaches 13 m).
+  const NEAR_SQ = 40 * 40;
 
-  function draw(elapsed) {
-    fish.forEach((f, i) => {
-      const family = families[f.type];
-      direction.copy(f.velocity).normalize();
-      heading.set(0, Math.atan2(-direction.z, direction.x), Math.atan2(direction.y, Math.hypot(direction.x, direction.z)), 'YZX');
-      orientation.setFromEuler(heading);
-      dummy.position.copy(f.position); dummy.quaternion.copy(orientation); dummy.scale.setScalar(f.size); dummy.updateMatrix();
-      family.bodies.setMatrixAt(f.slot, dummy.matrix);
-      const wag = Math.sin(elapsed * 6.3 + f.phase) * .11;
-      tailWag.setFromAxisAngle(UP, wag);
-      dummy.position.copy(f.position).addScaledVector(direction, -.63 * f.size);
-      dummy.quaternion.copy(orientation).multiply(tailWag); dummy.scale.setScalar(f.size); dummy.updateMatrix();
-      family.tails.setMatrixAt(f.slot, dummy.matrix);
-      dummy.position.copy(f.position);
-      dummy.quaternion.copy(orientation); dummy.scale.setScalar(f.size); dummy.updateMatrix(); family.dorsal.setMatrixAt(f.slot, dummy.matrix);
-      offset.set(-.02 * f.size, -.02 * f.size, .12 * f.size).applyQuaternion(orientation);
-      dummy.position.copy(f.position).add(offset);
-      dummy.scale.set(f.size, f.size, f.size); dummy.updateMatrix(); family.pectorals.setMatrixAt(f.slot, dummy.matrix);
-      for (let side = 0; side < 2; side++) {
-        offset.set(.37 * f.size, .045 * f.size, (side ? 1 : -1) * .087 * f.size).applyQuaternion(orientation);
-        dummy.position.copy(f.position).add(offset); dummy.quaternion.copy(orientation); dummy.scale.setScalar(.022 * f.size); dummy.updateMatrix(); eyes.setMatrixAt(i * 2 + side, dummy.matrix);
+  // view: { frustum, eye, range }. Only schools in view and within the haze
+  // are written, packed to the front of each mesh, so the instance count (and
+  // the vertex work) follows what can be seen rather than the whole reef.
+  function draw(elapsed, view) {
+    swimTime.value = elapsed;
+    let total = 0, mask = '';
+    for (const type in families) families[type].drawn = 0;
+    for (let s = 0; s < schools.length; s++) {
+      const home = schools[s], members = home.members;
+      home.shown = true;
+      if (view) {
+        let cx = 0, cy = 0, cz = 0, reach = 0;
+        for (let m = 0; m < members.length; m++) { const p = members[m].position; cx += p.x; cy += p.y; cz += p.z; }
+        bounds3.center.set(cx / members.length, cy / members.length, cz / members.length);
+        for (let m = 0; m < members.length; m++) reach = Math.max(reach, bounds3.center.distanceToSquared(members[m].position));
+        bounds3.radius = Math.sqrt(reach) + 1.2;
+        // A half-metre fish is lost in the haze well before the range itself.
+        home.shown = view.eye.distanceTo(bounds3.center) - bounds3.radius < view.range * .75 && view.frustum.intersectsSphere(bounds3);
       }
-    });
-    for (const family of Object.values(families)) for (const mesh of [family.bodies, family.tails, family.dorsal, family.pectorals]) mesh.instanceMatrix.needsUpdate = true;
-    eyes.instanceMatrix.needsUpdate = true;
+      mask += home.shown ? '1' : '0';
+    }
+    // Instance colours only move when the set of visible schools changes.
+    const repaint = mask !== painted; painted = mask;
+    for (let s = 0; s < schools.length; s++) {
+      const home = schools[s], members = home.members;
+      if (!home.shown) continue;
+      const family = families[home.color], bodies = family.bodies;
+      for (let m = 0; m < members.length; m++) {
+        const f = members[m], slot = family.drawn++, index = total++;
+        direction.copy(f.velocity).normalize();
+        heading.set(0, Math.atan2(-direction.z, direction.x), Math.atan2(direction.y, Math.hypot(direction.x, direction.z)), 'YZX');
+        orientation.setFromEuler(heading);
+        dummy.position.copy(f.position); dummy.quaternion.copy(orientation); dummy.scale.setScalar(f.size); dummy.updateMatrix();
+        bodies.setMatrixAt(slot, dummy.matrix); trim.setMatrixAt(index, dummy.matrix);
+        tailWag.setFromAxisAngle(UP, Math.sin(elapsed * 6.3 + f.phase) * .11);
+        dummy.position.addScaledVector(direction, -.63 * f.size);
+        dummy.quaternion.multiply(tailWag); dummy.updateMatrix();
+        tails.setMatrixAt(index, dummy.matrix);
+        if (repaint) { bodies.setColorAt(slot, f.bodyColor); tails.setColorAt(index, f.tailColor); trim.setColorAt(index, f.trimColor); }
+      }
+    }
+    for (const type in families) { const bodies = families[type].bodies; bodies.count = families[type].drawn; bodies.visible = bodies.count > 0; }
+    tails.count = trim.count = total; tails.visible = trim.visible = total > 0;
+    for (const mesh of meshes) { mesh.instanceMatrix.needsUpdate = true; if (repaint) mesh.instanceColor.needsUpdate = true; }
   }
 
-  function update(dt, elapsed, swimmerPosition) {
+  function update(dt, elapsed, swimmerPosition, view = null) {
     elapsed = Number.isFinite(elapsed) ? elapsed : 0;
     const frameDelta = Math.min(Math.max(dt || 0, 0), .1);
     const steps = frameDelta > 0 ? Math.ceil(frameDelta / (1 / 60)) : 0;
@@ -203,11 +276,27 @@ export function createMarineLife({ economy = false, terrainHeightAt = () => -54,
       swimmerSegment.copy(swimmerVelocity).multiplyScalar(-frameDelta);
     }
     if (steps > 0) {
+      frame++;
+      // Schools near the diver keep the fine fixed step, so parting around
+      // them is unchanged. A distant school takes one step per frame, and one
+      // that is also out of sight catches up every fourth frame.
+      for (let index = 0; index < schools.length; index++) {
+        const home = schools[index];
+        home.near = !hasSwimmer || home.target.distanceToSquared(swimmerPosition) < NEAR_SQ;
+        home.wake = 0;
+        if (!home.near) {
+          if (home.shown) home.wake = frameDelta;
+          else { home.idle += frameDelta; if ((frame + index) % 4 === 0) { home.wake = Math.min(home.idle, .1); home.idle = 0; } }
+        }
+      }
       for (let substep = 0; substep < steps; substep++) {
-        const simulationTime = elapsed - frameDelta + step * (substep + 1);
+        const last = substep === steps - 1;
         for (let index = 0; index < schools.length; index++) {
-          const home = schools[index], drift = simulationTime * (home.resident ? .14 : .065) + index * 1.35;
-          const roam = home.resident ? .6 : 5.3;
+          const home = schools[index], h = home.near ? step : last ? home.wake : 0;
+          home.dt = h;
+          if (!h) continue;
+          const drift = (home.near ? elapsed - frameDelta + step * (substep + 1) : elapsed) * (home.resident ? .16 : .095) + index * 1.35;
+          const roam = home.resident ? 1.2 : 9;
           home.target.set(home.center.x + Math.sin(drift) * roam, home.center.y, home.center.z + Math.cos(drift) * roam * .75);
           home.target.y = Math.min(-2.5, terrainHeightAt(home.target.x, home.target.z) + home.clearance + Math.sin(drift * .72) * .35);
           home.travel.set(Math.cos(drift), 0, -Math.sin(drift) * .75).normalize();
@@ -215,109 +304,110 @@ export function createMarineLife({ economy = false, terrainHeightAt = () => -54,
           if (hasSwimmer) {
             offset.subVectors(home.target, swimmerAhead);
             pressure = 1 - THREE.MathUtils.smoothstep(offset.length(), 4, 13);
-            if (offset.lengthSq() > .001) home.away.lerp(offset.normalize(), 1 - Math.exp(-step * 4));
+            if (offset.lengthSq() > .001) home.away.lerp(offset.normalize(), 1 - Math.exp(-h * 4));
           }
-          home.fear += (pressure - home.fear) * (1 - Math.exp(-step * (pressure > home.fear ? 5 : .55)));
+          home.fear += (pressure - home.fear) * (1 - Math.exp(-h * (pressure > home.fear ? 5 : .55)));
           home.target.addScaledVector(home.away, home.fear * 4.5);
         }
-        fish.forEach(f => {
-        center.set(0, 0, 0); alignment.set(0, 0, 0); separation.set(0, 0, 0);
-        let neighbors = 0;
-        const home = schools[f.school];
-        for (const other of home.members) {
-          if (other === f) continue;
-          offset.subVectors(other.position, f.position);
-          const distanceSq = offset.lengthSq();
-          if (distanceSq < 22) {
-            center.add(other.position); alignment.add(other.velocity); neighbors++;
-            if (distanceSq < 1.1 && distanceSq > .0001) separation.addScaledVector(offset, -1 / distanceSq);
+        // Compute forces from the previous state before integrating any fish.
+        for (let i = 0; i < fish.length; i++) {
+          const f = fish[i], home = schools[f.school], h = home.dt;
+          if (!h) continue;
+          const p = f.position, v = f.velocity, a = f.acceleration, members = home.members;
+          let cx = 0, cy = 0, cz = 0, ax = 0, ay = 0, az = 0, sx = 0, sy = 0, sz = 0, neighbors = 0;
+          for (let m = 0; m < members.length; m++) {
+            const other = members[m];
+            if (other === f) continue;
+            const q = other.position, dx = q.x - p.x, dy = q.y - p.y, dz = q.z - p.z, distanceSq = dx * dx + dy * dy + dz * dz;
+            if (distanceSq < 22) {
+              const w = other.velocity;
+              cx += q.x; cy += q.y; cz += q.z; ax += w.x; ay += w.y; az += w.z; neighbors++;
+              if (distanceSq < 1.1 && distanceSq > .0001) { const push = -1 / distanceSq; sx += dx * push; sy += dy * push; sz += dz * push; }
+            }
           }
-        }
-        f.acceleration.copy(separation).multiplyScalar(.95);
-        if (neighbors) {
-          center.multiplyScalar(1 / neighbors).sub(f.position);
-          alignment.multiplyScalar(1 / neighbors).sub(f.velocity);
-          f.acceleration.addScaledVector(center, .11).addScaledVector(alignment, .65);
-        }
-        target.copy(home.target);
-        steering.subVectors(target, f.position).multiplyScalar(home.resident ? .3 : .16);
-        f.acceleration.add(steering).addScaledVector(home.travel, home.resident ? .08 : .24);
-        const margin = home.radius + home.fear * 3;
-        offset.subVectors(f.position, home.target); offset.y = 0;
-        const radialDistance = offset.length();
-        if (radialDistance > margin) f.acceleration.addScaledVector(offset.normalize(), -Math.min(1, (radialDistance - margin) * .18));
-        let pressure = 0;
-        if (hasSwimmer) {
-          offset.subVectors(f.position, swimmerAhead);
-          pressure = 1 - THREE.MathUtils.smoothstep(offset.length(), 2.6, 8.5);
-          // Each member keeps its side of the approach, producing two coherent
-          // arcs around the diver instead of a radial explosion through it.
-          tangent.copy(swimmerVelocity);
-          if (tangent.lengthSq() < .1) tangent.copy(home.travel);
-          tangent.cross(UP).normalize().multiplyScalar(f.side);
-          avoidance.copy(offset);
-          if (avoidance.lengthSq() < .001) avoidance.copy(tangent);
-          avoidance.normalize().multiplyScalar(3.8).addScaledVector(tangent, 3.1);
-          f.acceleration.addScaledVector(avoidance, pressure);
-          offset.subVectors(f.position, swimmerPosition);
-          const distance = offset.length();
-          if (distance < 4.2) {
-            if (distance < .001) offset.copy(tangent);
-            f.acceleration.addScaledVector(offset.normalize(), (1 - Math.min(distance / 4.2, 1)) * 7);
+          a.set(sx * .95, sy * .95, sz * .95);
+          if (neighbors) {
+            const inverse = 1 / neighbors;
+            a.x += (cx * inverse - p.x) * .11; a.y += (cy * inverse - p.y) * .11; a.z += (cz * inverse - p.z) * .11;
+            a.x += (ax * inverse - v.x) * .65; a.y += (ay * inverse - v.y) * .65; a.z += (az * inverse - v.z) * .65;
           }
-        }
-        f.fear += (Math.max(pressure, home.fear * .7) - f.fear) * (1 - Math.exp(-step * (pressure > f.fear ? 8 : .8)));
-        const floor = terrainHeightAt(f.position.x, f.position.z) + 2.35;
-        if (f.position.y < floor) f.acceleration.y += (floor - f.position.y) * .65;
-        f.acceleration.clampLength(0, 1.5 + f.fear * 7);
-        });
-        fish.forEach(f => {
-        f.velocity.addScaledVector(f.acceleration, step);
-        const speed = f.velocity.length();
-        const minSpeed = schools[f.school].resident ? .18 : .65;
-        const maxSpeed = (schools[f.school].resident ? .8 : 1.5) + f.fear * 2.5;
-        if (speed < .00001) f.velocity.copy(schools[f.school].travel).multiplyScalar(minSpeed);
-        else if (speed < minSpeed) f.velocity.setLength(minSpeed);
-        else if (speed > maxSpeed) f.velocity.setLength(maxSpeed);
-        f.position.addScaledVector(f.velocity, step);
-        if (hasSwimmer) {
-          // Swept-body clearance catches an advancing diver between frames.
-          closest.copy(swimmerPosition);
-          const segmentLengthSq = swimmerSegment.lengthSq();
-          if (segmentLengthSq > .00001) {
-            offset.subVectors(f.position, swimmerPosition);
-            closest.addScaledVector(swimmerSegment, THREE.MathUtils.clamp(offset.dot(swimmerSegment) / segmentLengthSq, 0, 1));
+          steering.subVectors(home.target, p).multiplyScalar(home.resident ? .3 : .16);
+          a.add(steering).addScaledVector(home.travel, home.resident ? .08 : .24);
+          const margin = home.radius + home.fear * 3;
+          offset.subVectors(p, home.target); offset.y = 0;
+          const radialDistance = offset.length();
+          if (radialDistance > margin) a.addScaledVector(offset.normalize(), -Math.min(1, (radialDistance - margin) * .18));
+          let pressure = 0;
+          if (hasSwimmer && home.near) {
+            offset.subVectors(p, swimmerAhead);
+            pressure = 1 - THREE.MathUtils.smoothstep(offset.length(), 2.6, 8.5);
+            // Each member keeps its side of the approach, producing two coherent
+            // arcs around the diver instead of a radial explosion through it.
+            tangent.copy(swimmerVelocity);
+            if (tangent.lengthSq() < .1) tangent.copy(home.travel);
+            tangent.cross(UP).normalize().multiplyScalar(f.side);
+            avoidance.copy(offset);
+            if (avoidance.lengthSq() < .001) avoidance.copy(tangent);
+            avoidance.normalize().multiplyScalar(3.8).addScaledVector(tangent, 3.1);
+            a.addScaledVector(avoidance, pressure);
+            offset.subVectors(p, swimmerPosition);
+            const distance = offset.length();
+            if (distance < 4.2) {
+              if (distance < .001) offset.copy(tangent);
+              a.addScaledVector(offset.normalize(), (1 - Math.min(distance / 4.2, 1)) * 7);
+            }
           }
-          offset.subVectors(f.position, closest);
-          const clearance = 1.65 + f.size * .75, distance = offset.length();
-          if (distance < clearance) {
-            if (distance < .0001) offset.copy(schools[f.school].travel).cross(UP).multiplyScalar(f.side);
-            offset.normalize();
-            f.position.copy(closest).addScaledVector(offset, clearance);
-            const inwardSpeed = f.velocity.dot(offset);
-            if (inwardSpeed < 0) f.velocity.addScaledVector(offset, -inwardSpeed);
-          }
+          f.fear += (Math.max(pressure, home.fear * .7) - f.fear) * (1 - Math.exp(-h * (pressure > f.fear ? 8 : .8)));
+          const floor = floorAt(p.x, p.z) + 2.35;
+          if (p.y < floor) a.y += (floor - p.y) * .65;
+          a.clampLength(0, 1.5 + f.fear * 7);
         }
-        const floor = terrainHeightAt(f.position.x, f.position.z) + 1.7;
-        if (f.position.y < floor) { f.position.y = floor; f.velocity.y = Math.abs(f.velocity.y) * .35; }
-        for (const axis of ['x', 'y', 'z']) {
-          const [min, max] = bounds[axis];
-          if (f.position[axis] < min || f.position[axis] > max) {
-            f.position[axis] = THREE.MathUtils.clamp(f.position[axis], min, max);
-            f.velocity[axis] *= -.45;
+        for (let i = 0; i < fish.length; i++) {
+          const f = fish[i], home = schools[f.school], h = home.dt;
+          if (!h) continue;
+          const p = f.position, v = f.velocity;
+          v.addScaledVector(f.acceleration, h);
+          const speed = v.length();
+          const minSpeed = home.resident ? .24 : .85;
+          const maxSpeed = (home.resident ? 1 : 1.9) + f.fear * 2.5;
+          if (speed < .00001) v.copy(home.travel).multiplyScalar(minSpeed);
+          else if (speed < minSpeed) v.setLength(minSpeed);
+          else if (speed > maxSpeed) v.setLength(maxSpeed);
+          p.addScaledVector(v, h);
+          if (hasSwimmer && home.near) {
+            // Swept-body clearance catches an advancing diver between frames.
+            closest.copy(swimmerPosition);
+            const segmentLengthSq = swimmerSegment.lengthSq();
+            if (segmentLengthSq > .00001) {
+              offset.subVectors(p, swimmerPosition);
+              closest.addScaledVector(swimmerSegment, THREE.MathUtils.clamp(offset.dot(swimmerSegment) / segmentLengthSq, 0, 1));
+            }
+            offset.subVectors(p, closest);
+            const clearance = 1.65 + f.size * .75, distance = offset.length();
+            if (distance < clearance) {
+              if (distance < .0001) offset.copy(home.travel).cross(UP).multiplyScalar(f.side);
+              offset.normalize();
+              p.copy(closest).addScaledVector(offset, clearance);
+              const inwardSpeed = v.dot(offset);
+              if (inwardSpeed < 0) v.addScaledVector(offset, -inwardSpeed);
+            }
           }
+          const floor = floorAt(p.x, p.z) + 1.7;
+          if (p.y < floor) { p.y = floor; v.y = Math.abs(v.y) * .35; }
+          if (p.x < bounds.x[0] || p.x > bounds.x[1]) { p.x = THREE.MathUtils.clamp(p.x, bounds.x[0], bounds.x[1]); v.x *= -.45; }
+          if (p.y < bounds.y[0] || p.y > bounds.y[1]) { p.y = THREE.MathUtils.clamp(p.y, bounds.y[0], bounds.y[1]); v.y *= -.45; }
+          if (p.z < bounds.z[0] || p.z > bounds.z[1]) { p.z = THREE.MathUtils.clamp(p.z, bounds.z[0], bounds.z[1]); v.z *= -.45; }
         }
-        });
       }
     }
     if (hasSwimmer) swimmerPrevious.copy(swimmerPosition);
     hadSwimmer = hasSwimmer;
-    draw(elapsed || 0);
+    draw(elapsed || 0, view);
   }
   update(0, 0);
-  const api = { root, update, count };
+  const api = { root, update, count, schoolCount: schools.length, drawCalls: meshes.length };
   if (debug) api.inspect = () => ({
-    schools: schools.map(s => ({ center: s.center.toArray(), target: s.target.toArray(), resident: s.resident, count: s.count, fear: s.fear })),
+    schools: schools.map(s => ({ center: s.center.toArray(), target: s.target.toArray(), resident: s.resident, count: s.count, fear: s.fear, near: s.near, shown: s.shown })),
     fish: fish.map(f => ({ position: f.position.toArray(), velocity: f.velocity.toArray(), school: f.school, size: f.size, fear: f.fear }))
   });
   return api;

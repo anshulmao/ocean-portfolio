@@ -1,21 +1,22 @@
 import * as THREE from './vendor/three.module.min.js';
+import { shareLater } from './assets.js';
 
 // Procedural, articulated scuba equipment. Local +Y is headward; +Z is the face.
 // Each rigid section is merged by material, leaving elbow and knee pivots intact.
-function ellipsoid(parent, material, position, scale, segments = 20) {
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, segments, 12), material);
+function ellipsoid(parent, material, position, scale, segments = 14) {
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, segments, Math.max(6, Math.round(segments * .65))), material);
   mesh.position.set(...position); mesh.scale.set(...scale); parent.add(mesh);
   return mesh;
 }
 
-function tube(parent, material, points, radius = .015, segments = 28) {
+function tube(parent, material, points, radius = .015, segments = 16) {
   const path = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)));
   const mesh = new THREE.Mesh(new THREE.TubeGeometry(path, segments, radius, 6, false), material);
   parent.add(mesh); return mesh;
 }
 
 function cylinder(parent, material, position, radius, height) {
-  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, 24), material);
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, 16), material);
   mesh.position.set(...position); parent.add(mesh); return mesh;
 }
 
@@ -31,8 +32,8 @@ function roundedBox(parent, material, position, size, radius = .025) {
   shape.lineTo(-w / 2, -h / 2 + r); shape.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2);
   const geometry = new THREE.ExtrudeGeometry(shape, {
     depth: Math.max(.001, d - bevel * 2), bevelEnabled: true,
-    bevelSegments: 3, steps: 1, bevelSize: bevel, bevelThickness: bevel,
-    curveSegments: 6
+    bevelSegments: 2, steps: 1, bevelSize: bevel, bevelThickness: bevel,
+    curveSegments: 3
   });
   geometry.translate(0, 0, -(d - bevel * 2) / 2);
   const mesh = new THREE.Mesh(geometry, material);
@@ -42,7 +43,7 @@ function roundedBox(parent, material, position, size, radius = .025) {
 // Continuous oval sections give the torso an anatomical taper instead of spheres.
 function shapedBody(parent, material, rings, position = [0, 0, 0]) {
   const spline = new THREE.CatmullRomCurve3(rings.map(([y, x, z]) => new THREE.Vector3(y, x, z)));
-  const positions = [], indices = [], rows = 28, segments = 24;
+  const positions = [], indices = [], rows = 14, segments = 16;
   for (let row = 0; row <= rows; row++) {
     const p = spline.getPoint(row / rows);
     for (let col = 0; col <= segments; col++) {
@@ -76,15 +77,24 @@ function shapedBody(parent, material, rings, position = [0, 0, 0]) {
   mesh.position.set(...position); parent.add(mesh); return mesh;
 }
 
-function mergeRigid(group) {
+// Each rigid group becomes one mesh per surface. The matte materials (suit,
+// panels, rubber, webbing, skin) differ only in colour once the shared look
+// lights them, so they share the painted material and carry their colour in
+// the vertices; the glossy ones (cylinder, metal, lens) keep a mesh each.
+function mergeRigid(group, painted) {
   group.updateMatrixWorld(true);
   const inverse = group.matrixWorld.clone().invert(), batches = new Map(), originals = [];
   for (const child of group.children) {
     if (!child.isMesh) continue;
     const geometry = child.geometry.index ? child.geometry.toNonIndexed() : child.geometry.clone();
     geometry.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inverse, child.matrixWorld));
-    if (!batches.has(child.material)) batches.set(child.material, []);
-    batches.get(child.material).push(geometry); originals.push(child);
+    const source = child.material, matte = painted && source.roughness >= .5 && source.metalness <= .1 && source.emissiveIntensity * (source.emissive.r + source.emissive.g + source.emissive.b) === 0;
+    const count = geometry.getAttribute('position').count, tint = new Uint8Array(count * 3), shade = matte ? source.color : { r: 1, g: 1, b: 1 };
+    for (let i = 0; i < count; i++) { tint[i * 3] = Math.round(shade.r * 255); tint[i * 3 + 1] = Math.round(shade.g * 255); tint[i * 3 + 2] = Math.round(shade.b * 255); }
+    geometry.setAttribute('color', new THREE.BufferAttribute(tint, 3, true));
+    const material = matte ? painted : source;
+    if (!batches.has(material)) batches.set(material, []);
+    batches.get(material).push(geometry); originals.push(child);
   }
   for (const mesh of originals) { group.remove(mesh); mesh.geometry.dispose(); }
   for (const [material, geometries] of batches) {
@@ -96,185 +106,228 @@ function mergeRigid(group) {
       for (const g of geometries) { const a = g.getAttribute(name).array; data.set(a, offset); offset += a.length; }
       merged.setAttribute(name, new THREE.BufferAttribute(data, 3));
     }
+    if (material === painted) {
+      const data = new Uint8Array(merged.getAttribute('position').count * 3); let offset = 0;
+      for (const g of geometries) { const a = g.getAttribute('color').array; data.set(a, offset); offset += a.length; }
+      merged.setAttribute('color', new THREE.BufferAttribute(data, 3, true));
+    }
     merged.computeBoundingSphere();
-    const mesh = new THREE.Mesh(merged, material);
+    // The parts arrive unshared, three vertices to a triangle: sharing the identical ones leaves the diver a fifth of the vertex work.
+    const mesh = shareLater(new THREE.Mesh(merged, material));
     mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh);
     geometries.forEach(g => g.dispose());
   }
 }
 
+function ring(parent, material, position, radius, thickness, rotation = [Math.PI / 2, 0, 0], scale = [1, 1, 1]) {
+  const mesh = new THREE.Mesh(new THREE.TorusGeometry(radius, thickness, 6, 20), material);
+  mesh.position.set(...position); mesh.rotation.set(...rotation); mesh.scale.set(...scale); parent.add(mesh); return mesh;
+}
+
+// A closed elliptical band around the body axis (belt, cummerbund, tank straps).
+function band(parent, material, y, a, b, radius, z = 0) {
+  const points = [];
+  for (let i = 0; i < 14; i++) { const t = i / 14 * Math.PI * 2; points.push(new THREE.Vector3(Math.sin(t) * a, y, z + Math.cos(t) * b)); }
+  const mesh = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points, true), 28, radius, 6, true), material);
+  parent.add(mesh); return mesh;
+}
+
+// Ribbed low-pressure hose: a tube with collars threaded along it.
+function corrugated(parent, material, collar, points, radius, count) {
+  const path = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)));
+  parent.add(new THREE.Mesh(new THREE.TubeGeometry(path, 24, radius, 6, false), material));
+  const forward = new THREE.Vector3(0, 0, 1);
+  for (let i = 0; i < count; i++) {
+    const t = (i + .5) / count, mesh = new THREE.Mesh(new THREE.TorusGeometry(radius * 1.12, radius * .34, 5, 10), collar);
+    mesh.position.copy(path.getPoint(t)); mesh.quaternion.setFromUnitVectors(forward, path.getTangent(t)); parent.add(mesh);
+  }
+}
+
+// Blade frame: (across, along, lift) on the tilted blade, expressed in shin space.
+const FIN_SIN = Math.sin(.16), FIN_COS = Math.cos(.16);
+const onFin = (x, along, lift = 0) => [x, -.48 - FIN_COS * along + FIN_SIN * lift, .12 + FIN_SIN * along + FIN_COS * lift];
+
 function fin(parent, rubber, accent, side) {
-  // Flat blade with a subtle scoop, flared rails and open-heel foot pocket.
-  const points = [[-.085, 0], [-.13, .18], [-.18, .64], [-.16, .72], [.16, .72], [.18, .64], [.13, .18], [.085, 0]];
-  const shape = new THREE.Shape(); shape.moveTo(...points[0]);
-  points.slice(1).forEach(p => shape.lineTo(...p)); shape.closePath();
-  const geometry = new THREE.ExtrudeGeometry(shape, {
-    depth: .019, steps: 1, bevelEnabled: true, bevelThickness: .007,
-    bevelSize: .012, bevelSegments: 2, curveSegments: 5
-  });
-  const mesh = new THREE.Mesh(geometry, accent);
-  // Suspended divers point their toes. The blade continues feetward (-Y),
-  // with a gentle plantar-flex angle, rather than hanging across their swim path.
-  mesh.rotation.set(-.16, 0, Math.PI); mesh.position.set(0, -.48, .12); parent.add(mesh);
+  // Paddle blade that flares from the foot pocket into a shallow swallow tail;
+  // the bright blade inside dark rails is what the chase camera reads first.
+  const shape = new THREE.Shape(); shape.moveTo(-.075, 0);
+  shape.bezierCurveTo(-.10, .16, -.205, .40, -.205, .62);
+  shape.quadraticCurveTo(-.205, .745, -.12, .75); shape.quadraticCurveTo(-.045, .745, 0, .685);
+  shape.quadraticCurveTo(.045, .745, .12, .75); shape.quadraticCurveTo(.205, .745, .205, .62);
+  shape.bezierCurveTo(.205, .40, .10, .16, .075, 0); shape.closePath();
+  const blade = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, {
+    depth: .018, steps: 1, bevelEnabled: true, bevelThickness: .007, bevelSize: .010, bevelSegments: 2, curveSegments: 7
+  }), accent);
+  // Suspended divers point their toes, so the blade trails feetward (-Y).
+  blade.rotation.set(-.16, 0, Math.PI); blade.position.set(0, -.48, .12); parent.add(blade);
   for (const sign of [-1, 1]) {
-    tube(parent, rubber, [[sign * .077, -.51, .14], [sign * .13, -.70, .16], [sign * .168, -1.10, .222], [sign * .155, -1.18, .233]], .014, 16);
+    tube(parent, rubber, [onFin(sign * .08, .0, .01), onFin(sign * .118, .2, .01), onFin(sign * .188, .44, .01), onFin(sign * .214, .63, .01), onFin(sign * .175, .742, .01)], .019, 18);
+    // Dark channel inserts break the blade into three painted panels.
+    for (const lift of [-.011, .029]) {
+      const channel = roundedBox(parent, rubber, onFin(sign * .068, .43, lift), [.036, .40, .006], .016);
+      channel.rotation.set(-.16, 0, sign * .09);
+    }
   }
-  tube(parent, accent, [[0, -.62, .157], [0, -.87, .197], [0, -1.15, .24]], .009, 12);
-  // Raised longitudinal channels also read from the third-person rear camera.
-  for (const sign of [-1, 1]) {
-    tube(parent, rubber, [[sign * .055, -.67, .141], [sign * .066, -.89, .176], [sign * .075, -1.16, .218]], .008, 16);
-  }
-  ellipsoid(parent, rubber, [0, -.50, .10], [.075, .15, .063]);
-  tube(parent, rubber, [[-.079, -.44, .10], [-.072, -.425, .046], [0, -.42, .024], [.072, -.425, .046], [.079, -.44, .10]], .013, 16);
-  // Small muted identification strip on each blade.
-  const strip = roundedBox(parent, rubber, [side * .06, -1.03, .231], [.04, .14, .012], .003);
-  strip.rotation.x = -.16;
+  tube(parent, accent, [onFin(0, .1, .02), onFin(0, .4, .022), onFin(0, .66, .02)], .013, 10);
+  // Open-heel foot pocket with a spring strap.
+  ellipsoid(parent, rubber, [0, -.515, .105], [.086, .17, .07]);
+  tube(parent, rubber, [[-.084, -.45, .10], [-.078, -.43, .04], [0, -.42, .012], [.078, -.43, .04], [.084, -.45, .10]], .015, 14);
+  roundedBox(parent, accent, [side * .0, -.418, .004], [.05, .026, .012], .006);
 }
 
 export function createDiver() {
   const root = new THREE.Group(); root.name = 'Articulated scuba diver';
   const body = new THREE.Group(); body.name = 'Wetsuit and scuba rig'; root.add(body);
-  const suit = new THREE.MeshStandardMaterial({ color: '#21383e', roughness: .77, metalness: .03 });
-  const panel = new THREE.MeshStandardMaterial({ color: '#324b50', roughness: .78 });
-  const rubber = new THREE.MeshStandardMaterial({ color: '#112227', roughness: .63, metalness: .04 });
-  const accent = new THREE.MeshStandardMaterial({ color: '#79aaa2', roughness: .60, metalness: .04 });
-  const metal = new THREE.MeshStandardMaterial({ color: '#b8c6c6', roughness: .40, metalness: .65 });
-  const skin = new THREE.MeshStandardMaterial({ color: '#ba8c73', roughness: .82 });
-  const hair = new THREE.MeshStandardMaterial({ color: '#263033', roughness: .95 });
-  const lens = new THREE.MeshStandardMaterial({ color: '#a6d1cf', roughness: .11, metalness: .12, transparent: true, opacity: .55, depthWrite: false });
-  for (const [name, material] of Object.entries({ suit, panel, rubber, accent, metal, skin, hair, lens })) material.name = `Diver ${name}`;
+  // Dusty navy suit with aqua panels sits inside the ocean palette; marigold
+  // and a cream cylinder are the only warm notes, so the kit reads at a glance.
+  const mat = (color, roughness = .75, metalness = .02) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
+  const suit = mat('#3f78a6'), panel = mat('#58c9bf', .7), rubber = mat('#2f404d', .62), gear = mat('#5a7088', .8);
+  const accent = mat('#ffb23f', .55), tank = mat('#f1ebd9', .45, .08), metal = mat('#c3d0d3', .4, .6), skin = mat('#dba586', .8);
+  const lens = mat('#93e4ee', .16, .1); lens.emissive.set('#1b6a7a'); lens.emissiveIntensity = .3;
+  for (const [name, material] of Object.entries({ suit, panel, rubber, gear, accent, tank, metal, skin, lens })) material.name = `Diver ${name}`;
+  const painted = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: .75, metalness: .02, vertexColors: true }); painted.name = 'Diver painted surfaces';
 
   shapedBody(body, suit, [
     [.23, .15, .11], [.15, .285, .16], [-.03, .305, .19],
-    [-.28, .27, .18], [-.52, .225, .15], [-.71, .26, .17],
+    [-.28, .262, .178], [-.52, .215, .148], [-.71, .255, .17],
     [-.85, .25, .17], [-.96, .08, .075]
   ]);
-  // Two sculpted rear-wing lobes sit alongside the cylinder, leaving a clear
-  // backplate and tank silhouette instead of one inflated spherical backpack.
-  for (const side of [-1, 1]) {
-    const wing = ellipsoid(body, rubber, [side * .20, -.25, -.135], [.135, .41, .17]);
-    wing.rotation.z = side * -.055;
-    tube(body, panel, [[side * .246, .07, -.24], [side * .315, -.17, -.22], [side * .30, -.41, -.205], [side * .235, -.60, -.205]], .008, 24);
-  }
-  const backplate = roundedBox(body, metal, [0, -.30, -.217], [.205, .72, .025], .035);
-  backplate.rotation.y = Math.PI;
-  for (const side of [-1, 1]) {
-    const pocket = roundedBox(body, rubber, [side * .245, -.43, .117], [.145, .255, .12], .035);
-    pocket.rotation.z = -side * .065;
-    tube(body, rubber, [[side * .20, .17, -.16], [side * .245, .22, -.02], [side * .245, .13, .15], [side * .20, -.18, .23], [side * .19, -.47, .18]], .037);
-    tube(body, accent, [[side * .274, .05, .125], [side * .275, -.13, .15], [side * .25, -.28, .165]], .008, 16);
-    roundedBox(body, metal, [side * .213, -.235, .248], [.065, .041, .022], .008);
-    tube(body, panel, [[side * .215, -.62, .10], [side * .235, -.73, .13], [side * .195, -.87, .12]], .009, 12);
-    tube(body, panel, [[side * .22, -.62, -.086], [side * .221, -.74, -.117], [side * .185, -.85, -.113]], .006, 16);
-    tube(body, rubber, [[side * .195, .12, -.22], [side * .20, -.08, -.27], [side * .19, -.40, -.268], [side * .16, -.65, -.23]], .023, 24);
-  }
-  tube(body, rubber, [[-.255, -.64, .08], [-.21, -.66, .18], [0, -.665, .185], [.21, -.66, .18], [.255, -.64, .08]], .034, 22);
-  roundedBox(body, metal, [0, -.658, .22], [.082, .061, .019], .009);
-  // Chest bridge remains narrow enough to reveal the wetsuit silhouette.
-  tube(body, rubber, [[-.19, -.18, .236], [0, -.19, .238], [.19, -.18, .236]], .016, 12);
-  roundedBox(body, metal, [0, -.19, .26], [.051, .026, .012], .004);
+  // Aqua flank panels run armpit to hip beneath the harness.
+  for (const side of [-1, 1]) ellipsoid(body, panel, [side * .188, -.36, .0], [.095, .40, .155]);
 
-  cylinder(body, suit, [0, .25, 0], .095, .21);
-  cylinder(body, skin, [0, .32, .015], .079, .105);
-  ellipsoid(body, skin, [0, .55, .025], [.175, .22, .172], 32);
-  // A single continuous close-cropped cap; no stacked hair blobs.
-  const capGeometry = new THREE.SphereGeometry(1, 32, 16, 0, Math.PI * 2, 0, 1.36);
-  const cap = new THREE.Mesh(capGeometry, hair);
-  cap.position.set(0, .55, .014); cap.scale.set(.181, .228, .177); body.add(cap);
-  for (const side of [-1, 1]) {
-    ellipsoid(body, skin, [side * .174, .525, .018], [.026, .048, .024], 16);
-    // Rounded rectangular mask reads as equipment, with separate inset lenses.
-    const rim = roundedBox(body, rubber, [side * .087, .574, .187], [.17, .126, .043], .027);
-    rim.rotation.z = -side * .035;
-    const glass = roundedBox(body, lens, [side * .087, .574, .218], [.133, .089, .014], .017);
-    glass.rotation.z = -side * .035;
-    tube(body, rubber, [[side * .158, .572, .16], [side * .185, .572, .05], [side * .164, .573, -.12], [side * .095, .572, -.16]], .013, 18);
-    tube(body, panel, [[side * .092, .636, .217], [side * .13, .636, .213]], .005, 8);
-  }
-  tube(body, rubber, [[-.10, .573, -.147], [0, .574, -.159], [.10, .573, -.147]], .015, 16);
-  const maskBuckle = roundedBox(body, rubber, [0, .572, -.173], [.08, .044, .015], .008);
-  maskBuckle.rotation.y = Math.PI;
-  ellipsoid(body, rubber, [0, .537, .194], [.048, .075, .058]);
-  ellipsoid(body, skin, [0, .414, .113], [.086, .065, .067]);
-  ellipsoid(body, rubber, [0, .443, .194], [.071, .055, .058]);
-  const regulatorFace = cylinder(body, metal, [0, .443, .248], .045, .016);
-  regulatorFace.rotation.x = Math.PI / 2;
-  ellipsoid(body, rubber, [0, .443, .26], [.027, .027, .008]);
+  // Hooded head: the face is a slightly forward ellipsoid that breaks through
+  // the hood, which leaves a clean oval opening without any boolean work.
+  cylinder(body, suit, [0, .27, 0], .10, .2);
+  ellipsoid(body, suit, [0, .56, .01], [.2, .235, .2], 28);
+  ellipsoid(body, skin, [0, .536, .088], [.166, .2, .16], 24);
+  { const points = [];
+    for (let i = 0; i <= 8; i++) { const a = -.72 + i / 8 * 3.25; points.push([0, .56 + Math.cos(a) * .232, .01 + Math.sin(a) * .197]); }
+    tube(body, panel, points, .02, 20).scale.x = 2.4; }
+  // One wide lens in a marigold frame over a dark skirt.
+  roundedBox(body, rubber, [0, .585, .228], [.325, .158, .064], .05);
+  roundedBox(body, accent, [0, .586, .261], [.312, .144, .034], .046);
+  roundedBox(body, rubber, [0, .586, .278], [.262, .098, .012], .034);
+  roundedBox(body, lens, [0, .586, .284], [.25, .087, .012], .03);
+  roundedBox(body, tank, [-.07, .606, .2915], [.05, .012, .003], .005).rotation.z = .5;
+  ellipsoid(body, rubber, [0, .528, .252], [.042, .046, .042], 12);
+  tube(body, rubber, [[.155, .586, .215], [.21, .586, .06], [.188, .586, -.1], [.1, .586, -.19], [0, .586, -.207], [-.1, .586, -.19], [-.188, .586, -.1], [-.21, .586, .06], [-.155, .586, .215]], .019, 30);
+  for (const side of [-1, 1]) roundedBox(body, accent, [side * .206, .586, .07], [.02, .05, .05], .008);
+
+  // Second stage: round body, bright purge cover and exhaust tee.
+  cylinder(body, rubber, [0, .437, .236], .064, .07).rotation.x = Math.PI / 2;
+  cylinder(body, accent, [0, .437, .276], .046, .014).rotation.x = Math.PI / 2;
+  cylinder(body, metal, [0, .437, .282], .02, .01).rotation.x = Math.PI / 2;
+  tube(body, rubber, [[-.11, .40, .17], [-.06, .392, .229], [0, .388, .242], [.06, .392, .229], [.11, .40, .17]], .021, 14);
   // Emitter is a retained Object3D, independent of merged equipment geometry.
   const regulator = new THREE.Object3D(); regulator.name = 'Regulator bubble outlet';
-  regulator.position.set(0, .443, .274); body.add(regulator);
+  regulator.position.set(0, .443, .292); body.add(regulator);
 
-  // Single back-mounted cylinder with domed ends and two retaining bands.
-  cylinder(body, metal, [0, -.22, -.365], .145, .81);
-  ellipsoid(body, metal, [0, .183, -.365], [.145, .11, .145]);
-  ellipsoid(body, rubber, [0, -.623, -.365], [.146, .076, .146]);
-  cylinder(body, metal, [0, .304, -.365], .031, .095);
-  roundedBox(body, rubber, [.054, .32, -.365], [.081, .05, .06], .012);
-  const firstStage = cylinder(body, metal, [.09, .30, -.365], .029, .064);
-  firstStage.rotation.z = Math.PI / 2;
-  for (const y of [-.035, -.44]) {
-    cylinder(body, rubber, [0, y, -.365], .149, .058);
-    const tankBuckle = roundedBox(body, metal, [-.125, y, -.462], [.037, .072, .027], .008);
-    tankBuckle.rotation.y = Math.PI * .80;
-    tube(body, rubber, [[-.128, y, -.445], [-.185, y, -.333], [-.205, y, -.248]], .02, 12);
-    tube(body, rubber, [[.128, y, -.445], [.185, y, -.333], [.205, y, -.248]], .02, 12);
+  // Wing BCD: two lobes beside the cylinder, padded shoulder straps, cummerbund.
+  for (const side of [-1, 1]) {
+    ellipsoid(body, gear, [side * .205, -.25, -.14], [.145, .42, .175]).rotation.z = side * -.055;
+    tube(body, accent, [[side * .25, .08, -.25], [side * .335, -.17, -.225], [side * .32, -.42, -.21], [side * .245, -.62, -.2]], .01, 20);
+    tube(body, gear, [[side * .195, .16, -.17], [side * .245, .225, -.02], [side * .245, .13, .155], [side * .205, -.18, .235], [side * .2, -.45, .19]], .042);
+    tube(body, accent, [[side * .262, .2, .06], [side * .262, .1, .185], [side * .22, -.16, .268], [side * .214, -.4, .228]], .009, 18);
+    ring(body, metal, [side * .2, -.085, .285], .026, .007, [.25, 0, 0], [1, 1.15, 1]);
+    const pocket = roundedBox(body, gear, [side * .25, -.47, .11], [.15, .2, .13], .04);
+    pocket.rotation.z = -side * .065;
+    roundedBox(body, accent, [side * .262, -.4, .178], [.1, .014, .01], .004).rotation.z = -side * .065;
+    tube(body, gear, [[side * .195, .12, -.22], [side * .2, -.08, -.27], [side * .19, -.40, -.268], [side * .16, -.65, -.23]], .023, 20);
   }
-  // Quiet painted cylinder markings, no generated logos or baked text textures.
-  cylinder(body, accent, [0, .136, -.365], .146, .019);
-  const tankMark = roundedBox(body, panel, [0, -.225, -.513], [.062, .195, .004], .009);
-  tankMark.rotation.y = Math.PI;
-  const inspectionMark = roundedBox(body, accent, [0, -.181, -.517], [.037, .050, .002], .004);
-  inspectionMark.rotation.y = Math.PI;
-  tube(body, rubber, [[.04, .31, -.365], [.285, .30, -.28], [.33, .36, -.05], [.292, .43, .20], [.09, .443, .235]], .018, 32);
-  tube(body, rubber, [[-.055, .31, -.36], [-.29, .23, -.25], [-.337, -.05, -.10], [-.29, -.22, .105]], .022, 24);
-  tube(body, rubber, [[-.065, .30, -.365], [-.265, .14, -.315], [-.342, -.18, -.23], [-.325, -.43, -.184]], .015, 32);
-  const gauge = cylinder(body, metal, [-.325, -.447, -.194], .040, .012);
-  gauge.rotation.x = Math.PI / 2;
-  ellipsoid(body, panel, [-.325, -.447, -.202], [.031, .031, .006], 16);
-  roundedBox(body, rubber, [-.285, -.24, .12], [.057, .105, .05], .012);
-  roundedBox(body, accent, [-.285, -.245, .151], [.027, .034, .008], .004);
+  roundedBox(body, metal, [0, -.30, -.217], [.205, .72, .025], .035).rotation.y = Math.PI;
+  band(body, gear, -.47, .262, .188, .043);
+  roundedBox(body, rubber, [0, -.47, .232], [.12, .07, .02], .012);
+  tube(body, gear, [[-.2, -.17, .245], [0, -.185, .25], [.2, -.17, .245]], .017, 10);
+  roundedBox(body, metal, [0, -.185, .27], [.058, .032, .014], .006);
+
+  // Weight belt: webbing, square lead blocks and a cam buckle.
+  band(body, rubber, -.655, .262, .18, .032);
+  for (const angle of [.62, 1.35, 2.25, -.62, -1.35, -2.25]) {
+    const weight = roundedBox(body, metal, [Math.sin(angle) * .272, -.655, Math.cos(angle) * .19], [.1, .078, .046], .014);
+    weight.rotation.y = angle;
+  }
+  roundedBox(body, metal, [0, -.655, .205], [.07, .058, .02], .008);
+  roundedBox(body, accent, [0, -.655, .217], [.03, .04, .008], .005);
+
+  // Cream cylinder with a marigold shoulder band, boot, cam bands and valve.
+  cylinder(body, tank, [0, -.22, -.365], .15, .81);
+  ellipsoid(body, tank, [0, .183, -.365], [.15, .115, .15]);
+  ellipsoid(body, gear, [0, -.61, -.365], [.156, .09, .156]);
+  cylinder(body, gear, [0, -.6, -.365], .156, .07);
+  cylinder(body, accent, [0, .105, -.365], .152, .07);
+  cylinder(body, panel, [0, .05, -.365], .152, .018);
+  cylinder(body, metal, [0, .304, -.365], .034, .1);
+  roundedBox(body, metal, [.03, .335, -.365], [.15, .056, .066], .014);
+  cylinder(body, rubber, [-.085, .335, -.365], .036, .05).rotation.z = Math.PI / 2;
+  cylinder(body, metal, [.105, .335, -.365], .042, .07).rotation.z = Math.PI / 2;
+  for (const y of [-.06, -.44]) {
+    cylinder(body, gear, [0, y, -.365], .155, .06);
+    roundedBox(body, metal, [-.13, y, -.468], [.04, .074, .027], .008).rotation.y = Math.PI * .80;
+    for (const side of [-1, 1]) tube(body, gear, [[side * .132, y, -.445], [side * .188, y, -.333], [side * .208, y, -.248]], .02, 10);
+  }
+
+  // Hoses: primary over the right shoulder, yellow octopus clipped to the
+  // chest, ribbed inflator on the left strap and a gauge console at the hip.
+  tube(body, rubber, [[.11, .33, -.365], [.3, .31, -.27], [.345, .37, -.04], [.26, .43, .17], [.06, .437, .238]], .018, 28);
+  tube(body, accent, [[.12, .31, -.36], [.33, .12, -.26], [.365, -.14, -.06], [.31, -.3, .16], [.17, -.29, .262]], .015, 26);
+  ellipsoid(body, accent, [.14, -.288, .272], [.056, .05, .034], 12);
+  cylinder(body, rubber, [.14, -.288, .3], .026, .014).rotation.x = Math.PI / 2;
+  corrugated(body, rubber, gear, [[-.07, .31, -.36], [-.29, .25, -.24], [-.335, .12, -.02], [-.295, -.08, .2], [-.27, -.2, .262]], .026, 9);
+  roundedBox(body, rubber, [-.265, -.255, .272], [.06, .11, .05], .014);
+  roundedBox(body, accent, [-.265, -.235, .301], [.03, .03, .01], .006);
+  roundedBox(body, metal, [-.265, -.285, .3], [.026, .022, .008], .005);
+  tube(body, rubber, [[-.075, .30, -.365], [-.28, .13, -.32], [-.372, -.2, -.2], [-.378, -.45, -.02], [-.345, -.55, .1]], .014, 26);
+  const consoleBody = roundedBox(body, rubber, [-.335, -.6, .12], [.03, .16, .1], .012);
+  consoleBody.rotation.set(.25, -.35, 0);
+  const dial = cylinder(body, tank, [-.354, -.575, .114], .036, .012);
+  dial.rotation.set(.25, -.35, Math.PI / 2);
+  const needle = roundedBox(body, accent, [-.362, -.575, .112], [.006, .03, .006], .002);
+  needle.rotation.set(.25, -.35 + Math.PI / 2, .6);
 
   const arms = [], legs = [];
   for (const side of [-1, 1]) {
     const shoulder = new THREE.Group(); shoulder.name = `${side < 0 ? 'Left' : 'Right'} shoulder`;
     shoulder.position.set(side * .29, .10, 0); root.add(shoulder);
-    ellipsoid(shoulder, suit, [side * .034, -.065, 0], [.112, .16, .113]);
-    shapedBody(shoulder, suit, [[0, .078, .078], [-.09, .102, .097], [-.24, .081, .08], [-.38, .071, .073], [-.415, .041, .042]], [side * .035, 0, 0]);
-    tube(shoulder, panel, [[side * .119, -.08, .018], [side * .123, -.19, .032], [side * .107, -.29, .032]], .009, 12);
-    tube(shoulder, panel, [[side * .030, -.055, -.109], [side * .048, -.16, -.095], [side * .045, -.29, -.079]], .005, 18);
+    ellipsoid(shoulder, suit, [side * .034, -.065, 0], [.114, .16, .115]);
+    shapedBody(shoulder, suit, [[0, .078, .078], [-.09, .104, .099], [-.24, .083, .082], [-.38, .072, .074], [-.415, .041, .042]], [side * .035, 0, 0]);
+    tube(shoulder, panel, [[side * .104, -.02, .0], [side * .118, -.14, .008], [side * .1, -.27, .008], [side * .088, -.37, .004]], .028, 12);
     const forearm = new THREE.Group(); forearm.name = 'Elbow';
     forearm.position.set(side * .035, -.38, 0); shoulder.add(forearm);
-    ellipsoid(forearm, suit, [0, -.024, 0], [.073, .08, .073]);
-    shapedBody(forearm, suit, [[.01, .060, .060], [-.10, .075, .073], [-.24, .056, .054], [-.33, .046, .044], [-.35, .026, .026]]);
-    tube(forearm, panel, [[side * .029, -.055, -.072], [side * .021, -.18, -.067], [side * .014, -.285, -.049]], .0045, 16);
-    // Closed fingers form a relaxed hand, without exaggerated mitten proportions.
-    ellipsoid(forearm, skin, [0, -.407, .003], [.055, .085, .033]);
-    ellipsoid(forearm, skin, [-side * .045, -.384, .017], [.022, .045, .022], 16);
-    cylinder(forearm, rubber, [0, -.303, 0], .056, .048);
+    ellipsoid(forearm, suit, [0, -.024, 0], [.075, .082, .075]);
+    shapedBody(forearm, suit, [[.01, .060, .060], [-.10, .077, .075], [-.24, .058, .056], [-.33, .048, .046], [-.35, .026, .026]]);
+    tube(forearm, panel, [[side * .052, -.03, .0], [side * .058, -.12, .0], [side * .04, -.24, .0], [side * .032, -.31, .0]], .024, 12);
+    // Slightly oversized mitten hands keep the gesture readable at a distance.
+    ellipsoid(forearm, skin, [0, -.412, .004], [.06, .09, .037]);
+    ellipsoid(forearm, skin, [-side * .05, -.385, .02], [.025, .05, .025], 12);
+    cylinder(forearm, rubber, [0, -.315, 0], .058, .05);
     if (side < 0) {
-      roundedBox(forearm, rubber, [0, -.302, .065], [.085, .065, .031], .011);
-      roundedBox(forearm, metal, [0, -.302, .084], [.063, .048, .009], .006);
-      roundedBox(forearm, accent, [0, -.302, .090], [.048, .033, .003], .003);
+      roundedBox(forearm, rubber, [0, -.302, .065], [.09, .07, .031], .011);
+      roundedBox(forearm, metal, [0, -.302, .084], [.066, .05, .009], .006);
+      roundedBox(forearm, accent, [0, -.302, .090], [.05, .034, .003], .003);
     }
     shoulder.rotation.z = side * .13; forearm.rotation.x = -.23;
-    mergeRigid(forearm); mergeRigid(shoulder); arms.push({ shoulder, forearm, side });
+    mergeRigid(forearm, painted); mergeRigid(shoulder, painted); arms.push({ shoulder, forearm, side });
 
     const hip = new THREE.Group(); hip.name = `${side < 0 ? 'Left' : 'Right'} hip`;
     hip.position.set(side * .145, -.83, .015); root.add(hip);
-    shapedBody(hip, suit, [[.035, .093, .101], [-.08, .122, .119], [-.24, .108, .11], [-.42, .079, .08], [-.52, .069, .071], [-.55, .038, .04]]);
-    tube(hip, panel, [[side * .099, -.10, .03], [side * .10, -.27, .035], [side * .078, -.43, .04]], .01, 16);
-    tube(hip, panel, [[side * .060, -.06, -.107], [side * .051, -.23, -.102], [side * .038, -.40, -.076]], .0055, 20);
+    shapedBody(hip, suit, [[.035, .093, .101], [-.08, .124, .121], [-.24, .11, .112], [-.42, .081, .082], [-.52, .07, .072], [-.55, .038, .04]]);
+    tube(hip, panel, [[side * .092, -.04, .0], [side * .1, -.2, .004], [side * .08, -.38, .006], [side * .056, -.5, .006]], .032, 14);
     const shin = new THREE.Group(); shin.name = 'Knee'; shin.position.set(0, -.52, 0); hip.add(shin);
-    ellipsoid(shin, rubber, [0, -.017, .025], [.074, .088, .058]);
-    shapedBody(shin, suit, [[.01, .058, .062], [-.11, .081, .084], [-.24, .075, .077], [-.40, .047, .048], [-.47, .043, .044], [-.49, .025, .026]]);
-    tube(shin, panel, [[side * .062, -.12, .042], [side * .063, -.27, .045], [side * .043, -.39, .031]], .007, 12);
-    tube(shin, panel, [[side * .028, -.075, -.074], [side * .033, -.19, -.077], [side * .015, -.35, -.055]], .0045, 18);
-    ellipsoid(shin, rubber, [0, -.485, .043], [.069, .076, .104]);
+    ellipsoid(shin, panel, [0, -.02, .03], [.078, .095, .062]);
+    shapedBody(shin, suit, [[.01, .058, .062], [-.11, .083, .086], [-.24, .077, .079], [-.40, .048, .049], [-.47, .044, .045], [-.49, .025, .026]]);
+    tube(shin, panel, [[side * .056, -.1, .0], [side * .066, -.22, .0], [side * .04, -.36, .0], [side * .03, -.42, .0]], .026, 12);
+    // Neoprene boot; the right calf carries a small sheathed knife.
+    ellipsoid(shin, rubber, [0, -.47, .03], [.066, .1, .092]);
+    cylinder(shin, rubber, [0, -.41, .0], .055, .05);
+    if (side > 0) {
+      roundedBox(shin, rubber, [side * .082, -.23, .0], [.03, .17, .05], .012);
+      roundedBox(shin, accent, [side * .086, -.115, .0], [.026, .07, .034], .01);
+    }
     fin(shin, rubber, accent, side);
     hip.rotation.x = -.04; shin.rotation.x = .08;
-    mergeRigid(shin); mergeRigid(hip); legs.push({ hip, shin, side });
+    mergeRigid(shin, painted); mergeRigid(hip, painted); legs.push({ hip, shin, side });
   }
-  mergeRigid(body);
+  mergeRigid(body, painted);
   root.userData.asset = { source: 'procedural', headAxis: '+Y', faceAxis: '+Z', approximateHeight: 3.33 };
-  return { root, arms, legs, regulator, materials: { suit, panel, rubber, accent, metal, skin } };
+  return { root, arms, legs, regulator, materials: { suit, panel, rubber, accent, metal, skin, gear, tank, lens } };
 }

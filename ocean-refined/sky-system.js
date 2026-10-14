@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
 import * as Astronomy from './vendor/astronomy-engine.runtime.js';
-import { skyVertex, skyFragment, starsVertex, starsFragment } from './shaders.js';
+import { skyVertex, skyFragment, skyMapVertex, skyMapFragment, SKY_MAP, starsVertex, starsFragment, weatherUniforms } from './shaders.js';
 
 // J2000 RA (degrees), Dec (degrees), visual magnitude and Harvard Revised ID.
 // Positions/magnitudes: Yale Bright Star Catalogue, 5th Revised Edition (V/50),
@@ -1706,23 +1706,52 @@ const lineVertex = /* glsl */ `
   varying float vHorizon;
   void main() {
     vHorizon=normalize((modelMatrix*vec4(position,0.0)).xyz).y;
-    gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+    gl_Position=(projectionMatrix*modelViewMatrix*vec4(position,1.0)).xyww;
   }
 `;
 const lineFragment = /* glsl */ `
-  uniform float uNight;uniform float uDive;varying float vHorizon;
+  uniform float uNight;uniform float uDive;uniform vec4 uWeather;varying float vHorizon;
   void main() {
-    float a=smoothstep(.0,.09,vHorizon)*smoothstep(.38,.92,uNight)*(1.0-uDive)*.21;
+    float a=smoothstep(.0,.09,vHorizon)*smoothstep(.38,.92,uNight)*(1.0-uDive)*(1.0-smoothstep(.08,.55,uWeather.w))*.21;
     gl_FragColor=vec4(.46,.67,.86,a);
   }
 `;
 
 export function createSkySystem(uniforms, rng) {
   const root = new THREE.Group(); root.name = 'Moving celestial sphere';
-  const shell = new THREE.Mesh(new THREE.SphereGeometry(850,40,24),new THREE.ShaderMaterial({
-    uniforms,vertexShader:skyVertex,fragmentShader:skyFragment,side:THREE.BackSide,depthWrite:false,fog:false
-  }));
+  weatherUniforms(uniforms);
+  // The dome has a program per medium (see skyFragment). The two it is not using
+  // ride along on hidden meshes, so the start-up compile builds all three and
+  // crossing the surface never waits for a shader.
+  const domeMaterial=defines=>new THREE.ShaderMaterial({uniforms,defines,vertexShader:skyVertex,fragmentShader:skyFragment,side:THREE.BackSide,depthWrite:false,fog:false});
+  const domes={above:domeMaterial({SKY_ABOVE:1}),between:domeMaterial({}),below:domeMaterial({SKY_BELOW:1})};
+  const shell = new THREE.Mesh(new THREE.SphereGeometry(850,40,24),domes.above);
   shell.renderOrder=-100;shell.frustumCulled=false;root.add(shell);
+  for(const material of [domes.between,domes.below]){const spare=new THREE.Mesh(shell.geometry,material);spare.visible=false;spare.name='Sky program warm-up';root.add(spare);}
+  // The slow-varying sky, baked for the dome, the sea's reflection and Snell's window (see shaders.js).
+  // Half floats where the GPU can render to them; the square-root encoding keeps 8 bits usable otherwise.
+  const skyTarget=new THREE.WebGLRenderTarget(SKY_MAP,SKY_MAP,{type:THREE.HalfFloatType,depthBuffer:false,generateMipmaps:false,minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});
+  skyTarget.texture.name='Baked sky';uniforms.uSkyMap.value=skyTarget.texture;
+  const bakeScene=new THREE.Scene(),bakeCamera=new THREE.Camera(),bakeGeometry=new THREE.BufferGeometry();
+  bakeGeometry.setAttribute('position',new THREE.Float32BufferAttribute([-1,-1,0,3,-1,0,-1,3,0],3));
+  const bakeMesh=new THREE.Mesh(bakeGeometry,new THREE.ShaderMaterial({uniforms,vertexShader:skyMapVertex,fragmentShader:skyMapFragment,depthTest:false,depthWrite:false,fog:false}));
+  bakeMesh.frustumCulled=false;bakeScene.add(bakeMesh);
+  // The baked sky drifts by a fraction of a texel a frame, so it is refreshed every third frame; urgent (lightning, a time or weather change under way) refreshes at once.
+  let bakeChecked=false,bakeIn=0;
+  const checkTarget=renderer=>{if(!bakeChecked){bakeChecked=true;const extensions=renderer.extensions;if(!extensions.has('EXT_color_buffer_float')&&!extensions.has('EXT_color_buffer_half_float'))skyTarget.texture.type=THREE.UnsignedByteType;}};
+  // Hands the bake's program to the browser ahead of the first bake, built for the target it draws into, so that bake does not wait on a compile. Returns its materials.
+  function prepare(renderer) {
+    checkTarget(renderer);
+    const target=renderer.getRenderTarget();
+    renderer.setRenderTarget(skyTarget);const materials=renderer.compile(bakeScene,bakeCamera);renderer.setRenderTarget(target);
+    return materials;
+  }
+  function bake(renderer,urgent=false) {
+    if(--bakeIn>0&&!urgent)return;bakeIn=3;
+    checkTarget(renderer);
+    const target=renderer.getRenderTarget();
+    renderer.setRenderTarget(skyTarget);renderer.render(bakeScene,bakeCamera);renderer.setRenderTarget(target);
+  }
 
   // One rigid observer transform rotates every catalog star and guide together.
   const horizon = new THREE.Group();
@@ -1770,7 +1799,7 @@ export function createSkySystem(uniforms, rng) {
     dawn:(sunrise.date-reference)/DAY_MS*TAU,
     dusk:(sunset.date-reference)/DAY_MS*TAU};
   const rotationMatrix=new THREE.Matrix4(),sunDirection=new THREE.Vector3(),moonDirection=new THREE.Vector3(),moonLight=new THREE.Vector3();
-  let cachedPhase=NaN,cachedState;
+  let cachedPhase=NaN,cachedState,turnedFor=null;
   const atPhase=phase=>new Date(reference.getTime()+phase/TAU*DAY_MS);
   function skyState(phase) {
     if(phase===cachedPhase)return cachedState;
@@ -1841,15 +1870,16 @@ export function createSkySystem(uniforms, rng) {
     root.position.copy(cameraPosition);
     uniforms.uSun.value.copy(sunDirection);uniforms.uMoon.value.copy(moonDirection);uniforms.uMoonLight.value.copy(moonLight);
     uniforms.uMoonFraction.value=state.moonIllumination;
-    catalogWorldRotation(Astronomy.Rotation_EQJ_HOR(state.time,observer),rotationMatrix);
-    horizon.quaternion.setFromRotationMatrix(rotationMatrix);
+    // The star sphere only turns when the clock has moved.
+    if(state!==turnedFor){turnedFor=state;catalogWorldRotation(Astronomy.Rotation_EQJ_HOR(state.time,observer),rotationMatrix);horizon.quaternion.setFromRotationMatrix(rotationMatrix);}
     uniforms.uMilkyWay.value.copy(galacticPole).applyQuaternion(horizon.quaternion);
     uniforms.uTime.value=elapsed;uniforms.uNight.value=night;uniforms.uDive.value=underwater;
+    const dome=underwater<=0?domes.above:underwater>=.999?domes.below:domes.between;if(shell.material!==dome)shell.material=dome;
     celestial.visible=night>.001&&underwater<.995;
     root.updateMatrixWorld(true);
     return state;
   }
-  return {root,update,labels,starCount:CATALOG.length,constellationCount:PATTERNS.length,
+  return {root,update,bake,prepare,labels,starCount:CATALOG.length,constellationCount:PATTERNS.length,
     initialPhase,presets,referenceUTC:reference.toISOString(),observer:OBSERVER,
     getNightFactor:phase=>skyState(phase).night,getState:skyState};
 }

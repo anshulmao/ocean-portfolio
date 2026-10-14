@@ -1,0 +1,7 @@
+<!-- Guided dive caption card
+     Source: guided-dive.js (built at load and appended to <body>)
+     Styles: styles.css, hologram.css, motion.css, journey.css, dive-plan.css (button recipe)
+     Scripts: guided-dive.js, journey.js
+     guided-dive.js fills the kicker, title and caption, hides the buttons that do not apply and sets data-show / data-state. -->
+<section class="tour-card holo holo--reading" aria-label="Guided dive" data-show="false" inert><header><span class="holo-label tour-kicker"></span><span class="holo-value tour-count"></span></header><h2 class="tour-title"></h2><p class="tour-lines" aria-live="polite"></p><div class="tour-progress" aria-hidden="true"><i></i></div><footer><button type="button" data-tour="pause">Pause <kbd>P</kbd></button><button type="button" data-tour="read">Read it <kbd>F</kbd></button><button type="button" data-tour="next">Next <kbd>N</kbd></button><button type="button" data-tour="rejoin">Rejoin the tour <kbd>G</kbd></button><button type="button" data-tour="surface">Surface</button><button type="button" data-tour="explore">Keep exploring</button><button type="button" data-tour="exit">Exit tour</button></footer></section>
+<div class="tour-fade" aria-hidden="true"></div>

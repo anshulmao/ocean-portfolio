@@ -6,7 +6,7 @@ export async function exportReef(controls){
   const snapshot=new THREE.Group();snapshot.name='Ocean reef editing snapshot';
   const layers=controls.viewer.layers();
   // Portable geometry, not the custom water/atmosphere shaders or particle systems.
-  for(const source of [layers.reef,layers.models,layers.diver,...layers.creatures.slice(2)].filter(Boolean)){
+  for(const source of [layers.reef,layers.corals,layers.formations,layers.models,layers.diver,...layers.creatures.slice(2)].filter(Boolean)){
     const object=clone(source);object.visible=true;
     object.traverse(n=>{if(n.isMesh){const convert=m=>m.isShaderMaterial?new THREE.MeshStandardMaterial({color:'#68969c',roughness:.8}):m.clone();n.material=Array.isArray(n.material)?n.material.map(convert):convert(n.material);}});
     snapshot.add(object);

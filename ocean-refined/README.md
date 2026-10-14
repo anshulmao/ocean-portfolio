@@ -1,8 +1,12 @@
 # Ocean refinement
 
-Browser-only Three.js scene; no build step or backend. Original `/ocean/` is preserved. The refinement runs at [the local preview](http://127.0.0.1:4175/ocean-refined/).
+Browser-only Three.js scene; no build step or backend. This is the isolated returned editing kit, including the 13 October refinement pass. The main portfolio repository remains separate. Run `python serve.py --port 4190` from the kit root and open [the local preview](http://127.0.0.1:4190/ocean-refined/).
 
-Serve from `portfolio/site` using `python ocean-refined/qa/serve.py`. The server binds to localhost on port 4175. See `REFINEMENT_PLAN.md` for scope and the checkpoint path.
+The server binds to localhost. See `REFINEMENT_2026-10-13.md` for the latest scope and verification; older validation entries describe earlier checkpoints.
+
+The subsequent user-created creature/coral pack is integrated; see `NEW_LIFE_SET.md` for the replacements, behaviors, editing files and checks. Model Studio includes all 37 new assets.
+
+Ongoing tenfold objective and current evidence: `TENFOLD_OPTIMIZATION.md`. Prepared charts and imported coral have exact validated fast paths; these gains do not yet prove tenfold application-wide performance.
 
 ## Controls
 
@@ -13,7 +17,11 @@ At the surface, click the ocean or **Look around** to capture the mouse; use the
 - V switches first person / attached third person. Escape releases the pointer; click the scene to resume.
 - Atlas buttons start an automatic journey and frame the landmark on arrival. WASD or aiming takes over.
 - Back to the surface shows the swimmer ascending from the actual location. Space near the surface also triggers ascent.
-- F or the nearby prompt opens the landmark panel. Portfolio content remains a placeholder.
+- F or the nearby prompt opens the landmark records. Away from a landmark, F collects a nearby artifact. Finds and score last for the current session.
+- Hold E while swimming for the visible red scooter; Q toggles the longer-range flashlight.
+- C raises the wrist computer; V switches perspective. Instrument air/pressure readings are simulated demo values.
+- F2 at 3–6 m holds a safety stop, including during automatic ascent. Optional feedback/contact information exports to a local JSON file; nothing is sent to a server.
+- H saves a world-only PNG in underwater first person. This does not include the HUD.
 - Movement provides live settings with local persistence, reset and JSON export.
 - Touch uses drag-to-look and held movement buttons. Reduced motion pauses ambient animation, while navigation remains available.
 
@@ -80,3 +88,13 @@ Choose Dawn, Day, Dusk or Night. Golden-hour presets follow this date's Kuala Lu
 The archive uses a mint profile, amber career timeline, project-specific showcases and a coral resume sleeve, with locally bundled GSAP choreography and reduced-motion support. Five additional grottos and map-wide current particles fill out the reef; wave refraction and turbulence are visible from below. Imported coral roots are independently grounded before batching. See VALIDATION.md for checks and ASSETS.md for motion-library attribution.
 
 Focused checks: newqa/sky-chapters.mjs and newqa/reef-detail.mjs.
+
+### Stylized overhaul
+
+`ocean-look.js` gives every lit surface the same painted treatment: stepped shading, rim light, baked caustics and colour-absorbing water haze that matches the sky backdrop. Apply it to anything new with `stylizeTree(object)` or, for imported GLBs, `stylizeImported(object)`.
+
+`set-pieces.js` dresses the anchor, wreck and chests with instanced props and a light beacon each. `journey.js` adds the three-lights quest: a waypoint chip, discovery toasts, depth chapter cards and atlas progress (kept for the browser session only).
+
+Interface motion follows one identity: ease `cubic-bezier(.4,0,.2,1)`, durations 180 / 420 / 700 ms, entrances rise and settle, exits leave faster, ambient loops are sine based. The tokens are at the top of `journey.css`.
+
+For checks when the tab is not painting, `oceanControls.step(seconds)` advances the simulation in fixed steps and renders once. See `../return/CHANGELOG.md` for the full list of changes.

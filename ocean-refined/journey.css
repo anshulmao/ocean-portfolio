@@ -1,0 +1,87 @@
+/* Journey layer: discovery, wayfinding and depth chapters.
+   Motion identity (calm / premium): one signature ease, three durations,
+   entrances rise and settle, exits leave about 40% faster.
+   The --journey-* tokens are declared once, in motion.css, for the whole interface. */
+
+/* Notes are written on a slate (the recipe is in hologram.css): the toast is a small one passed across, with
+   the kicker as its heading and one plain line under it. It keeps the projected palette at the daylight surface. */
+.journey-toast{position:fixed;left:50%;top:124px;z-index:7;display:flex;align-items:center;gap:12px;max-width:min(86vw,440px);padding:10px 20px 11px 24px;--holo-ink:#eefdff;--holo-dim:#8ff4ff66;--holo-strong:#c9fbff;text-shadow:0 0 9px #5fe9ff70;font:400 14px/1.4 Outfit,system-ui,sans-serif;letter-spacing:.01em;opacity:0;transform:translate(-50%,14px);pointer-events:none}
+.journey-toast i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--signal,#7ff0cf);box-shadow:0 0 0 0 var(--signal,#7ff0cf)}
+.journey-toast small{display:block;margin-bottom:2px;font:500 10px/1.3 var(--holo-mono);letter-spacing:.12em;color:var(--holo-strong);text-transform:uppercase}
+.journey-toast[data-show="true"]{opacity:1;transform:translate(-50%,0);transition:opacity var(--journey-standard) var(--journey-in),transform var(--journey-standard) var(--journey-in)}
+.journey-toast[data-show="true"] i{animation:journey-ping 1.4s var(--journey-ease) 120ms 2}
+.journey-toast[data-show="false"]{transition:opacity 240ms var(--journey-out),transform 240ms var(--journey-out);transform:translate(-50%,-8px)}
+@keyframes journey-ping{0%{box-shadow:0 0 0 0 var(--signal,#7ff0cf)}100%{box-shadow:0 0 0 12px transparent}}
+
+/* Depth chapters read like a marker on the descent line: the zone's name in the slate hand, a pencil rule that
+   draws itself, and the depth band in the instruments' mono. No panel: the words sit on the water. */
+.zone-card{position:fixed;left:50%;top:27%;z-index:6;text-align:center;color:#f2fbff;font-family:Outfit,system-ui,sans-serif;opacity:0;transform:translate(-50%,10px);pointer-events:none;text-shadow:0 0 3px #021d2ab8,0 1px 18px #062c3acc}
+.zone-card strong{display:block;font-size:clamp(24px,2.9vw,34px);font-weight:500;line-height:1.1;letter-spacing:.005em;rotate:-1.2deg}
+.zone-card span{display:block;margin-top:11px;font:500 11px/1.3 var(--holo-mono);letter-spacing:.14em;opacity:.9;text-transform:uppercase}
+.zone-card b{display:block;width:150px;height:1px;margin:12px auto 0;background:#edfaffb0;transform:scaleX(0)}
+.zone-card[data-show="true"]{opacity:1;transform:translate(-50%,0);transition:opacity var(--journey-slow) var(--journey-in),transform var(--journey-slow) var(--journey-in)}
+.zone-card[data-show="true"] b{transform:scaleX(1);transition:transform 900ms var(--journey-ease) 160ms}
+.zone-card[data-show="false"]{transition:opacity 380ms var(--journey-out),transform 380ms var(--journey-out);transform:translate(-50%,-8px)}
+
+.waypoint{position:fixed;left:0;top:0;z-index:4;display:flex;align-items:center;gap:8px;padding:5px 11px 5px 7px;border:1px solid var(--holo-dim);border-radius:9px 9px 9px 3px;background:#06283a99;box-shadow:var(--holo-glow);color:#eefdff;text-shadow:0 0 9px #5fe9ff70;font:500 10px/1 Outfit,system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity var(--journey-standard) var(--journey-ease);will-change:transform}
+.waypoint[data-show="true"]{opacity:.94}
+/* A toast is the louder message: the chip steps back while one is up, so they never stack. */
+.journey-toast[data-show="true"]~.waypoint[data-show="true"]{opacity:0}
+.waypoint i{width:9px;height:9px;background:var(--signal,#7ff0cf);transform:rotate(45deg)}
+/* The marker breathes only while the chip is on screen. */
+.waypoint[data-show="true"] i{animation:journey-breathe 2.6s ease-in-out infinite}
+.waypoint[data-edge="true"] i{width:0;height:0;background:none;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:10px solid var(--signal,#7ff0cf);transform:rotate(var(--bearing,0rad))}
+.waypoint[data-show="true"][data-edge="true"] i{animation:none}
+.waypoint b{font:500 10px/1 var(--holo-mono);letter-spacing:.04em;font-variant-numeric:tabular-nums;text-transform:none;opacity:.85}
+@keyframes journey-breathe{0%,100%{opacity:.6;scale:.86}50%{opacity:1;scale:1.08}}
+
+/* Crossing the surface: a brief wash of bright water. It covers the whole view, so it is only rendered while it
+   plays: journey.js sets data-play and clears it again when the animation ends. */
+.surface-wash{display:none;position:fixed;inset:0;z-index:3;pointer-events:none;opacity:0;background:radial-gradient(120% 90% at 50% 0%,#e9fbffd9 0%,#9fe3e688 34%,#2f9aa800 72%)}
+.surface-wash[data-play="true"]{display:block;animation:journey-wash var(--journey-slow) var(--journey-ease) both}
+@keyframes journey-wash{0%{opacity:0;transform:translateY(-6%)}28%{opacity:1}100%{opacity:0;transform:translateY(10%)}}
+
+.map-legend button[data-found="true"]{border-color:var(--signal,#7ff0cf)}
+.map-legend button[data-found="true"]::after{content:"";display:inline-block;width:6px;height:6px;margin-left:6px;border-radius:50%;background:var(--signal,#7ff0cf);vertical-align:middle}
+.map-chart button[data-found="true"]{box-shadow:0 0 0 2px var(--signal,#7ff0cf)}
+.journey-progress{display:block;margin-top:6px;font:500 9px/1 Outfit,system-ui,sans-serif;letter-spacing:.16em;color:#edfaffb8;text-transform:uppercase}
+
+/* Guided dive: the caption card and the fade used for cuts between stops.
+   The card is projected light like the rest of the hologram interface. */
+/* It sits in the lower right corner, above the dive console and clear of the interaction prompt in the middle of
+   the view; while the full computer face is up it stands above that. */
+section.tour-card{position:fixed;right:var(--pad,24px);bottom:150px;z-index:8;width:min(calc(100vw - 32px),440px);padding:14px 18px 14px 22px;opacity:0;translate:0 14px;visibility:hidden;transition:opacity 250ms var(--journey-out),translate 250ms var(--journey-out),visibility 0s 250ms}
+section.tour-card[data-show="true"]{opacity:1;translate:0 0;visibility:visible;transition:opacity var(--journey-standard) var(--journey-in),translate var(--journey-standard) var(--journey-in)}
+body[data-computer-open="true"][data-camera="third"] section.tour-card{bottom:292px}
+.tour-card header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tour-card .tour-kicker{color:var(--signal,var(--holo-strong))}
+.tour-card .tour-count{font-size:12px}
+.tour-title{width:fit-content;margin:10px 0 9px;font-size:22px;line-height:1.15}
+.tour-lines{margin:0;min-height:44px;font-size:14.5px;line-height:22px}
+.tour-card[data-state="travel"] .tour-lines{opacity:.72}
+.tour-progress{height:1px;margin:11px 0 11px;background:var(--holo-faint)}
+/* The bar grows many times a second while a stop is narrated: on its own layer that is a compositor move, not a repaint of the card. */
+.tour-progress i{display:block;height:100%;background:var(--signal,var(--holo));box-shadow:0 0 6px var(--signal,var(--holo));transform:scaleX(0);transform-origin:left;will-change:transform}
+.tour-card footer{display:flex;flex-wrap:wrap;gap:8px}
+.tour-card footer button[hidden]{display:none}
+.tour-card footer [data-tour="exit"]{margin-left:auto;border-color:#0000;background:none}
+.tour-card footer :is([data-tour="rejoin"],[data-tour="surface"],[data-tour="read"]){border-color:var(--signal,var(--holo))}
+.tour-fade{position:fixed;inset:0;z-index:5;pointer-events:none;background:#04303f;opacity:0;transition:opacity var(--journey-standard) var(--journey-ease)}
+.tour-fade[data-on="true"]{opacity:1;transition:opacity 200ms var(--journey-out)}
+/* The tour narrates each landmark itself, so the generic prompt to click in stays out of its way. */
+body:is([data-tour="travel"],[data-tour="dwell"]) .waypoint{opacity:0}
+
+/* On a phone the toast sits in a clear band: underwater between the instrument buttons and the depth scale, off the
+   touch pad, and at the surface between the entry buttons and the look arrows. The tour's buttons are finger-sized,
+   and the depth scale, which the card would cover, steps out while the card is up. */
+@media (max-width:600px){.journey-toast{top:auto;bottom:140px;font-size:13px}body[data-submerged="true"] .journey-toast{top:284px;bottom:auto}.tour-card footer button{min-height:40px}body[data-tour]:not([data-tour="off"],[data-tour="starting"]) .depth{opacity:0}.zone-card{top:55%;width:92vw}.zone-card strong{font-size:22px}.zone-card span{font-size:10px;letter-spacing:.1em}section.tour-card,body[data-computer-open="true"][data-camera="third"] section.tour-card{right:16px;bottom:166px;left:16px;width:auto;padding:11px 13px 11px 20px}.tour-title{margin:8px 0 7px;font-size:19px}.tour-lines{font-size:13.5px;min-height:0}.tour-card footer{gap:6px}}
+/* The touch pad stays reachable under the card, and key caps mean nothing without a keyboard. */
+@media (pointer:coarse){.tour-card footer kbd{display:none}}
+@media (prefers-reduced-motion:reduce){
+  section.tour-card,section.tour-card[data-show="true"]{translate:0 0;transition:opacity var(--journey-quick) linear,visibility 0s}
+  .tour-fade,.tour-fade[data-on="true"]{transition:opacity var(--journey-quick) linear}
+  .journey-toast,.journey-toast[data-show],.zone-card,.zone-card[data-show]{transition:opacity var(--journey-quick) linear;transform:translate(-50%,0)}
+  .zone-card b{transform:scaleX(1);transition:none}
+  .waypoint[data-show] i,.journey-toast[data-show="true"] i{animation:none}
+  .surface-wash[data-play="true"]{animation:none}
+}

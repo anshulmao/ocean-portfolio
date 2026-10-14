@@ -1,4 +1,4 @@
-import {settings, schema, setSetting, resetSettings, persistSettings} from './movement-settings.js';
+import {settings, schema, presets, setSetting, applyPreset, resetSettings, persistSettings} from './movement-settings.js';
 
 export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
   const trigger = document.getElementById('movement-toggle');
@@ -14,6 +14,26 @@ export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
   const listen = (element,event,fn) => { element.addEventListener(event,fn); removers.push(() => element.removeEventListener(event,fn)); };
   const format = (item,value) => `${value}${item.unit ? ` ${item.unit}` : ''}`;
   let group = null;
+
+  // Control feel: three presets above the individual sliders. Each sets a handful of them at once; moving one of those afterwards reads as 'Custom'.
+  const presetBox = document.createElement('fieldset'), presetRow = document.createElement('div'), presetNote = document.createElement('p'), presetButtons = new Map();
+  presetBox.className = 'movement-presets'; presetRow.className = 'movement-preset-row'; presetNote.className = 'movement-preset-note'; presetNote.id = 'movement-preset-note';
+  const legend = document.createElement('legend'); legend.textContent = 'Control feel'; presetBox.append(legend, presetRow, presetNote);
+  for (const [name, preset] of Object.entries(presets)) {
+    const button = Object.assign(document.createElement('button'), {type:'button', textContent:preset.label});
+    button.dataset.preset = name; button.setAttribute('aria-describedby', presetNote.id);
+    presetRow.append(button); presetButtons.set(name, button);
+    listen(button, 'click', () => {
+      applyPreset(name); refresh();
+      notice.textContent = persistSettings() ? `${preset.label} feel · saved on this device` : `${preset.label} feel · browser storage unavailable`;
+      onChange(null,null,settings);
+    });
+  }
+  content.append(presetBox);
+  function refreshPreset() {
+    for (const [name, button] of presetButtons) button.setAttribute('aria-pressed', String(settings.preset === name));
+    presetNote.textContent = presets[settings.preset]?.description ?? 'Custom: tuned with the sliders below.';
+  }
 
   for (const item of schema) {
     if (group?.dataset.group !== item.group) {
@@ -91,6 +111,7 @@ export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
       const value = item.type === 'boolean' ? input.checked : item.type === 'number' ? source.valueAsNumber : input.value;
       setSetting(item.key,value);
       refresh(source === input && item.type === 'number');
+      refreshPreset();
       notice.textContent = persistSettings() ? 'Saved on this device · changes apply live' : 'Changes apply live · browser storage unavailable';
       onChange(item.key,settings[item.key],settings);
     };
@@ -100,8 +121,9 @@ export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
     controls.set(item.key,refresh);
     refresh();
   }
+  refreshPreset();
 
-  function refresh() { for (const fn of controls.values()) fn(); }
+  function refresh() { for (const fn of controls.values()) fn(); refreshPreset(); }
   function close() {
     if (!open) return;
     open = false;
@@ -111,7 +133,8 @@ export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
     for (const [element,wasInert] of inertBefore) element.inert=wasInert;
     inertBefore.clear();
     onOpen(false);
-    const focusTarget=restoreFocus?.isConnected ? restoreFocus : trigger;
+    // The trigger lives in the settings menu, which closes when this panel opens: fall back to the menu button.
+    const focusTarget=restoreFocus?.isConnected && restoreFocus.getClientRects().length ? restoreFocus : document.getElementById('menu-toggle') || trigger;
     focusTarget.focus({preventScroll:true});
     // In short viewports the trigger was hidden behind the sheet. Wait for
     // its visibility to return before restoring focus on Chromium touch views.

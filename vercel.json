@@ -1,0 +1,89 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "npm run build",
+  "installCommand": "npm install --omit=dev",
+  "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)\\.(js|css|html|json)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/assets/models/coral_waterverbruik_gezond.glb",
+      "headers": [
+        {
+          "key": "X-Asset-SHA256",
+          "value": "25ac773bfe5d8a1228af881863360326c5d03ce6e9c70aeadedd4bf37e44915e"
+        }
+      ]
+    },
+    {
+      "source": "/assets/models/coral_landbouw_gezond.glb",
+      "headers": [
+        {
+          "key": "X-Asset-SHA256",
+          "value": "c12281635de5baaa50979f6d17ac6461e58b04e046387a73f2c33e273c25588e"
+        }
+      ]
+    },
+    {
+      "source": "/assets/models/coral_anker_kleur.glb",
+      "headers": [
+        {
+          "key": "X-Asset-SHA256",
+          "value": "010936e0a8c493dd26640adc8701d1e279be020039fc13fe77127d6434f3291f"
+        }
+      ]
+    },
+    {
+      "source": "/assets/models/coral_uitstoot_gezond.glb",
+      "headers": [
+        {
+          "key": "X-Asset-SHA256",
+          "value": "a907e052c746d93747ab91ac3f443776bd49b535cc24c1044ff310a362664f76"
+        }
+      ]
+    },
+    {
+      "source": "/assets/models/coral_visnet_gezond_fish.glb",
+      "headers": [
+        {
+          "key": "X-Asset-SHA256",
+          "value": "cd189ff088c757908f344076a12257bfff9c9c7a30d669b38912b5b077762032"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+/* Hologram interface base. Panels are projected light, not slabs: no solid
+   fills and no backdrop blur (the WebGL canvas renders underneath, and blur
+   is expensive on integrated graphics). Legibility comes from a very light
+   tint, a thin glowing edge and a soft text glow. */
+:root,.holo--reading,.holo-deep,.ocean-dialog{
+  --holo:#8ff4ff;--holo-strong:#c9fbff;--holo-dim:#8ff4ff66;--holo-faint:#8ff4ff24;--holo-ink:#eefdff;
+  --holo-tint:#06283a38;--holo-tint-solid:#06283acc;
+  --holo-mint:#7ff0cf;--holo-amber:#ffcf7a;--holo-violet:#c9a2ff;--holo-coral:#ff9d8a;
+  --holo-glow:0 0 14px #5fe9ff33;--holo-text-glow:0 0 2px #021d2ab8,0 0 9px #5fe9ff70;
+  --holo-font:Outfit,system-ui,sans-serif;--holo-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  /* Shared by the HUD controls: a dark halo that keeps thin light readable over bright water, the fill of a
+     control at rest, under the pointer and switched on, and the focus ring. */
+  --holo-halo:drop-shadow(0 0 1.5px #021d2ad9);--holo-fill:#06283a52;--holo-fill-hover:#8ff4ff26;--holo-fill-on:#8ff4ff38;--holo-focus:#f2feff;
+}
+/* Daylight above the water: the same instruments drawn in ink, so thin lines stay legible against a pale sky.
+   Reading panels, dialogs and anything marked .holo-deep (the instruments that sit over the water at the bottom
+   of the view) keep the projected palette: they restate the tokens above. */
+html[data-sky-preset="day"] body:not([data-submerged="true"]),html:not([data-sky-preset])[data-theme="day"] body:not([data-submerged="true"]){
+  --holo:#0e4a5d;--holo-strong:#0a3a4b;--holo-dim:#0e4a5d80;--holo-faint:#0e4a5d2e;--holo-ink:#0a3442;
+  --holo-tint:#f4fcff3d;--holo-glow:0 0 14px #ffffff3d;--holo-text-glow:0 0 8px #ffffff8c;
+  --holo-halo:drop-shadow(0 0 2px #ffffff99);--holo-fill:#f4fcff47;--holo-fill-hover:#f4fcff8c;--holo-fill-on:#0e4a5d2e;--holo-focus:#0a3442;
+  /* The signal colours in ink: light amber and coral vanish against a pale sky. */
+  --holo-mint:#0b6a56;--holo-amber:#8a5200;--holo-coral:#a3341f;
+}
+/* One accent logic for every instrument: cyan light (--holo, --holo-ink) is a normal reading, --holo-amber is
+   caution, --holo-coral is warning and nothing else. A state that changes colour changes its words too. */
+/* The panel recipe. Add class="holo" to any container. */
+.holo{position:relative;background:linear-gradient(var(--holo-tint),var(--holo-tint)),repeating-linear-gradient(0deg,#8ff4ff0f 0 1px,#0000 1px 3px);border:1px solid var(--holo-dim);border-radius:3px;box-shadow:inset 0 0 22px #5fe9ff17,var(--holo-glow);color:var(--holo-ink);font-family:var(--holo-font);text-shadow:var(--holo-text-glow)}
+/* Corner brackets read as a projected frame. */
+.holo::before,.holo::after{content:"";position:absolute;width:10px;height:10px;border:1px solid var(--holo-strong);pointer-events:none}
+.holo::before{left:-1px;top:-1px;border-right:0;border-bottom:0}
+.holo::after{right:-1px;bottom:-1px;border-left:0;border-top:0}
+/* Reading surfaces (long text) may use the denser tint for contrast. */
+.holo--reading{background:linear-gradient(var(--holo-tint-solid),var(--holo-tint-solid)),repeating-linear-gradient(0deg,#8ff4ff0a 0 1px,#0000 1px 3px)}
+.holo-label{font:500 10px/1 var(--holo-font);letter-spacing:.18em;text-transform:uppercase;color:var(--holo-strong)}
+.holo-value{font:500 15px/1 var(--holo-mono);letter-spacing:.06em;font-variant-numeric:tabular-nums;color:var(--holo-ink)}
+/* The slate recipe, for notes and captions (the tour card, toasts, the dive summary, the surface board): a
+   diver's writing slate in the same projected light. Rounded corners, a lanyard hole in the corner, faint ruled
+   lines and a pencil tucked under the lower edge. Headings on a slate are written by hand: .slate-hand gives a
+   short heading a slight slant and a pencil underline in the bundled face. Body text stays upright and plain. */
+.slate{position:relative}
+/* The notes other modules build (guided-dive.js, journey.js, dive-plan.js) take the recipe by name. */
+:is(.slate,section.tour-card,div.journey-toast,aside.dive-summary,dialog.dive-prompt){border:1px solid var(--holo-dim);border-radius:10px 10px 10px 4px;background:repeating-linear-gradient(0deg,#0000 0 21px,#8ff4ff12 21px 22px),linear-gradient(var(--holo-tint-solid),var(--holo-tint-solid));box-shadow:inset 0 0 22px #5fe9ff12,var(--holo-glow);color:var(--holo-ink);font-family:var(--holo-font)}
+:is(.slate,section.tour-card,div.journey-toast,aside.dive-summary,dialog.dive-prompt)::before{content:"";position:absolute;left:6px;top:6px;width:8px;height:8px;box-sizing:border-box;border:1.5px solid var(--holo-dim);border-radius:50%;pointer-events:none}
+:is(.slate,section.tour-card,aside.dive-summary,dialog.dive-prompt)::after{content:"";position:absolute;left:auto;top:auto;right:16px;bottom:-3px;width:36px;height:5px;box-sizing:border-box;border:1px solid var(--holo-dim);border-radius:1px 3px 3px 1px;background:linear-gradient(90deg,var(--holo-strong) 0 6px,#04202f 6px);rotate:-4deg;pointer-events:none}
+:is(.slate-hand,.tour-title,.dive-summary header .holo-label,.dive-prompt h2){font-family:var(--holo-font);font-weight:500;letter-spacing:.005em;text-transform:none;text-decoration-line:underline;text-decoration-style:wavy;text-decoration-color:var(--holo-dim);text-decoration-thickness:1px;text-underline-offset:.32em;rotate:-1.2deg;transform-origin:0 100%}

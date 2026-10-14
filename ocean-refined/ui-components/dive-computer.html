@@ -1,6 +1,11 @@
-<aside id="dive-computer" class="dive-computer" aria-label="Dive computer" hidden="">
-    <div class="computer-top"><span><i></i> DIVE SYSTEM / 01</span><span id="computer-mode">THIRD PERSON</span></div>
-    <div class="computer-readings"><div class="computer-depth"><span>DEPTH</span><strong id="computer-depth">24.6<small>m</small></strong></div><div><span>DIVE TIME</span><strong id="computer-time">00:02</strong></div></div>
-    <div class="computer-air"><div><span>AIR · SIMULATED</span><strong id="computer-air">100<small>%</small></strong></div><div class="air-track"><i id="computer-air-fill" style="width: 99.9147%;"></i></div></div>
-    <div class="computer-bottom"><span>LOCATION</span><strong id="computer-location">At The Surface</strong></div>
-  </aside>
+<!-- Dive computer side panel (third person)
+     Source: index.html
+     Styles: styles.css, hologram.css, hud.css (+ motion.css for transitions)
+     Scripts: dive-hud.js -->
+<aside id="dive-computer" class="dive-computer holo" aria-label="Dive computer" hidden>
+  <div class="computer-top"><span><i></i> AIR 21% · SIMULATED</span><span id="computer-mode">DIVE</span></div>
+  <div class="computer-readings"><div class="computer-depth"><span>DEPTH</span><strong id="computer-depth">0.0<small>m</small></strong></div><div class="computer-ndl" id="computer-ndl" data-mode="ndl"><span id="computer-ndl-label">NO-DECO LIMIT</span><strong id="computer-ndl-value">99+<small>min</small></strong></div><div class="ascent-bar" id="computer-ascent" aria-hidden="true" data-level="0"><i></i><i></i><i></i><i></i><i></i><em>SLOW</em></div></div>
+  <div class="computer-row"><div><span>DIVE TIME</span><strong id="computer-time">00:00</strong></div><div><span>MAX DEPTH</span><strong id="computer-max">0.0<small>m</small></strong></div><div><span>WATER</span><strong id="computer-temp">28<small>°C</small></strong></div><div><span>TANK</span><strong id="computer-air">200<small>bar</small></strong></div></div>
+  <div class="computer-profile"><span>PROFILE</span><svg viewBox="0 0 240 44" preserveAspectRatio="none" role="img" aria-label="Dive profile: depth against time"><path class="profile-grid" d="M0 .5H240M0 22H240M0 43.5H240"/><polyline id="computer-profile" points="0,0 240,0"/></svg><b id="computer-profile-scale">20 m</b></div>
+  <div class="computer-bottom"><span>LOCATION</span><strong id="computer-location">Coral gardens</strong></div>
+</aside>

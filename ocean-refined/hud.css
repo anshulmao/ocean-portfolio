@@ -1,0 +1,476 @@
+/* In-scene HUD: dive instruments drawn in projected light (tokens and the .holo panel recipe live in hologram.css).
+   Layout: menu button and wordmark top left, compass card top centre, sun / moon button and the sonar
+   scope (minimap) top right, depth gauge down the left edge, dive console (computer face and pressure
+   gauge) bottom right. Notes, the mask frame and the surface board are in instruments.css.
+   Nothing here blurs the canvas, and nothing here moves: every transition and keyframe is in motion.css. */
+:root{--tape-width:320px;--map-size:136px;--hud-top:18px}
+@media(max-width:900px){:root{--tape-width:240px;--map-size:120px}}
+@media(max-width:600px){:root{--tape-width:150px;--map-size:100px;--hud-top:14px}}
+
+/* 0. One recipe for every control: a faint fill, a thin lit edge, a brighter state when switched on. */
+:is(.menu-toggle,.time-cycle,.map-expand,.settings-close,.movement-close,.camera-toggle,.motion-control,.movement-toggle,.credits-toggle,.archive-toggle,.dive-computer-toggle,.capture-hint,.interact-prompt){border:1px solid var(--holo-dim);border-radius:3px;background:var(--holo-fill);color:var(--holo-ink);font-family:var(--holo-font);text-shadow:var(--holo-text-glow);box-shadow:inset 0 0 12px #5fe9ff14}
+:is(.view-controls,.swim-controls,.map-heading,.map-legend,.movement-actions,.weather-picker,.theme-control)>button{border:1px solid var(--holo-dim);border-radius:3px;background:var(--holo-fill);color:var(--holo-ink);font-family:var(--holo-font);text-shadow:var(--holo-text-glow);box-shadow:inset 0 0 12px #5fe9ff14}
+:is(.menu-toggle,.time-cycle,.map-expand,.settings-close,.movement-close,.camera-toggle,.motion-control,.movement-toggle,.credits-toggle,.archive-toggle,.dive-computer-toggle):is([aria-pressed="true"],[aria-expanded="true"]),:is(.weather-picker,.theme-control)>button[aria-pressed="true"]{border-color:var(--holo-strong);background:var(--holo-fill-on);box-shadow:inset 0 0 14px #5fe9ff38,var(--holo-glow)}
+:is(.menu-toggle,.time-cycle,.map-expand,.settings-close,.movement-close,.camera-toggle,.motion-control,.movement-toggle,.credits-toggle,.archive-toggle,.dive-computer-toggle,.capture-hint,.interact-prompt,.dialog-close):focus-visible,:is(.view-controls,.swim-controls,.map-heading,.map-legend,.map-chart,.movement-actions,.weather-picker,.theme-control)>button:focus-visible{outline:2px solid var(--holo-focus);outline-offset:3px}
+@media(hover:hover){
+  :is(.menu-toggle,.time-cycle,.map-expand,.settings-close,.movement-close,.camera-toggle,.motion-control,.movement-toggle,.credits-toggle,.archive-toggle,.dive-computer-toggle,.capture-hint,.interact-prompt):hover{border-color:var(--holo);background:var(--holo-fill-hover)}
+  :is(.view-controls,.swim-controls,.map-heading,.map-legend,.movement-actions,.weather-picker,.theme-control)>button:hover{border-color:var(--holo);background:var(--holo-fill-hover)}
+}
+.menu-toggle svg,.time-cycle svg,.weather-glyph svg,.map-expand svg{filter:var(--holo-halo)}
+
+/* 1. Top row. */
+.masthead{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:var(--hud-top) var(--pad) 0;pointer-events:none}
+.masthead-start,.sky-cluster{display:flex;align-items:center;gap:14px;pointer-events:auto}
+.sky-cluster{gap:6px}
+body[data-submerged="true"] .masthead{padding-right:calc(var(--pad) + var(--map-size) + 12px)}
+.menu-toggle,.time-cycle{position:relative;display:grid;place-items:center;flex:none;width:42px;height:42px;padding:0}
+.menu-toggle svg{width:20px;height:20px}
+.menu-toggle path{transform-box:fill-box;transform-origin:center}
+.menu-toggle[aria-expanded="true"] path:nth-child(1){translate:0 5px;rotate:45deg}
+.menu-toggle[aria-expanded="true"] path:nth-child(2){opacity:0;scale:.2 1}
+.menu-toggle[aria-expanded="true"] path:nth-child(3){translate:0 -5px;rotate:-45deg}
+.wordmark{font:500 14px/1.3 Montserrat,system-ui,sans-serif;letter-spacing:.3em;color:var(--ink);white-space:nowrap}
+.wordmark span{display:block;margin-top:6px;font-size:7px;letter-spacing:.24em;opacity:.65}
+body[data-submerged="true"] .wordmark{color:var(--holo-ink);text-shadow:var(--holo-text-glow)}
+/* The sun / moon button: one glyph whose parts trade places with the sky preset. */
+.time-cycle{border-radius:50%}
+.sky-glyph{width:24px;height:24px;overflow:visible}
+.sky-glyph g{transform-box:view-box;transform-origin:50% 50%;opacity:0}
+.sky-glyph .sky-day{scale:.5;translate:0 5px}
+.sky-glyph .sky-low{translate:0 4px}
+.sky-glyph .sky-night{translate:0 -4px;rotate:-50deg}
+.sky-glyph :is(.sky-up,.sky-down){opacity:0}
+html[data-sky-preset="day"] .sky-glyph .sky-day,html:not([data-sky-preset],[data-theme="night"]) .sky-glyph .sky-day{opacity:1;scale:1;translate:0 0}
+html:is([data-sky-preset="dawn"],[data-sky-preset="dusk"]) .sky-glyph .sky-low{opacity:1;translate:0 0}
+html[data-sky-preset="dawn"] .sky-glyph .sky-up,html[data-sky-preset="dusk"] .sky-glyph .sky-down{opacity:1}
+html[data-sky-preset="night"] .sky-glyph .sky-night,html:not([data-sky-preset])[data-theme="night"] .sky-glyph .sky-night{opacity:1;translate:0 0;rotate:0deg}
+.weather-glyph{position:relative;display:grid;place-items:center;flex:none;width:28px;height:28px;color:var(--holo-ink)}
+.weather-glyph svg{width:21px;height:21px;overflow:visible}
+.weather-glyph g{transform-box:view-box;transform-origin:50% 50%;opacity:0;scale:.8}
+.weather-glyph[data-weather="clear"] g[data-w="clear"],.weather-glyph[data-weather="rain"] g[data-w="rain"],.weather-glyph[data-weather="storm"] g[data-w="storm"]{opacity:1;scale:1}
+/* A small padlock appears on either glyph while its lock is on. */
+.lock-pip{position:absolute;right:-1px;bottom:1px;width:8px;height:6px;border-radius:1px;background:var(--holo-amber);box-shadow:0 0 0 1px #021d2a99,0 0 6px #ffcf7a99;opacity:0;scale:.4;pointer-events:none}
+.lock-pip::before{content:"";position:absolute;left:1px;top:-4px;width:6px;height:5px;box-sizing:border-box;border:1.5px solid var(--holo-amber);border-bottom:0;border-radius:3px 3px 0 0}
+[data-locked="true"]>.lock-pip{opacity:1;scale:1}
+.weather-glyph .lock-pip{right:0;bottom:2px}
+
+/* 2. Settings menu, under the menu button. */
+.settings-menu{position:absolute;top:calc(var(--hud-top) + 50px);left:var(--pad);z-index:11;display:flex;flex-direction:column;width:min(340px,calc(100vw - 32px));max-height:calc(100dvh - var(--hud-top) - 66px);text-shadow:none;color-scheme:dark;--holo-tint-solid:#04202feb}
+.settings-head{display:flex;align-items:center;justify-content:space-between;flex:none;padding:10px 10px 10px 16px;border-bottom:1px solid var(--holo-faint)}
+.settings-head .holo-label{font-size:11px;text-shadow:var(--holo-text-glow)}
+.settings-close{display:grid;place-items:center;width:30px;height:30px;padding:0}
+.settings-close svg{width:14px;height:14px}
+.settings-body{min-height:0;padding:0 16px 12px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--holo-dim) #0000}
+.settings-group{padding:14px 0 13px;border-bottom:1px solid var(--holo-faint)}
+.settings-group:last-child{padding-bottom:4px;border-bottom:0}
+.settings-group h3{margin:0 0 11px;color:var(--holo)}
+.theme-control{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;min-width:0;margin:0;padding:0;border:0}
+.time-scrubber{grid-column:1/-1}
+.time-title{display:flex;justify-content:space-between;align-items:baseline;font:500 10px/1 var(--holo-font);letter-spacing:.14em;color:var(--holo-strong)}
+#time-reading{font:500 16px/1 var(--holo-mono);letter-spacing:.06em;color:var(--holo-ink);text-shadow:var(--holo-text-glow)}
+.time-track{position:relative;margin:3px 6px 0;padding-top:15px}
+#time-orb{position:absolute;top:0;width:11px;height:11px;border-radius:50%;background:var(--holo-amber);box-shadow:0 0 10px #ffcf7aa6;transform:translate(-50%,var(--rise,0px));pointer-events:none}
+#time-orb[data-kind="moon"]{background:none;box-shadow:inset -3px -1px 0 0 var(--holo-strong)}
+:is(#time-slider,.movement-field input[type="range"]){appearance:none;width:100%;height:24px;margin:0;background:none;cursor:ew-resize}
+:is(#time-slider,.movement-field input[type="range"])::-webkit-slider-runnable-track{height:2px;background:var(--holo-dim)}
+:is(#time-slider,.movement-field input[type="range"])::-webkit-slider-thumb{appearance:none;width:8px;height:18px;margin-top:-8px;border:1px solid var(--holo-strong);border-radius:1px;background:#0a3a4f;box-shadow:0 0 8px #5fe9ff80}
+:is(#time-slider,.movement-field input[type="range"])::-moz-range-track{height:2px;background:var(--holo-dim)}
+:is(#time-slider,.movement-field input[type="range"])::-moz-range-thumb{width:7px;height:17px;border:1px solid var(--holo-strong);border-radius:1px;background:#0a3a4f}
+:is(#time-slider,.movement-field input[type="range"]):focus-visible{outline:2px solid var(--holo-focus);outline-offset:2px}
+.time-labels{display:flex;justify-content:space-between;margin:1px 0 9px;font:400 9px/1 var(--holo-mono);letter-spacing:.06em;color:var(--holo)}
+.theme-control>button{display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 2px 7px;font-size:11px;letter-spacing:.04em}
+.theme-control>button svg{width:16px;height:16px}
+.sky-clock{margin-top:10px;font:400 10px/1 var(--holo-mono);letter-spacing:.1em;color:var(--holo)}
+.holo-switch{position:relative;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:3px 12px;margin-top:12px;cursor:pointer}
+.holo-switch input{position:absolute;left:0;top:50%;width:38px;height:22px;margin:-11px 0 0;opacity:0;cursor:pointer}
+.holo-switch i{grid-row:1/3;position:relative;width:38px;height:20px;border:1px solid var(--holo-dim);border-radius:10px;background:var(--holo-fill)}
+.holo-switch i::before{content:"";position:absolute;left:3px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--holo)}
+.holo-switch input:checked+i{border-color:var(--holo-strong);background:var(--holo-fill-on)}
+.holo-switch input:checked+i::before{translate:18px 0;background:var(--holo-ink);box-shadow:0 0 8px var(--holo)}
+.holo-switch input:focus-visible+i{outline:2px solid var(--holo-focus);outline-offset:3px}
+.holo-switch span{font:500 13px/1.2 var(--holo-font);color:var(--holo-ink)}
+.holo-switch small{grid-column:2;font:400 11px/1.3 var(--holo-font);color:var(--holo)}
+.weather-picker{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.weather-picker>button{position:relative;min-height:36px;padding:6px 2px;font-size:11px;letter-spacing:.02em}
+.weather-picker>button[data-current="true"]::after{content:"";position:absolute;right:4px;top:4px;width:5px;height:5px;border-radius:50%;background:var(--holo-mint);box-shadow:0 0 6px var(--holo-mint)}
+.settings-actions{display:grid;gap:6px}
+.settings-actions>button{display:flex;align-items:center;gap:10px;width:100%;min-height:38px;padding:8px 12px;font-size:13px;text-align:left}
+.settings-actions>button svg{flex:none;width:15px;height:15px}
+.key-reference{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin:0}
+.key-reference div{display:flex;align-items:center;gap:9px;min-width:0}
+.key-reference dt{display:flex;flex:none;gap:3px;min-width:51px}
+.key-reference dd{margin:0;font:400 12px/1.25 var(--holo-font);color:var(--holo-ink)}
+:is(.settings-menu,.interact-prompt,.dive-computer-toggle) kbd{min-width:23px;height:22px;padding:0 5px;border:1px solid var(--holo-dim);border-radius:3px;background:var(--holo-fill);color:var(--holo-strong);font:500 10px/1 var(--holo-mono);opacity:1}
+
+/* 3. Compass. A dive compass card read edge-on: hud.js slides .heading-tape under the fixed lubber line and
+   keeps a bezel marker (.heading-bug, on the card) on the bearing of the nearest site not yet found, with a
+   chevron at the window's end when that bearing is out of sight; world.js paints the readout. */
+.heading-indicator{position:absolute;top:var(--hud-top);left:50%;z-index:4;width:var(--tape-width);transform:translateX(-50%);color:var(--holo-ink);font-family:var(--holo-font);text-align:center;pointer-events:none}
+body:not([data-submerged="true"],[data-exploring="true"]) .heading-indicator{opacity:0}
+.heading-window{position:relative;height:34px;overflow:hidden;border-top:1px solid var(--holo-dim);border-bottom:1px solid var(--holo);background:linear-gradient(var(--holo-fill),var(--holo-fill)),linear-gradient(var(--holo-tint),var(--holo-tint));-webkit-mask-image:linear-gradient(90deg,#0000,#000 24%,#000 76%,#0000);mask-image:linear-gradient(90deg,#0000,#000 24%,#000 76%,#0000)}
+/* The card's graduations: a long mark every 30°, a mark every 10° and a short one every 5°. */
+.heading-tape{position:absolute;left:50%;top:0;width:1800px;height:100%;will-change:transform;background:linear-gradient(90deg,var(--holo-ink) 1px,#0000 1px) 0 100%/90px 12px repeat-x,linear-gradient(90deg,var(--holo-strong) 1px,#0000 1px) 0 100%/30px 8px repeat-x,linear-gradient(90deg,var(--holo) 1px,#0000 1px) 0 100%/15px 4px repeat-x}
+.heading-tape span{position:absolute;top:6px;translate:-50% 0;font:500 10px/1 var(--holo-mono);letter-spacing:.04em;font-variant-numeric:tabular-nums;color:var(--holo-strong);text-shadow:var(--holo-text-glow)}
+.heading-tape span[data-cardinal]{top:4px;font:500 15px/1 var(--holo-font);color:var(--holo-ink)}
+.heading-tape span[data-inter]{top:7px;font:500 9px/1 var(--holo-font);letter-spacing:.06em;color:var(--holo)}
+/* North carries a pointer, as it does on a compass card. */
+.heading-tape span[data-north]::before{content:"";position:absolute;left:50%;top:-4px;margin-left:-3px;border:solid #0000;border-width:0 3px 3px;border-bottom-color:currentColor}
+/* The bezel marker: a notch that rides the card on the bearing of the next site. */
+.heading-bug{position:absolute;left:0;bottom:0;width:15px;height:10px;margin-left:-7.5px;box-sizing:border-box;border:1.5px solid var(--holo-ink);border-bottom:0;border-radius:2px 2px 0 0;opacity:0}
+.heading-bug[data-on="true"]{opacity:1}
+/* The lubber line: an index above and below the card, broken where the lettering passes. */
+.heading-lubber{position:absolute;left:50%;top:1px;width:1px;height:34px;margin-left:-.5px;background:linear-gradient(var(--holo-ink) 0 4px,#0000 4px 24px,var(--holo-ink) 24px)}
+.heading-lubber::before{content:"";position:absolute;left:-3.5px;top:-5px;border:solid #0000;border-width:5px 4px 0;border-top-color:var(--holo-ink)}
+.heading-caret{position:absolute;left:50%;top:36px;translate:-50% 0;border:solid #0000;border-width:0 5px 7px;border-bottom-color:var(--holo-ink)}
+.heading-turn{position:absolute;top:13px;width:8px;height:8px;box-sizing:border-box;border:solid var(--holo-ink);border-width:0 0 1.5px 1.5px;opacity:0}
+.heading-indicator[data-turn="left"] .heading-turn{left:22px;rotate:45deg;opacity:1}
+.heading-indicator[data-turn="right"] .heading-turn{right:22px;rotate:-135deg;opacity:1}
+.heading-readout{display:inline-flex;align-items:baseline;gap:8px;margin-top:13px;text-shadow:var(--holo-text-glow)}
+.heading-readout span{font:500 9px/1 var(--holo-font);letter-spacing:.2em;color:var(--holo)}
+.heading-readout strong{font:500 15px/1 var(--holo-mono);letter-spacing:.06em}
+.heading-readout #heading-cardinal{min-width:1.3em;font-family:var(--holo-font);color:var(--holo-strong);text-align:right}
+
+/* 4. Minimap. Round by default: a 50 m radius of reef around the diver, heading up. The lens is 100 m across inside its
+   border, so .map-chart (the reef's 124 x 140 m bounds) is 124% x 140% of it and --map-m is one metre. hud.js pans and turns the
+   chart under the fixed centre arrow and rests any site beyond the rim on the rim as a pip (transform writes only).
+   world.js places the markers and the diver as percentages of .map-chart, which keeps the reef's proportions. */
+.reef-map{position:absolute;top:var(--hud-top);right:var(--pad);z-index:6;width:var(--map-size);color:var(--holo-ink);font-family:var(--holo-font);--map-m:calc((var(--map-size) - 2px)/100)}
+.map-lens{position:relative;width:var(--map-size);height:var(--map-size);overflow:hidden;isolation:isolate;border:1px solid var(--holo-dim);border-radius:50%;background:radial-gradient(circle,#06283a94 0 55%,#041c2ac2 100%);box-shadow:inset 0 0 18px #5fe9ff33,var(--holo-glow)}
+/* The scope's furniture: a bezel graduated every 30°, a range ring at 25 m, cross hairs and a slow sweep (motion.css). */
+.map-lens::before{content:"";position:absolute;inset:0;z-index:2;border-radius:50%;background:repeating-conic-gradient(from -.7deg,var(--holo-strong) 0 1.4deg,#0000 1.4deg 30deg);-webkit-mask-image:radial-gradient(circle closest-side,#0000 0 92%,#000 93%);mask-image:radial-gradient(circle closest-side,#0000 0 92%,#000 93%);pointer-events:none}
+.map-lens::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle closest-side,#0000 0 49.2%,var(--holo-faint) 50% 51%,#0000 51.8%),linear-gradient(var(--holo-faint),var(--holo-faint)) 50% 0/1px 100% no-repeat,linear-gradient(var(--holo-faint),var(--holo-faint)) 0 50%/100% 1px no-repeat,repeating-linear-gradient(0deg,#8ff4ff12 0 1px,#0000 1px 3px);pointer-events:none}
+.map-sweep{position:absolute;inset:0;border-radius:50%;background:conic-gradient(#0000 0 300deg,#8ff4ff24 360deg);opacity:0;pointer-events:none}
+.map-range{position:absolute;left:50%;bottom:7px;z-index:2;translate:-50% 0;font:500 7px/1 var(--holo-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--holo-strong);text-shadow:0 0 3px #021d2a;pointer-events:none}
+/* Until the first frame the chart rests on the dive entry point. The canvas covers 240 m (expedition-ui.js), so the
+   lens stays filled at the edges of the reef. */
+.map-chart{position:absolute;left:50%;top:50%;width:124%;height:140%;transform-origin:0 0;transform:translate(-50%,-75%);will-change:transform}
+.map-terrain{position:absolute;left:-46.77%;top:-35.71%;width:193.55%;height:171.43%;pointer-events:none}
+.map-orientation{display:none}
+.map-chart button{position:absolute;z-index:2;width:18px;height:18px;margin:-9px 0 0 -9px;padding:0;border:1px solid var(--holo-strong);border-radius:50%;background:#04202fe0;color:var(--holo-ink);font:500 9px/1 var(--holo-mono);box-shadow:0 0 8px #5fe9ff66}
+.map-chart button::after{content:"";position:absolute;inset:-4px;border-radius:50%}
+/* A site beyond the rim: a small pip in its signal colour on the rim, hollow once the site has been found. It keeps the button's size, so it is as easy to press. */
+.reef-map[data-view="round"] .map-chart button[data-off="true"]{border-color:#0000;background:none;box-shadow:none;color:#0000;font-size:0;scale:1!important}
+.reef-map[data-view="round"] .map-chart button[data-off="true"]::before{content:"";position:absolute;inset:auto;left:50%;top:50%;width:8px;height:8px;margin:-4px;box-sizing:border-box;border:2px solid var(--signal,var(--holo-ink));border-radius:50%;background:var(--signal,var(--holo-ink));box-shadow:0 0 0 1px #04202fe0,0 0 7px var(--signal,var(--holo));opacity:1;animation:none}
+.reef-map[data-view="round"] .map-chart button[data-off="true"][data-found="true"]::before{background:#04202fe0}
+.reef-map[data-view="round"] .map-chart button[data-off="true"]:is(:hover,:focus-visible,[data-selected="true"])::before{width:12px;height:12px;margin:-6px}
+.reef-map[data-view="round"] .map-chart button[data-off="true"]:focus-visible{outline-offset:-2px}
+@media(hover:hover){.map-chart button:hover{background:#0f5a70}}
+.map-player{position:absolute;z-index:3;width:9px;height:12px;background:#fff;clip-path:polygon(50% 0,100% 100%,50% 76%,0 100%);transform:translate(-50%,-50%) rotate(var(--heading,0rad))}
+/* In the round view hud.js carries the arrow with a transform from the chart's corner, frame for frame with the pan; world.js's left / top are for the expanded chart. */
+.reef-map[data-view="round"] .map-player{left:0!important;top:0!important;transform:translate(calc(var(--map-m)*62),calc(var(--map-m)*105)) translate(-50%,-50%)}
+.map-rose{position:absolute;inset:0;z-index:1;pointer-events:none}
+.map-rose b{position:absolute;left:8px;top:50%;margin-top:-5px;font:500 10px/1 var(--holo-font);color:var(--holo-ink);text-shadow:0 0 3px #021d2a,0 0 3px #021d2a}
+.map-lubber{position:absolute;left:calc(var(--map-size)/2);top:-2px;translate:-50% 0;border:solid #0000;border-width:6px 4px 0;border-top-color:var(--holo-ink)}
+.map-expand{position:absolute;left:-4px;top:calc(var(--map-size) - 26px);z-index:2;display:grid;place-items:center;width:28px;height:28px;padding:0;border-radius:50%;background:#04202fd1}
+.map-expand svg{width:13px;height:13px}
+.map-expand-in{display:none}
+.reef-map[data-view="round"] :is(.map-heading,.map-legend,.chart-key,#map-caption){display:none}
+.reef-map[data-view="round"] .map-reading{display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:9px;font:500 9px/1 var(--holo-mono);letter-spacing:.1em;white-space:nowrap;text-shadow:var(--holo-text-glow)}
+.reef-map[data-view="round"] #speed-value{color:var(--holo)}
+.reef-map[data-view="round"] .journey-progress{margin-top:6px;font-size:8px;letter-spacing:.1em;text-align:center;text-shadow:var(--holo-text-glow)}
+/* Expanded: the same chart, north-fixed, in a panel with its legend. */
+.reef-map[data-view="full"]{z-index:9;width:min(288px,calc(100vw - 32px));max-height:calc(100dvh - 2*var(--hud-top));padding:12px 14px 14px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--holo-dim) #0000;border:1px solid var(--holo-dim);border-radius:3px;background:linear-gradient(#04202fe6,#04202fe6),repeating-linear-gradient(0deg,#8ff4ff0a 0 1px,#0000 1px 3px);box-shadow:inset 0 0 22px #5fe9ff17,var(--holo-glow)}
+.reef-map[data-view="full"] .map-lens{width:100%;height:auto;aspect-ratio:124/140;margin:11px 0 10px;border-radius:2px;background:#041c2a99;box-shadow:inset 0 0 18px #5fe9ff26}
+.reef-map[data-view="full"] .map-lens::after{border-radius:0;background:repeating-linear-gradient(0deg,#8ff4ff0d 0 1px,#0000 1px 3px)}
+.reef-map[data-view="full"] .map-chart{left:0;top:0;width:100%;height:100%;transform:none}
+.reef-map[data-view="full"] .map-chart button{width:24px;height:24px;margin:-12px 0 0 -12px;font-size:11px}
+.reef-map[data-view="full"] .map-orientation{display:block;position:absolute;right:6px;top:6px;z-index:1;padding:3px 5px;background:#04202fb8;font:500 9px/1 var(--holo-mono);letter-spacing:.08em;color:var(--holo-strong)}
+.reef-map[data-view="full"] :is(.map-rose,.map-lubber,.map-sweep,.map-range),.reef-map[data-view="full"] .map-lens::before{display:none}
+.reef-map[data-view="full"] .map-expand{left:auto;right:10px;top:8px;border-radius:3px}
+.reef-map[data-view="full"] .map-expand-out{display:none}
+.reef-map[data-view="full"] .map-expand-in{display:block}
+.map-heading{display:flex;align-items:center;gap:8px;min-height:28px;padding-right:36px;font:500 10px/1 var(--holo-font);letter-spacing:.18em;color:var(--holo-strong);text-shadow:var(--holo-text-glow)}
+.map-heading>span{margin-right:auto}
+.map-heading>button{padding:7px 9px;font-size:11px;letter-spacing:.02em}
+.map-legend{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.map-legend>button{min-height:42px;padding:6px 3px;font-size:11px;line-height:1.2}
+.map-legend span{display:block;margin-bottom:4px;font:500 9px/1 var(--holo-mono);color:var(--holo)}
+.chart-key{margin-top:10px;font:400 8px/1 var(--holo-mono);letter-spacing:.1em;text-align:center;color:var(--holo)}
+.reef-map[data-view="full"] .map-reading{display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--holo-faint);font:500 9px/1 var(--holo-mono);letter-spacing:.1em}
+#map-caption{min-height:2.9em;margin:10px 0 0;font:400 12px/1.45 var(--holo-font);color:var(--holo-ink)}
+
+/* 5. Depth gauge, down the left edge. world.js moves #depth-marker (0 to 60 m); dive-hud.js slides #depth-max, the
+   maximum-depth memory (a hollow diamond, as the drag needle on an analog gauge), by a share of its own height,
+   which is the track's. The bracket near the top is the safety-stop window, 3 to 6.5 m. */
+.depth{position:absolute;left:var(--pad);top:38%;z-index:4;display:flex;flex-direction:column;align-items:flex-start;height:34%;color:var(--holo-ink);font-family:var(--holo-font);text-shadow:var(--holo-text-glow);opacity:0;transform:translateX(-12px);pointer-events:none}
+body[data-submerged="true"] .depth{opacity:var(--depth-weight,1);transform:none}
+/* In first person the wrist computer already shows depth, so the scale steps back. The weight is set on the scale
+   itself: a custom property on the body would restyle every element each time the camera changes. */
+body[data-camera="first"] .depth{--depth-weight:.66}
+.depth-title,.depth-unit{font:500 9px/1 var(--holo-font);letter-spacing:.2em;color:var(--holo-strong)}
+.depth-track{position:relative;flex:1;width:62px;margin:13px 0;border-left:1px solid var(--holo-dim);background:repeating-linear-gradient(180deg,var(--holo-dim) 0 1px,#0000 1px calc(100%/12)) 0 0/5px 100% no-repeat}
+.depth-track span{position:absolute;left:0;top:var(--tick);translate:0 -50%;padding-left:16px;font:500 10px/1 var(--holo-mono);font-variant-numeric:tabular-nums;color:var(--holo)}
+.depth-max{position:absolute;inset:0;opacity:0;pointer-events:none}
+.depth-max[data-set="true"]{opacity:1}
+.depth-max::before{content:"";position:absolute;left:1px;top:-4px;width:8px;height:8px;box-sizing:border-box;border:1.5px solid var(--holo-ink);rotate:45deg}
+.depth-max b{position:absolute;left:36px;top:-4px;font:500 8px/1 var(--holo-font);letter-spacing:.14em;color:var(--holo-strong)}
+.depth-stop{position:absolute;left:0;top:5%;width:6px;height:5.83%;box-sizing:border-box;border:1px solid var(--holo-strong);border-left:0}
+.depth-stop b{position:absolute;left:36px;top:50%;translate:0 -50%;font:500 7px/1 var(--holo-font);letter-spacing:.14em;color:var(--holo)}
+.depth-track span::before{content:"";position:absolute;left:0;top:50%;width:10px;height:1px;background:var(--holo-strong)}
+#depth-marker{position:absolute;left:-1px;top:0;z-index:1;width:0;height:0;translate:-100% -50%;border:solid #0000;border-width:5px 0 5px 8px;border-left-color:var(--holo-ink)}
+#depth-marker::after{content:"";position:absolute;left:0;top:-.5px;width:30px;height:1px;background:linear-gradient(90deg,var(--holo-ink),#0000)}
+
+/* 6. Dive console, bottom right: a compact dive-computer face beside the submersible pressure gauge. dive-hud.js
+   writes the readings (five times a second, and only what changed), sets data-mode on the no-stop cell,
+   data-level and data-slow on the ascent meter, data-level on the gauge, and turns the needle with one transform.
+   Nothing here carries a filter: the needle and the readings would re-rasterise it. Cyan is normal, amber is
+   caution, coral is warning; each of those states also changes the words on the face. */
+.air-gauge{position:absolute;right:var(--pad);bottom:22px;z-index:6;display:flex;align-items:flex-end;gap:12px;color:var(--holo-ink);font-family:var(--holo-font);text-shadow:var(--holo-text-glow);pointer-events:none}
+.console-computer{position:relative;display:grid;grid-template-columns:auto auto 22px;align-items:end;gap:0 14px;padding:10px 10px 8px 14px;border:1px solid var(--holo-dim);border-radius:13px;background:#04202f94;box-shadow:inset 0 0 14px #5fe9ff14,var(--holo-glow)}
+/* Two push buttons on the case, as on a wrist computer. */
+.console-computer::before,.console-computer::after{content:"";position:absolute;left:-5px;top:22%;width:4px;height:16px;box-sizing:border-box;border:1px solid var(--holo-dim);border-right:0;border-radius:2px 0 0 2px}
+.console-computer::after{top:auto;bottom:22%}
+:is(.console-computer,.dive-computer) span{display:block;font:500 8px/1 var(--holo-font);letter-spacing:.16em;color:var(--holo-strong);white-space:nowrap}
+:is(.console-computer,.dive-computer,.spg) :is(strong,b){font-family:var(--holo-mono);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+:is(.console-computer,.dive-computer,.spg) small{margin-left:3px;font-size:.4em;letter-spacing:0;color:var(--holo)}
+.console-depth strong{display:block;min-width:3.2ch;margin-top:5px;font-size:32px;line-height:1;letter-spacing:-.04em}
+.console-ndl strong{display:block;min-width:4.6ch;margin-top:5px;font-size:21px;line-height:1.1;letter-spacing:-.02em}
+.console-ndl small{font-size:9px}
+.console-row{grid-column:1/-1;display:flex;align-items:baseline;gap:7px;margin-top:8px;padding-top:7px;border-top:1px solid var(--holo-faint)}
+.console-row b{margin-right:9px;font-size:12px;line-height:1;letter-spacing:.02em}
+/* The no-stop cell in each of its states (the label changes with it). */
+:is(.console-ndl,.computer-ndl):is([data-mode="low"],[data-mode="due"]) :is(span,strong){color:var(--holo-amber)}
+:is(.console-ndl,.computer-ndl)[data-mode="deco"] :is(span,strong){color:var(--holo-coral)}
+:is(.console-ndl,.computer-ndl):is([data-mode="stop"],[data-mode="done"]) span{color:var(--holo-ink)}
+/* Ascent meter: five chevrons fill from the bottom, 2.5 m/min each; above the limit they turn amber under the word SLOW. */
+.ascent-bar{position:relative;grid-column:3;grid-row:1;align-self:stretch;display:flex;flex-direction:column-reverse;align-items:center;gap:2px;min-height:50px;padding-bottom:2px}
+.ascent-bar i{flex:none;width:13px;height:7px;background:var(--holo);clip-path:polygon(50% 0,100% 58%,100% 100%,50% 42%,0 100%,0 58%);opacity:.2}
+.ascent-bar:is([data-level="1"],[data-level="2"],[data-level="3"],[data-level="4"],[data-level="5"]) i:nth-of-type(1),.ascent-bar:is([data-level="2"],[data-level="3"],[data-level="4"],[data-level="5"]) i:nth-of-type(2),.ascent-bar:is([data-level="3"],[data-level="4"],[data-level="5"]) i:nth-of-type(3),.ascent-bar:is([data-level="4"],[data-level="5"]) i:nth-of-type(4),.ascent-bar[data-level="5"] i:nth-of-type(5){opacity:1}
+.ascent-bar[data-slow="true"] i{background:var(--holo-amber)}
+.ascent-bar em{position:absolute;left:50%;top:0;translate:-50% 0;font:500 7px/1 var(--holo-font);font-style:normal;letter-spacing:.08em;color:var(--holo-amber);opacity:0}
+.ascent-bar[data-slow="true"] em{opacity:1}
+/* Submersible pressure gauge. The dial is drawn once (instruments.js); the needle is its own layer. */
+.spg{position:relative;flex:none;width:116px;height:116px}
+.spg-dial{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.spg-face{fill:#04202f94;stroke:var(--holo-dim);stroke-width:1}
+.spg-scale{stroke:var(--holo-dim);stroke-width:1}
+.spg-reserve{stroke:var(--holo-coral);stroke-width:3.4;stroke-linecap:butt}
+.spg-minor{stroke:var(--holo);stroke-width:.8}
+.spg-major{stroke:var(--holo-ink);stroke-width:1.5}
+.spg-numerals text{fill:var(--holo-ink);stroke:none;font:500 8.5px var(--holo-mono);text-anchor:middle}
+.spg-needle{position:absolute;left:calc(50% - 1px);bottom:50%;width:2px;height:31%;border-radius:1px 1px 0 0;background:var(--holo-ink);box-shadow:0 0 5px #5fe9ff99,0 0 1px #021d2a;transform-origin:50% 100%;transform:rotate(81deg);will-change:transform}
+.spg-needle::after{content:"";position:absolute;left:0;top:100%;width:2px;height:24%;background:var(--holo)}
+.spg-hub{position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px;box-sizing:border-box;border:1.5px solid var(--holo-ink);border-radius:50%;background:#04202f}
+.spg-hub::after{content:"";position:absolute;inset:-3px;border:1px solid var(--holo);border-radius:50%;opacity:0}
+.spg-title,.spg-flag{position:absolute;left:50%;top:33%;translate:-50% 0;font:500 7px/1 var(--holo-font);font-style:normal;letter-spacing:.2em;color:var(--holo-strong);white-space:nowrap}
+.spg:not([data-level="ok"]) .spg-title{opacity:0}
+.spg strong{position:absolute;left:50%;bottom:13px;translate:-50% 0;font-size:14px;line-height:1}
+.spg strong small{font-size:8px}
+.spg[data-level="low"] :is(strong,.spg-flag){color:var(--holo-amber)}
+.spg[data-level="reserve"] :is(strong,.spg-flag){color:var(--holo-coral)}
+/* The full face takes the compact one's place while it is up. In first person the wrist computer rises in the
+   scene instead, and the compact face steps aside for it unless a stop, a low limit or deco is showing. */
+body[data-computer-open="true"][data-camera="third"] .console-computer,body[data-computer-open="true"][data-camera="first"] .air-gauge:not([data-alert="true"]) .console-computer{opacity:0}
+
+/* 7. Dive computer: the full wrist-computer face (third person, raised with C; in first person the 3D wrist
+   computer rises instead) and the two instrument buttons on the left. It stands where the compact face was,
+   beside the pressure gauge: depth and the no-stop cell lead, then time, maximum depth, water and tank, then
+   the dive profile. */
+.dive-computer{position:fixed;right:calc(var(--pad) + 128px);bottom:22px;z-index:7;width:304px;padding:12px 16px 12px;border-radius:15px;pointer-events:none;--holo-tint:#04202fd9}
+.dive-computer.holo::before,.dive-computer.holo::after{left:-5px;right:auto;top:24%;bottom:auto;width:4px;height:18px;box-sizing:border-box;border:1px solid var(--holo-dim);border-right:0;border-radius:2px 0 0 2px}
+.dive-computer.holo::after{top:auto;bottom:24%}
+.computer-top{display:flex;justify-content:space-between;padding-bottom:9px;border-bottom:1px solid var(--holo-faint)}
+.computer-top span{font:500 8px/1 var(--holo-mono);letter-spacing:.12em;color:var(--holo)}
+.computer-top #computer-mode{color:var(--holo-ink)}
+.computer-top i{display:inline-block;width:5px;height:5px;margin-right:6px;border-radius:50%;background:var(--holo-mint);box-shadow:0 0 8px var(--holo-mint)}
+.computer-readings{display:grid;grid-template-columns:1fr 1fr 22px;align-items:end;gap:12px;padding:11px 0 10px}
+.computer-ndl{padding-left:12px;border-left:1px solid var(--holo-faint)}
+.computer-depth strong{display:block;margin-top:6px;font-size:42px;line-height:1;letter-spacing:-.05em}
+.computer-ndl strong{display:block;margin-top:6px;font-size:27px;line-height:1.15;letter-spacing:-.03em}
+.computer-ndl small{font-size:10px}
+.computer-readings .ascent-bar{grid-column:3;min-height:62px}
+.computer-row{display:grid;grid-template-columns:repeat(4,auto);justify-content:space-between;gap:10px;padding:9px 0 10px;border-top:1px solid var(--holo-faint)}
+.computer-row strong{display:block;margin-top:6px;font-size:14px;line-height:1;letter-spacing:.01em}
+.computer-row small{font-size:9px}
+.computer-profile{position:relative;padding:9px 0 10px;border-top:1px solid var(--holo-faint)}
+.computer-profile svg{display:block;width:100%;height:44px;margin-top:7px;overflow:visible}
+.profile-grid{stroke:var(--holo-faint);stroke-width:1;vector-effect:non-scaling-stroke}
+#computer-profile{stroke:var(--holo-ink);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.computer-profile b{position:absolute;right:0;top:9px;font-size:8px;line-height:1;letter-spacing:.1em;color:var(--holo)}
+.computer-bottom{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding-top:9px;border-top:1px solid var(--holo-faint)}
+.computer-bottom strong{font:500 10px/1.2 var(--holo-font);text-align:right}
+.archive-toggle,.dive-computer-toggle{position:fixed;left:var(--pad);z-index:8;display:flex;align-items:center;gap:9px;min-height:36px;padding:7px 12px;font-size:12px;letter-spacing:.02em}
+.archive-toggle{top:calc(var(--hud-top) + 116px)}
+.dive-computer-toggle{top:calc(var(--hud-top) + 160px)}
+:is(.archive-toggle,.dive-computer-toggle) .hud-icon{width:17px;height:17px;color:var(--holo)}
+.dive-computer-toggle>span{display:grid}
+.archive-toggle>span{color:var(--holo)}
+html body[data-dialog="open"] :is(.dive-computer,.dive-computer-toggle,.archive-toggle){visibility:hidden}
+
+/* 8. Centre of the view: crosshair, the click-to-swim hint, ascent status and the prompt to explore. */
+.crosshair{position:fixed;left:50%;top:50%;z-index:6;width:22px;height:22px;transform:translate(-50%,-50%);filter:drop-shadow(0 0 1.5px #021d2a);pointer-events:none}
+.crosshair i,.crosshair b{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+.crosshair i{width:20px;height:1px;background:linear-gradient(90deg,var(--holo-ink) 0 7px,#0000 7px 13px,var(--holo-ink) 13px)}
+.crosshair b{width:1px;height:20px;background:linear-gradient(var(--holo-ink) 0 7px,#0000 7px 13px,var(--holo-ink) 13px)}
+.crosshair::after{content:"";position:absolute;left:50%;top:50%;width:2px;height:2px;margin:-1px;border-radius:50%;background:var(--holo-ink)}
+.capture-hint{position:absolute;left:50%;bottom:104px;z-index:7;max-width:calc(100vw - 48px);padding:11px 22px;transform:translateX(-50%);text-align:center;--holo-tint:#04202f8f}
+.capture-hint strong{display:block;font:500 13px/1.2 var(--holo-font);letter-spacing:.04em}
+.capture-hint span{display:block;margin-top:5px;font:400 10px/1.5 var(--holo-font);color:var(--holo-strong)}
+.ascent-status{position:absolute;left:50%;top:40%;z-index:7;padding:13px 22px;transform:translate(-50%,-50%);font:500 12px/1 var(--holo-mono);letter-spacing:.14em;text-align:center;white-space:nowrap;pointer-events:none;--holo-tint:#04202f8f}
+.interact-prompt{position:absolute;left:50%;bottom:166px;z-index:8;display:flex;align-items:center;gap:12px;padding:9px 18px 9px 11px;transform:translateX(-50%);font-size:13px;letter-spacing:.02em;white-space:nowrap;--holo-tint:#04202f8f}
+.interact-prompt kbd{border-color:var(--holo-mint);color:var(--holo-mint)}
+:is(.capture-hint,.interact-prompt).holo{background:linear-gradient(var(--holo-tint),var(--holo-tint)),repeating-linear-gradient(0deg,#8ff4ff0f 0 1px,#0000 1px 3px)}
+/* body[data-dialog] and body[data-motion] are kept by ui-ticker.js. They stand in for body:has(dialog[open]) and
+   body:has(#motion[aria-pressed]): a :has() on the body makes the browser restyle the whole page whenever any
+   element's children change, which the HUD readouts do several times a second. */
+html body[data-dialog="open"] :is(.capture-hint,.crosshair){display:none}
+body[data-movement-panel="open"] .capture-hint{display:none}
+@media(pointer:coarse){.capture-hint{display:none!important}}
+
+/* 9. Bottom edge, touch controls and the loading line. */
+.scene-footer{position:absolute;left:var(--pad);right:var(--pad);bottom:22px;z-index:5;display:flex;align-items:center;gap:20px;min-height:16px;color:var(--holo-ink);font-family:var(--holo-font);text-shadow:var(--holo-text-glow);pointer-events:none}
+.location{display:flex;align-items:center;gap:10px;font:500 10px/1 var(--holo-mono);letter-spacing:.14em;white-space:nowrap}
+.location-dot{width:5px;height:5px;border-radius:50%;background:var(--holo-mint);box-shadow:0 0 10px var(--holo-mint)}
+.separator{opacity:.4}
+.look-hint{position:absolute;left:50%;margin:0;transform:translateX(-50%);font:400 11px/1 var(--holo-font);letter-spacing:.04em;opacity:.82;white-space:nowrap}
+.status{position:absolute;left:50%;bottom:50px;z-index:6;width:max-content;max-width:min(360px,calc(100vw - 48px));margin:0;padding:9px 16px;transform:translateX(-50%);font:400 12px/1.45 var(--holo-font);text-align:center;pointer-events:none;--holo-tint:#04202f9e}
+.status:empty{opacity:0}
+/* At the surface the line stands above the pre-dive board. */
+@media(min-width:601px) and (min-height:551px){body[data-ready="true"]:not([data-submerged="true"]) .status{bottom:146px}}
+.view-controls{position:absolute;left:var(--pad);bottom:84px;z-index:5;display:none;gap:7px}
+body:not([data-submerged="true"]) .view-controls{display:flex}
+.view-controls>button{min-width:42px;min-height:38px;padding:6px 12px;font-size:14px}
+.swim-controls{position:absolute;left:var(--pad);bottom:62px;z-index:6;display:none;grid-template-columns:repeat(6,44px);gap:5px}
+.swim-controls>button{width:44px;height:44px;padding:0;font:500 13px/1 var(--holo-font);touch-action:none}
+.swim-controls>button:is([data-swim="ArrowUp"],[data-swim="ArrowDown"]){font-size:19px}
+.swim-controls>button:active,.swim-controls>button[aria-pressed="true"]{border-color:var(--holo-strong);background:var(--holo-fill-on)}
+@media(pointer:coarse),(max-width:600px){.swim-controls:not([hidden]){display:grid}}
+body:is([data-menu="open"],[data-movement-panel="open"]) :is(.swim-controls,.view-controls){visibility:hidden}
+/* Below the surface the dive control joins the instruments on the left. */
+body:is([data-submerged="true"],[data-exploring="true"]) .hero{top:calc(var(--hud-top) + 70px);width:auto}
+body[data-submerged="true"] .dive-button{gap:14px;padding:9px 14px;border:1px solid var(--holo-dim);border-radius:3px;background:var(--holo-fill);color:var(--holo-ink);font:500 12px/1 var(--holo-font);letter-spacing:.02em;text-shadow:var(--holo-text-glow);box-shadow:inset 0 0 12px #5fe9ff14}
+body[data-submerged="true"] .dive-button svg{width:14px;height:14px}
+@media(hover:hover){body[data-submerged="true"] .dive-button:hover{border-color:var(--holo);background:var(--holo-fill-hover);box-shadow:inset 0 0 12px #5fe9ff14}}
+body[data-submerged="true"] .dive-button:focus-visible{outline:2px solid var(--holo-focus);outline-offset:3px}
+/* At the surface the ring takes the button's own colour (dark by day, pale at night), which always stands off the water. */
+body:not([data-submerged="true"]) .dive-button:focus-visible{outline-color:var(--button)}
+
+/* 10. Scene controls: the tuning panel opened from the settings menu. */
+.movement-panel{position:absolute;top:calc(var(--hud-top) + 50px);left:var(--pad);z-index:12;display:flex;flex-direction:column;width:min(390px,calc(100vw - 32px));max-height:calc(100dvh - var(--hud-top) - 66px);overflow:hidden;text-shadow:none;color-scheme:dark;--holo-tint-solid:#04202feb}
+.movement-header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-shrink:0;padding:16px 14px 10px 18px}
+.movement-header p{margin:0 0 7px;font:500 9px/1 var(--holo-font);letter-spacing:.2em;color:var(--holo)}
+.movement-header h2{font:400 22px/1.1 var(--holo-font);letter-spacing:-.01em;color:var(--holo-ink);text-shadow:var(--holo-text-glow)}
+.movement-close{flex:none;width:32px;height:32px;padding:0;font-size:20px;line-height:1}
+.movement-intro{flex-shrink:0;margin:0 0 10px;padding:0 18px;font:400 12px/1.6 var(--holo-font);color:#c4e9f1}
+.movement-fields{min-height:0;padding:0 18px 14px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--holo-dim) #0000}
+.movement-fields details{margin:0;border-top:1px solid var(--holo-faint)}
+.movement-fields summary{display:flex;justify-content:space-between;align-items:center;padding:13px 0;font:500 11px/1 var(--holo-font);letter-spacing:.16em;text-transform:uppercase;color:var(--holo-strong);cursor:pointer;list-style:none}
+.movement-fields summary::-webkit-details-marker{display:none}
+.movement-fields summary::after{content:'+';font:400 16px/1 var(--holo-mono);color:var(--holo)}
+.movement-fields details[open]>summary::after{content:'\2212'}
+.movement-field{display:grid;grid-template-columns:1fr auto;gap:7px 12px;padding:8px 0 12px;font:400 13px/1.4 var(--holo-font)}
+.movement-field label{align-self:center;color:var(--holo-ink)}
+.movement-output{align-self:center;font:500 11px/1 var(--holo-mono);color:var(--holo);white-space:nowrap}
+.movement-number-controls{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) 74px;align-items:center;gap:14px}
+.movement-field input[type="number"],.movement-field select{width:100%;min-width:0;min-height:32px;padding:5px 7px;border:1px solid var(--holo-dim);border-radius:2px;background:var(--holo-fill);color:var(--holo-ink);font:500 12px/1 var(--holo-mono)}
+.movement-field select{width:140px;font-family:var(--holo-font)}
+.movement-panel select option{background:#062434;color:#eefdff}
+.movement-field input[type="checkbox"]{appearance:none;position:relative;align-self:center;width:38px;height:20px;margin:0;border:1px solid var(--holo-dim);border-radius:10px;background:var(--holo-fill);cursor:pointer}
+.movement-field input[type="checkbox"]::before{content:'';position:absolute;left:3px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--holo)}
+.movement-field input[type="checkbox"]:checked{border-color:var(--holo-strong);background:var(--holo-fill-on)}
+.movement-field input[type="checkbox"]:checked::before{translate:18px 0;background:var(--holo-ink);box-shadow:0 0 8px var(--holo)}
+.movement-field p{grid-column:1/-1;margin:0 0 2px;font:400 11px/1.55 var(--holo-font);color:#a9d8e3}
+.movement-fields :is(input,select,summary):focus-visible{outline:2px solid var(--holo-focus);outline-offset:3px}
+.movement-footer{flex-shrink:0;padding:12px 18px 14px;border-top:1px solid var(--holo-faint)}
+.movement-actions{display:flex;justify-content:space-between;gap:8px}
+.movement-actions>button{min-height:34px;padding:7px 12px;font-size:12px}
+.movement-save-status{min-height:12px;margin:9px 0 0;font:400 9px/1.4 var(--holo-mono);letter-spacing:.06em;color:var(--holo)}
+body[data-movement-panel="open"]::after{content:'';position:fixed;inset:0;z-index:10;background:#00293824}
+
+/* 11. Model credits. Scoped to the credits dialog: the archive dialog has its own stylesheet. */
+.credits-dialog{width:min(560px,calc(100vw - 32px));padding:40px 30px 26px;border:1px solid var(--holo-dim);border-radius:3px;background:linear-gradient(#04202feb,#04202feb),repeating-linear-gradient(0deg,#8ff4ff0a 0 1px,#0000 1px 3px);box-shadow:inset 0 0 28px #5fe9ff14,var(--holo-glow);color:var(--holo-ink);font-family:var(--holo-font);scrollbar-width:thin;scrollbar-color:var(--holo-dim) #0000}
+.credits-dialog .eyebrow{margin-bottom:14px;font:500 10px/1 var(--holo-font);letter-spacing:.2em;color:var(--holo)}
+.credits-dialog h2{font:400 clamp(30px,5vw,42px)/1.05 var(--holo-font);letter-spacing:-.02em;text-shadow:var(--holo-text-glow)}
+.credits-dialog .dialog-copy{margin:16px 0;font:400 13px/1.75 var(--holo-font);color:#c4e9f1}
+.credits-dialog a{color:var(--holo-strong);text-underline-offset:3px}
+.credits-dialog a:focus-visible{outline:2px solid var(--holo-focus);outline-offset:3px}
+.credits-dialog .dialog-close{right:12px;top:12px;width:32px;height:32px;border:1px solid var(--holo-dim);border-radius:3px;background:var(--holo-fill);color:var(--holo-ink);font-size:20px;line-height:1}
+.credits-dialog #model-credits p{margin:12px 0;padding-top:12px;border-top:1px solid var(--holo-faint);font-size:13px}
+.credits-dialog #model-credits span{margin-top:4px;font-size:11px;opacity:.78}
+
+/* 12. Narrow and short viewports. */
+@media(max-width:900px){
+  .wordmark span{display:none}
+}
+@media(max-width:600px){
+  .masthead{gap:10px}.masthead-start{gap:10px}
+  .menu-toggle,.time-cycle{width:40px;height:40px}
+  .wordmark{font-size:12px}
+  .weather-glyph{width:24px;height:24px}
+  .settings-menu,.movement-panel{left:12px;width:auto;right:12px}
+  .settings-close{width:40px;height:40px}
+  .settings-actions>button{min-height:42px}
+  .holo-switch{min-height:40px}
+  .weather-picker>button,.theme-control>button{min-height:44px}
+  body[data-submerged="true"] .heading-indicator{left:calc((100% - var(--map-size) - 12px)/2)}
+  .heading-indicator{top:calc(var(--hud-top) + 54px)}
+  .heading-readout{margin-top:11px}
+  .heading-indicator[data-turn="left"] .heading-turn{left:-9px}
+  .heading-indicator[data-turn="right"] .heading-turn{right:-9px}
+  .heading-readout strong{font-size:13px}
+  body:is([data-submerged="true"],[data-exploring="true"]) .hero{top:calc(var(--hud-top) + 124px)}
+  /* The three instrument buttons on the left are finger-sized: 40 px tall, 6 px apart. */
+  body[data-submerged="true"] .dive-button{min-height:40px}
+  .hero .explore-button{min-height:44px;margin-top:10px}
+  .archive-toggle,.dive-computer-toggle{min-height:40px;padding:6px 10px;font-size:11px}
+  .archive-toggle{top:calc(var(--hud-top) + 170px)}
+  .dive-computer-toggle{top:calc(var(--hud-top) + 216px)}
+  .dive-computer-toggle kbd{display:none}
+  .depth{top:39%;height:24%}
+  .map-chart button{width:18px;height:18px}
+  .map-legend>button{min-height:44px}.map-heading>button{min-height:36px}
+  /* The console becomes one strip along the bottom edge, under the touch pad: depth, the no-stop cell, dive time,
+     the ascent meter, then the tank reading beside a small dial. The location line makes way for it. */
+  .air-gauge{left:var(--pad);right:var(--pad);bottom:8px;align-items:center;gap:8px}
+  .console-computer{flex:1;grid-template-columns:auto auto 1fr 20px;gap:0 10px;padding:6px 6px 5px 10px;border-radius:9px}
+  .console-computer::before,.console-computer::after{display:none}
+  .console-computer span{font-size:7px;letter-spacing:.1em}
+  .console-depth strong{margin-top:4px;font-size:21px}
+  .console-ndl strong{min-width:3.6ch;margin-top:4px;font-size:16px;line-height:1.3}
+  .console-row{grid-column:3;grid-row:1;display:grid;gap:4px;align-self:end;margin:0;padding:0;border:0}
+  .console-row :is(span:nth-of-type(2),#console-max){display:none}
+  .console-row b{margin:0;font-size:14px;line-height:1.5}
+  .console-computer .ascent-bar{grid-column:4;gap:1px;min-height:36px}
+  .console-computer .ascent-bar i{width:11px;height:5px}
+  .spg{width:46px;height:46px;margin-left:46px}
+  .spg-numerals,.spg-title{display:none}
+  .spg strong{left:auto;right:100%;bottom:50%;translate:-6px 50%;font-size:13px}
+  .spg-flag{left:auto;right:100%;top:auto;bottom:0;translate:-6px 0;letter-spacing:.1em}
+  body[data-submerged="true"] .location{display:none}
+  .location{font-size:9px;gap:7px;letter-spacing:.1em}
+  .look-hint{display:none}
+  .dive-computer{right:16px;bottom:172px;width:min(304px,calc(100vw - 32px));padding:10px 13px}
+  .computer-depth strong{font-size:34px}
+  .computer-ndl strong{font-size:22px}
+  .computer-row{gap:6px}
+  .swim-controls{gap:4px}
+  .capture-hint{bottom:180px;width:190px;padding:9px 14px}
+  .interact-prompt{bottom:236px;padding:9px 14px 9px 10px}
+  .status{bottom:172px}
+  .view-controls>button{min-height:44px;min-width:44px}
+  .movement-panel{position:fixed;top:auto;bottom:max(12px,env(safe-area-inset-bottom));max-height:calc(100dvh - 120px)}
+  .movement-field input[type="number"],.movement-field select{min-height:40px}
+  :is(#time-slider,.movement-field input[type="range"]){height:40px}
+  .movement-close{width:40px;height:40px}.movement-actions>button{min-height:42px}.movement-fields summary{min-height:44px}
+  .credits-dialog{padding:40px 22px 22px}
+}
+@media(max-width:900px) and (min-width:601px){.look-hint{display:none}}
+/* Up to 430 px the speaker button drops under the sun / moon button (ambient-audio.css): the tape moves over to clear it. */
+@media(max-width:430px){body[data-submerged="true"] .heading-indicator{left:calc((100% - var(--map-size) - 12px)/2 - 10px)}}
+/* Fingers get a 40 px target on the minimap's markers and its expand button; the drawing stays the same size. */
+@media(pointer:coarse){.reef-map[data-view="round"] .map-chart button::after{inset:-11px}.map-expand::after{content:"";position:absolute;inset:-6px;border-radius:50%}}
+@media(max-height:550px){
+  .depth{display:none}
+  .capture-hint{bottom:56px}.interact-prompt{bottom:112px}.status{bottom:auto;top:calc(var(--hud-top) + 76px)}
+  .view-controls{bottom:58px}
+  .movement-panel{position:fixed;top:12px;bottom:12px;max-height:calc(100dvh - 24px)}
+  .movement-header{align-items:center;padding:12px 14px 8px 18px}.movement-header p{display:none}
+  .movement-intro{margin-bottom:6px;font-size:11px;line-height:1.5}
+  .computer-profile{display:none}
+}
+/* The menu and the scene controls cover the headline and the left-hand instruments: they step back meanwhile,
+   out of the tab order too, so keyboard focus never lands on something that cannot be seen. */
+body:is([data-menu="open"],[data-movement-panel="open"]) :is(.hero,.archive-toggle,.dive-computer-toggle,.depth){opacity:0;visibility:hidden;pointer-events:none}
+.hero{transition:opacity .6s,transform .6s,visibility .6s}
+body[data-menu="open"] .hero *{pointer-events:none}
+@media(max-width:600px){body:is([data-menu="open"],[data-movement-panel="open"]) .heading-indicator{opacity:0}}

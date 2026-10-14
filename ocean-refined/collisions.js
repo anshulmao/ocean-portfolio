@@ -7,6 +7,8 @@ import * as THREE from './vendor/three.module.min.js';
 // Soft grass/tentacles, animated fish and glowing decorations are not colliders.
 const AXES = ['x', 'y', 'z'];
 const EPSILON = 1e-5;
+// Ten bits a coordinate: cells 512 either side of the origin, far beyond the reef.
+const cellKey = (x, y, z) => (x & 1023) | ((y & 1023) << 10) | ((z & 1023) << 20);
 
 function geometryPieces(geometry, kind) {
   geometry.computeBoundingBox();
@@ -64,6 +66,10 @@ export class CollisionWorld {
     this.cellSize = Math.max(.5, cellSize);
     this.boxes = [];
     this.grid = new Map();
+    // The same cells under integer keys, for nearby(): a query that must not build strings every frame.
+    this.cells = new Map();
+    this._seen = new Uint32Array(0);
+    this._query = 0;
     this.blocked = false;
     this._queryBounds = new THREE.Box3();
     this._normal = new THREE.Vector3();
@@ -121,13 +127,90 @@ export class CollisionWorld {
       if (!this.grid.has(key)) this.grid.set(key, []);
       this.grid.get(key).push(index);
     });
+    const s = this.cellSize;
+    for (let x = Math.floor(box.min.x / s); x <= Math.floor(box.max.x / s); x++) {
+      for (let y = Math.floor(box.min.y / s); y <= Math.floor(box.max.y / s); y++) {
+        for (let z = Math.floor(box.min.z / s); z <= Math.floor(box.max.z / s); z++) {
+          const key = cellKey(x, y, z), list = this.cells.get(key);
+          if (list) list.push(index); else this.cells.set(key, [index]);
+        }
+      }
+    }
+  }
+
+  // Read-only companion to move(): the solid surfaces within `reach` metres of the same capsule, so a swimmer
+  // can ease toward them instead of being stopped by them. Fills `out` ({count, gaps: Float32Array(n), normals:
+  // Float32Array(3n)}) with at most n entries, the nearest it finds: normals[3i..3i+2] is the unit direction from
+  // the surface to the body and gaps[i] the clear water between them (0 where move() would hold the body off).
+  // Changes nothing and allocates nothing.
+  nearby(position, { radius = .55, length = 2, yaw = 0, pitch = 0, padding = .08 } = {}, reach = 1, out) {
+    radius = Math.max(.03, Number.isFinite(radius) ? radius : .55);
+    padding = Math.max(0, Number.isFinite(padding) ? padding : .08);
+    length = Math.max(0, Number.isFinite(length) ? length : 2);
+    yaw = Number.isFinite(yaw) ? yaw : 0; pitch = Number.isFinite(pitch) ? pitch : 0;
+    // The same chain of spheres move() resolves.
+    const half = Math.max(0, length / 2 - radius);
+    const intervals = half ? Math.max(1, Math.ceil(half * 2 / (radius * .8))) : 0;
+    const spacing = intervals ? half * 2 / intervals : 0;
+    const sampleRadius = Math.hypot(radius + padding, spacing / 2);
+    const hx = -Math.sin(yaw) * Math.cos(pitch), hy = Math.sin(pitch), hz = -Math.cos(yaw) * Math.cos(pitch);
+    const limit = sampleRadius + Math.max(0, reach), s = this.cellSize, capacity = out.gaps.length;
+    out.count = 0;
+    if (!Number.isFinite(position.x + position.y + position.z) || !Number.isFinite(limit)) return 0;
+    if (this._seen.length < this.boxes.length) this._seen = new Uint32Array(this.boxes.length);
+    if (++this._query > 4e9) { this._seen.fill(0); this._query = 1; }
+    const seen = this._seen, query = this._query;
+    const x1 = Math.floor((position.x + Math.abs(hx) * half + limit) / s), y1 = Math.floor((position.y + Math.abs(hy) * half + limit) / s), z1 = Math.floor((position.z + Math.abs(hz) * half + limit) / s);
+    let count = 0;
+    for (let x = Math.floor((position.x - Math.abs(hx) * half - limit) / s); x <= x1; x++) {
+      for (let y = Math.floor((position.y - Math.abs(hy) * half - limit) / s); y <= y1; y++) {
+        for (let z = Math.floor((position.z - Math.abs(hz) * half - limit) / s); z <= z1; z++) {
+          const list = this.cells.get(cellKey(x, y, z));
+          if (!list) continue;
+          for (let j = 0; j < list.length; j++) {
+            const index = list[j];
+            if (seen[index] === query) continue;
+            seen[index] = query;
+            const { min, max } = this.boxes[index].box;
+            for (let i = 0; i <= intervals; i++) {
+              const along = intervals ? -half + i * spacing : 0;
+              const cx = position.x + hx * along, cy = position.y + hy * along, cz = position.z + hz * along;
+              const dx = cx - Math.min(Math.max(cx, min.x), max.x), dy = cy - Math.min(Math.max(cy, min.y), max.y), dz = cz - Math.min(Math.max(cz, min.z), max.z);
+              const squared = dx * dx + dy * dy + dz * dz;
+              // A centre inside a solid has no outward direction here; move() recovers from that.
+              if (squared >= limit * limit || squared < 1e-10) continue;
+              const distance = Math.sqrt(squared), gap = distance - sampleRadius;
+              let slot = count;
+              if (count < capacity) count++;
+              else {
+                // Full: this one takes the place of the farthest kept so far, if it is nearer.
+                slot = -1; let farthest = gap;
+                for (let k = 0; k < capacity; k++) if (out.gaps[k] > farthest) { farthest = out.gaps[k]; slot = k; }
+                if (slot < 0) continue;
+              }
+              out.gaps[slot] = gap; out.normals[slot * 3] = dx / distance; out.normals[slot * 3 + 1] = dy / distance; out.normals[slot * 3 + 2] = dz / distance;
+            }
+          }
+        }
+      }
+    }
+    out.count = count;
+    return count;
   }
 
   addInstancedMesh(mesh, kind = 'solid') {
+    const steps = this.addInstancedMeshSteps(mesh, kind);
+    while (!steps.next().done);
+    return this;
+  }
+
+  // The same, yielding every few dozen instances for a caller that builds the world between frames.
+  *addInstancedMeshSteps(mesh, kind = 'solid', every = 48) {
     mesh.updateWorldMatrix(true, false);
     const pieces = geometryPieces(mesh.geometry, kind);
     const instance = new THREE.Matrix4(), transform = new THREE.Matrix4();
     for (let i = 0; i < mesh.count; i++) {
+      if (i && i % every === 0) yield;
       mesh.getMatrixAt(i, instance);
       transform.multiplyMatrices(mesh.matrixWorld, instance);
       for (const piece of pieces) {
@@ -281,11 +364,21 @@ export class CollisionWorld {
   }
 }
 
-export function createCollisionWorld(root, options) {
-  const world = new CollisionWorld(options);
+// sources: instanced meshes that are not in the scene graph. The reef draws
+// each family as several culled chunks but collides against one unsplit copy.
+// collisionWorldSteps() builds the same world one mesh at a time, pausing (yielding) between them, for a caller
+// that builds it between frames; createCollisionWorld() runs those steps straight through.
+export function* collisionWorldSteps(root, options, sources = []) {
+  const world = new CollisionWorld(options), meshes = [];
   root.updateWorldMatrix(true, true);
   root.traverse(mesh => {
-    if (mesh.isInstancedMesh && mesh.userData.collisionKind) world.addInstancedMesh(mesh, mesh.userData.collisionKind);
+    if (mesh.isInstancedMesh && mesh.userData.collisionKind) meshes.push(mesh);
   });
+  for (const mesh of [...meshes, ...sources]) { yield* world.addInstancedMeshSteps(mesh, mesh.userData.collisionKind); yield; }
   return world;
+}
+export function createCollisionWorld(root, options, sources = []) {
+  const steps = collisionWorldSteps(root, options, sources); let step;
+  while (!(step = steps.next()).done);
+  return step.value;
 }

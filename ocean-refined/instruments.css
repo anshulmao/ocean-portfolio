@@ -1,0 +1,67 @@
+/* Dive gear around the instruments: the mask frame in first person, the diver-down flag,
+   entry chips and the slate dressing of the notes other modules build. The instruments themselves (compass,
+   scope, depth gauge, console, dive computer) are in hud.css; tokens and the slate recipe are in hologram.css;
+   every transition and keyframe is in motion.css. Loaded after dive-plan.css, whose chips and summary it dresses. */
+
+/* 1. Mask. In first person the view is framed by the skirt of a dive mask: four strips along the edges and the
+   nose pocket at the bottom, each its own small layer, so the middle of the view is never blended over (a
+   full-screen vignette would cost a full-screen blend on integrated graphics). Together they cover about a sixth
+   of the view; where two strips cross, the corner darkens as a skirt does. Third person and the surface have none. A hairline along the inner edge of the top and bottom
+   strips is the lens edge catching light, with a faint warm twin for the refraction there. */
+.mask-frame>*{position:fixed;z-index:2;opacity:0;visibility:hidden;pointer-events:none;will-change:opacity}
+body[data-camera="first"][data-submerged="true"] .mask-frame>*{opacity:1;visibility:visible}
+.mask-frame>i:nth-child(1){left:0;right:0;top:0;height:6vmin;background:linear-gradient(#010d1485,#010d1438 45%,#010d1400)}
+.mask-frame>i:nth-child(2){left:0;right:0;bottom:0;height:6vmin;background:linear-gradient(0deg,#010d1485,#010d1438 45%,#010d1400)}
+.mask-frame>i:nth-child(3){left:0;top:0;bottom:0;width:5vmin;background:linear-gradient(90deg,#010d1485,#010d1438 45%,#010d1400)}
+.mask-frame>i:nth-child(4){right:0;top:0;bottom:0;width:5vmin;background:linear-gradient(270deg,#010d1485,#010d1438 45%,#010d1400)}
+.mask-frame>b{left:50%;bottom:0;width:30vmin;height:8vmin;margin-left:-15vmin;background:radial-gradient(ellipse 50% 100% at 50% 100%,#010d1494 0 30%,#010d1400 100%)}
+.mask-frame>i:nth-child(1)::after,.mask-frame>i:nth-child(2)::after{content:"";position:absolute;left:20%;right:20%;bottom:0;height:1px;background:linear-gradient(90deg,#0000,#c9fbff2b 30%,#c9fbff2b 70%,#0000);box-shadow:0 1px 0 #ff9d8a12}
+.mask-frame>i:nth-child(2)::after{top:0;bottom:auto;left:8%;right:62%;box-shadow:0 -1px 0 #ff9d8a12}
+.mask-frame>i:nth-child(2)::before{content:"";position:absolute;top:0;left:62%;right:8%;height:1px;background:linear-gradient(90deg,#0000,#c9fbff2b 30%,#c9fbff2b 70%,#0000);box-shadow:0 -1px 0 #ff9d8a12}
+
+/* 2. The diver-down flag marks Dive in. */
+.dive-flag{flex:none;width:19px;height:13px;margin-right:-14px;border-radius:1.5px;background:linear-gradient(to top right,#d8382b 0 39%,#fff 39% 61%,#d8382b 61%);box-shadow:0 0 0 1px #ffffff3d}
+body[data-submerged="true"] .dive-flag{display:none}
+
+/* The planner's own conditions line (hud.js adds it under the planner's title). */
+.plan-conditions{margin:8px 0 0!important;font:500 10px/1.3 var(--holo-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--holo-strong)}
+
+/* 4. Entry chips and notes from dive-plan.js, dressed here. Plan your dive is the checklist; the guided dive is
+   the buddy pair. The glyphs are masks, so they take the chip's own colour by day and by night. */
+.dive-entry .holo-chip::before{content:"";flex:none;width:14px;height:14px;background:currentColor;-webkit-mask:var(--glyph) center/contain no-repeat;mask:var(--glyph) center/contain no-repeat}
+#plan-dive{--glyph:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6l2 2 3-4M3 13l2 2 3-4M3 20l2 2 3-4M12 6h9M12 13h9M12 20h9'/%3E%3C/svg%3E")}
+#guided-dive{--glyph:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='7' r='3'/%3E%3Ccircle cx='17.5' cy='9' r='2.5'/%3E%3Cpath d='M2 20a6 6 0 0 1 12 0M15 14.6a5 5 0 0 1 7 4.4'/%3E%3C/svg%3E")}
+/* Reading notes take a denser tint than the instruments: their body text has to hold over bright shallows. */
+section.tour-card,aside.dive-summary,dialog.dive-prompt{--holo-tint-solid:#05222fe0}
+aside.dive-summary{padding:15px 16px 16px 22px}
+.dive-summary header .holo-label{font-size:18px;line-height:1.2;color:var(--holo-ink)}
+.dive-summary dd,.plan-info dd{font-variant-numeric:tabular-nums}
+dialog.dive-prompt{padding-left:24px}
+.dive-prompt h2{width:fit-content}
+
+/* 5. Hand signals. Ascending is a thumb up; the glyph is part of the status line's background because the scene
+   rewrites that line's text. */
+.ascent-status.holo{padding-left:48px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23eefdff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 21H5a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h3m0 10V11l3.5-7.5c1.6 0 2.5 1.2 2.5 2.6V10h4.6a1.9 1.9 0 0 1 1.9 2.3l-1.3 7a2 2 0 0 1-2 1.7H8Z'/%3E%3C/svg%3E") 17px 50%/19px 19px no-repeat,linear-gradient(var(--holo-tint),var(--holo-tint))}
+/* Gear glyphs in the settings menu's headings (hud.js puts them there). */
+.settings-glyph{flex:none;width:15px;height:15px;margin-right:8px;vertical-align:-3px;stroke-width:1.5}
+
+/* 6. Narrow and short viewports. */
+@media(max-width:600px){
+  .dive-flag{margin-right:-11px}
+  .ascent-status.holo{padding-left:42px;background-position:13px 50%,0 0}
+  aside.dive-summary{padding-left:20px}
+}
+
+/* The return summary stays on the left-hand surface rail. */
+@media(min-width:601px){aside.dive-summary{left:var(--pad);right:auto;top:145px;width:min(300px,29vw)}}
+/* The surface arrows have their own bottom-right lane. */
+body:not([data-submerged="true"]) .view-controls{left:auto;right:var(--pad);bottom:54px}
+@media(max-width:600px){
+  body:not([data-submerged="true"]) .view-controls{bottom:58px}
+}
+@media(max-width:600px) and (max-height:550px){
+  body:not([data-submerged="true"]) .view-controls{bottom:58px}
+}
+
+/* Safety-stop band uses calibrated 0–40 metre display depth. */
+.depth-stop{top:7.5%;height:7.5%}

@@ -1,0 +1,229 @@
+{
+ "units": "metres",
+ "up": "+Y",
+ "base": "y = 0",
+ "license": "Made in code for this project; no third-party assets",
+ "corals": [
+  {
+   "id": "coral-elkhorn",
+   "name": "Elkhorn coral",
+   "scientific": "Acropora palmata",
+   "group": "coral",
+   "widthMetres": 2,
+   "boundsMetres": [
+    1.773,
+    1.326,
+    2.157
+   ],
+   "triangles": 281,
+   "zone": "shallow",
+   "note": "Shallow reef, in strong light",
+   "file": "coral-elkhorn.glb",
+   "bytes": 31840
+  },
+  {
+   "id": "coral-fire",
+   "name": "Blade fire coral",
+   "scientific": "Millepora complanata",
+   "group": "coral",
+   "widthMetres": 0.55,
+   "boundsMetres": [
+    0.561,
+    0.505,
+    0.322
+   ],
+   "triangles": 132,
+   "zone": "shallow",
+   "note": "Shallow reef, in strong light",
+   "file": "coral-fire.glb",
+   "bytes": 15740
+  },
+  {
+   "id": "coral-finger",
+   "name": "Finger coral",
+   "scientific": "Porites porites",
+   "group": "coral",
+   "widthMetres": 0.7,
+   "boundsMetres": [
+    0.695,
+    0.438,
+    0.607
+   ],
+   "triangles": 207,
+   "zone": "shallow",
+   "note": "Shallow reef, in strong light",
+   "file": "coral-finger.glb",
+   "bytes": 23836
+  },
+  {
+   "id": "coral-cauliflower",
+   "name": "Cauliflower coral",
+   "scientific": "Pocillopora meandrina",
+   "group": "coral",
+   "widthMetres": 0.4,
+   "boundsMetres": [
+    0.315,
+    0.214,
+    0.357
+   ],
+   "triangles": 140,
+   "zone": "shallow",
+   "note": "Shallow reef, in strong light",
+   "file": "coral-cauliflower.glb",
+   "bytes": 16652
+  },
+  {
+   "id": "coral-lettuce",
+   "name": "Lettuce coral",
+   "scientific": "Turbinaria reniformis",
+   "group": "coral",
+   "widthMetres": 0.8,
+   "boundsMetres": [
+    0.764,
+    0.331,
+    0.749
+   ],
+   "triangles": 168,
+   "zone": "mid",
+   "note": "Mid reef and terraces",
+   "file": "coral-lettuce.glb",
+   "bytes": 19652
+  },
+  {
+   "id": "coral-vase",
+   "name": "Cup coral",
+   "scientific": "Turbinaria peltata",
+   "group": "coral",
+   "widthMetres": 0.6,
+   "boundsMetres": [
+    0.591,
+    0.603,
+    0.585
+   ],
+   "triangles": 88,
+   "zone": "mid",
+   "note": "Mid reef and terraces",
+   "file": "coral-vase.glb",
+   "bytes": 10976
+  },
+  {
+   "id": "coral-toadstool",
+   "name": "Toadstool leather coral",
+   "scientific": "Sarcophyton glaucum",
+   "group": "coral",
+   "widthMetres": 0.65,
+   "boundsMetres": [
+    0.622,
+    0.514,
+    0.61
+   ],
+   "triangles": 94,
+   "zone": "mid",
+   "note": "Mid reef and terraces",
+   "file": "coral-toadstool.glb",
+   "bytes": 11680
+  },
+  {
+   "id": "coral-bubble",
+   "name": "Bubble coral",
+   "scientific": "Plerogyra sinuosa",
+   "group": "coral",
+   "widthMetres": 0.4,
+   "boundsMetres": [
+    0.329,
+    0.265,
+    0.359
+   ],
+   "triangles": 128,
+   "zone": "mid",
+   "note": "Mid reef and terraces",
+   "file": "coral-bubble.glb",
+   "bytes": 15276
+  },
+  {
+   "id": "coral-organpipe",
+   "name": "Organ pipe coral",
+   "scientific": "Tubipora musica",
+   "group": "coral",
+   "widthMetres": 0.45,
+   "boundsMetres": [
+    0.463,
+    0.374,
+    0.436
+   ],
+   "triangles": 156,
+   "zone": "mid",
+   "note": "Mid reef and terraces",
+   "file": "coral-organpipe.glb",
+   "bytes": 18356
+  },
+  {
+   "id": "coral-starmound",
+   "name": "Great star coral",
+   "scientific": "Montastraea cavernosa",
+   "group": "coral",
+   "widthMetres": 1.1,
+   "boundsMetres": [
+    1.02,
+    0.52,
+    1.048
+   ],
+   "triangles": 176,
+   "zone": "mid",
+   "note": "Mid reef and terraces",
+   "file": "coral-starmound.glb",
+   "bytes": 20532
+  },
+  {
+   "id": "coral-softtree",
+   "name": "Soft tree coral",
+   "scientific": "Dendronephthya sp.",
+   "group": "coral",
+   "widthMetres": 0.65,
+   "boundsMetres": [
+    0.546,
+    0.785,
+    0.52
+   ],
+   "triangles": 195,
+   "zone": "deep",
+   "note": "Deep slope and rock faces",
+   "file": "coral-softtree.glb",
+   "bytes": 22560
+  },
+  {
+   "id": "coral-suncoral",
+   "name": "Orange sun coral",
+   "scientific": "Tubastraea coccinea",
+   "group": "coral",
+   "widthMetres": 0.4,
+   "boundsMetres": [
+    0.312,
+    0.296,
+    0.396
+   ],
+   "triangles": 205,
+   "zone": "deep",
+   "note": "Deep slope and rock faces",
+   "file": "coral-suncoral.glb",
+   "bytes": 23644
+  },
+  {
+   "id": "coral-searod",
+   "name": "Candelabra sea rod",
+   "scientific": "Eunicea sp.",
+   "group": "coral",
+   "widthMetres": 0.8,
+   "boundsMetres": [
+    0.645,
+    1.253,
+    0.349
+   ],
+   "triangles": 187,
+   "zone": "deep",
+   "note": "Deep slope and rock faces",
+   "file": "coral-searod.glb",
+   "bytes": 21700
+  }
+ ]
+}

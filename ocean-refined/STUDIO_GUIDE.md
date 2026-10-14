@@ -22,7 +22,10 @@ Export reef GLB in the world viewer downloads an editing snapshot with the terra
 - Portfolio content: `portfolio-content.js`; entry layouts: `landmark-interactions.js`.
 - Terrain/reef formations: `reef.js`; imported objects: `model-scene.js`.
 - Creature size/routes: `creature-pack.js`; extraction and rig recipe: `tools/prepare-creatures.js`.
+- Newly supplied Sets assets: `user-creatures.js`, `user-creature-routes.js`, `user-corals.js`. These GLBs are already in metres; retain native scale instead of applying the older normalized creature convention. Every new creature/coral is selectable in Model Studio.
 - Swimming and camera settings: the existing Scene controls panel and `movement-settings.js`.
+- Scooter/wrist geometry: `scooter.js` and `wrist-computer.js`; safety feedback, artifacts and photos: `expedition-interactions.js` and its stylesheet. These visitor-only overlays are independent of the world viewer.
+- Viewer layers now include Living reef and Reef formations. Their visibility changes are preview-only. Exported geometry still cannot preserve shaders, procedural animation, feedback UI or game logic.
 
 Source and adapted creature attribution is in `assets/models/creatures/CREDITS.md`. Both newly supplied packs contain CC BY-SA 4.0 metadata; separated/rigged adaptations retain that licence.
 

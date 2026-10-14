@@ -1,0 +1,6 @@
+<!-- Dive summary card, shown back at the surface
+     Source: dive-plan.js
+     Styles: styles.css, hologram.css, motion.css, dive-plan.css
+     Scripts: dive-plan.js, journey.js (oceandiveend)
+     dive-plan.js sets data-show="true" and removes inert when a dive ends. -->
+<aside class="dive-summary holo holo--reading" aria-label="Dive summary" data-show="false" inert><header><p class="holo-label">Dive summary</p><button type="button" class="summary-close" aria-label="Dismiss the dive summary">×</button></header><dl><div><dt>Sites found</dt><dd class="sum-found"></dd></div><div><dt>Max depth</dt><dd class="sum-depth"></dd></div><div><dt>Dive time</dt><dd class="sum-time"></dd></div></dl><p class="sum-note" role="status"></p><button type="button" class="holo-chip sum-log">Open the logbook <span aria-hidden="true">→</span></button></aside>

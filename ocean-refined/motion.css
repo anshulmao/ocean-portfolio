@@ -1,0 +1,183 @@
+/* Interface motion system. One identity for every surface (calm / premium):
+   signature ease for on-screen change, a decelerating ease for entrances, an
+   accelerating ease for exits, three durations, entrances rise and settle,
+   exits leave about 40% faster, ambient loops are sine-eased and compositor-only.
+   Only opacity and the individual translate / scale / rotate properties are
+   animated, so layout transforms already used for positioning stay untouched.
+   Elements toggled with the hidden attribute enter through @starting-style and
+   leave through a discrete display transition; without support they simply
+   appear and disappear as before. */
+:root{--journey-ease:cubic-bezier(.4,0,.2,1);--journey-in:cubic-bezier(.05,.7,.1,1);--journey-out:cubic-bezier(.3,0,1,1);--journey-quick:180ms;--journey-standard:420ms;--journey-slow:700ms;--motion-sine:cubic-bezier(.37,0,.63,1);--motion-needle:cubic-bezier(.3,1.16,.5,1);--motion-hover:90ms;--motion-press:120ms;--motion-settle:240ms;--motion-exit:250ms}
+/* Mirrors the surface hero box in styles.css so the headline can leave from where it stood. */
+:root{--hero-top:22%;--hero-width:min(520px,45vw)}
+@media(min-width:1700px){:root{--hero-top:24%}}
+@media(max-width:900px){:root{--hero-top:23%;--hero-width:52vw}}
+@media(max-width:600px){:root{--hero-top:18%;--hero-width:84vw}}
+@media(max-height:550px) and (min-width:600px){:root{--hero-top:25%}}
+
+@media(prefers-reduced-motion:no-preference){
+/* Shared keyframes. Paired names restart the same motion when a state flips. */
+@keyframes motion-rise{from{opacity:0;translate:0 var(--rise,14px)}}
+@keyframes motion-rise-b{from{opacity:0;translate:0 var(--rise,14px)}}
+@keyframes motion-hold{0%,96%{opacity:0}}
+@keyframes motion-bob{0%,100%{translate:0 0}50%{translate:0 3px}}
+@keyframes motion-ring{0%{opacity:.5;scale:1}70%,100%{opacity:0;scale:var(--ring,1.5)}}
+@keyframes motion-breathe{0%,100%{opacity:.72;scale:.92}50%{opacity:1;scale:1.12}}
+@keyframes motion-glow{0%,100%{opacity:.7}50%{opacity:1}}
+@keyframes motion-sweep{to{rotate:360deg}}
+@keyframes motion-pop{from{opacity:.2;scale:.5}}
+@keyframes motion-pop-b{from{opacity:.2;scale:.5}}
+@keyframes motion-settle{from{scale:.95}}
+@keyframes motion-settle-b{from{scale:.95}}
+/* Projected panels catch for a moment as they switch on. Opacity only, and never fully dark after the first step. */
+@keyframes holo-in{0%{opacity:0}16%{opacity:.78}28%{opacity:.34}44%{opacity:.92}58%{opacity:.7}100%{opacity:1}}
+@keyframes holo-in-b{0%{opacity:0}16%{opacity:.78}28%{opacity:.34}44%{opacity:.92}58%{opacity:.7}100%{opacity:1}}
+
+/* 1. Arrival. Nothing is shown while the ocean prepares (the status line carries
+   the wait); once ready the headline leads and the instruments follow within
+   half a second. The hold releases by itself if the scene never reports back.
+   html.js is set by the first script in the page, so without JavaScript nothing is held back. */
+.surface-copy h1 em{display:inline-block}
+html.js body:not([data-ready="true"],[data-fallback="true"]) :is(.menu-toggle,.wordmark,.sky-cluster,.surface-copy>*,.dive-button,.explore-button,.view-controls,.scene-footer){animation:motion-hold 9s linear backwards}
+body[data-ready="true"] :is(.menu-toggle,.wordmark,.sky-cluster,.surface-copy>*,.dive-button,.explore-button,.view-controls,.scene-footer){animation:motion-rise var(--journey-standard) var(--journey-in) var(--arrive,0ms) backwards}
+body[data-ready="true"] .surface-copy h1{--rise:26px;animation-duration:var(--journey-slow)}
+body[data-ready="true"] .surface-copy h1 em{--rise:.16em;animation:motion-rise var(--journey-slow) var(--journey-in) 110ms backwards}
+.surface-copy .eyebrow{--arrive:60ms}.surface-copy .lede{--arrive:120ms}.dive-button{--arrive:190ms}.explore-button,.menu-toggle{--arrive:250ms}.wordmark{--arrive:300ms}.sky-cluster{--arrive:350ms}.view-controls{--arrive:420ms}.scene-footer{--arrive:450ms}
+:is(.menu-toggle,.wordmark,.sky-cluster,.view-controls,.scene-footer){--rise:10px}
+.status{transition:opacity var(--journey-standard) var(--journey-ease),translate var(--journey-standard) var(--journey-in)}
+.status:empty{translate:0 8px;transition-duration:var(--motion-exit);transition-timing-function:var(--journey-out)}
+body:not([data-ready="true"],[data-fallback="true"]) .status:not(:empty)::before{content:'';display:inline-block;width:6px;height:6px;margin-right:9px;border-radius:50%;background:currentColor;vertical-align:middle;animation:motion-breathe 1.8s var(--motion-sine) infinite}
+
+/* 2. Leaving the surface and coming back. The headline lifts away from where it
+   stood while the dive control re-settles in its compact place; on the return
+   the headline group replays its arrival because it is rendered afresh. */
+body:is([data-submerged="true"],[data-exploring="true"]) .surface-copy{position:fixed;top:var(--hero-top);left:var(--pad);width:var(--hero-width);transform:none;translate:0 -18px;transition:opacity var(--motion-exit) var(--journey-out),translate var(--motion-exit) var(--journey-out),visibility var(--motion-exit),display var(--motion-exit) allow-discrete}
+body[data-ready="true"]:is([data-submerged="true"],[data-exploring="true"]) :is(.dive-button,.explore-button){animation-name:motion-rise-b;animation-delay:60ms}
+body[data-ready="true"]:is([data-submerged="true"],[data-exploring="true"]) .explore-button{animation-delay:120ms}
+.dive-button svg{transition:transform var(--journey-standard) var(--journey-ease)}
+.view-controls{transition:opacity var(--motion-exit) var(--journey-out),translate var(--motion-exit) var(--journey-out),display var(--motion-exit) allow-discrete}
+body[data-submerged="true"] .view-controls{opacity:0;translate:0 10px}
+body[data-submerged="true"] .explore-button{opacity:0}
+.depth{transition:opacity var(--motion-exit) var(--journey-out),transform var(--motion-exit) var(--journey-out)}
+body[data-submerged="true"] .depth{transition:opacity var(--journey-slow) var(--journey-ease) 300ms,transform var(--journey-slow) var(--journey-in) 300ms}
+.heading-indicator{transition:opacity var(--journey-standard) var(--journey-ease)}
+.air-gauge{transition:opacity var(--journey-standard) var(--journey-ease),translate var(--journey-standard) var(--journey-in),display var(--journey-standard) allow-discrete}
+/* Instruments. A needle has mass: it swings to a new reading over the slow duration and runs a few percent past
+   before it settles. The max-depth tick follows the diver down on the signature ease. The full computer face takes
+   the compact one's place by a cross-fade; chevrons and flags switch in the quick duration; the bezel marker and
+   the turn chevrons fade. Transforms and opacity only: none of these elements is laid out or painted again. */
+.spg-needle{transition:transform var(--journey-slow) var(--motion-needle)}
+.depth-max{transition:transform var(--journey-standard) var(--journey-ease),opacity var(--journey-standard) var(--journey-ease)}
+.console-computer{transition:opacity var(--motion-exit) var(--journey-out)}
+body:not([data-computer-open="true"]) .console-computer{transition:opacity var(--journey-standard) var(--journey-ease) 120ms}
+.ascent-bar i,.ascent-bar em,.spg-title,.heading-bug,.heading-turn{transition:opacity var(--journey-quick) var(--journey-ease)}
+/* A state that asks for attention arrives with the projector's catch, then holds still: the word carries it. */
+:is(.console-ndl,.computer-ndl):is([data-mode="due"],[data-mode="deco"]){animation:holo-in var(--journey-standard) linear}
+:is(.console-ndl,.computer-ndl):is([data-mode="stop"],[data-mode="done"],[data-mode="low"]){animation:holo-in-b var(--journey-standard) linear}
+.ascent-bar[data-slow="true"] em{animation:motion-glow 1.6s var(--motion-sine) infinite}
+/* Ambient: a ring leaves the gauge's hub with each breath, and the scope sweeps once every eight seconds. */
+.spg-hub::after{--ring:2.6;animation:motion-ring 5.2s var(--motion-sine) 1.2s infinite}
+.map-sweep{opacity:1;animation:motion-sweep 8s linear infinite}
+/* The mask settles over the view once the water has closed overhead, and lifts quickly. */
+.mask-frame>*{transition:opacity var(--motion-exit) var(--journey-out),visibility 0s var(--motion-exit)}
+body[data-camera="first"][data-submerged="true"] .mask-frame>*{transition:opacity var(--journey-slow) var(--journey-ease) 300ms}
+.predive{--arrive:480ms;--rise:10px}
+body[data-ready="true"] .predive{animation:motion-rise var(--journey-standard) var(--journey-in) var(--arrive) backwards}
+.buddy-check :is(span,b){transition:opacity var(--journey-standard) var(--journey-ease) calc(520ms + var(--check,0)*90ms)}
+
+/* 3. One transition recipe for every instrument and control: quick colour on
+   hover, a firm press, an unhurried settle, and a rise for anything that is
+   revealed or dismissed with the hidden attribute. */
+:is(.reef-map,.swim-controls,.settings-menu,.camera-toggle,.dive-computer-toggle,.archive-toggle,.capture-hint,.ascent-status,.interact-prompt,.crosshair,.movement-panel,.movement-toggle,.explore-button,.credits-toggle,.motion-control,.movement-close,.settings-close,.menu-toggle,.time-cycle,.map-expand,.dialog-close,.dialog-return,.view-controls button,.swim-controls button,.map-heading button,.map-legend button,.movement-actions button,.weather-picker button,.theme-control>button){transition:background-color var(--motion-hover) var(--journey-ease),border-color var(--motion-hover) var(--journey-ease),color var(--motion-hover) var(--journey-ease),transform var(--motion-settle) var(--journey-ease),scale var(--m-scale,var(--motion-press)) var(--journey-ease),opacity var(--m-dur,var(--journey-standard)) var(--m-ease,var(--journey-in)) var(--m-delay,0ms),translate var(--m-dur,var(--journey-standard)) var(--m-ease,var(--journey-in)) var(--m-delay,0ms),visibility var(--m-dur,var(--journey-standard)),display var(--m-dur,var(--journey-standard)) allow-discrete}
+/* Timing variables are per element: children of a revealed panel start from the defaults again. */
+:is(.reef-map,.swim-controls,.movement-panel,.settings-menu)>*{--m-dur:initial;--m-ease:initial;--m-delay:initial;--m-scale:initial;--m-rise:initial}
+:is(.reef-map,.swim-controls,.settings-menu,.dive-computer-toggle,.archive-toggle,.capture-hint,.ascent-status,.interact-prompt,.crosshair,.movement-panel,.air-gauge)[hidden]{--m-dur:var(--motion-exit);--m-ease:var(--journey-out);--m-delay:0ms;opacity:0;translate:0 var(--m-rise,12px);pointer-events:none}
+@starting-style{:is(.reef-map,.swim-controls,.settings-menu,.dive-computer-toggle,.archive-toggle,.capture-hint,.ascent-status,.interact-prompt,.crosshair,.movement-panel,.air-gauge):not([hidden]){opacity:0;translate:0 var(--m-rise,12px)}}
+/* Hologram panels flicker on as they rise; they leave on the plain exit above. */
+:is(.settings-menu,.movement-panel,.dive-computer-toggle,.archive-toggle,.capture-hint,.ascent-status,.interact-prompt,.air-gauge):not([hidden]){animation:holo-in var(--journey-standard) linear var(--m-delay,0ms) backwards}
+:is(.movement-toggle,.credits-toggle,.camera-toggle,.motion-control,.movement-close,.settings-close,.menu-toggle,.time-cycle,.map-expand,.dialog-close,.dialog-return,.view-controls button,.swim-controls button,.map-heading button,.map-legend button,.movement-actions button,.weather-picker button,.theme-control>button){--m-dur:var(--motion-hover);--m-ease:var(--journey-ease)}
+.explore-button{--m-dur:var(--motion-exit);--m-ease:var(--journey-out)}
+/* The dive: instruments arrive one after another once the water closes overhead. */
+.archive-toggle{--m-delay:120ms}.dive-computer-toggle{--m-delay:180ms}.reef-map{--m-delay:120ms;--m-rise:-10px}.air-gauge{--m-delay:240ms;--m-rise:8px}.swim-controls{--m-delay:240ms}.capture-hint{--m-delay:420ms}.interact-prompt,.ascent-status{--m-rise:10px}.settings-menu{--m-rise:-8px}
+.crosshair{--m-rise:0px;--m-dur:var(--journey-quick);--m-scale:var(--journey-quick)}.crosshair[hidden]{scale:.5}
+@starting-style{.crosshair:not([hidden]){scale:.5}}
+html body[data-dialog="open"] :is(.capture-hint,.crosshair,.dive-computer-toggle,.archive-toggle){--m-dur:var(--motion-exit);--m-ease:var(--journey-out);--m-delay:0ms;opacity:0}
+body[data-movement-panel="open"] :is(.capture-hint,.swim-controls){--m-dur:var(--motion-exit);--m-ease:var(--journey-out);--m-delay:0ms;opacity:0}
+/* Press, hover and keyboard focus share one response. */
+:is(.camera-toggle,.dive-computer-toggle,.archive-toggle,.capture-hint,.interact-prompt,.movement-toggle,.explore-button,.credits-toggle,.motion-control,.movement-close,.settings-close,.menu-toggle,.time-cycle,.map-expand,.dialog-close,.dialog-return,.view-controls button,.swim-controls button,.map-heading button,.map-legend button,.movement-actions button,.weather-picker button,.theme-control>button):active{scale:.96}
+.swim-controls button:active{scale:.93}
+:is(.dive-computer-toggle,.archive-toggle):focus-visible{transform:translateY(-2px)}
+@media(hover:hover){:is(.dive-computer-toggle,.archive-toggle):hover{transform:translateY(-2px);transition-duration:var(--motion-hover)}}
+:is(.dive-computer-toggle,.archive-toggle):active{transform:none}
+/* The menu button's bars fold into a cross; switches slide; the lock badge pops. */
+.menu-toggle path{transition:translate var(--journey-standard) var(--journey-ease),rotate var(--journey-standard) var(--journey-ease),scale var(--journey-quick) var(--journey-ease),opacity var(--journey-quick) var(--journey-ease)}
+.holo-switch i::before,.movement-field input[type="checkbox"]::before{transition:translate var(--journey-quick) var(--journey-ease),background-color var(--journey-quick) var(--journey-ease)}
+.holo-switch i{transition:background-color var(--journey-quick) var(--journey-ease),border-color var(--journey-quick) var(--journey-ease)}
+.lock-pip{transition:opacity var(--journey-quick) var(--journey-ease),scale var(--motion-settle) var(--journey-in)}
+/* The settings groups follow the menu in. */
+.settings-menu>*{transition:opacity var(--journey-standard) var(--journey-ease) var(--follow,60ms),translate var(--journey-standard) var(--journey-in) var(--follow,60ms)}
+.settings-menu>.settings-body{--follow:120ms}
+@starting-style{.settings-menu:not([hidden])>*{opacity:0;translate:0 -6px}}
+/* The dive control: fast lift, firm press, and a slow sonar ring with a nodding arrow while it waits at the surface. */
+.dive-button{position:relative;transition:background 1.3s,color 1.3s,box-shadow .3s,transform var(--motion-settle) var(--journey-ease)}
+.dive-button:hover{transition-duration:1.3s,1.3s,.3s,var(--motion-hover)}.dive-button:active{transition-duration:1.3s,1.3s,.3s,var(--motion-press)}
+.dive-button:focus-visible{transform:translateY(-3px)}
+.dive-button::after{content:'';position:absolute;inset:-1px;border:1px solid var(--button);border-radius:inherit;opacity:0;pointer-events:none}
+body[data-ready="true"]:not([data-submerged="true"],[data-exploring="true"]) .dive-button:not(:disabled)::after{--ring:1.08 1.34;animation:motion-ring 3.2s var(--motion-sine) 1.4s infinite}
+body[data-ready="true"]:not([data-submerged="true"],[data-exploring="true"]) .dive-button:not(:disabled) svg{animation:motion-bob 3.2s var(--motion-sine) 1.4s infinite}
+
+/* 4. Reef atlas: the chart, legend and caption follow the panel in, markers land
+   on the chart one by one, and the diver's marker breathes. */
+.reef-map>:is(.map-reading,.map-legend,p){transition:opacity var(--journey-standard) var(--journey-ease) var(--follow,180ms),translate var(--journey-standard) var(--journey-in) var(--follow,180ms)}
+.reef-map>p{--follow:240ms}
+@starting-style{.reef-map>:is(.map-reading,.map-legend,p){opacity:0;translate:0 -6px}}
+.reef-map{transform-origin:100% 0}
+.reef-map[data-view="round"]:not([hidden]){animation:holo-in var(--journey-standard) linear var(--m-delay,0ms) backwards,motion-settle var(--motion-settle) var(--journey-in)}
+.reef-map[data-view="full"]:not([hidden]){animation:holo-in-b var(--journey-standard) linear backwards,motion-settle-b var(--motion-settle) var(--journey-in)}
+.map-chart button{transition:background-color var(--motion-hover) var(--journey-ease),scale 300ms var(--journey-in) var(--land,0ms),opacity 300ms var(--journey-ease) var(--land,0ms)}
+.map-chart button:nth-of-type(1){--land:260ms}.map-chart button:nth-of-type(2){--land:320ms}.map-chart button:nth-of-type(3){--land:380ms}.map-chart button:nth-of-type(n+4){--land:440ms}
+@starting-style{.map-chart button{opacity:0;scale:.4}}
+.map-chart button:is(:hover,:focus-visible){scale:1.18;transition-duration:var(--motion-hover);transition-delay:0ms}
+.map-chart button:active{scale:.94;transition-duration:var(--motion-press);transition-delay:0ms}
+.map-chart button[data-selected="true"]{scale:1.14;background:#0f5a70}
+.map-chart button[data-selected="true"]::before{content:'';position:absolute;inset:-4px;border:1px solid currentColor;border-radius:50%;margin:0;opacity:0;pointer-events:none;--ring:1.7;animation:motion-ring 1.6s var(--motion-sine) 2}
+.map-legend button[data-selected="true"]{background:var(--holo-fill-on);border-color:var(--holo-strong)}
+.map-player{animation:motion-breathe 3s var(--motion-sine) infinite}
+/* On the round minimap the arrow is carried by a transform, so it breathes in opacity alone. */
+.reef-map[data-view="round"] .map-player{animation-name:motion-glow}
+
+/* 5. The prompt to explore keeps a quiet ring on its key while it waits. */
+.interact-prompt kbd{position:relative}
+.interact-prompt kbd::after{content:'';position:absolute;inset:-1px;border:1px solid currentColor;border-radius:inherit;pointer-events:none;--ring:1.6;animation:motion-ring 2.4s var(--motion-sine) 500ms infinite backwards}
+
+/* 6. Scene controls, credits and the Dive Explorer: panels rise, their contents
+   follow, and the scrim fades rather than cutting. */
+.movement-panel{--m-rise:-10px;--m-scale:var(--journey-standard);transform-origin:0 0}.movement-panel[hidden]{--m-scale:var(--motion-exit);scale:.985}
+@starting-style{.movement-panel:not([hidden]){scale:.985}}
+.movement-panel>*{transition:opacity var(--journey-standard) var(--journey-ease) var(--follow,60ms),translate var(--journey-standard) var(--journey-in) var(--follow,60ms)}
+.movement-panel>.movement-intro{--follow:100ms}.movement-panel>.movement-fields{--follow:140ms}.movement-panel>.movement-footer{--follow:180ms}
+@starting-style{.movement-panel:not([hidden])>*{opacity:0;translate:0 8px}}
+body[data-movement-panel="open"]::after{transition:opacity var(--journey-standard) var(--journey-ease)}
+@starting-style{body[data-movement-panel="open"]::after{opacity:0}}
+@media(max-width:600px){.movement-panel{--m-rise:24px;transform-origin:50% 100%}}
+/* Only Chromium keeps a closing dialog in the top layer (the overlay transition). Elsewhere it fades from the page
+   itself, so it is pinned where the top layer had it and kept above the instruments while it leaves. */
+.ocean-dialog{position:fixed;inset:0;margin:auto;z-index:30;opacity:0;translate:0 12px;pointer-events:none;transition:opacity var(--motion-exit) var(--journey-out),translate var(--motion-exit) var(--journey-out),scale var(--motion-exit) var(--journey-out),overlay var(--motion-exit) allow-discrete,display var(--motion-exit) allow-discrete}
+.ocean-dialog[open]{opacity:1;translate:none;pointer-events:auto;transition:opacity var(--journey-standard) var(--journey-in),translate var(--journey-standard) var(--journey-in),scale var(--journey-standard) var(--journey-in),overlay var(--journey-standard) allow-discrete,display var(--journey-standard) allow-discrete}
+@starting-style{.credits-dialog[open]{opacity:0;translate:0 20px;scale:.985}}
+.credits-dialog>:not(.dialog-close){transition:opacity var(--journey-standard) var(--journey-ease) var(--follow,80ms),translate var(--journey-standard) var(--journey-in) var(--follow,80ms)}
+.credits-dialog>h2{--follow:120ms}.credits-dialog>.dialog-copy{--follow:160ms}.credits-dialog>#model-credits{--follow:200ms}
+@starting-style{.credits-dialog[open]>:not(.dialog-close){opacity:0;translate:0 10px}}
+.ocean-dialog::backdrop{opacity:0;transition:opacity var(--motion-exit) var(--journey-out),overlay var(--motion-exit) allow-discrete,display var(--motion-exit) allow-discrete}
+.ocean-dialog[open]::backdrop{opacity:1;transition:opacity var(--journey-standard) var(--journey-ease),overlay var(--journey-standard) allow-discrete,display var(--journey-standard) allow-discrete}
+@starting-style{.ocean-dialog[open]::backdrop{opacity:0}}
+
+/* 7. Sky time: the orb re-forms when the sun hands over to the moon. */
+#time-orb{transition:transform var(--journey-quick) var(--journey-ease)}
+#time-orb[data-kind="sun"]{animation:motion-pop var(--journey-standard) var(--journey-in)}#time-orb[data-kind="moon"]{animation:motion-pop-b var(--journey-standard) var(--journey-in)}
+:is(.sky-glyph,.weather-glyph) :is(g,.sky-up,.sky-down){transition:opacity var(--journey-standard) var(--journey-ease),translate var(--journey-slow) var(--journey-ease),scale var(--journey-slow) var(--journey-ease),rotate var(--journey-slow) var(--journey-ease)}
+
+/* Pause motion also stills the ambient loops. body[data-motion] mirrors the pause button (ui-ticker.js); :not(#_) only
+   lends the rule the weight the button's id used to give it, so it still outranks the animations it pauses. */
+body[data-motion="paused"]:not(#_) :is(.map-player,.dive-button svg,.map-sweep,.ascent-bar em),body[data-motion="paused"]:not(#_) .spg-hub::after,body[data-motion="paused"]:not(#_) .dive-button::after,body[data-motion="paused"]:not(#_) .interact-prompt kbd::after{animation-play-state:paused}
+}

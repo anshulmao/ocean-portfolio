@@ -7,6 +7,11 @@ export const PORTFOLIO_CONTENT = {
     entries: [
       {
         id: "overview",
+        // Structured restatements of this entry's own text, used by the diver profile card.
+        name: "Anshul",
+        base: "Kuala Lumpur",
+        // role restates the summary below ("an applied AI product manager and hands-on solutions builder").
+        role: "Applied AI product manager and hands-on solutions builder",
         title: "I turn AI into products people use.",
         tag: "Applied AI product",
         summary: "I’m Anshul, an applied AI product manager and hands-on solutions builder.",
@@ -44,6 +49,8 @@ export const PORTFOLIO_CONTENT = {
         id: "product-manager",
         title: "Product Manager",
         tag: "Twimbit · Jan 2025 — present",
+        // org / start / end restate the tag above for the dive log (end: null means present).
+        org: "Twimbit", start: "2025-01", end: null,
         summary: "Leading Rae across product strategy, discovery, requirements, analytics, AI solution design, launches, adoption, and enterprise stakeholder alignment.",
         body: ["I learned the market by studying it, the product by operating it, and AI systems by improving and building them."],
         facts: ["Product roadmap and PRDs", "RAG, search, routing and evaluation", "Activation and enablement systems"],
@@ -53,6 +60,7 @@ export const PORTFOLIO_CONTENT = {
         id: "content-operations",
         title: "Product Content Manager",
         tag: "Twimbit · Sep 2024 — Jan 2025",
+        org: "Twimbit", start: "2024-09", end: "2025-01",
         summary: "Built AI-accelerated content operations, combining structured intake, workflow automation, research assistants, and human review.",
         body: ["Built AI-accelerated content operations for a three-person team, combining structured intake, workflow automation, research assistants, and human review."],
         facts: ["Structured intake", "Workflow automation", "Human review"],
@@ -62,6 +70,13 @@ export const PORTFOLIO_CONTENT = {
         id: "research-foundations",
         title: "Consulting and research foundations",
         tag: "Twimbit · Sep 2023 — Sep 2024",
+        org: "Twimbit", start: "2023-09", end: "2024-09",
+        // stages and site restate the three facts below, for the dive profile chart and the log sheet.
+        stages: [
+          { label: "Advisory Maverick", start: "2023-09", end: "2023-12" },
+          { label: "Consultant Analyst", start: "2024-01", end: "2024-09" }
+        ],
+        site: "Kuala Lumpur, Malaysia",
         summary: "Worked across customer experience, strategy, competitive benchmarking, and AI adoption research for regional technology and financial-services organizations.",
         body: ["Started in consulting research and analysis, translating market evidence into clear recommendations and client-ready stories."],
         facts: ["Consultant Analyst · Jan 2024 — Sep 2024", "Advisory Maverick · Sep 2023 — Dec 2023", "Kuala Lumpur, Malaysia"],
@@ -138,6 +153,8 @@ export const PORTFOLIO_CONTENT = {
     subtitle: "A compact view of the work.",
     entries: [{
       id: "portfolio-resume", title: "The work, on one page.", tag: "Resume · Existing portfolio PDF",
+      // format and issued restate the fact "PDF · July 2026" for the document sleeve.
+      format: "PDF", issued: "July 2026",
       summary: "Product strategy, applied AI and hands-on delivery.",
       body: ["Download the resume already included in my portfolio, or open the PDF in a new tab.", "This is the July 2026 AI Product Manager version. The project stories in this archive provide additional context."],
       facts: ["AI Product Manager resume", "PDF · July 2026", "Existing portfolio document"],

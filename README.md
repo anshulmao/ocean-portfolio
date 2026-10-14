@@ -1,35 +1,34 @@
 # Ocean portfolio
 
-A browser-only Three.js portfolio: a real-date sky, living reef, first-person diving and instrument-style portfolio overlays. Source repository is private. No backend or build is required.
+Live site: https://anshul-portfolio-rho.vercel.app/
 
-## Run locally
+The full source of Anshul’s browser-based Three.js portfolio, including the ocean world, 24 authored creature species, schooling fish, coral habitats, astronomical sky, first/third-person diving, map, dive instruments and portfolio archive. The repository is private; the hosted site is public.
 
-From the repository root, run `python ocean-refined/qa/serve.py`, then open http://127.0.0.1:4175/ocean-refined/ (stop another process using port 4175 first).
+## Run and edit
 
-WASD swims, mouse aims, Space rises, Shift descends, V changes perspective, C toggles the Dive Computer, F opens a nearby waypoint and Escape releases the mouse or closes the archive.
+Requirements: Node.js 22+ and Python 3.10+.
 
-## Portfolio copy
+- `npm run dev` serves the editing source at http://127.0.0.1:4190/ocean-refined/. Use another port if 4190 is occupied: `python serve.py --port 4191`.
+- `ocean-refined/ui-gallery.html` reviews UI separately.
+- `ocean-refined/world-viewer.html` explores and exports the world.
+- `ocean-refined/pack-viewer.html` inspects model packs and rigs.
+- `ocean-refined/portfolio-content.js` contains the portfolio text. Editor-only introduction drafts are excluded by the production build.
+- Model sources, rigs, textures and prepared caches are in `ocean-refined/assets/`. Creator and licence metadata are preserved alongside the models.
 
-`ocean-refined/portfolio-content.js` keeps presentation data separate from the scene. Existing website copy is the baseline; new reading-style introductions await approval. See `ocean-refined/COPY_REVIEW.md`.
+## Build the public site
 
-## Assets and checks
+Run `npm run build`. It creates `dist/` with the exact launch structure: ocean at `/`, lightweight portfolio at `/profile.html`, resume, privacy page and sitemap. It excludes editing studios, tests, captures, copy variants and unused model backups. `dist/` is generated and deliberately not committed.
 
-Creator attribution and licence terms are retained in `ocean-refined/assets/models/CREDITS.md`, `ASSETS.md` and vendor licence files. This repository does not grant a new licence over third-party assets.
+The build uses only Node’s built-in modules and this repository. Vercel can build it with the included `vercel.json`: framework Other, build `npm run build`, output `dist`.
 
-See `ocean-refined/VALIDATION.md` for verified checks and limitations. To run browser checks, install development dependencies with `npm install`, install Chromium with `npx playwright install chromium`, start the preview, then run `npm run test:hud`. Browser-rendering checks use software WebGL; physical-device FPS remains unmeasured. Captures are ignored.
+For direct upload, authenticate with Vercel and link to the existing `anshul-portfolio` project in `anshulmaos-projects`. Run `npm run build`, `npm run prepare:deploy`, then `vercel deploy --prebuilt --prod --scope team_QxXq7z7TZDEkoke6wCrExIrB`. Inspect the linked project before deploying. Do not commit `.env*` or `.vercel/`.
 
+`release/live-site.json` records the production deployment and previous deployment for rollback. Git push alone does not establish that Vercel has deployed a new revision; verify hosting separately.
 
-## CRT expedition update
+## Checks and limitations
 
-The heading tape, animated time slider and reef-derived angled chart accompany a phosphor CRT field archive. Dive and ascent camera translation/rotation are eased and speed-limited; returning restores the original third-person surface composition. The morning/evening horizon faces east/west while the astronomical sky remains physically mapped.
+The live launch passed Chrome desktop/mobile viewport checks, all 24 creature species and eight landmark/coral models, map, portfolio panels, resume download and prepared coral cache. Physical-device performance remains unmeasured. Browser tests use Playwright: install development dependencies and Chromium (`npm install`, `npx playwright install chromium`), then use the test scripts in package.json. Older tests may describe historical UI; consult the latest tests and refinement notes under `ocean-refined/`.
 
-Concept boards and prompts are in `design/ocean-crt/`. The deployment plan is `design/ocean-crt/DEPLOYMENT.md`; no hosting release has been performed. Exclude design and QA files from the eventual static output.
+Depth readings are calibrated to 0–40 m; geometry and movement distances retain the original world scale. Safety-stop feedback and optional contact details are local to the visitor’s browser and are not sent to a server. Photos are local downloads. No analytics are bundled.
 
-Run `npm run test:crt` for the new desktop/mobile transition and layout checks.
-
-
-## Independent UI and 3D studios
-
-The active interface uses pale ocean colors and white readings. Open `ocean-refined/ui-gallery.html` for UI alone, `pack-viewer.html` for source/rigged model inspection, or `world-viewer.html` for orbit exploration, placement previews, layer controls and Blender geometry export. See `STUDIO_GUIDE.md` for customization steps and `ui-components/` for sixteen interface fragments.
-
-New creature assets preserve the source CC BY-SA 4.0 licence; see `assets/models/creatures/CREDITS.md`. Animal rigs and clips were created from static source packs. Development validation: `npm run test:studio`, `npm run test:rigs`.
+Original user-supplied Sets assets and older attributed landmark/ray models are both present. This repository does not relicense third-party assets; see their included credits and manifests. Some source-review notes describe earlier versions; the production build and current runtime code determine what is shipped.
