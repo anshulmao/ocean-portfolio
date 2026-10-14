@@ -52,3 +52,5 @@ report.errors = [...new Set(errors)];
 writeFileSync(join(out, 'report.json'), JSON.stringify(report, null, 1));
 console.log(JSON.stringify({ out, diagnostics, after: report.after, errors: report.errors }, null, 1));
 await browser.close();
+
+if (!diagnostics.ready || diagnostics.loaded !== 27 || diagnostics.failed || !report.after.finite || report.errors.length || Object.values(report.encounters).some(value=>!value) || Object.values(report.residents).some(value=>!value)) process.exitCode=1;

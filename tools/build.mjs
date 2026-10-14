@@ -4,7 +4,9 @@ import {createHash} from 'node:crypto';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 const launch=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const source=path.resolve(launch,'ocean-refined');
-const out=path.join(launch,'dist');await fs.mkdir(out,{recursive:true});
+const out=path.join(launch,'dist');
+if(path.dirname(out)!==launch||path.basename(out)!=='dist')throw Error('Unexpected build output path');
+await fs.rm(out,{recursive:true,force:true});await fs.mkdir(out,{recursive:true});
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const written=new Set();
 async function copy(rel){const file=path.join(source,rel),target=path.join(out,rel);await fs.mkdir(path.dirname(target),{recursive:true});await fs.copyFile(file,target);written.add(rel.replaceAll('\\','/'));}

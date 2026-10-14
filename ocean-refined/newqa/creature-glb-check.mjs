@@ -24,4 +24,4 @@ for (const [folder, key] of [['creature-set', 'creatures'], ['coral-set', 'coral
 }
 console.log(failed ? `${failed} FAILED` : 'all files load back as expected', errors.length ? errors : '');
 await browser.close();
-process.exit(failed ? 1 : 0);
+process.exit(failed || errors.length ? 1 : 0);
