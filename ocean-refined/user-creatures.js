@@ -1,153 +1,493 @@
 import * as THREE from './vendor/three.module.min.js';
-import {GLTFLoader} from './vendor/GLTFLoader.js';
-import {clone} from './vendor/SkeletonUtils.js';
-import {floatSkinIndices,turn} from './assets.js';
-import {sampleMarineRoute} from './marine-routes.js';
-import {USER_VISITOR_ROUTES,schoolHabitat} from './user-creature-routes.js';
+import { GLTFLoader } from './vendor/GLTFLoader.js';
+import { clone } from './vendor/SkeletonUtils.js';
+import { floatSkinIndices, turn } from './assets.js';
+import { creatureGeometry, speciesById } from './creature-species.js';
+import { ENCOUNTERS, RESIDENTS, SCHOOLS } from './user-creature-routes.js';
 
-const BASE='./assets/models/user-sets/sets/creature-set/',FRAMES=32;
-// A school samples the supplied authored rig on the GPU. One small palette per
-// species replaces a CPU skeleton and draw call for each little fish.
-async function schoolPalette(gltf,mesh,clip){
-  const mixer=new THREE.AnimationMixer(gltf.scene),action=mixer.clipAction(clip);action.play();
-  const bones=mesh.skeleton.bones.length,data=new Float32Array(FRAMES*bones*16);
-  for(let frame=0;frame<FRAMES;frame++){
-    mixer.setTime(clip.duration*frame/FRAMES);gltf.scene.updateMatrixWorld(true);mesh.skeleton.update();
-    data.set(mesh.skeleton.boneMatrices,frame*bones*16);if(frame%8===7)await turn();
-  }
-  mixer.stopAllAction();mixer.setTime(0);
-  const texture=new THREE.DataTexture(data,4,FRAMES*bones,THREE.RGBAFormat,THREE.FloatType);
-  texture.minFilter=texture.magFilter=THREE.NearestFilter;texture.generateMipmaps=false;texture.needsUpdate=true;
-  return {texture,bones,duration:clip.duration};
-}
-function schoolMaterial(source,palette,mesh,time){
-  const material=source.clone(),uniforms={uSchoolBones:{value:palette.texture},uSchoolTime:time,
-    uSchoolDuration:{value:palette.duration},uSchoolBind:{value:mesh.bindMatrix.clone()},uSchoolUnbind:{value:mesh.bindMatrixInverse.clone()}};
-  material.onBeforeCompile=shader=>{
-    Object.assign(shader.uniforms,uniforms);
-    shader.vertexShader=shader.vertexShader.replace('#include <common>',`#include <common>
-attribute vec4 skinIndex; attribute vec4 skinWeight; attribute vec2 aSchoolPhase;
-uniform sampler2D uSchoolBones; uniform float uSchoolTime; uniform float uSchoolDuration;
-uniform mat4 uSchoolBind; uniform mat4 uSchoolUnbind;
-mat4 schoolBone(float bone,float frame){
-  float row=(frame*${palette.bones.toFixed(1)}+bone+.5)/${(FRAMES*palette.bones).toFixed(1)};
-  return mat4(texture2D(uSchoolBones,vec2(.125,row)),texture2D(uSchoolBones,vec2(.375,row)),texture2D(uSchoolBones,vec2(.625,row)),texture2D(uSchoolBones,vec2(.875,row)));
-}
-mat4 schoolPose(float frame){
-  mat4 result=skinWeight.x*schoolBone(skinIndex.x,frame);
-  if(skinWeight.y>0.0)result+=skinWeight.y*schoolBone(skinIndex.y,frame);
-  if(skinWeight.z>0.0)result+=skinWeight.z*schoolBone(skinIndex.z,frame);
-  if(skinWeight.w>0.0)result+=skinWeight.w*schoolBone(skinIndex.w,frame);
-  return result;
-}
-`).replace('#include <beginnormal_vertex>',`#include <beginnormal_vertex>
-float schoolFrame=mod((uSchoolTime*aSchoolPhase.y/uSchoolDuration+aSchoolPhase.x)*${FRAMES.toFixed(1)},${FRAMES.toFixed(1)});
-float frameA=floor(schoolFrame),frameB=mod(frameA+1.0,${FRAMES.toFixed(1)});
-mat4 schoolSkin=uSchoolUnbind*(schoolPose(frameA)*(1.0-fract(schoolFrame))+schoolPose(frameB)*fract(schoolFrame))*uSchoolBind;
-objectNormal=mat3(schoolSkin)*objectNormal;
-`).replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed=(schoolSkin*vec4(transformed,1.0)).xyz;');
+// The creature set at home in the ocean (see user-creature-routes.js for the numbers).
+//
+// The great animals are encounters: a whale far out in the blue, a whale shark with its remoras, an orca family, a
+// dolphin pod, a pair of reef sharks, a tuna school. A director brings one in from beyond the haze, lets it pass the
+// diver and swim out of sight, and then nothing of it exists (no drawing, no animation) until it is chosen again.
+// Residents (bumpheads, rays, a sleeping nurse shark, the wreck's barracuda, morays in their dens) live on the reef
+// and cost nothing while out of view. Fish in numbers are instances of the set's own models, one draw call a
+// species, swimming in the vertex shader with the same wave their clips were made from.
+//
+// Every model is a GLB from assets/models/user-sets/sets/creature-set (rig, clips, painted skin). Lighter shapes for
+// the far and the many come from creature-species.js, whose texture layout matches the files.
+const BASE = './assets/models/user-sets/sets/creature-set/';
+const TAU = Math.PI * 2, { clamp, smoothstep } = THREE.MathUtils;
+const turnTo = (from, to) => Math.atan2(Math.sin(to - from), Math.cos(to - from));
+const ease = (dt, rate) => 1 - Math.exp(-dt * rate);
+const rr = (a, b) => a + Math.random() * (b - a);
+const swimTime = { value: 0 };
+
+// A species drawn as instances bends from the shoulders back, each fish on its own beat (aBeat). The shape of the
+// wave is in uniforms, so every school shares one shader program: one arriving mid-dive compiles nothing.
+function schoolMaterial(source, id, length, beatRate) {
+  const swim = speciesById(id)?.swimShader || { amp: .09, waves: .75, power: 2 };
+  const material = source.clone(), own = { uSwimShape: { value: new THREE.Vector4(length, swim.amp * length, swim.power, TAU * swim.waves) }, uSwimRate: { value: beatRate } };
+  material.name = `${id} school`;
+  material.onBeforeCompile = shader => {
+    Object.assign(shader.uniforms, own); shader.uniforms.uSetTime = swimTime;
+    shader.vertexShader = `uniform float uSetTime; uniform vec4 uSwimShape; uniform float uSwimRate;
+attribute float aBeat;
+${shader.vertexShader}`.replace('#include <begin_vertex>', `#include <begin_vertex>
+float setAlong = clamp(.5 - position.z / uSwimShape.x, 0.0, 1.0), setPhase = uSetTime * uSwimRate - aBeat;
+transformed.x += uSwimShape.y * (pow(setAlong, uSwimShape.z) * sin(uSwimShape.w * setAlong - setPhase) - .14 * (1.0 - setAlong) * sin(.6 - setPhase));`);
   };
-  material.customProgramCacheKey=()=>`user-authored-school-sparse-v2-${palette.bones}-${FRAMES}`;
+  material.customProgramCacheKey = () => 'user-creature-school-v2';
   return material;
 }
-export function createUserCreatures({terrainHeightAt=()=>-40,economy=false}={}){
-  const root=new THREE.Group();root.name='User authored marine species';
-  const diagnostics={ready:false,loaded:0,loadedSpecies:0,failed:0,species:24,visitors:0,visitorCount:0,schoolFish:0,schoolCount:0,schoolDrawCalls:0,authoredClips:true,realUnits:true,errors:[]};
-  const visitors=[],schools=[],cache=new Map(),time={value:0},origin=new THREE.Vector3(),sphere=new THREE.Sphere();
-  const target=new THREE.Vector3(),away=new THREE.Vector3(),pose=new THREE.Euler(0,0,0,'YXZ'),quaternion=new THREE.Quaternion(),dummy=new THREE.Object3D(),forward=new THREE.Vector3(),direction=new THREE.Vector3();
-  // Zero-reach route samples ask for this exact coordinate three times. Retain
-  // only the latest answer, so changing terrain/editor data is never gridded.
-  let floorX=NaN,floorZ=NaN,floorY=0;
-  const schoolFloor=(x,z)=>{if(x!==floorX||z!==floorZ){floorX=x;floorZ=z;floorY=terrainHeightAt(x,z);}return floorY;};
-  const loadFile=spec=>{if(!cache.has(spec.id))cache.set(spec.id,new GLTFLoader().loadAsync(BASE+spec.file).then(async gltf=>{floatSkinIndices(gltf.scene);await turn();return gltf;}));return cache.get(spec.id);};
-  async function addVisitors(spec,gltf){
-    const routes=USER_VISITOR_ROUTES.filter(r=>r.id===spec.id);
-    for(const config of routes.slice(0,economy&&routes.length>1?1:routes.length)){
-      const model=clone(gltf.scene),wrapper=new THREE.Group();wrapper.name=spec.id+' authored visitor';wrapper.userData.creatureId=spec.id;wrapper.add(model);root.add(wrapper);
-      const mixer=new THREE.AnimationMixer(model),clip=gltf.animations.find(c=>c.name==='swim')||gltf.animations[0];
-      if(!clip)throw new Error(spec.id+' has no authored animation');
-      const swim=mixer.clipAction(clip).play(),fastClip=gltf.animations.find(c=>c.name==='fast'),fast=fastClip?mixer.clipAction(fastClip).setEffectiveWeight(0).play():null;
-      mixer.setTime(config.phase*.7);model.traverse(n=>{if(n.isSkinnedMesh){n.geometry.computeBoundingSphere();n.boundingSphere=n.geometry.boundingSphere.clone();n.boundingSphere.radius*=1.4;n.frustumCulled=true;}});
-      visitors.push({spec,config,wrapper,mixer,swim,fast,boost:0,route:{},started:false,headingDot:1});diagnostics.visitors++;diagnostics.visitorCount++;
+
+export function createUserCreatures({ terrainHeightAt = () => -40, collisions = null, economy = false, sites = {} } = {}) {
+  const root = new THREE.Group(); root.name = 'Creature set';
+  const pair = value => Array.isArray(value) ? value[economy ? 1 : 0] : value;
+  const diagnostics = { loading: {}, ready: false, loaded: 0, loadedSpecies: 0, failed: 0, species: 0, errors: [], visitors: 0, visitorCount: 0, schoolFish: 0, schoolCount: 0, schoolDrawCalls: 0, encounters: { active: [], history: [] } };
+  const gltfs = new Map(), facts = new Map(), actors = [], groups = [], kinds = new Map(), herds = [];
+  let clock = 0, frame = 0;
+
+  // --- The seabed, as the animals see it ------------------------------------------------------------------------
+  // A one-metre height map of the terrain and every collision box on it, widened and softened, so an animal keeping
+  // its height above it rises over a coral head in a curve instead of a step. Built once, a few rows at a time.
+  const GX = -64, GZ = -108, GW = 129, GH = 146, hard = new Float32Array(GW * GH), soft = new Float32Array(GW * GH);
+  const floor = (x, z) => { const h = terrainHeightAt(x, z); return Number.isFinite(h) ? Math.max(h, -200) : -60; };
+  async function buildCover() {
+    for (let z = 0; z < GH; z++) { for (let x = 0; x < GW; x++) hard[z * GW + x] = floor(GX + x, GZ + z); if (z % 24 === 23) await turn(); }
+    for (const { box } of collisions?.boxes || []) {
+      const x0 = Math.max(0, Math.floor(box.min.x - GX - .5)), x1 = Math.min(GW - 1, Math.ceil(box.max.x - GX + .5)), z0 = Math.max(0, Math.floor(box.min.z - GZ - .5)), z1 = Math.min(GH - 1, Math.ceil(box.max.z - GZ + .5));
+      for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) { const i = z * GW + x; if (box.max.y > hard[i]) hard[i] = box.max.y; }
+    }
+    await turn();
+    const wide = new Float32Array(GW * GH);
+    for (let z = 0; z < GH; z++) for (let x = 0; x < GW; x++) { let top = -1e9; for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) top = Math.max(top, hard[clamp(z + dz, 0, GH - 1) * GW + clamp(x + dx, 0, GW - 1)]); wide[z * GW + x] = top; }
+    await turn();
+    for (let z = 0; z < GH; z++) for (let x = 0; x < GW; x++) { let sum = 0; for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) sum += wide[clamp(z + dz, 0, GH - 1) * GW + clamp(x + dx, 0, GW - 1)]; soft[z * GW + x] = Math.max(sum / 25, hard[z * GW + x]); }
+  }
+  function cover(x, z) {
+    const fx = clamp(x - GX, 0, GW - 1.001), fz = clamp(z - GZ, 0, GH - 1.001), ix = fx | 0, iz = fz | 0, tx = fx - ix, tz = fz - iz, i = iz * GW + ix;
+    return (soft[i] * (1 - tx) + soft[i + 1] * tx) * (1 - tz) + (soft[i + GW] * (1 - tx) + soft[i + GW + 1] * tx) * tz;
+  }
+  const ground = (x, z) => hard[clamp(Math.round(z - GZ), 0, GH - 1) * GW + clamp(Math.round(x - GX), 0, GW - 1)];
+  const solid = (x, z) => ground(x, z) > floor(x, z) + .25;
+  /** Open, fairly level sand near a wished-for spot: for the animals that lie on the bottom. */
+  function sand(x, z, radius = 2) {
+    for (let ring = 0; ring <= 16; ring++) for (let k = 0, n = ring ? ring * 6 : 1; k < n; k++) {
+      const a = k / n * TAU + ring, px = x + Math.cos(a) * ring, pz = z + Math.sin(a) * ring; let ok = Math.abs(px) < 58 && pz > -100 && pz < 30;
+      for (let s = 0; ok && s < 6; s++) { const qx = px + Math.cos(s * TAU / 6) * radius, qz = pz + Math.sin(s * TAU / 6) * radius; ok = !solid(qx, qz) && Math.abs(floor(qx, qz) - floor(px, pz)) < radius * .45; }
+      if (ok && !solid(px, pz)) return [px, pz];
+    }
+    return [x, z];
+  }
+  // What the reef offers to gather round: the tall formations, the coral gardens, residents' sites and landmarks.
+  const formations = () => (sites.formations || []).map(s => ({ name: s.name, x: s.position[0], y: s.position[1], z: s.position[2], radius: s.radius, height: s.height }));
+  const patches = zone => (sites.patches?.() || []).filter(p => !zone || p.zone === zone).map(p => ({ x: p.x, z: p.z, y: floor(p.x, p.z), radius: p.radius || 5, zone: p.zone }));
+  const lifeSite = id => { const s = (sites.life || []).find(item => item.id === id); return s && { x: s.position[0], y: s.position[1], z: s.position[2], radius: s.radius }; };
+  const landmark = id => { const s = (sites.landmarks || []).find(item => item.id === id); return s && { x: s.position[0], y: s.position[1], z: s.position[2] }; };
+
+  // --- Skinned animals --------------------------------------------------------------------------------------------
+  const lighter = new Map();
+  function actor(species, { clip = 'swim', scale = 1, name = species } = {}) {
+    const gltf = gltfs.get(species), fact = facts.get(species); if (!gltf) return null;
+    const model = clone(gltf.scene), wrapper = new THREE.Group(); wrapper.name = `Creature set · ${name}`; wrapper.userData.creatureId = species; wrapper.add(model); wrapper.scale.setScalar(scale);
+    let mesh = null; model.traverse(n => { if (n.isSkinnedMesh && !mesh) mesh = n; }); if (!mesh) return null;
+    mesh.frustumCulled = false;   // culled here, against the haze as well as the view
+    const mixer = new THREE.AnimationMixer(model), actions = {};
+    for (const c of gltf.animations) actions[c.name] = mixer.clipAction(c);
+    const swim = gltf.animations.find(c => c.name === 'swim') || gltf.animations[0], L = fact.lengthMetres * scale;
+    const a = { species, name, wrapper, mesh, full: mesh.geometry, light: lighter.get(species), mixer, actions, clip: null, after: null, until: 0, L, scale,
+      pos: new THREE.Vector3(), yaw: 0, pitch: 0, roll: 0, started: false, ease: 1.6, tick: 0, seen: false, active: true,
+      // How far one stroke of the swim clip carries it: the clip runs faster or slower to match the animal's speed.
+      stride: .72 * L / swim.duration };
+    play(a, clip, 0); mixer.update(Math.random() * 4); wrapper.visible = false; root.add(wrapper); actors.push(a); diagnostics.visitors++; diagnostics.visitorCount++;
+    return a;
+  }
+  /** Cross-fade to a clip. once: an action that plays to its end and hands back to `back`. */
+  function play(a, name, fade = .6, once = false, back = 'swim') {
+    const next = a.actions[name]; if (!next || (a.clip === name && !once)) return;
+    next.reset(); next.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); next.clampWhenFinished = once; next.setEffectiveWeight(1).play();
+    const previous = a.clip && a.clip !== name ? a.actions[a.clip] : null;
+    if (previous) { if (fade > 0) previous.crossFadeTo(next, fade, false); else previous.stop(); }
+    a.clip = name; a.after = once ? back : null; a.until = once ? clock + next.getClip().duration - Math.min(fade, .3) : 0;
+  }
+  function place(a, target, yaw, pitch, roll, dt) {
+    if (!a.started) { a.pos.copy(target); a.yaw = yaw; a.pitch = pitch; a.roll = roll; a.started = true; }
+    else { a.pos.lerp(target, ease(dt, a.ease)); a.yaw += turnTo(a.yaw, yaw) * ease(dt, 2.2); a.pitch += (pitch - a.pitch) * ease(dt, 1.8); a.roll += (roll - a.roll) * ease(dt, 1.5); }
+    a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(-a.pitch, a.yaw, a.roll, 'YXZ');
+  }
+  const sphere = new THREE.Sphere();
+  // Drawn only in sight and within the haze; far off, a lighter mesh and a stroke stepped at half rate.
+  function present(a, dt, view) {
+    if (!a.active) { a.wrapper.visible = a.seen = false; return; }
+    let seen = true, d = 0;
+    if (view) { d = view.eye.distanceTo(a.pos); sphere.center.copy(a.pos); sphere.radius = a.L * .7; seen = d - sphere.radius < view.range && view.frustum.intersectsSphere(sphere); }
+    a.wrapper.visible = a.seen = seen;
+    if (a.after && clock >= a.until) play(a, a.after, .5);
+    a.tick += dt; if (!seen) return;
+    const far = Boolean(view) && d - a.L > 24, geometry = far && a.light ? a.light : a.full;
+    if (a.mesh.geometry !== geometry) a.mesh.geometry = geometry;
+    if (far && (frame & 1)) return;
+    a.mixer.update(a.tick); a.tick = 0;
+  }
+
+  // --- Routes for the residents ------------------------------------------------------------------------------------
+  const route = (cx, cz, rx, rz, { dir = Math.random() < .5 ? 1 : -1, wobble = .1 } = {}) => ({ cx, cz, rx, rz, dir, wobble, theta: rr(0, TAU), radius: (rx + rz) / 2, seed: rr(0, TAU) });
+  function along(r, theta, out) { const k = 1 + r.wobble * Math.sin(theta * 3 + r.seed); out.x = r.cx + r.rx * Math.cos(theta) * k; out.z = r.cz + r.rz * Math.sin(theta) * k; return out; }
+  const over = (height, ceiling = -2) => (x, z) => Math.min(ceiling, cover(x, z) + height);
+  const level = (y, swing = 0, period = 30, phase = rr(0, TAU)) => (x, z, t) => y + swing * Math.sin(t * TAU / period + phase);
+  const A = new THREE.Vector3(), B = new THREE.Vector3(), C = new THREE.Vector3(), want = new THREE.Vector3(), spot = { yaw: 0, pitch: 0 };
+  const member = (back = 0, side = 0, up = 0, { drift = .3, bob = .2, scale = 1 } = {}) => ({ back, side, up, drift, bob, scale, w1: rr(.25, .6), w2: rr(.3, .8), p1: rr(0, TAU), p2: rr(0, TAU), beat: rr(0, TAU) });
+  // Where a member of a group belongs now: fills `want`, returns its heading and climb.
+  function station(g, m, t) {
+    const r = g.route, theta = r.theta - m.back / r.radius * r.dir;
+    along(r, theta, A); along(r, theta + .03 * r.dir, B);
+    let tx = B.x - A.x, tz = B.z - A.z; const span = Math.hypot(tx, tz) || 1; tx /= span; tz /= span;
+    want.x = A.x - tz * m.side + Math.sin(t * m.w1 + m.p1) * m.drift; want.z = A.z + tx * m.side + Math.cos(t * m.w1 * .83 + m.p2) * m.drift;
+    const here = g.height(want.x, want.z, t) + m.up + Math.sin(t * m.w2 + m.p2) * m.bob, ahead = g.height(want.x + tx * g.look, want.z + tz * g.look, t) + m.up;
+    want.y = here; spot.yaw = Math.atan2(tx, tz); spot.pitch = clamp(Math.atan2(ahead - here, g.look), -.45, .45);
+    return spot;
+  }
+  function driveHerd(g, dt, t, player) {
+    g.route.theta += g.route.dir * g.speed * g.pace * dt / g.route.radius;
+    for (const m of g.members) {
+      const a = m.actor, p = station(g, m, t);
+      if (player) { C.copy(want).sub(player); const d = C.length(), room = 3 + a.L * .4; if (d < room && d > .01) want.addScaledVector(C, (room - d) * .6 / d); }
+      place(a, want, p.yaw, p.pitch, -g.route.dir * g.bank, dt);
+      a.mixer.timeScale = clamp(g.speed * g.pace / a.stride, .3, 2.2);
     }
   }
-  async function addSchool(spec,gltf,index){
-    let source=null;gltf.scene.traverse(n=>{if(n.isSkinnedMesh&&!source)source=n;});if(!source)throw new Error(spec.id+' has no skinned mesh');
-    const clip=gltf.animations.find(c=>c.name==='swim')||gltf.animations[0],palette=await schoolPalette(gltf,source,clip);
-    const count=spec.id==='remora'?(economy?4:6):(economy?8:14),geometry=source.geometry.clone(),phase=new THREE.InstancedBufferAttribute(new Float32Array(count*2),2);phase.setUsage(THREE.DynamicDrawUsage);geometry.setAttribute('aSchoolPhase',phase);
-    const material=schoolMaterial(source.material,palette,source,time),mesh=new THREE.InstancedMesh(geometry,material,count);mesh.name=spec.id+' authored school';mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);root.add(mesh);
-    const habitats=[schoolHabitat(index,0),schoolHabitat(index,1)],members=[];
-    if(spec.id==='cleaner-wrasse')for(const home of habitats){home.rx=2;home.rz=2;home.height=1.5;home.speed=.2;}
-    if(spec.id==='bluespotted-ray')for(const home of habitats){home.rx=5;home.rz=4;home.height=.5;home.speed=.5;}
-    if(spec.id==='bumphead-parrotfish')for(const home of habitats){home.height=1.8;home.speed=.65;}
-    if(['yellowfin-tuna','great-barracuda','giant-trevally'].includes(spec.id))for(const home of habitats){home.rx=17;home.rz=12;home.height=8;home.speed=spec.id==='yellowfin-tuna'?1.7:1.35;}
-    for(let k=0;k<count;k++)members.push({position:new THREE.Vector3(),started:false,phase:k*2.399+index*.23,pace:.9+(k%4)*.04,habitat:k%2,yaw:0,pitch:0});
-    schools.push({spec,mesh,phase,members,habitats,route:{},palette,visibleMask:-1,slots:new Uint8Array(count)});diagnostics.schoolFish+=count;diagnostics.schoolDrawCalls++;diagnostics.schoolCount+=habitats.length;
-  }
-  async function load(){
-    const manifest=await fetch(BASE+'manifest.json').then(r=>{if(!r.ok)throw new Error('Creature manifest '+r.status);return r.json();});
-    let cursor=0;const worker=async()=>{while(cursor<manifest.creatures.length){const index=cursor++,spec=manifest.creatures[index];try{
-      const gltf=await loadFile(spec);if(USER_VISITOR_ROUTES.some(r=>r.id===spec.id))await addVisitors(spec,gltf);else await addSchool(spec,gltf,index);
-      diagnostics.loaded++;diagnostics.loadedSpecies++;await turn();
-    }catch(error){diagnostics.failed++;diagnostics.errors.push(spec.id+': '+error.message);}}};
-    await Promise.all([worker(),worker()]);update(0);diagnostics.ready=true;return diagnostics;
-  }
-  function shown(position,radius,view,range=1){if(!view)return true;sphere.center.copy(position);sphere.radius=radius;return view.eye.distanceTo(position)-radius<view.range*range&&view.frustum.intersectsSphere(sphere);}
-  function update(dt=0,player=origin,view=null){
-    const step=Math.min(.1,Math.max(0,dt));time.value+=step;
-    for(const animal of visitors){
-      if(step===0&&animal.started){animal.wrapper.visible=shown(animal.wrapper.position,animal.spec.lengthMetres,view);continue;}
-      const {config:c,spec,wrapper}=animal,r=sampleMarineRoute(c,time.value,c.phase,terrainHeightAt,spec.lengthMetres*.5,animal.route);
-      target.set(r.x,r.y,r.z);away.copy(target).sub(player);const distance=away.length(),reach=spec.lengthMetres>5?7:3.5;
-      if(distance<reach&&distance>.01){away.y=0;away.normalize();target.addScaledVector(away,(reach-distance)*.5);}
-      // Gentle, bounded displacement between giants; never an impulsive kick.
-      if(spec.lengthMetres>5)for(const other of visitors){if(other===animal||other.spec.lengthMetres<=5||!other.started)continue;away.copy(target).sub(other.wrapper.position);const length=away.length();if(length>0.01&&length<7){away.normalize();target.addScaledVector(away,(7-length)*.24);}}
-      const initial=!animal.started;if(initial){wrapper.position.copy(target);animal.started=true;}else wrapper.position.lerp(target,1-Math.exp(-step*1.7));
-      quaternion.setFromEuler(pose.set(-r.pitch,r.yaw,Math.sin(r.angle)*.02));if(initial)wrapper.quaternion.copy(quaternion);else if(step>0)wrapper.quaternion.slerp(quaternion,1-Math.exp(-step*2.8));
-      animal.headingDot=forward.set(0,0,1).applyQuaternion(wrapper.quaternion).dot(direction.set(r.dx,0,r.dz).normalize());
-      wrapper.visible=shown(wrapper.position,spec.lengthMetres,view);
-      if(wrapper.visible){const alarm=distance<reach?Math.min(.25,(reach-distance)*.07):0;animal.boost+=(alarm-animal.boost)*(1-Math.exp(-step*1.3));animal.swim.setEffectiveWeight(1-animal.boost);if(animal.fast)animal.fast.setEffectiveWeight(animal.boost);animal.mixer.update(step);}
-    }
-    for(const school of schools){
-      const {spec,mesh,members,habitats,phase,slots}=school;let drawn=0,mask=0;
-      for(let h=0;h<habitats.length;h++){
-        const home=habitats[h],r=step>0||school.visibleMask<0?sampleMarineRoute(home,time.value,home.phase,schoolFloor,0,school.route):null;
-        for(let k=h;k<members.length;k+=2){
-          const member=members[k];
-          if(step>0||!member.started){
-          const a=member.phase,spread=Math.max(1.6,spec.lengthMetres*2.2),targetX=r.x+Math.cos(a)*spread,targetZ=r.z+Math.sin(a)*spread;
-          target.set(targetX,Math.max(r.y+Math.sin(a)*.45,terrainHeightAt(targetX,targetZ)+(spec.id==='bluespotted-ray'?.25:1)),targetZ);
-          if(spec.id==='flying-fish')target.y=-2.6+Math.sin(a)*.4;
-          if(spec.id==='remora'){
-            const host=visitors.find(v=>v.spec.id==='whale-shark');if(host){const yaw=host.route.yaw??0,side=Math.cos(a)*1.5,back=-3.8-k*.17;target.copy(host.wrapper.position);target.x+=Math.cos(yaw)*side+Math.sin(yaw)*back;target.z+=-Math.sin(yaw)*side+Math.cos(yaw)*back;target.y-=.8;r.yaw=yaw;}
-          }
-          away.copy(target).sub(player);const distance=away.length();if(distance<3&&distance>.01)target.addScaledVector(away.normalize(),(3-distance)*.65);
-          const spacing=.18+spec.lengthMetres*.85;
-          for(let j=h;j<members.length;j+=2){if(j===k||!members[j].started)continue;away.copy(target).sub(members[j].position);const apart=away.length();if(apart>.01&&apart<spacing)target.addScaledVector(away.normalize(),(spacing-apart)*.3);}
-          if(!member.started){member.position.copy(target);member.started=true;member.yaw=r.yaw;}else{
-            direction.subVectors(target,member.position);const horizontal=Math.hypot(direction.x,direction.z),angle=horizontal>.004?Math.atan2(direction.x,direction.z):r.yaw;
-            if(step>0){member.yaw+=Math.atan2(Math.sin(angle-member.yaw),Math.cos(angle-member.yaw))*(1-Math.exp(-step*5));const tilt=horizontal>.004?THREE.MathUtils.clamp(Math.atan2(direction.y,horizontal),-.3,.3):0;member.pitch+=(tilt-member.pitch)*(1-Math.exp(-step*4));}
-            member.position.lerp(target,1-Math.exp(-step*2));
-          }
-          }
-          if(!shown(member.position,Math.max(.25,spec.lengthMetres),view,spec.lengthMetres<.4?.45:.75))continue;
-          slots[drawn++]=k;mask|=1<<k;
-        }
+
+  // --- The director: big animals come, pass, and go ------------------------------------------------------------
+  const casts = new Map(), slots = [];
+  function buildEncounters() {
+    for (const [slot, config] of Object.entries(ENCOUNTERS)) {
+      const kinds = [];
+      for (const kind of config.kinds) {
+        const cast = [];
+        if (kind.cast) for (const role of kind.cast) { const a = actor(role.species, { scale: role.scale ?? 1, name: role.name || role.species }); if (a) { a.active = false; cast.push({ actor: a, side: role.side ?? 0, back: role.back ?? 0, phase: rr(0, TAU), lean: role.lean }); } }
+        const riders = [];
+        if (kind.riders) for (let i = 0; i < pair(kind.riders); i++) { const a = actor('remora', { clip: 'ride', scale: rr(.85, 1.1), name: `remora ${i + 1}` }); if (a) { a.active = false; riders.push({ actor: a, home: new THREE.Vector3(...[[1, -1.6, 4.3], [-1, -1.9, -.4], [2.3, -.6, 1.9]][i]), yaw: [0, .1, -.05][i], next: rr(14, 40) + i * 9, trip: 0, side: i % 2 ? -1 : 1, p: rr(0, TAU) }); } }
+        const school = kind.school ? schoolGroup(kind.school.species, { kind: 'encounter', count: pair(kind.school.count), spread: kind.school.spread }) : null;
+        if (school) for (let i = 0; i < pair(kind.school.count); i++) school.members.push(member(i ? rr(0, school.spread[0]) : 0, rr(-school.spread[1], school.spread[1]), rr(-school.spread[2], school.spread[2]), { scale: rr(.85, 1.08) }));
+        if (!cast.length && !school) continue;
+        const length = Math.max(...cast.map(c => c.actor.L), school ? facts.get(kind.school.species).lengthMetres : 0);
+        const record = { ...kind, slot, cast, riders, school, length, path: null, u: 0, y0: 0, next: 0 };
+        casts.set(kind.id, record); kinds.push(record);
       }
-      const repack=mask!==school.visibleMask;
-      if(drawn&&(step>0||repack)){
-        for(let index=0;index<drawn;index++){
-          const member=members[slots[index]];
-          dummy.position.copy(member.position);dummy.rotation.set(-member.pitch,member.yaw,0,'YXZ');dummy.scale.setScalar(1);dummy.updateMatrix();
-          mesh.setMatrixAt(index,dummy.matrix);
-          if(repack)phase.setXY(index,member.phase,member.pace);
-        }
-        mesh.instanceMatrix.needsUpdate=true;
-      }
-      if(drawn&&repack)phase.needsUpdate=true;
-      school.visibleMask=mask;mesh.count=drawn;mesh.visible=drawn>0;
+      if (kinds.length) slots.push({ slot, config, kinds, active: null, wait: rr(...config.first) * (economy ? 1.2 : 1), last: null });
     }
   }
-  Object.defineProperties(diagnostics,{count:{enumerable:true,get:()=>diagnostics.visitorCount+diagnostics.schoolFish},headingDots:{enumerable:true,get:()=>visitors.map(a=>a.headingDot)},finite:{enumerable:true,get:()=>visitors.every(a=>a.wrapper.position.toArray().every(Number.isFinite))&&schools.every(s=>s.members.every(m=>m.position.toArray().every(Number.isFinite)))}});
-  return {root,load,update,diagnostics,inspect:()=>({visitors:visitors.map(a=>({id:a.spec.id,length:a.spec.lengthMetres,position:a.wrapper.position.toArray(),headingDot:a.headingDot})),schools:schools.map(s=>({id:s.spec.id,count:s.members.length,drawn:s.mesh.count,bones:s.palette.bones,duration:s.palette.duration,members:s.members.map(m=>({position:m.position.toArray(),yaw:m.yaw}))}))})};
+  function begin(e, player, view) {
+    const range = view ? Math.min(view.range, 130) : 110, R = range + e.length + 12, angle = rr(0, TAU), sideOf = Math.random() < .5 ? 1 : -1;
+    const dx = Math.sin(angle), dz = Math.cos(angle), nx = dz * sideOf, nz = -dx * sideOf, pass = rr(...e.pass), px = player?.x ?? 0, pz = player?.z ?? -30;
+    e.path = { sx: px + nx * pass - dx * R, sz: pz + nz * pass - dz * R, ex: px + nx * pass + dx * R, ez: pz + nz * pass + dz * R, nx, nz, len: 2 * R, bulge: rr(-1, 1) * e.bulge * R };
+    e.u = 0; e.y0 = rr(...e.depth); e.next = clock + rr(4, 8);
+    for (const c of e.cast) { c.actor.active = true; c.actor.started = false; play(c.actor, 'swim', 0); }
+    for (const r of e.riders) { r.actor.active = true; r.actor.started = false; }
+    if (e.school) e.school.active = true;
+    diagnostics.encounters.history.push({ id: e.id, at: Math.round(clock), pass: Math.round(pass) }); if (diagnostics.encounters.history.length > 12) diagnostics.encounters.history.shift();
+  }
+  function end(e) {
+    for (const c of e.cast) c.actor.active = false; for (const r of e.riders) r.actor.active = false;
+    if (e.school) e.school.active = false; e.path = null;
+  }
+  // A point on the pass (u: 0 at the far start, 1 at the far end): a straight line with a gentle bow in it.
+  function onPath(e, u, out, tangent) {
+    const p = e.path, bow = Math.sin(Math.PI * u) * p.bulge, slope = Math.PI * Math.cos(Math.PI * u) * p.bulge;
+    out.x = p.sx + (p.ex - p.sx) * u + p.nx * bow; out.z = p.sz + (p.ez - p.sz) * u + p.nz * bow;
+    tangent.set(p.ex - p.sx + p.nx * slope, 0, p.ez - p.sz + p.nz * slope).normalize();
+  }
+  const T = new THREE.Vector3();
+  function bandHeight(e, x, z, phase) {
+    let y = e.low ? Math.min(e.depth[1], cover(x, z) + 3.2) : e.y0 + Math.sin(clock * .11 + phase) * 1.2;
+    if (e.porpoise) y = e.y0 + e.porpoise * Math.sin(clock * .95 + phase);
+    return Math.min(-1.8, Math.max(y, cover(x, z) + e.clearance));
+  }
+  function driveEncounter(e, dt, player) {
+    e.u += e.speed * dt / e.path.len;
+    const backest = Math.max(0, ...e.cast.map(c => c.back), e.school ? e.school.spread[0] : 0);
+    if (e.u - (backest + e.length) / e.path.len > 1) return false;
+    for (const c of e.cast) {
+      const a = c.actor;
+      onPath(e, clamp(e.u - c.back / e.path.len, 0, 1), want, T);
+      want.x += -T.z * c.side; want.z += T.x * c.side;
+      // A long body clears the bottom along its whole length.
+      const reach = a.L * .45;
+      want.y = Math.max(bandHeight(e, want.x, want.z, c.phase), cover(want.x + T.x * reach, want.z + T.z * reach) + e.clearance, cover(want.x - T.x * reach, want.z - T.z * reach) + e.clearance);
+      if (player) { C.copy(want).sub(player); const d = C.length(), room = 4 + a.L * .5; if (d < room && d > .01) { C.y *= .3; want.addScaledVector(C, (room - d) * .5 / d); } }
+      const yaw = Math.atan2(T.x, T.z) + (c.lean ? Math.sin(clock * .7 + c.phase) * .08 : 0), climb = e.porpoise ? Math.cos(clock * .95 + c.phase) * .25 : 0;
+      a.ease = e.porpoise ? 2.6 : 1.2; place(a, want, yaw, climb, Math.sin(clock * .3 + c.phase) * .03, dt);
+      a.mixer.timeScale = clamp(e.speed / a.stride, .4, 2.2);
+      const near = player ? a.pos.distanceTo(player) : 1e9;
+      if (e.id === 'orcas') play(a, near < 30 ? 'fast' : 'swim', 1.2);
+      if (e.id === 'blacktips' && near < 7 && a.clip !== 'burst') play(a, 'burst', .2, true);
+    }
+    // Now and then one dolphin spins out of the line.
+    if (e.porpoise && clock > e.next) { e.next = clock + rr(5, 10); const c = e.cast[Math.floor(Math.random() * e.cast.length)]; if (c.actor.seen) play(c.actor, 'spin', .3, true); }
+    if (e.riders.length) driveRiders(e, dt);
+    return true;
+  }
+  // Remoras ride under the whale shark; now and then one lets go, swings out round its host and comes back.
+  function driveRiders(e, dt) {
+    const host = e.cast[0].actor; host.wrapper.updateMatrixWorld(true);
+    for (const r of e.riders) {
+      const a = r.actor; r.next -= dt;
+      if (r.next < 0 && r.trip <= 0) { r.trip = 1; r.next = rr(22, 55); }
+      let ox = 0, oy = 0, oz = 0;
+      if (r.trip > 0) { r.trip -= dt / 7; const u = 1 - Math.max(r.trip, 0), swing = Math.sin(u * Math.PI); ox = Math.sin(u * TAU) * 2.8 * r.side * swing; oy = -.9 * swing; oz = -(1 - Math.cos(u * TAU)) * 2; play(a, 'swim', .5); } else play(a, 'ride', .8);
+      C.set(r.home.x + ox + Math.sin(clock * .4 + r.p) * .1, r.home.y + oy + Math.sin(clock * .53 + r.p) * .07, r.home.z + oz + Math.sin(clock * .31 + r.p) * .18);
+      C.applyMatrix4(host.wrapper.matrixWorld);
+      a.ease = 6; place(a, C, host.yaw + r.yaw + (r.trip > 0 ? Math.cos((1 - r.trip) * TAU) * .5 * r.side : 0), host.pitch, 0, dt);
+    }
+  }
+  function direct(dt, player, view) {
+    diagnostics.encounters.active.length = 0;
+    for (const s of slots) {
+      if (s.active) {
+        if (driveEncounter(s.active, dt, player)) { diagnostics.encounters.active.push(s.active.id); continue; }
+        end(s.active); s.last = s.active.id; s.active = null; s.wait = rr(...s.config.cooldown) * (economy ? 1.3 : 1);
+      } else if ((s.wait -= dt) <= 0) {
+        const choices = s.kinds.filter(k => k.id !== s.last), e = choices[Math.floor(Math.random() * choices.length)] || s.kinds[0];
+        begin(e, player, view); s.active = e;
+      }
+    }
+  }
+
+  // --- Residents ------------------------------------------------------------------------------------------------
+  const spotted = [], dens = [];
+  let sentinel = null, grazers = null;
+  function buildResidents() {
+    const b = RESIDENTS.bumpheads;
+    if (gltfs.has(b.species)) {
+      const herd = Array.from({ length: pair(b.count) }, (_, i) => ({ actor: actor(b.species, { scale: rr(.88, 1.05), name: `bumphead ${i + 1}` }), ...member(i * 4, [0, 3, -3, 1][i] ?? 0, rr(-.4, .4), { drift: .5, bob: .2 }) })).filter(m => m.actor);
+      grazers = { route: route(...b.loop, { wobble: .12 }), height: over(b.height, -4), speed: b.speed, pace: 1, members: herd, look: 4, bank: .05, timer: rr(10, 20), grazing: false };
+      herds.push(grazers);
+    }
+    const w = RESIDENTS.whipray;
+    if (gltfs.has(w.species)) { const a = actor(w.species); if (a) herds.push({ route: route(...w.loop), height: over(w.height, -4), speed: w.speed, pace: 1, members: [{ actor: a, ...member(0, 0, 0, { drift: .6, bob: .12 }) }], look: 6, bank: .12 }); }
+    const s = RESIDENTS.bluespots;
+    if (gltfs.has(s.species)) for (const [x, z] of s.spots.slice(0, economy ? s.lean : s.spots.length)) {
+      const a = actor(s.species, { clip: 'rest' }); if (!a) continue;
+      const [px, pz] = sand(x, z, 1.8); a.pos.set(px, floor(px, pz) + .1, pz); a.yaw = rr(0, TAU); a.started = true;
+      spotted.push({ actor: a, from: a.pos.clone(), to: a.pos.clone(), go: 0, yaw: a.yaw });
+    }
+    const n = RESIDENTS.sleeper;
+    if (gltfs.has(n.species)) { const a = actor(n.species, { clip: 'rest' }); if (a) { const [x, z] = sand(...n.near, 3.5); a.pos.set(x, floor(x, z) + .45, z); a.yaw = rr(0, TAU); a.started = true; a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(0, a.yaw, 0, 'YXZ'); } }
+    const g = RESIDENTS.sentinel, wreck = landmark(g.landmark) || { x: 18, y: -23, z: -39 };
+    if (gltfs.has(g.species)) { const a = actor(g.species, { clip: 'hover' }); if (a) { sentinel = { actor: a, home: new THREE.Vector3(wreck.x + g.offset[0], wreck.y + g.offset[1], wreck.z + g.offset[2]), drift: rr(0, TAU), dart: 0, away: new THREE.Vector3() }; a.pos.copy(sentinel.home); a.started = true; a.ease = 1.2; } }
+    // Dens: at the foot of a formation, looking out from it, the rest of the body inside the rock.
+    const all = formations();
+    for (const d of RESIDENTS.dens) {
+      if (economy && d.lean) continue;
+      const f = all.find(item => item.name === d.formation); if (!f || !gltfs.has(d.species)) continue;
+      const a = actor(d.species, { clip: 'breathe' }); if (!a) continue;
+      // Out from the formation's middle until the ground is open: the den mouth. Half the body stays in the rock.
+      const dx = Math.sin(d.angle), dz = Math.cos(d.angle); let edge = f.radius * .4;
+      while (edge < f.radius * 2.5 && (solid(f.x + dx * edge, f.z + dz * edge) || cover(f.x + dx * edge, f.z + dz * edge) > floor(f.x + dx * edge, f.z + dz * edge) + .8)) edge += .5;
+      const x = f.x + dx * (edge - a.L * .08), z = f.z + dz * (edge - a.L * .08);
+      a.pos.set(x, floor(f.x + dx * edge, f.z + dz * edge) + a.L * .06, z); a.yaw = d.angle; a.pitch = .12; a.started = true; a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(-a.pitch, a.yaw, 0, 'YXZ');
+      dens.push({ actor: a, rest: 0 });
+    }
+  }
+  function driveResidents(dt, player) {
+    if (grazers) {
+      grazers.timer -= dt;
+      if (grazers.timer < 0) { grazers.grazing = !grazers.grazing; grazers.timer = grazers.grazing ? rr(6, 10) : rr(18, 32); for (const m of grazers.members) play(m.actor, grazers.grazing ? 'graze' : 'swim', 1.1); }
+      grazers.pace += ((grazers.grazing ? .05 : 1) - grazers.pace) * ease(dt, 1.2);
+    }
+    for (const g of herds) driveHerd(g, dt, clock, player);
+    for (const s of spotted) {
+      const a = s.actor;
+      if (s.go > 0) {
+        s.go = Math.max(0, s.go - dt / 2.4); const u = 1 - s.go, k = u * u * (3 - 2 * u);
+        a.pos.lerpVectors(s.from, s.to, k); a.pos.y += Math.sin(u * Math.PI) * 1.2; a.yaw += turnTo(a.yaw, s.yaw) * ease(dt, 6);
+        if (s.go === 0) play(a, 'rest', 1);
+      } else if (player && a.pos.distanceToSquared(player) < 6 * 6) {
+        // Away from the diver, to the first open sand in that direction.
+        const base = Math.atan2(a.pos.x - player.x, a.pos.z - player.z);
+        for (const t of [0, .5, -.5, 1, -1, 1.6]) { const yaw = base + t, x = a.pos.x + Math.sin(yaw) * 10, z = a.pos.z + Math.cos(yaw) * 10; if (Math.abs(x) < 58 && z > -100 && z < 30 && !solid(x, z)) { s.from.copy(a.pos); s.to.set(x, floor(x, z) + .1, z); s.yaw = yaw; s.go = 1; play(a, 'fast', .25); break; } }
+      }
+      a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(0, a.yaw, 0, 'YXZ');
+    }
+    if (sentinel) {
+      const s = sentinel, a = s.actor; let yaw = 2.2 + Math.sin(clock * .11 + s.drift) * .5;
+      C.copy(s.home); C.x += Math.sin(clock * .13 + s.drift) * .9; C.y += Math.sin(clock * .21) * .4;
+      if (player) {
+        const d = a.pos.distanceTo(player);
+        if (s.dart <= 0 && d < 6) { s.dart = 1; s.away.copy(a.pos).sub(player).setY(0).normalize().multiplyScalar(16).add(a.pos); s.away.y = s.home.y + 2; play(a, 'strike', .15, true, 'swim'); }
+        else if (s.dart <= 0 && d < 24) yaw = Math.atan2(player.x - a.pos.x, player.z - a.pos.z);   // it turns to keep the diver in view
+      }
+      if (s.dart > 0) {
+        s.dart -= dt / 6; const out = s.dart > .75;
+        if (out) { C.copy(s.away); yaw = Math.atan2(s.away.x - a.pos.x, s.away.z - a.pos.z); a.ease = 3; } else { yaw = Math.atan2(s.home.x - a.pos.x, s.home.z - a.pos.z); a.ease = .8; }
+        if (s.dart <= 0) { play(a, 'hover', 1.2); a.ease = 1.2; }
+      }
+      place(a, C, yaw, 0, 0, dt);
+    }
+    for (const d of dens) {
+      const a = d.actor; d.rest -= dt;
+      if (player && d.rest <= 0) {
+        C.copy(player).sub(a.pos); const dist = C.length(), facing = (Math.sin(a.yaw) * C.x + Math.cos(a.yaw) * C.z) / Math.max(dist, .01);
+        if (dist < a.L * .9 && facing > .5) { play(a, 'strike', .15, true, 'breathe'); d.rest = 7; }
+      }
+    }
+  }
+
+  // --- Schools ----------------------------------------------------------------------------------------------------
+  function kindOf(species, { lod = 1, pose = null, clip = 'swim', scale = 1 } = {}) {
+    const key = `${species}|${lod}|${pose}|${clip}`;
+    if (kinds.has(key)) return kinds.get(key);
+    const gltf = gltfs.get(species), fact = facts.get(species); if (!gltf) return null;
+    let source = null; gltf.scene.traverse(n => { if (n.isSkinnedMesh && !source) source = n; });
+    const geometry = creatureGeometry(species, { lod, pose }).clone(); for (const name of ['skinIndex', 'skinWeight']) geometry.deleteAttribute(name);
+    const beats = (gltf.animations.find(c => c.name === clip) || gltf.animations[0]).duration;
+    const k = { species, key, geometry, material: schoolMaterial(source.material, species, fact.lengthMetres, TAU / beats), groups: [], capacity: 0, mesh: null, beats: null, drawn: 0 };
+    kinds.set(key, k); return k;
+  }
+  function schoolGroup(species, options) {
+    const k = kindOf(species, options); if (!k) return null;
+    const count = options.count, g = { kind: options.kind, k, members: [], centre: new THREE.Vector3(), radius: 6, shown: false, active: options.kind !== 'encounter', fear: 0, spread: options.spread || [6, 2, 1], name: `${species} ${options.kind}`, ...options };
+    k.groups.push(g); k.capacity += count; groups.push(g); diagnostics.schoolFish += count; diagnostics.schoolCount++;
+    return g;
+  }
+  function buildSchools() {
+    const L = id => facts.get(id)?.lengthMetres || 1;
+    const cloud = (species, x, y, z, count, size, extra = {}) => {
+      const g = schoolGroup(species, { kind: 'cloud', count, lod: extra.lod, clip: 'idle' }); if (!g) return;
+      g.centre.set(x, y, z); g.size = size; g.heading = rr(0, TAU); g.radius = Math.max(...size) + L(species);
+      for (let i = 0; i < count; i++) { const a = rr(0, TAU), r = Math.cbrt(Math.random()), u = rr(-1, 1), s = Math.sqrt(1 - u * u); g.members.push({ hx: Math.cos(a) * s * r * size[0], hy: u * r * size[1], hz: Math.sin(a) * s * r * size[2], scale: rr(.85, 1.1), w1: rr(.35, 1.1), w2: rr(.4, 1.2), w3: rr(.2, .7), p1: rr(0, TAU), p2: rr(0, TAU), p3: rr(0, TAU), beat: rr(0, TAU) }); }
+    };
+    const shoal = (species, r, height, speed, count, spread, extra = {}) => {
+      const g = schoolGroup(species, { kind: 'shoal', count, lod: extra.lod, pose: extra.pose, spread }); if (!g) return;
+      g.route = r; g.height = height; g.speed = speed; g.look = Math.max(2, L(species) * 1.2); g.radius = spread[0] + L(species) + 2; g.ring = extra.ring;
+      for (let i = 0; i < count; i++) g.members.push(member(extra.ring ? i / count * TAU * r.radius + rr(-1, 1) : (i ? rr(0, spread[0]) : 0), rr(-spread[1], spread[1]), rr(-spread[2], spread[2]), { drift: extra.drift ?? .4, bob: extra.bob ?? .2, scale: rr(.85, 1.1) * (extra.scale ?? 1) }));
+      if (extra.ring) g.radius = r.radius + spread[1] + L(species);
+    };
+    const all = formations(), clouds = SCHOOLS.anthias;
+    // Anthias over the tops of the tall formations, and over the shallow coral gardens.
+    for (const f of all.filter(f => !/clam|kelp/i.test(f.name))) cloud(clouds.species, f.x, f.y + f.height * .78 + 1, f.z, pair(clouds.count), [f.radius * .75, Math.min(2.4, f.height * .18), f.radius * .75], { lod: clouds.lod });
+    for (const p of patches(clouds.patches.zone).slice(0, clouds.patches.max)) cloud(clouds.species, p.x, cover(p.x, p.z) + 3.2, p.z, pair(clouds.patches.count), [p.radius * .8, 1.4, p.radius * .8], { lod: clouds.lod });
+    const ch = SCHOOLS.chromis;
+    for (const p of patches(ch.zone).slice(0, ch.max)) cloud(ch.species, p.x + 1.5, cover(p.x, p.z) + 2.4, p.z - 1, pair(ch.count), [p.radius * .6, 1.1, p.radius * .6], { lod: ch.lod });
+    const sg = SCHOOLS.sergeants;
+    for (const [x, z] of sg.at.slice(0, economy ? 2 : sg.at.length)) cloud(sg.species, x, Math.max(sg.y, cover(x, z) + 4), z, pair(sg.count), sg.size);
+    const wr = SCHOOLS.wrasse, station = lifeSite(wr.site);
+    if (station) cloud(wr.species, station.x, cover(station.x, station.z) + wr.lift, station.z, pair(wr.count), wr.size);
+    // Pairs and small parties working the reef close to the bottom.
+    const anchors = near => { const list = near === 'formations' ? all.map(f => ({ x: f.x + f.radius * 1.1, z: f.z })) : patches(); return list.length ? list : all.map(f => ({ x: f.x - f.radius * 1.2, z: f.z + 2 })); };
+    for (const id of ['butterflies', 'idols', 'tangs', 'angels']) {
+      const s = SCHOOLS[id], list = anchors(s.near);
+      for (let i = 0; i < Math.min(pair(s.groups), list.length); i++) { const a = list[(i * 3 + id.length) % list.length]; shoal(s.species, route(a.x, a.z, s.loop, s.loop * .78, { wobble: .2 }), over(s.height, -3), .5 + L(s.species) * .15, s.count, [L(s.species) * 1.2, L(s.species) * .5, .2], { drift: .2, bob: .15 }); }
+    }
+    // Garden eels: a colony on open sand, standing in their burrows.
+    const ge = SCHOOLS.gardenEels;
+    if (gltfs.has(ge.species)) {
+      const [cx, cz] = sand(...ge.near, 4), g = schoolGroup(ge.species, { kind: 'burrows', count: pair(ge.count), lod: ge.lod, clip: 'sway' });
+      if (g) { g.centre.set(cx, floor(cx, cz), cz); g.radius = 6 + L(ge.species); g.sink = 0; for (let i = 0; i < pair(ge.count); i++) { const a = i * 2.4, r = .8 + Math.sqrt(i) * 1.15, x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r; g.members.push({ x, z, y: floor(x, z), yaw: rr(0, TAU), scale: rr(.8, 1.1), beat: rr(0, TAU), w1: rr(.3, .7), p1: rr(0, TAU) }); } }
+    }
+    const fu = SCHOOLS.fusiliers;
+    shoal(fu.species, route(...fu.loop, { wobble: .09 }), over(fu.height, fu.ceiling), fu.speed, pair(fu.count), fu.spread);
+    const bw = SCHOOLS.barracudaWheel;
+    shoal(bw.species, route(bw.centre[0], bw.centre[1], bw.radius, bw.radius, { wobble: .03 }), level(bw.y, .5, 20), bw.speed, pair(bw.count), [0, 1.2, bw.stack], { ring: true, scale: bw.scale, drift: .2, bob: .15 });
+    const tr = SCHOOLS.trevally, bait = lifeSite(tr.site) || { x: 48, y: -27.8, z: -67 };
+    shoal(tr.species, route(bait.x - 1, bait.z, tr.radius * .9, tr.radius, { wobble: .1 }), level(bait.y + tr.lift, 1.6, 26), tr.speed, pair(tr.count), tr.spread);
+    const ff = SCHOOLS.flyingFish;
+    shoal(ff.species, route(...ff.loop, { wobble: .12 }), level(ff.y, .25, 9), ff.speed, pair(ff.count), ff.spread, { pose: ff.pose, drift: .3, bob: .05 });
+    // One mesh a species; the groups in sight are packed to its front each frame.
+    for (const k of kinds.values()) {
+      if (!k.capacity) continue;
+      const mesh = new THREE.InstancedMesh(k.geometry, k.material, k.capacity); mesh.name = `Creature set · ${k.species} (${k.capacity})`;
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); mesh.frustumCulled = false; mesh.count = 0; mesh.visible = false;
+      k.beats = new THREE.InstancedBufferAttribute(new Float32Array(k.capacity), 1); k.beats.setUsage(THREE.DynamicDrawUsage); mesh.geometry.setAttribute('aBeat', k.beats);
+      k.mesh = mesh; root.add(mesh); diagnostics.schoolDrawCalls++;
+    }
+  }
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(), E = new THREE.Euler(0, 0, 0, 'YXZ');
+  function write(k, x, y, z, yaw, pitch, roll, scale, beat) {
+    const slot = k.drawn++; want.set(x, y, z); E.set(-pitch, yaw, roll, 'YXZ'); M.compose(want, Q.setFromEuler(E), S.setScalar(scale)); k.mesh.setMatrixAt(slot, M); k.beats.array[slot] = beat;
+  }
+  function paintSchools(dt, player, view) {
+    for (const k of kinds.values()) k.drawn = 0;
+    const t = clock;
+    for (const g of groups) {
+      if (!g.active || !g.k.mesh) continue;
+      if (g.kind === 'shoal') { g.route.theta += g.route.dir * g.speed * dt / g.route.radius; if (g.ring) g.centre.set(g.route.cx, g.height(g.route.cx, g.route.cz, t), g.route.cz); else { along(g.route, g.route.theta, A); g.centre.set(A.x, g.height(A.x, A.z, t), A.z); } }
+      if (g.kind === 'encounter') { const e = casts.get('tuna'); if (!e?.path) continue; onPath(e, clamp(e.u, 0, 1), A, T); g.centre.set(A.x, bandHeight(e, A.x, A.z, 0), A.z); g.radius = g.spread[0] + 6; }
+      g.shown = true;
+      if (view) { sphere.center.copy(g.centre); sphere.radius = g.radius; g.shown = view.eye.distanceTo(g.centre) - g.radius < view.range * (g.kind === 'cloud' || g.kind === 'burrows' ? .55 : .8) && view.frustum.intersectsSphere(sphere); }
+      if (!g.shown) continue;
+      const k = g.k;
+      if (g.kind === 'shoal') for (const m of g.members) { const p = station(g, m, t); write(k, want.x, want.y, want.z, p.yaw, p.pitch, 0, m.scale, m.beat); }
+      else if (g.kind === 'cloud') {
+        // Holding station facing the current, darting a little; they sink into the coral as the diver comes close.
+        let near = 0; if (player) near = 1 - smoothstep(player.distanceTo(g.centre), g.radius + 1, g.radius + 7);
+        g.fear += (near - g.fear) * ease(dt, near > g.fear ? 4 : .5);
+        const tight = 1 - g.fear * .55, drop = g.fear * g.size[1] * 1.3;
+        for (const m of g.members) write(k, g.centre.x + m.hx * tight + Math.sin(t * m.w1 + m.p1) * .5, g.centre.y - drop + m.hy * tight + Math.sin(t * m.w2 + m.p2) * .3, g.centre.z + m.hz * tight + Math.cos(t * m.w1 * .9 + m.p3) * .5,
+          g.heading + Math.sin(t * m.w3 + m.p3) * .7 + Math.sin(t * m.w1 * 2.3 + m.p1) * .25, Math.sin(t * m.w2 + m.p3) * .18, 0, m.scale, m.beat);
+      } else if (g.kind === 'burrows') {
+        // Upright in the sand; as the diver comes over they draw back until only their heads show.
+        const L = facts.get(g.k.species).lengthMetres; let near = 0; if (player) near = 1 - smoothstep(player.distanceTo(g.centre), 5, 11);
+        g.sink += (near - g.sink) * ease(dt, near > g.sink ? 2.5 : .35);
+        for (const m of g.members) write(k, m.x, m.y - L * (.08 + .4 * g.sink) * m.scale, m.z, m.yaw + Math.sin(t * m.w1 + m.p1) * .4, Math.PI / 2 - .12, 0, m.scale, m.beat);
+      } else if (g.kind === 'encounter') {
+        const e = casts.get('tuna');
+        for (const m of g.members) { onPath(e, clamp(e.u - m.back / e.path.len, 0, 1), A, T); write(k, A.x - T.z * m.side, bandHeight(e, A.x, A.z, 0) + m.up, A.z + T.x * m.side, Math.atan2(T.x, T.z) + Math.sin(t * m.w1 + m.p1) * .05, 0, 0, m.scale, m.beat); }
+      }
+    }
+    for (const k of kinds.values()) { if (!k.mesh) continue; k.mesh.count = k.drawn; k.mesh.visible = k.drawn > 0; if (k.drawn) { k.mesh.instanceMatrix.needsUpdate = true; k.beats.needsUpdate = true; } }
+  }
+
+  // --- Loading -----------------------------------------------------------------------------------------------------
+  async function load() {
+    const manifest = await fetch(BASE + 'manifest.json').then(r => { if (!r.ok) throw new Error('Creature manifest ' + r.status); return r.json(); });
+    diagnostics.species = manifest.creatures.length;
+    let cursor = 0;
+    const worker = async () => { while (cursor < manifest.creatures.length) { const spec = manifest.creatures[cursor++]; try {
+      const gltf = await new GLTFLoader().loadAsync(BASE + spec.file); floatSkinIndices(gltf.scene); gltfs.set(spec.id, gltf); facts.set(spec.id, spec);
+      diagnostics.loaded++; diagnostics.loadedSpecies++; await turn();
+    } catch (error) { diagnostics.failed++; diagnostics.errors.push(spec.id + ': ' + error.message); } } };
+    await Promise.all([worker(), worker()]);
+    // Each step is timed, and the longest stretch without a pause is kept: none of this should hold up a frame.
+    const timed = (name, fn) => { const t = performance.now(), out = fn(), ms = performance.now() - t; diagnostics.loading[name] = (diagnostics.loading[name] || 0) + Math.round(ms * 10) / 10; diagnostics.loading.longest = Math.max(diagnostics.loading.longest || 0, Math.round(ms * 10) / 10); return out; };
+    const started = performance.now();
+    await buildCover();
+    // The lighter shapes for animals seen far off: built once a species, a species a slice.
+    for (const id of gltfs.keys()) { if (facts.get(id).lengthMetres > 2.5 || id === 'remora') { timed('lighter', () => lighter.set(id, creatureGeometry(id, { lod: 1 }))); await turn(); } }
+    // And the shapes the schools are drawn with, likewise a species a slice, so building the schools is quick.
+    for (const s of [...Object.values(SCHOOLS), ...Object.values(ENCOUNTERS).flatMap(slot => slot.kinds.map(kind => kind.school).filter(Boolean))]) {
+      if (!gltfs.has(s.species)) continue; timed('school shapes', () => creatureGeometry(s.species, { lod: s.lod ?? 1, pose: s.pose ?? null })); await turn();
+    }
+    timed('residents', buildResidents); await turn();
+    timed('encounters', buildEncounters); await turn();
+    timed('schools', buildSchools); await turn();
+    diagnostics.loading.total = Math.round(performance.now() - started);
+    update(0); diagnostics.ready = true;
+    return diagnostics;
+  }
+
+  /** view: { frustum, eye, range } or null (the orbit viewer: everything resident is drawn). */
+  function update(dt = 0, player = null, view = null) {
+    const step = Math.min(.1, Math.max(0, dt)); clock += step; frame++; swimTime.value = clock;
+    if (step > 0) { direct(step, player, view); driveResidents(step, player); }
+    for (const a of actors) present(a, step, view);
+    paintSchools(step, player, view);
+  }
+
+  Object.defineProperties(diagnostics, {
+    count: { enumerable: true, get: () => diagnostics.visitorCount + diagnostics.schoolFish },
+    shown: { enumerable: true, get: () => ({ skinned: actors.filter(a => a.seen).length, instances: [...kinds.values()].reduce((sum, k) => sum + (k.drawn || 0), 0), encounters: [...diagnostics.encounters.active] }) },
+    finite: { enumerable: true, get: () => actors.every(a => a.pos.toArray().every(Number.isFinite)) }
+  });
+  const sitesNow = () => [...actors.filter(a => a.active).map(a => ({ id: a.name, species: a.species, kind: 'animal', position: a.pos.toArray(), length: a.L, seen: a.seen })),
+    ...groups.filter(g => g.active).map(g => ({ id: g.name, species: g.k.species, kind: g.kind, position: g.centre.toArray(), length: g.radius, seen: g.shown }))];
+  const debug = {
+    /** Bring an encounter in now, wherever the diver is: 'whale', 'whale-shark', 'orcas', 'dolphins', 'blacktips', 'tuna'. */
+    spawn(id, player = null, view = null) { const e = casts.get(id); if (!e) return false; const s = slots.find(item => item.slot === e.slot); if (s.active) end(s.active); begin(e, player, view); s.active = e; return true; },
+    slots: () => slots.map(s => ({ slot: s.slot, active: s.active?.id || null, wait: Math.round(s.wait), progress: s.active ? +s.active.u.toFixed(3) : null })),
+    /** Move an encounter under way to a point of its pass (0..1; .5 is its closest approach). */
+    seek(id, u) { const e = casts.get(id); if (!e?.path) return false; e.u = u; for (const c of e.cast) c.actor.started = false; for (const r of e.riders) r.actor.started = false; return true; }
+  };
+  return { root, load, update, diagnostics, sites: sitesNow, debug };
 }

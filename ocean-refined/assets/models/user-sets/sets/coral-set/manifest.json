@@ -2,6 +2,7 @@
  "units": "metres",
  "up": "+Y",
  "base": "y = 0",
+ "scale": "Sized for the site: small reef fish match the schooling fish already in the scene, larger animals keep their order with the gaps squeezed (creature-species.js, siteLength). Real lengths are given alongside.",
  "license": "Made in code for this project; no third-party assets",
  "corals": [
   {
@@ -9,221 +10,234 @@
    "name": "Elkhorn coral",
    "scientific": "Acropora palmata",
    "group": "coral",
-   "widthMetres": 2,
+   "widthMetres": 5.99,
+   "realWidthMetres": 2,
    "boundsMetres": [
-    1.773,
-    1.326,
-    2.157
+    5.309,
+    3.969,
+    6.459
    ],
-   "triangles": 281,
+   "triangles": 287,
    "zone": "shallow",
    "note": "Shallow reef, in strong light",
    "file": "coral-elkhorn.glb",
-   "bytes": 31840
+   "bytes": 32508
   },
   {
    "id": "coral-fire",
    "name": "Blade fire coral",
    "scientific": "Millepora complanata",
    "group": "coral",
-   "widthMetres": 0.55,
+   "widthMetres": 2.53,
+   "realWidthMetres": 0.55,
    "boundsMetres": [
-    0.561,
-    0.505,
-    0.322
+    2.579,
+    2.323,
+    1.481
    ],
    "triangles": 132,
    "zone": "shallow",
    "note": "Shallow reef, in strong light",
    "file": "coral-fire.glb",
-   "bytes": 15740
+   "bytes": 15760
   },
   {
    "id": "coral-finger",
    "name": "Finger coral",
    "scientific": "Porites porites",
    "group": "coral",
-   "widthMetres": 0.7,
+   "widthMetres": 2.97,
+   "realWidthMetres": 0.7,
    "boundsMetres": [
-    0.695,
-    0.438,
-    0.607
+    2.958,
+    1.865,
+    2.586
    ],
-   "triangles": 207,
+   "triangles": 297,
    "zone": "shallow",
    "note": "Shallow reef, in strong light",
    "file": "coral-finger.glb",
-   "bytes": 23836
+   "bytes": 33584
   },
   {
    "id": "coral-cauliflower",
    "name": "Cauliflower coral",
    "scientific": "Pocillopora meandrina",
    "group": "coral",
-   "widthMetres": 0.4,
+   "widthMetres": 2.04,
+   "realWidthMetres": 0.4,
    "boundsMetres": [
-    0.315,
-    0.214,
-    0.357
+    1.758,
+    1.275,
+    1.822
    ],
    "triangles": 140,
    "zone": "shallow",
    "note": "Shallow reef, in strong light",
    "file": "coral-cauliflower.glb",
-   "bytes": 16652
+   "bytes": 16672
   },
   {
    "id": "coral-lettuce",
    "name": "Lettuce coral",
    "scientific": "Turbinaria reniformis",
    "group": "coral",
-   "widthMetres": 0.8,
+   "widthMetres": 3.25,
+   "realWidthMetres": 0.8,
    "boundsMetres": [
-    0.764,
-    0.331,
-    0.749
+    3.145,
+    1.382,
+    3.042
    ],
-   "triangles": 168,
+   "triangles": 224,
    "zone": "mid",
    "note": "Mid reef and terraces",
    "file": "coral-lettuce.glb",
-   "bytes": 19652
+   "bytes": 25720
   },
   {
    "id": "coral-vase",
    "name": "Cup coral",
    "scientific": "Turbinaria peltata",
    "group": "coral",
-   "widthMetres": 0.6,
+   "widthMetres": 2.68,
+   "realWidthMetres": 0.6,
    "boundsMetres": [
-    0.591,
-    0.603,
-    0.585
+    2.737,
+    2.703,
+    2.719
    ],
-   "triangles": 88,
+   "triangles": 121,
    "zone": "mid",
    "note": "Mid reef and terraces",
    "file": "coral-vase.glb",
-   "bytes": 10976
+   "bytes": 14564
   },
   {
    "id": "coral-toadstool",
    "name": "Toadstool leather coral",
    "scientific": "Sarcophyton glaucum",
    "group": "coral",
-   "widthMetres": 0.65,
+   "widthMetres": 2.83,
+   "realWidthMetres": 0.65,
    "boundsMetres": [
-    0.622,
-    0.514,
-    0.61
+    2.672,
+    2.256,
+    2.64
    ],
-   "triangles": 94,
+   "triangles": 123,
    "zone": "mid",
    "note": "Mid reef and terraces",
    "file": "coral-toadstool.glb",
-   "bytes": 11680
+   "bytes": 14836
   },
   {
    "id": "coral-bubble",
    "name": "Bubble coral",
    "scientific": "Plerogyra sinuosa",
    "group": "coral",
-   "widthMetres": 0.4,
+   "widthMetres": 2.04,
+   "realWidthMetres": 0.4,
    "boundsMetres": [
-    0.329,
-    0.265,
-    0.359
+    1.678,
+    1.239,
+    1.833
    ],
    "triangles": 128,
    "zone": "mid",
    "note": "Mid reef and terraces",
    "file": "coral-bubble.glb",
-   "bytes": 15276
+   "bytes": 15300
   },
   {
    "id": "coral-organpipe",
    "name": "Organ pipe coral",
    "scientific": "Tubipora musica",
    "group": "coral",
-   "widthMetres": 0.45,
+   "widthMetres": 2.21,
+   "realWidthMetres": 0.45,
    "boundsMetres": [
-    0.463,
-    0.374,
-    0.436
+    2.276,
+    1.839,
+    2.12
    ],
-   "triangles": 156,
+   "triangles": 228,
    "zone": "mid",
    "note": "Mid reef and terraces",
    "file": "coral-organpipe.glb",
-   "bytes": 18356
+   "bytes": 26152
   },
   {
    "id": "coral-starmound",
    "name": "Great star coral",
    "scientific": "Montastraea cavernosa",
    "group": "coral",
-   "widthMetres": 1.1,
+   "widthMetres": 4.02,
+   "realWidthMetres": 1.1,
    "boundsMetres": [
-    1.02,
-    0.52,
-    1.048
+    3.994,
+    1.899,
+    3.857
    ],
-   "triangles": 176,
+   "triangles": 270,
    "zone": "mid",
    "note": "Mid reef and terraces",
    "file": "coral-starmound.glb",
-   "bytes": 20532
+   "bytes": 30704
   },
   {
    "id": "coral-softtree",
    "name": "Soft tree coral",
    "scientific": "Dendronephthya sp.",
    "group": "coral",
-   "widthMetres": 0.65,
+   "widthMetres": 2.83,
+   "realWidthMetres": 0.65,
    "boundsMetres": [
-    0.546,
-    0.785,
-    0.52
+    2.375,
+    3.42,
+    2.263
    ],
-   "triangles": 195,
+   "triangles": 221,
    "zone": "deep",
    "note": "Deep slope and rock faces",
    "file": "coral-softtree.glb",
-   "bytes": 22560
+   "bytes": 25388
   },
   {
    "id": "coral-suncoral",
    "name": "Orange sun coral",
    "scientific": "Tubastraea coccinea",
    "group": "coral",
-   "widthMetres": 0.4,
+   "widthMetres": 2.04,
+   "realWidthMetres": 0.4,
    "boundsMetres": [
-    0.312,
-    0.296,
-    0.396
+    1.592,
+    1.51,
+    2.032
    ],
-   "triangles": 205,
+   "triangles": 255,
    "zone": "deep",
    "note": "Deep slope and rock faces",
    "file": "coral-suncoral.glb",
-   "bytes": 23644
+   "bytes": 29064
   },
   {
    "id": "coral-searod",
    "name": "Candelabra sea rod",
    "scientific": "Eunicea sp.",
    "group": "coral",
-   "widthMetres": 0.8,
+   "widthMetres": 3.25,
+   "realWidthMetres": 0.8,
    "boundsMetres": [
-    0.645,
-    1.253,
-    0.349
+    2.653,
+    5.091,
+    1.424
    ],
-   "triangles": 187,
+   "triangles": 279,
    "zone": "deep",
    "note": "Deep slope and rock faces",
    "file": "coral-searod.glb",
-   "bytes": 21700
+   "bytes": 31660
   }
  ]
 }

@@ -2,6 +2,7 @@
  "units": "metres",
  "forward": "+Z",
  "up": "+Y",
+ "scale": "Sized for the site: small reef fish match the schooling fish already in the scene, larger animals keep their order with the gaps squeezed (creature-species.js, siteLength). Real lengths are given alongside.",
  "license": "Made in code for this project; no third-party assets",
  "creatures": [
   {
@@ -9,746 +10,1444 @@
    "name": "Southern right whale",
    "scientific": "Eubalaena australis",
    "group": "whale",
-   "lengthMetres": 14,
+   "lengthMetres": 21.98,
+   "realLengthMetres": 14,
    "boundsMetres": [
-    5.495,
-    3.416,
-    14.02
+    8.627,
+    5.363,
+    22.011
    ],
-   "triangles": 844,
+   "triangles": 1940,
    "bones": 9,
    "clips": [
     {
      "name": "swim",
-     "seconds": 6.4
+     "seconds": 6.4,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 3.6
+     "seconds": 3.6,
+     "loop": true
     },
     {
      "name": "idle",
-     "seconds": 9
+     "seconds": 9,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 6.4,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 6.4,
+     "loop": true
+    },
+    {
+     "name": "breach",
+     "seconds": 5,
+     "loop": false
+    },
+    {
+     "name": "fluke_dive",
+     "seconds": 6,
+     "loop": false
     }
    ],
-   "note": "No dorsal fin, a head a quarter of its length, pale callosities and broad paddle flippers.",
+   "note": "No dorsal fin, a head a quarter of its length, pale callosities, a bowed lip line and broad paddle flippers.",
    "file": "right-whale.glb",
-   "bytes": 189704
+   "bytes": 497776
   },
   {
    "id": "whale-shark",
    "name": "Whale shark",
    "scientific": "Rhincodon typus",
    "group": "shark",
-   "lengthMetres": 9.5,
+   "lengthMetres": 16.96,
+   "realLengthMetres": 9.5,
    "boundsMetres": [
-    3.237,
-    3.344,
-    9.5
+    5.78,
+    5.97,
+    16.96
    ],
-   "triangles": 1118,
-   "bones": 10,
+   "triangles": 1126,
+   "bones": 11,
    "clips": [
     {
      "name": "swim",
-     "seconds": 4.6
+     "seconds": 4.6,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 2.8
+     "seconds": 2.8,
+     "loop": true
     },
     {
      "name": "idle",
-     "seconds": 7
+     "seconds": 7,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 4.6,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 4.6,
+     "loop": true
+    },
+    {
+     "name": "feed",
+     "seconds": 5.5,
+     "loop": true
+    },
+    {
+     "name": "surface_feed",
+     "seconds": 6,
+     "loop": false
     }
    ],
-   "note": "A broad flat head with the mouth across its front, pale spots in rows, and a tall crescent tail.",
+   "note": "A broad flat head with the mouth across its front, pale spots and bars in a checkerboard, a tall crescent tail.",
    "file": "whale-shark.glb",
-   "bytes": 242572
+   "bytes": 453096
   },
   {
    "id": "orca",
    "name": "Orca (bull)",
    "scientific": "Orcinus orca",
    "group": "whale",
-   "lengthMetres": 6.6,
+   "lengthMetres": 13.3,
+   "realLengthMetres": 6.6,
    "boundsMetres": [
-    2.323,
-    2.834,
-    6.542
+    4.682,
+    5.71,
+    13.183
    ],
-   "triangles": 712,
+   "triangles": 1036,
    "bones": 10,
    "clips": [
     {
      "name": "swim",
-     "seconds": 2.8
+     "seconds": 2.8,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 1.5
+     "seconds": 1.5,
+     "loop": true
     },
     {
      "name": "idle",
-     "seconds": 5
+     "seconds": 5,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 2.8,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 2.8,
+     "loop": true
+    },
+    {
+     "name": "lunge",
+     "seconds": 3.22,
+     "loop": false
+    },
+    {
+     "name": "breach",
+     "seconds": 3.4,
+     "loop": false
+    },
+    {
+     "name": "spyhop",
+     "seconds": 6,
+     "loop": false
+    },
+    {
+     "name": "flipper_slap",
+     "seconds": 2.6,
+     "loop": false
     }
    ],
    "note": "The bull carries a dorsal fin as tall as a diver, with a grey saddle behind it.",
    "file": "orca.glb",
-   "bytes": 169280
+   "bytes": 396572
   },
   {
    "id": "orca-cow",
    "name": "Orca (female)",
    "scientific": "Orcinus orca",
    "group": "whale",
-   "lengthMetres": 5.6,
+   "lengthMetres": 11.92,
+   "realLengthMetres": 5.6,
    "boundsMetres": [
-    1.971,
-    1.707,
-    5.551
+    4.196,
+    3.633,
+    11.815
    ],
-   "triangles": 712,
+   "triangles": 1036,
    "bones": 10,
    "clips": [
     {
      "name": "swim",
-     "seconds": 2.8
+     "seconds": 2.8,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 1.5
+     "seconds": 1.5,
+     "loop": true
     },
     {
      "name": "idle",
-     "seconds": 5
+     "seconds": 5,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 2.8,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 2.8,
+     "loop": true
+    },
+    {
+     "name": "lunge",
+     "seconds": 3.22,
+     "loop": false
+    },
+    {
+     "name": "breach",
+     "seconds": 3.4,
+     "loop": false
+    },
+    {
+     "name": "spyhop",
+     "seconds": 6,
+     "loop": false
+    },
+    {
+     "name": "flipper_slap",
+     "seconds": 2.6,
+     "loop": false
     }
    ],
-   "note": "A shorter, back-curved dorsal fin; the calf swims as a half-size cow.",
+   "note": "A shorter, back-curved dorsal fin; a calf is the cow at half size.",
    "file": "orca-cow.glb",
-   "bytes": 169324
+   "bytes": 396632
   },
   {
    "id": "pink-whipray",
    "name": "Pink whipray",
    "scientific": "Pateobatis fai",
    "group": "ray",
-   "lengthMetres": 3,
-   "discWidthMetres": 1.3,
+   "lengthMetres": 7.85,
+   "realLengthMetres": 3,
+   "discWidthMetres": 3.4,
+   "realDiscWidthMetres": 1.3,
    "boundsMetres": [
-    1.296,
-    0.117,
-    3
+    2.65,
+    0.306,
+    7.85
    ],
-   "triangles": 448,
+   "triangles": 888,
    "bones": 17,
    "clips": [
     {
      "name": "swim",
-     "seconds": 2.3
+     "seconds": 2.3,
+     "loop": true
     },
     {
      "name": "glide",
-     "seconds": 4.5
+     "seconds": 4.5,
+     "loop": true
     },
     {
      "name": "rest",
-     "seconds": 3.6
+     "seconds": 3.6,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 2.3,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 2.3,
+     "loop": true
+    },
+    {
+     "name": "fast",
+     "seconds": 1.265,
+     "loop": true
+    },
+    {
+     "name": "bury",
+     "seconds": 2.6,
+     "loop": false
     }
    ],
    "note": "A kite-shaped disc a diver could lie on, plain and sandy, trailing a whip twice its own length.",
    "file": "pink-whipray.glb",
-   "bytes": 144900
+   "bytes": 370712
   },
   {
    "id": "bottlenose-dolphin",
    "name": "Bottlenose dolphin",
    "scientific": "Tursiops aduncus",
    "group": "whale",
-   "lengthMetres": 2.7,
+   "lengthMetres": 7.32,
+   "realLengthMetres": 2.7,
    "boundsMetres": [
-    0.691,
-    0.716,
-    2.668
+    1.874,
+    1.942,
+    7.234
    ],
-   "triangles": 676,
+   "triangles": 1056,
    "bones": 9,
    "clips": [
     {
      "name": "swim",
-     "seconds": 1.15
+     "seconds": 1.15,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 0.62
+     "seconds": 0.62,
+     "loop": true
     },
     {
      "name": "idle",
-     "seconds": 2.6
+     "seconds": 2.6,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 1.15,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 1.15,
+     "loop": true
+    },
+    {
+     "name": "burst",
+     "seconds": 1.322,
+     "loop": false
+    },
+    {
+     "name": "leap",
+     "seconds": 1.7,
+     "loop": false
+    },
+    {
+     "name": "spin",
+     "seconds": 1.5,
+     "loop": false
+    },
+    {
+     "name": "surf",
+     "seconds": 3,
+     "loop": true
     }
    ],
-   "note": "A short beak under a rounded melon, a hooked dorsal fin and a three-tone grey coat.",
+   "note": "A short beak under a rounded melon, a hooked dorsal fin and a three-tone grey coat with a darker cape.",
    "file": "bottlenose-dolphin.glb",
-   "bytes": 159636
+   "bytes": 385424
   },
   {
    "id": "nurse-shark",
    "name": "Tawny nurse shark",
    "scientific": "Nebrius ferrugineus",
    "group": "shark",
-   "lengthMetres": 2.6,
+   "lengthMetres": 7.14,
+   "realLengthMetres": 2.6,
    "boundsMetres": [
-    0.653,
-    0.43,
-    2.599
+    1.794,
+    1.182,
+    7.136
    ],
-   "triangles": 630,
+   "triangles": 990,
    "bones": 10,
    "clips": [
     {
      "name": "swim",
-     "seconds": 2.6
+     "seconds": 2.6,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 1.4
+     "seconds": 1.4,
+     "loop": true
     },
     {
      "name": "rest",
-     "seconds": 4.2
+     "seconds": 4.2,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 2.6,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 2.6,
+     "loop": true
+    },
+    {
+     "name": "burst",
+     "seconds": 2.99,
+     "loop": false
+    },
+    {
+     "name": "suck",
+     "seconds": 1.4,
+     "loop": false
     }
    ],
    "note": "A wide blunt head with barbels, two dorsal fins set far back, and a long low tail with no lower lobe.",
    "file": "nurse-shark.glb",
-   "bytes": 154788
+   "bytes": 381392
+  },
+  {
+   "id": "giant-moray",
+   "name": "Giant moray",
+   "scientific": "Gymnothorax javanicus",
+   "group": "eel",
+   "lengthMetres": 6.95,
+   "realLengthMetres": 2.5,
+   "boundsMetres": [
+    0.473,
+    0.762,
+    6.95
+   ],
+   "triangles": 878,
+   "bones": 13,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 2.4,
+     "loop": true
+    },
+    {
+     "name": "fast",
+     "seconds": 1.32,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 2.4,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 2.4,
+     "loop": true
+    },
+    {
+     "name": "breathe",
+     "seconds": 3.2,
+     "loop": true
+    },
+    {
+     "name": "strike",
+     "seconds": 1.3,
+     "loop": false
+    }
+   ],
+   "note": "A heavy, leopard-spotted eel with a black patch at the gill and a mouth always working.",
+   "file": "giant-moray.glb",
+   "bytes": 524540
   },
   {
    "id": "blacktip-reef-shark",
    "name": "Blacktip reef shark",
    "scientific": "Carcharhinus melanopterus",
    "group": "shark",
-   "lengthMetres": 1.6,
+   "lengthMetres": 5.16,
+   "realLengthMetres": 1.6,
    "boundsMetres": [
-    0.364,
-    0.499,
-    1.598
+    1.175,
+    1.61,
+    5.155
    ],
-   "triangles": 700,
+   "triangles": 1100,
    "bones": 10,
    "clips": [
     {
      "name": "swim",
-     "seconds": 1.5
+     "seconds": 1.5,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 0.7
+     "seconds": 0.7,
+     "loop": true
     },
     {
      "name": "idle",
-     "seconds": 2.4
+     "seconds": 2.4,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 1.5,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 1.5,
+     "loop": true
+    },
+    {
+     "name": "burst",
+     "seconds": 1.725,
+     "loop": false
+    },
+    {
+     "name": "threat",
+     "seconds": 1.1,
+     "loop": true
     }
    ],
    "note": "Every fin dipped in black, the dorsal tip underlined in white, and a pale wedge along the flank.",
    "file": "blacktip-reef-shark.glb",
-   "bytes": 167480
+   "bytes": 376320
   },
   {
    "id": "yellowfin-tuna",
    "name": "Yellowfin tuna",
    "scientific": "Thunnus albacares",
    "group": "fish",
-   "lengthMetres": 1.5,
+   "lengthMetres": 4.94,
+   "realLengthMetres": 1.5,
    "boundsMetres": [
-    0.321,
-    0.632,
-    1.5
+    1.057,
+    2.082,
+    4.94
    ],
-   "triangles": 902,
+   "triangles": 1322,
    "bones": 9,
    "clips": [
     {
      "name": "swim",
-     "seconds": 0.5
+     "seconds": 0.5,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 0.28
+     "seconds": 0.28,
+     "loop": true
     },
     {
      "name": "idle",
-     "seconds": 0.8
+     "seconds": 0.8,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.5,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.5,
+     "loop": true
+    },
+    {
+     "name": "strike",
+     "seconds": 0.7,
+     "loop": false
     }
    ],
    "note": "A torpedo with a gold flank stripe, yellow sickle fins and finlets, and a hard crescent tail.",
    "file": "yellowfin-tuna.glb",
-   "bytes": 195472
+   "bytes": 383492
   },
   {
    "id": "great-barracuda",
    "name": "Great barracuda",
    "scientific": "Sphyraena barracuda",
    "group": "fish",
-   "lengthMetres": 1.4,
+   "lengthMetres": 4.72,
+   "realLengthMetres": 1.4,
    "boundsMetres": [
-    0.178,
-    0.392,
-    1.4
+    0.599,
+    1.322,
+    4.72
    ],
-   "triangles": 658,
-   "bones": 9,
+   "triangles": 960,
+   "bones": 10,
    "clips": [
     {
      "name": "swim",
-     "seconds": 1.1
+     "seconds": 1.1,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 0.34
+     "seconds": 0.34,
+     "loop": true
     },
     {
      "name": "hover",
-     "seconds": 2.4
+     "seconds": 2.4,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 1.1,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 1.1,
+     "loop": true
+    },
+    {
+     "name": "strike",
+     "seconds": 0.8,
+     "loop": false
     }
    ],
    "note": "A silver pike of the sea: a long jaw that juts beneath, two small dorsals far apart, dark bars and ink blots.",
    "file": "great-barracuda.glb",
-   "bytes": 154068
+   "bytes": 299288
   },
   {
    "id": "bumphead-parrotfish",
    "name": "Bumphead parrotfish",
    "scientific": "Bolbometopon muricatum",
    "group": "fish",
-   "lengthMetres": 1.2,
+   "lengthMetres": 4.26,
+   "realLengthMetres": 1.2,
    "boundsMetres": [
-    0.261,
-    0.502,
-    1.213
+    0.928,
+    1.781,
+    4.322
    ],
-   "triangles": 664,
+   "triangles": 1172,
    "bones": 8,
    "clips": [
     {
      "name": "swim",
-     "seconds": 1.25
+     "seconds": 1.25,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 0.6
+     "seconds": 0.6,
+     "loop": true
     },
     {
      "name": "graze",
-     "seconds": 1.8
+     "seconds": 1.8,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 1.25,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 1.25,
+     "loop": true
+    },
+    {
+     "name": "burst",
+     "seconds": 1.438,
+     "loop": false
+    },
+    {
+     "name": "ram",
+     "seconds": 1.3,
+     "loop": false
     }
    ],
-   "note": "A wall of a forehead above a pale beak; it rows with its pectoral fins and stops to bite at the reef.",
+   "note": "A wall of a forehead above a pale beak; it rows with its pectoral fins, bites at the reef and rams it.",
    "file": "bumphead-parrotfish.glb",
-   "bytes": 154040
+   "bytes": 337208
+  },
+  {
+   "id": "ribbon-eel",
+   "name": "Ribbon eel",
+   "scientific": "Rhinomuraena quaesita",
+   "group": "eel",
+   "lengthMetres": 4.26,
+   "realLengthMetres": 1.2,
+   "boundsMetres": [
+    0.105,
+    0.261,
+    4.262
+   ],
+   "triangles": 848,
+   "bones": 14,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 1.8,
+     "loop": true
+    },
+    {
+     "name": "fast",
+     "seconds": 0.99,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 1.8,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 1.8,
+     "loop": true
+    },
+    {
+     "name": "breathe",
+     "seconds": 3.2,
+     "loop": true
+    },
+    {
+     "name": "strike",
+     "seconds": 1.3,
+     "loop": false
+    }
+   ],
+   "note": "A whip-thin electric-blue eel with a yellow fin and jaw, and leaf-shaped flaps flaring from its nostrils.",
+   "file": "ribbon-eel.glb",
+   "bytes": 299832
   },
   {
    "id": "giant-trevally",
    "name": "Giant trevally",
    "scientific": "Caranx ignobilis",
    "group": "fish",
-   "lengthMetres": 1.1,
+   "lengthMetres": 4.02,
+   "realLengthMetres": 1.1,
    "boundsMetres": [
-    0.206,
-    0.465,
-    1.101
+    0.752,
+    1.699,
+    4.024
    ],
-   "triangles": 708,
+   "triangles": 1128,
    "bones": 9,
    "clips": [
     {
      "name": "swim",
-     "seconds": 0.78
+     "seconds": 0.78,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 0.36
+     "seconds": 0.36,
+     "loop": true
     },
     {
      "name": "idle",
-     "seconds": 1.3
+     "seconds": 1.3,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.78,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.78,
+     "loop": true
+    },
+    {
+     "name": "strike",
+     "seconds": 0.897,
+     "loop": false
     }
    ],
    "note": "A deep silver body with a steep blunt forehead, sickle pectorals and a hard forked tail.",
    "file": "giant-trevally.glb",
-   "bytes": 165548
+   "bytes": 312148
   },
   {
    "id": "bluespotted-ray",
    "name": "Bluespotted ribbontail ray",
    "scientific": "Taeniura lymma",
    "group": "ray",
-   "lengthMetres": 0.7,
-   "discWidthMetres": 0.3,
+   "lengthMetres": 2.97,
+   "realLengthMetres": 0.7,
+   "discWidthMetres": 1.27,
+   "realDiscWidthMetres": 0.3,
    "boundsMetres": [
-    0.301,
-    0.037,
-    0.7
+    0.998,
+    0.154,
+    2.97
    ],
-   "triangles": 568,
+   "triangles": 692,
    "bones": 17,
    "clips": [
     {
      "name": "swim",
-     "seconds": 1.1
+     "seconds": 1.1,
+     "loop": true
     },
     {
-     "name": "fast",
-     "seconds": 0.6
+     "name": "glide",
+     "seconds": 2.6,
+     "loop": true
     },
     {
      "name": "rest",
-     "seconds": 3
+     "seconds": 3,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 1.1,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 1.1,
+     "loop": true
+    },
+    {
+     "name": "fast",
+     "seconds": 0.605,
+     "loop": true
+    },
+    {
+     "name": "bury",
+     "seconds": 2.6,
+     "loop": false
     }
    ],
-   "note": "An ochre oval the size of a dinner plate, scattered with electric-blue spots, with a blue-striped tail.",
+   "note": "An ochre oval scattered with electric-blue spots, with a blue-striped tail and bulging golden eyes.",
    "file": "bluespotted-ray.glb",
-   "bytes": 166612
+   "bytes": 298752
   },
   {
    "id": "remora",
    "name": "Live sharksucker",
    "scientific": "Echeneis naucrates",
    "group": "fish",
-   "lengthMetres": 0.6,
+   "lengthMetres": 2.68,
+   "realLengthMetres": 0.6,
    "boundsMetres": [
-    0.096,
-    0.081,
-    0.596
+    0.43,
+    0.364,
+    2.661
    ],
-   "triangles": 634,
+   "triangles": 1098,
    "bones": 9,
    "clips": [
     {
      "name": "swim",
-     "seconds": 0.8
+     "seconds": 0.8,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 0.42
+     "seconds": 0.42,
+     "loop": true
     },
     {
      "name": "ride",
-     "seconds": 1.7
+     "seconds": 1.7,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.8,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.8,
+     "loop": true
+    },
+    {
+     "name": "detach",
+     "seconds": 0.92,
+     "loop": false
     }
    ],
    "note": "A slim hitch-hiker with a sucker plate on its crown and an ink stripe edged in white.",
    "file": "remora.glb",
-   "bytes": 151972
+   "bytes": 279476
+  },
+  {
+   "id": "garden-eel",
+   "name": "Spotted garden eel",
+   "scientific": "Heteroconger hassi",
+   "group": "eel",
+   "lengthMetres": 2.04,
+   "realLengthMetres": 0.4,
+   "boundsMetres": [
+    0.072,
+    0.08,
+    2.04
+   ],
+   "triangles": 686,
+   "bones": 13,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.9,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.9,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.9,
+     "loop": true
+    },
+    {
+     "name": "sway",
+     "seconds": 4,
+     "loop": true
+    },
+    {
+     "name": "retreat",
+     "seconds": 0.9,
+     "loop": false
+    }
+   ],
+   "note": "A thread of a fish, white with black flecks, that stands half out of the sand to pick plankton from the current.",
+   "file": "garden-eel.glb",
+   "bytes": 284260
   },
   {
    "id": "emperor-angelfish",
    "name": "Emperor angelfish",
    "scientific": "Pomacanthus imperator",
    "group": "small",
-   "lengthMetres": 0.35,
+   "lengthMetres": 1.87,
+   "realLengthMetres": 0.35,
    "boundsMetres": [
-    0.07,
-    0.21,
-    0.35
+    0.376,
+    1.122,
+    1.87
    ],
-   "triangles": 598,
+   "triangles": 834,
    "bones": 8,
    "clips": [
     {
      "name": "swim",
-     "seconds": 0.5
+     "seconds": 0.5,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 0.25
+     "seconds": 0.25,
+     "loop": true
     },
     {
      "name": "idle",
-     "seconds": 1.1
+     "seconds": 1.1,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.5,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.5,
+     "loop": true
+    },
+    {
+     "name": "dart",
+     "seconds": 0.45,
+     "loop": false
     }
    ],
    "note": "Yellow and royal-blue pinstripes running nose to tail behind a black mask edged in light blue.",
    "file": "emperor-angelfish.glb",
-   "bytes": 141956
+   "bytes": 272684
   },
   {
    "id": "flying-fish",
    "name": "Two-wing flying fish",
    "scientific": "Exocoetus volitans",
    "group": "fish",
-   "lengthMetres": 0.3,
+   "lengthMetres": 1.69,
+   "realLengthMetres": 0.3,
    "boundsMetres": [
-    0.362,
-    0.081,
-    0.3
+    2.039,
+    0.456,
+    1.69
    ],
-   "triangles": 536,
+   "triangles": 896,
    "bones": 10,
    "clips": [
     {
      "name": "swim",
-     "seconds": 0.34
+     "seconds": 0.34,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.34,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.34,
+     "loop": true
     },
     {
      "name": "glide",
-     "seconds": 1.2
+     "seconds": 1.2,
+     "loop": true
     },
     {
      "name": "taxi",
-     "seconds": 0.16
+     "seconds": 0.16,
+     "loop": true
+    },
+    {
+     "name": "launch",
+     "seconds": 1.2,
+     "loop": false
+    },
+    {
+     "name": "land",
+     "seconds": 0.8,
+     "loop": false
+    },
+    {
+     "name": "burst",
+     "seconds": 0.5,
+     "loop": false
     }
    ],
    "note": "Pectoral fins as long as its body, held spread to glide; underwater they lie folded along its flanks.",
    "file": "flying-fish.glb",
-   "bytes": 133012
+   "bytes": 290580
   },
   {
    "id": "fusilier",
    "name": "Yellow-and-blueback fusilier",
    "scientific": "Caesio teres",
    "group": "small",
-   "lengthMetres": 0.3,
+   "lengthMetres": 1.69,
+   "realLengthMetres": 0.3,
    "boundsMetres": [
-    0.062,
-    0.086,
-    0.294
+    0.352,
+    0.485,
+    1.656
    ],
-   "triangles": 436,
+   "triangles": 724,
    "bones": 8,
    "clips": [
     {
      "name": "swim",
-     "seconds": 0.36
+     "seconds": 0.36,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 0.18
+     "seconds": 0.18,
+     "loop": true
     },
     {
      "name": "idle",
-     "seconds": 0.792
+     "seconds": 0.792,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.36,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.36,
+     "loop": true
+    },
+    {
+     "name": "dart",
+     "seconds": 0.45,
+     "loop": false
     }
    ],
    "note": "Streamlined blue fish with a yellow back and tail, pouring along the reef edge in ribbons.",
    "file": "fusilier.glb",
-   "bytes": 112952
+   "bytes": 250208
   },
   {
    "id": "moorish-idol",
    "name": "Moorish idol",
    "scientific": "Zanclus cornutus",
    "group": "small",
-   "lengthMetres": 0.2,
+   "lengthMetres": 1.29,
+   "realLengthMetres": 0.2,
    "boundsMetres": [
-    0.037,
-    0.293,
-    0.2
+    0.241,
+    1.889,
+    1.29
    ],
-   "triangles": 496,
+   "triangles": 744,
    "bones": 8,
    "clips": [
     {
      "name": "swim",
-     "seconds": 0.42
+     "seconds": 0.42,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 0.21
+     "seconds": 0.21,
+     "loop": true
     },
     {
      "name": "idle",
-     "seconds": 0.924
+     "seconds": 0.924,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.42,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.42,
+     "loop": true
+    },
+    {
+     "name": "dart",
+     "seconds": 0.45,
+     "loop": false
     }
    ],
    "note": "Black, white and yellow bands under a dorsal streamer longer than the fish.",
    "file": "moorish-idol.glb",
-   "bytes": 123804
+   "bytes": 231048
   },
   {
    "id": "powder-blue-tang",
    "name": "Powder blue tang",
    "scientific": "Acanthurus leucosternon",
    "group": "small",
-   "lengthMetres": 0.2,
+   "lengthMetres": 1.29,
+   "realLengthMetres": 0.2,
    "boundsMetres": [
-    0.039,
-    0.116,
-    0.196
+    0.25,
+    0.748,
+    1.264
    ],
-   "triangles": 436,
+   "triangles": 724,
    "bones": 8,
    "clips": [
     {
      "name": "swim",
-     "seconds": 0.38
+     "seconds": 0.38,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 0.19
+     "seconds": 0.19,
+     "loop": true
     },
     {
      "name": "idle",
-     "seconds": 0.836
+     "seconds": 0.836,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.38,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.38,
+     "loop": true
+    },
+    {
+     "name": "dart",
+     "seconds": 0.45,
+     "loop": false
     }
    ],
    "note": "Powder-blue flanks, a black mask, a white throat and a yellow dorsal fin.",
    "file": "powder-blue-tang.glb",
-   "bytes": 113004
+   "bytes": 242404
   },
   {
    "id": "butterflyfish",
    "name": "Threadfin butterflyfish",
    "scientific": "Chaetodon auriga",
    "group": "small",
-   "lengthMetres": 0.16,
+   "lengthMetres": 1.11,
+   "realLengthMetres": 0.16,
    "boundsMetres": [
-    0.031,
-    0.101,
-    0.16
+    0.215,
+    0.701,
+    1.11
    ],
-   "triangles": 438,
+   "triangles": 674,
    "bones": 8,
    "clips": [
     {
      "name": "swim",
-     "seconds": 0.4
+     "seconds": 0.4,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 0.2
+     "seconds": 0.2,
+     "loop": true
     },
     {
      "name": "idle",
-     "seconds": 0.88
+     "seconds": 0.88,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.4,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.4,
+     "loop": true
+    },
+    {
+     "name": "dart",
+     "seconds": 0.45,
+     "loop": false
     }
    ],
-   "note": "A white disc that turns to yellow at the back, a black bar through the eye and a pointed snout.",
+   "note": "A white disc crossed with fine chevrons, yellow behind, a black bar through the eye and a dark spot on the dorsal fin.",
    "file": "butterflyfish.glb",
-   "bytes": 113356
+   "bytes": 238960
   },
   {
    "id": "sergeant-major",
    "name": "Indo-Pacific sergeant",
    "scientific": "Abudefduf vaigiensis",
    "group": "small",
-   "lengthMetres": 0.15,
+   "lengthMetres": 1.06,
+   "realLengthMetres": 0.15,
    "boundsMetres": [
-    0.033,
-    0.089,
-    0.147
+    0.236,
+    0.632,
+    1.039
    ],
-   "triangles": 532,
+   "triangles": 724,
    "bones": 8,
    "clips": [
     {
      "name": "swim",
-     "seconds": 0.32
+     "seconds": 0.32,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 0.16
+     "seconds": 0.16,
+     "loop": true
     },
     {
      "name": "idle",
-     "seconds": 0.704
+     "seconds": 0.704,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.32,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.32,
+     "loop": true
+    },
+    {
+     "name": "dart",
+     "seconds": 0.45,
+     "loop": false
     }
    ],
    "note": "Five black bars on silver, with a wash of yellow along the back.",
    "file": "sergeant-major.glb",
-   "bytes": 130292
+   "bytes": 249076
   },
   {
    "id": "anthias",
    "name": "Sea goldie",
    "scientific": "Pseudanthias squamipinnis",
    "group": "small",
-   "lengthMetres": 0.1,
+   "lengthMetres": 0.81,
+   "realLengthMetres": 0.1,
    "boundsMetres": [
-    0.02,
-    0.034,
-    0.103
+    0.163,
+    0.275,
+    0.834
    ],
-   "triangles": 420,
+   "triangles": 724,
    "bones": 8,
    "clips": [
     {
      "name": "swim",
-     "seconds": 0.32
+     "seconds": 0.32,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 0.16
+     "seconds": 0.16,
+     "loop": true
     },
     {
      "name": "idle",
-     "seconds": 0.704
+     "seconds": 0.704,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.32,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.32,
+     "loop": true
+    },
+    {
+     "name": "dart",
+     "seconds": 0.45,
+     "loop": false
     }
    ],
    "note": "Orange clouds over every coral head; they drop into the branches when a shadow passes.",
    "file": "anthias.glb",
-   "bytes": 110096
+   "bytes": 229004
   },
   {
    "id": "cleaner-wrasse",
    "name": "Bluestreak cleaner wrasse",
    "scientific": "Labroides dimidiatus",
    "group": "small",
-   "lengthMetres": 0.1,
+   "lengthMetres": 0.81,
+   "realLengthMetres": 0.1,
    "boundsMetres": [
-    0.019,
-    0.023,
-    0.1
+    0.151,
+    0.185,
+    0.81
    ],
-   "triangles": 390,
+   "triangles": 674,
    "bones": 8,
    "clips": [
     {
      "name": "swim",
-     "seconds": 0.3
+     "seconds": 0.3,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 0.15
+     "seconds": 0.15,
+     "loop": true
     },
     {
      "name": "idle",
-     "seconds": 0.66
+     "seconds": 0.66,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.3,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.3,
+     "loop": true
+    },
+    {
+     "name": "dart",
+     "seconds": 0.45,
+     "loop": false
+    },
+    {
+     "name": "dance",
+     "seconds": 0.5,
+     "loop": true
     }
    ],
    "note": "A finger of blue with a black stripe that widens to the tail; it dances to advertise its trade.",
    "file": "cleaner-wrasse.glb",
-   "bytes": 104760
+   "bytes": 250268
   },
   {
    "id": "chromis",
    "name": "Blue-green chromis",
    "scientific": "Chromis viridis",
    "group": "small",
-   "lengthMetres": 0.08,
+   "lengthMetres": 0.7,
+   "realLengthMetres": 0.08,
    "boundsMetres": [
-    0.017,
-    0.035,
-    0.078
+    0.151,
+    0.309,
+    0.686
    ],
-   "triangles": 420,
+   "triangles": 724,
    "bones": 8,
    "clips": [
     {
      "name": "swim",
-     "seconds": 0.32
+     "seconds": 0.32,
+     "loop": true
     },
     {
      "name": "fast",
-     "seconds": 0.16
+     "seconds": 0.16,
+     "loop": true
     },
     {
      "name": "idle",
-     "seconds": 0.704
+     "seconds": 0.704,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.32,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.32,
+     "loop": true
+    },
+    {
+     "name": "dart",
+     "seconds": 0.45,
+     "loop": false
     }
    ],
    "note": "Pale sea-glass fish that hang above branching coral in a loose shimmer.",
    "file": "chromis.glb",
-   "bytes": 110092
+   "bytes": 227020
   }
  ]
 }

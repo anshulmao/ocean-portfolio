@@ -34,7 +34,7 @@ export function createUserCorals({terrainHeightAt,collisions,economy=false}={}){
         }
         chosen.push(item);available.splice(available.indexOf(item),1);
       }
-      selected[zone]=chosen;diagnostics.patches.push(...chosen.map(p=>({...p,zone,radius:5})));
+      selected[zone]=chosen;diagnostics.patches.push(...chosen.map(p=>({...p,zone,radius:7})));
     }
     return selected;
   }
@@ -76,9 +76,10 @@ export function createUserCorals({terrainHeightAt,collisions,economy=false}={}){
         for(let i=0;i<target;i++){
           let placed=false;
           for(let attempt=0;attempt<100&&!placed&&anchors.length;attempt++){
-            const anchor=anchors[(i+Math.floor(attempt/25))%anchors.length],angle=rng()*Math.PI*2,radius=Math.sqrt(rng())*5;
+            const anchor=anchors[(i+Math.floor(attempt/25))%anchors.length],angle=rng()*Math.PI*2,radius=Math.sqrt(rng())*7;
             const x=anchor.x+Math.cos(angle)*radius,z=anchor.z+Math.sin(angle)*radius,height=floor(x,z),depth=-height;
-            const scale=(species.widthMetres>1?1.05:1.3)+rng()*(species.widthMetres>1?.55:.9);
+            // The files are already at the site's scale (widthMetres): colonies vary around it rather than growing past it.
+            const scale=.7+rng()*.45;
             const slope=gradient(x,z);
             if(depth<minDepth||depth>=maxDepth||isLane(x,z,species.widthMetres*scale*.35)||slope>.35){diagnostics.rejected++;continue;}
             probe.set(x,height+.3,z);if(occupied(probe)){diagnostics.rejected++;continue;}

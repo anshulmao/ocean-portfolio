@@ -4,7 +4,6 @@ import { OrbitControls } from './vendor/OrbitControls.js';
 
 const $ = id => document.getElementById(id);
 const notes = {
-  whale_shark_fantasy: 'Animated fantasy whale shark. Its display ocean and particles are hidden here so you can inspect the animal itself.',
   treasure_chest: 'Opening and closing clips are included. A useful Projects landmark; select either clip to inspect the lid movement.',
   anchor: 'Rusty nautical anchor. Its temporary exported rig is unnecessary for a static landmark; motion is paused here. We can lay it on the reef for About.',
   sunken_ship_low_poly: 'Static shipwreck. Large 4K source textures have been resized to 1K for this review. It still needs scale, placement and separate collision proxies.',
@@ -95,7 +94,6 @@ async function load(id) {
     if (current) { mixer?.stopAllAction(); mixer?.uncacheRoot(current); scene.remove(current); dispose(current); }
     current = gltf.scene; clips = gltf.animations; scene.add(current);
     current.traverse(object => {
-      if (id === 'whale_shark_fantasy' && /^(ocean|particles)/i.test(object.name)) object.visible = $('extras').checked;
       if (object.material) for (const material of [object.material].flat()) material.wireframe = $('wire').checked;
     });
     mixer = new THREE.AnimationMixer(current);
@@ -133,7 +131,6 @@ $('model').addEventListener('change', () => load($('model').value));
 $('clip').addEventListener('change', animation);
 $('play').addEventListener('click', () => { paused = !paused; $('play').textContent = paused ? 'Play' : 'Pause'; });
 $('frame').addEventListener('click', frame);
-$('extras').addEventListener('change', () => { if (window.assetReview.current === 'whale_shark_fantasy') load($('model').value); });
 $('wire').addEventListener('change', () => current?.traverse(object => { if (object.material) for (const material of [object.material].flat()) material.wireframe = $('wire').checked; }));
 $('theme').addEventListener('change', () => { document.body.classList.toggle('light', $('theme').checked); scene.background.set($('theme').checked ? '#dce8e3' : '#102531'); });
 let previous = performance.now();
