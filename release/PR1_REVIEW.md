@@ -34,3 +34,7 @@ Six fixed viewpoints in installed Chrome, 1280×800, three seconds per viewpoint
 | mid slope | 56.1 | 59.4 | 0.85 / 1 |
 | deep ledge | 60 | 59.4 | 1 / 1 |
 | open blue | 60 | 60 | 1 / 1 |
+
+## Deployment follow-up
+
+Model packs now use a content-addressed directory in production, hashing the exported files and their LOD recipe. This prevents a returning browser from mixing newly deployed runtime code with the previous release's one-hour cached GLBs or manifest. The build regression check also verifies the versioned manifest and excludes the unversioned pack path.

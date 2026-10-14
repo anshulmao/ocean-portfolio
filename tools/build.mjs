@@ -23,6 +23,16 @@ await copy('favicon.svg');await tree('assets/fonts');await tree('assets/portfoli
 const active=['anchor.glb','sunken_ship_low_poly.glb','treasure_chest.glb','coral_waterverbruik_gezond.glb','coral_landbouw_gezond.glb','coral_anker_kleur.glb','coral_uitstoot_gezond.glb','coral_visnet_gezond_fish.glb','manifest.json','CREDITS.md'];
 for(const f of active)await copy('assets/models/'+f);
 await tree('assets/models/user-sets/sets/creature-set',f=>/\.(?:glb|json|md)$/i.test(f));await tree('assets/models/user-sets/sets/coral-set',f=>/\.(?:glb|json|md)$/i.test(f));
+
+// Content-address the model packs so returning visitors never combine old cached
+// GLBs/manifests with a new runtime. Hash both model bytes and their LOD recipe.
+const packRoot=path.join(out,'assets/models/user-sets/sets'),packHash=createHash('sha256');
+async function hashPack(directory){for(const entry of (await fs.readdir(directory,{withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name))){const file=path.join(directory,entry.name);if(entry.isDirectory())await hashPack(file);else{packHash.update(path.relative(packRoot,file).replaceAll('\\','/'));packHash.update(await fs.readFile(file));}}}
+await hashPack(packRoot);for(const file of ['creature-kit.js','creature-species.js'])packHash.update(await fs.readFile(path.join(out,file)));
+const packVersion='v-'+packHash.digest('hex').slice(0,16),packParent=path.join(out,'assets/models/user-sets',packVersion);
+await fs.mkdir(packParent,{recursive:true});await fs.rename(packRoot,path.join(packParent,'sets'));
+for(const file of ['user-creatures.js','user-corals.js']){const target=path.join(out,file);await fs.writeFile(target,(await fs.readFile(target,'utf8')).replaceAll('assets/models/user-sets/sets/',`assets/models/user-sets/${packVersion}/sets/`));}
+
 for(const f of ['full.json','economy.json','full-webp.glb','economy-webp.glb'])await copy('assets/models/prepared-corals/'+f);
 // Public hosts assign their own ETags and dates. Hash headers preserve cheap,
 // exact source validation without forcing a 24 MB fallback download.
