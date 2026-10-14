@@ -1,4 +1,4 @@
-import { toDisplayDepth, DISPLAY_MAX_DEPTH } from './depth-metrics.js';
+import { toDisplayDepth } from './depth-metrics.js';
 import * as THREE from './vendor/three.module.min.js';
 import { onTick, ui } from './ui-ticker.js';
 
@@ -8,12 +8,12 @@ stylesheet.rel = 'stylesheet'; stylesheet.href = new URL('./expedition-interacti
 document.head.append(stylesheet);
 const dock = document.createElement('aside'); dock.className = 'expedition-tools'; dock.hidden = true;
 dock.setAttribute('aria-label', 'Expedition tools');
-dock.innerHTML = '<button type="button" data-stop>Safety stop <kbd>F2</kbd></button><button type="button" data-photo>Photo <kbd>H</kbd></button><button type="button" data-inventory>Finds <span data-score>0</span></button>';
+dock.innerHTML = '<button type="button" data-stop hidden>Pause at 5 m <kbd>F2</kbd></button><button type="button" data-photo hidden>Photo <kbd>H</kbd></button><button type="button" data-inventory hidden>Finds <span data-score>0</span></button>';
 const notice = document.createElement('div'); notice.className = 'expedition-notice'; notice.setAttribute('role', 'status'); notice.setAttribute('aria-live', 'polite');
 const prompt = document.createElement('div'); prompt.className = 'artifact-prompt'; prompt.hidden = true;
 const dialog = document.createElement('dialog'); dialog.className = 'expedition-dialog'; dialog.setAttribute('aria-labelledby', 'expedition-title');
 document.body.append(dock, notice, prompt, dialog);
-const score = dock.querySelector('[data-score]'), photoButton = dock.querySelector('[data-photo]');
+const score = dock.querySelector('[data-score]'), photoButton = dock.querySelector('[data-photo]'), stopButton = dock.querySelector('[data-stop]');
 const point = new THREE.Vector3(), matrix = new THREE.Matrix4(), quaternion = new THREE.Quaternion(), scale = new THREE.Vector3(1,1,1);
 const normal = new THREE.Vector3(), artifactPoint = new THREE.Vector3();
 const finds = [
@@ -23,7 +23,7 @@ const finds = [
 ].map(([name,x,z],id)=>({id,name,x,z,y:0,collected:false}));
 let mesh = null, nearest = null, active = '', previousFocus = null, heldDepth = 0, noticeLeft = 0, elapsed = 0, photos = 0;
 let lastScore = -1, lastPrompt = '', lastSubmerged = null;
-function say(message) { notice.textContent = message; noticeLeft = 5; }
+function say(message) { notice.textContent = message; noticeLeft = 3; }
 function download(blob, filename) {
   const url = URL.createObjectURL(blob), link = document.createElement('a');
   link.href = url; link.download = filename; link.click(); setTimeout(()=>URL.revokeObjectURL(url), 10000);
@@ -31,12 +31,19 @@ function download(blob, filename) {
 function begin(title, contents, mode) {
   if (ui.dialog || ui.panel || dialog.open) return false;
   previousFocus = document.activeElement; active = mode;
+  dialog.classList.toggle('safety-feedback', mode === 'stop');
+  if (mode === 'stop') {
+    document.body.dataset.safetyStop = 'true';
+    window.oceanControls?.setSafetyStop?.(true);
+  }
   window.oceanControls?.setInterfaceOpen(true);
   dialog.innerHTML = `<header><div><small>REEF FIELD NOTES</small><h2 id="expedition-title">${title}</h2></div><button type="button" data-close aria-label="Close">×</button></header>${contents}`;
   dialog.querySelector('[data-close]').addEventListener('click',()=>dialog.close());
   dialog.showModal(); dialog.querySelector('[data-close]').focus(); return true;
 }
 dialog.addEventListener('close',()=> {
+  if (active === 'stop') window.oceanControls?.setSafetyStop?.(false);
+  delete document.body.dataset.safetyStop;
   active = ''; window.oceanControls?.setInterfaceOpen(false);
   if (previousFocus?.isConnected) previousFocus.focus({preventScroll:true});
 });
@@ -44,28 +51,39 @@ function openStop() {
   const controls = window.oceanControls, state = window.oceanDiagnostics;
   if (dialog.open) { if (active === 'stop') dialog.close(); return; }
   const ascending = controls?.nav?.mode === 'transition' && controls.nav.transition;
-  if (!state?.submerged || (!ascending && (controls?.getMode() !== 'diver' || controls?.getTransition()))) { say('Safety stop is available underwater at 3–6 m.'); return; }
+  if (!state?.submerged || (!ascending && (controls?.getMode() !== 'diver' || controls?.getTransition()))) return;
   point.copy(controls.getPlayerPosition()); heldDepth = toDisplayDepth(-point.y);
-  if (heldDepth < 3 || heldDepth > 6) { say('Swim to 3–6 m depth, then press F2 to hold and leave a field note.'); return; }
-  if (!begin('A moment at the surface', `<p class="stop-hold">Holding at ${heldDepth.toFixed(1)} m · Movement and guided travel paused</p>
-    <p>How did the reef feel? Leave a note while you pause. This is an optional experience feature, not dive training.</p>
-    <form id="reef-feedback"><label>Your experience<select name="rating" required><option value="">Choose a rating</option><option value="5">Loved it</option><option value="4">Enjoyed it</option><option value="3">It was okay</option><option value="2">Needs work</option><option value="1">Had trouble</option></select></label>
-    <label>What worked, or what should improve?<textarea name="feedback" maxlength="2000" rows="4" placeholder="Your field note"></textarea></label>
+  if (heldDepth < 4 || heldDepth > 6) return;
+  const tooth = '<svg viewBox="0 0 40 44" aria-hidden="true"><path d="M4 7 12 3 20 6 28 3 36 7 32 15 22 39Q20 43 18 39L8 15Z"/><path class="tooth-root" d="M8 14Q20 9 32 14"/></svg>';
+  if (!begin('Safety stop', `<p class="stop-hold"><span aria-hidden="true">⌛</span> A quiet moment at ${heldDepth.toFixed(1)} m</p>
+    <form id="reef-feedback"><fieldset class="tooth-rating"><legend>How was your dive?</legend><p>Leave a little signal from the deep.</p><div class="tooth-options">${[1,2,3,4,5].map(value=>`<label><input type="radio" name="rating" value="${value}" required aria-label="${value} out of 5"><span>${tooth}<small>${value}</small></span></label>`).join('')}</div><span class="rating-caption" aria-live="polite">Choose 1–5 shark teeth</span></fieldset>
+    <section class="feedback-details" hidden aria-label="Optional field note">
+    <label>Anything to share? <small>optional</small><textarea name="feedback" maxlength="2000" rows="3" placeholder="A favourite moment, an idea, or something to improve…"></textarea></label>
     <div class="feedback-contact"><label>Name <small>optional</small><input name="name" autocomplete="name" maxlength="100"></label><label>Email <small>optional</small><input name="email" type="email" autocomplete="email" maxlength="254"></label></div>
-    <label class="feedback-check"><input name="consent" type="checkbox">Include my optional contact details in the exported note.</label>
-    <p class="feedback-privacy">Local demo: nothing is sent or saved to a server. Export downloads a JSON file on your device. Contact details are included only with your consent. Closing discards this form.</p>
-    <p class="feedback-error" role="alert" hidden></p><button type="submit" class="expedition-primary">Export my field note</button></form>`, 'stop')) return;
+    <label class="feedback-check"><input name="consent" type="checkbox">Include my contact details so I can share them with Anshul.</label>
+    <p class="feedback-privacy">This demo downloads your note as JSON. Nothing is sent to Anshul or saved to a server. Contact details are included only if you opt in.</p>
+    </section><p class="feedback-error" role="alert" hidden></p><div class="feedback-actions"><button type="button" data-skip>Skip & keep exploring</button><button type="submit" class="expedition-primary" hidden>Save field note ↓</button></div></form>`, 'stop')) return;
+  const form = dialog.querySelector('form');
+  form.addEventListener('change', event => {
+    if (event.target.name !== 'rating') return;
+    const rating = Number(event.target.value);
+    dialog.querySelector('.feedback-details').hidden = false;
+    dialog.querySelector('[type=submit]').hidden = false;
+    dialog.querySelector('.rating-caption').textContent = `${rating} of 5 · ${['','Room to improve','Finding its feet','A good dive','Loved exploring','An unforgettable dive'][rating]}`;
+    dialog.querySelectorAll('.tooth-options label').forEach((label,index)=>label.classList.toggle('rated',index < rating));
+  });
+  dialog.querySelector('[data-skip]').addEventListener('click',()=>dialog.close());
   dialog.querySelector('form').addEventListener('submit', event=> {
     event.preventDefault(); const form = event.currentTarget;
     if (!form.reportValidity()) return;
     const data = new FormData(form), consent = data.get('consent') === 'on';
-    const hasContact = Boolean(String(data.get('name')).trim() || String(data.get('email')).trim());
     const error = dialog.querySelector('.feedback-error');
-    if (hasContact && !consent) { error.hidden = false; error.textContent = 'Select the consent checkbox to include your details, or clear the optional contact fields.'; return; }
+    // Optional contact is omitted unless explicitly opted in, never accidentally exported.
     error.hidden = true;
     const record = {version:1,createdAt:new Date().toISOString(),rating:Number(data.get('rating')),feedback:String(data.get('feedback')).trim(),depthMeters:Number(heldDepth.toFixed(1)),contact:consent?{name:String(data.get('name')).trim(),email:String(data.get('email')).trim(),consent:true}:null};
     download(new Blob([JSON.stringify(record,null,2)],{type:'application/json'}),`reef-field-note-${new Date().toISOString().slice(0,10)}.json`);
     say('Your field note was exported to your device. Nothing was sent.');
+    dialog.close();
   });
 }
 function openInventory() {
@@ -73,7 +91,7 @@ function openInventory() {
   begin('Your reef finds', `<p>${collected.length} of ${finds.length} artifacts · ${collected.length*100} discovery points</p><p>These are imaginary finds. Enjoy collecting without disturbing the real reef.</p><ul class="artifact-list">${collected.length?collected.map(item=>`<li><span>◈</span>${item.name}<small>+100</small></li>`).join(''):'<li>No finds yet. Look for small gold tokens near the seabed; press F when in reach.</li>'}</ul><p class="feedback-privacy">Inventory lasts for this page session. It does not change your dive or portfolio access.</p>`, 'inventory');
 }
 function collect() {
-  if (!nearest || !mesh) return false;
+  if (!nearest || !mesh || dialog.open || ui.dialog || ui.panel) return false;
   nearest.collected = true; matrix.makeScale(0,0,0); mesh.setMatrixAt(nearest.id,matrix); mesh.instanceMatrix.needsUpdate = true;
   say(`${nearest.name} collected · +100 discovery points`); nearest = null; prompt.hidden = true; return true;
 }
@@ -109,12 +127,14 @@ onTick(dt=> {
   const underwater = Boolean(state.submerged);
   if (underwater !== lastSubmerged) { lastSubmerged = underwater; dock.hidden = !underwater; }
   photoButton.disabled = state.cameraMode !== 'first' || Boolean(controls.getTransition());
+  const reading = toDisplayDepth(-controls.getPlayerPosition().y);
+  stopButton.hidden = !underwater || reading < 4 || reading > 6 || dialog.open || Boolean(ui.dialog || ui.panel);
   if (mesh) mesh.visible = underwater;
   const count = finds.reduce((total,item)=>total+Number(item.collected),0);
   if (count !== lastScore) { lastScore = count; score.textContent = String(count); }
   elapsed += dt;
   if (elapsed < .2) return; elapsed = 0; nearest = null;
-  if (underwater && controls.getMode() === 'diver' && !controls.getTransition() && !ui.dialog && !ui.panel && !state.nearbyLandmark) {
+  if (underwater && controls.getMode() === 'diver' && !controls.getTransition() && !dialog.open && !ui.dialog && !ui.panel && !state.nearbyLandmark) {
     point.copy(controls.getPlayerPosition()); let best = 2.8*2.8;
     for (const item of finds) {
       if (item.collected) continue;
@@ -133,9 +153,9 @@ dock.querySelector('[data-stop]').addEventListener('click',openStop);
 dock.querySelector('[data-photo]').addEventListener('click',takePhoto);
 dock.querySelector('[data-inventory]').addEventListener('click',openInventory);
 addEventListener('keydown',event=> {
-  if (event.repeat || event.target.closest?.('input,textarea,select,button,[contenteditable="true"]')) return;
+  if (event.repeat || event.target.closest?.('input,textarea,select,[contenteditable="true"]') || (event.code !== 'F2' && event.target.closest?.('button'))) return;
   if (event.code === 'F2') { event.preventDefault(); event.stopImmediatePropagation(); openStop(); }
-  else if (event.code === 'KeyH' && !ui.dialog) { event.preventDefault(); takePhoto(); }
-  else if (event.code === 'KeyF' && nearest && !ui.dialog && !window.oceanDiagnostics?.nearbyLandmark) { event.preventDefault(); event.stopImmediatePropagation(); collect(); }
+  else if (event.code === 'KeyH' && !dialog.open && !ui.dialog) { event.preventDefault(); takePhoto(); }
+  else if (event.code === 'KeyF' && nearest && !dialog.open && !ui.dialog && !window.oceanDiagnostics?.nearbyLandmark) { event.preventDefault(); event.stopImmediatePropagation(); collect(); }
 }, {capture:true});
 window.oceanExpedition = {openStop,openInventory,takePhoto,collect,get inventory(){return finds.filter(item=>item.collected).map(({id,name})=>({id,name}));},get locations(){return finds.map(({id,name,x,y,z})=>({id,name,x,y,z}));},get score(){return finds.filter(item=>item.collected).length*100;},get photos(){return photos;},get holding(){return active === 'stop';}};

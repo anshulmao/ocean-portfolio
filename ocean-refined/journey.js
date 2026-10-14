@@ -50,6 +50,7 @@ export const foundCount = () => found.size;
 export function setQuiet(value) { quiet = Boolean(value); }
 
 export function say(kicker, text, signal = '#7ff0cf', hold = 3600) {
+  if (document.body.dataset.clearUi === 'true') return;
   if (toast.dataset.show === 'true') { queue.push([kicker, text, signal, hold]); return; }
   toast.style.setProperty('--signal', signal);
   toast.querySelector('small').textContent = kicker; toast.querySelector('span').textContent = text;
@@ -142,7 +143,25 @@ addEventListener('oceanmediumchange', () => {
 });
 wash.addEventListener('animationend', () => { wash.dataset.play = 'false'; });
 
-addEventListener('oceanlamp', event => say('Flashlight', event.detail ? 'On. It brightens as the water darkens.' : 'Off. Press Q to light the way again.', '#8ff4ff', 2200));
+// One confirmation for each state per page session. Gear feedback lives at the edge,
+// separate from the journey narration, and never queues repeated key presses.
+const lampNotice = element('div', 'lamp-notice');
+lampNotice.setAttribute('role', 'status'); lampNotice.setAttribute('aria-live', 'polite');
+const lampSeen = new Set(); let lampTimer;
+addEventListener('oceanlamp', event => {
+  const state = Boolean(event.detail);
+  if (lampSeen.has(state)) return;
+  lampSeen.add(state);
+  if (document.body.dataset.clearUi === 'true') return;
+  lampNotice.textContent = `Flashlight ${state ? 'on' : 'off'}`;
+  lampNotice.dataset.show = 'true'; clearTimeout(lampTimer);
+  lampTimer = setTimeout(() => { lampNotice.dataset.show = 'false'; }, 2000);
+});
+addEventListener('oceanclearuichange', event => {
+  if (!event.detail) return;
+  clearTimeout(toastTimer); queue.length = 0; toast.dataset.show = 'false';
+  lampNotice.dataset.show = 'false';
+});
 
 function tick(dt) {
   const controls = window.oceanControls, state = window.oceanDiagnostics;

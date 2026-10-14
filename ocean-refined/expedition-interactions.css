@@ -2,3 +2,55 @@
 .expedition-tools{bottom:78px}.expedition-notice{bottom:136px}.artifact-prompt{bottom:192px}
 @media(max-width:650px){.expedition-tools{top:calc(var(--hud-top,24px) + 170px);right:20px;left:auto;bottom:auto;transform:none;flex-direction:column;align-items:stretch;gap:4px}.expedition-tools button{min-height:40px;padding:8px 10px;text-align:left}.expedition-notice{bottom:180px}.artifact-prompt{bottom:235px}}
 @media(max-height:500px) and (max-width:900px){.expedition-tools{top:90px;right:16px;left:auto;bottom:auto;transform:none;flex-direction:column}.expedition-tools button{min-height:32px;font-size:11px;padding:5px 9px}.expedition-notice{bottom:130px}.artifact-prompt{bottom:170px}}
+/* Field notes borrow the ocean HUD's glass and pale phosphor, leaving the scene visible. */
+.expedition-tools button[hidden],.expedition-dialog [hidden]{display:none!important}
+.expedition-notice{left:24px;bottom:110px;transform:none;max-width:min(360px,calc(100vw - 48px));text-align:left;pointer-events:none;font-size:12px}
+.expedition-dialog.safety-feedback{position:fixed;inset:0 5vw 0 auto;margin:auto 0;width:min(440px,43vw);max-width:440px;max-height:calc(100dvh - 64px);padding:26px;border-radius:20px;background:linear-gradient(150deg,#143b49ec,#0a2634f5);box-shadow:0 20px 70px #00182055;border-color:#c5edf24a;scrollbar-width:thin;animation:field-note-in .35s cubic-bezier(.2,.7,.2,1)}
+.expedition-dialog.safety-feedback::backdrop{background:linear-gradient(90deg,transparent 35%,#02142122);backdrop-filter:none}
+.safety-feedback header small{font-size:9px;letter-spacing:.2em}
+.safety-feedback h2{font-size:30px;font-weight:550;letter-spacing:-.03em;margin-bottom:8px}
+.safety-feedback .stop-hold{padding:0;border:0;background:none;font-size:12px;margin:0 0 24px;color:#bae4e6}
+.stop-hold span{margin-right:6px}
+.tooth-rating{border:0;margin:0;padding:0;min-width:0}
+.tooth-rating legend{font-size:21px;letter-spacing:-.02em;font-weight:550}
+.tooth-rating p{font-size:12px;margin:6px 0 18px;color:#b6d5dd}
+.tooth-options{display:flex;gap:8px;justify-content:space-between}
+.expedition-dialog .tooth-options label{position:relative;display:block;flex:1;margin:0;cursor:pointer;min-width:0}
+.tooth-options input[type=radio]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.tooth-options label>span{display:flex;flex-direction:column;align-items:center;border:1px solid #bce8ed25;border-radius:10px;padding:9px 5px 6px;background:#b8e7ec08;transition:background .18s,border-color .18s,transform .18s}
+.tooth-options svg{width:38px;height:42px;max-width:100%;fill:#bce8ed16;stroke:#bce8ed99;stroke-width:1.3;transition:fill .2s,stroke .2s;filter:drop-shadow(0 2px 4px #092b3b)}
+.tooth-options svg .tooth-root{fill:none;stroke-width:1}
+.tooth-options small{color:#a3cdd8;font-size:10px;margin-top:3px}
+.tooth-options .rated>span{border-color:#b9eee85c;background:#b9eee81a}
+.tooth-options .rated svg{fill:#d4f3eb;stroke:#f0fff8}
+.tooth-options label:hover>span{transform:translateY(-3px);border-color:#dcfff2}
+.tooth-options input:focus-visible+span{outline:2px solid #e6fff9;outline-offset:3px}
+.rating-caption{display:block;min-height:18px;margin:11px 0 0;font-size:11px;color:#b7dce1}
+.feedback-details{animation:field-details-in .25s ease-out}
+.safety-feedback .feedback-details label{font-size:12px;margin-top:14px}
+.safety-feedback .feedback-contact{gap:12px}
+.safety-feedback input:not([type=checkbox]):not([type=radio]),.safety-feedback textarea{background:#0a202b99;border-radius:8px;border-color:#b0dce345;font-size:13px}
+.safety-feedback .feedback-check{font-size:11px;line-height:1.5}
+.safety-feedback .feedback-check input{accent-color:#a9e3de}
+.safety-feedback .feedback-privacy{font-size:10px;line-height:1.5;margin-bottom:0;color:#a6c8d2}
+.feedback-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:24px}
+.expedition-dialog .feedback-actions button{font-size:11px;padding:10px 12px;min-height:40px}
+.safety-feedback [data-skip]{background:transparent;border-color:transparent;color:#b8dbe2;padding-left:0}
+.safety-feedback [data-close]{background:transparent;border:0;font-size:22px;line-height:1;padding:3px 5px}
+@keyframes field-note-in{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+@keyframes field-details-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media(max-width:650px){
+ .expedition-dialog.safety-feedback{inset:auto 12px max(12px,env(safe-area-inset-bottom)) 12px;margin:0;width:calc(100% - 24px);max-width:none;max-height:64dvh;padding:20px;border-radius:18px}
+ .expedition-dialog.safety-feedback::backdrop{background:linear-gradient(transparent 25%,#02142122)}
+ .safety-feedback h2{font-size:25px}.safety-feedback .stop-hold{margin-bottom:16px}
+ .tooth-rating legend{font-size:19px}.tooth-rating p{margin-bottom:12px}
+ .tooth-options{gap:7px}.tooth-options svg{width:30px;height:34px}.tooth-options label>span{padding:7px 3px 4px}
+ .safety-feedback .feedback-contact{grid-template-columns:1fr 1fr;gap:10px}.feedback-actions{margin-top:18px}
+ .expedition-notice{left:16px;bottom:170px;max-width:calc(100vw - 32px)}
+}
+@media(max-height:500px) and (min-width:651px){.expedition-dialog.safety-feedback{max-height:calc(100dvh - 24px);width:43vw;right:3vw;padding:18px}.safety-feedback .stop-hold{margin-bottom:14px}.tooth-options svg{height:30px}.safety-feedback h2{font-size:24px}}
+@media(prefers-reduced-motion:reduce){.expedition-dialog.safety-feedback,.feedback-details{animation:none}.tooth-options label>span{transition:none}}
+.expedition-dialog .tooth-options input[type=radio]{position:absolute;inset:0;z-index:1;width:100%;height:100%;margin:0;padding:0;opacity:0;cursor:pointer;pointer-events:auto}
+/* Give the staged diver and field note room, without moving the normal instruments. */
+body[data-safety-stop="true"] :is(.masthead,.hero,.reef-map) *{visibility:hidden!important;pointer-events:none!important}
+body[data-safety-stop="true"] :is(.masthead,.heading-indicator,.reef-map,.depth,.air-gauge,.scene-footer,.touch-deck,.capture-hint,.crosshair,.expedition-tools,.artifact-prompt,.ascent-status,.interact-prompt,.dive-computer-toggle,.archive-toggle,.status,.journey-toast,.zone-card,.waypoint,.journey-progress,.tour-card,.lamp-notice,#reef-labels,#sky-labels){visibility:hidden!important;pointer-events:none!important;transition:none!important}
