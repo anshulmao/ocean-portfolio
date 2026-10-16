@@ -1,11 +1,16 @@
 import { toDisplayDepth } from './depth-metrics.js';
 import * as THREE from './vendor/three.module.min.js';
 import { onTick, ui } from './ui-ticker.js';
+import { safetyRatingMarkup } from './safety-rating.js';
+import { createSafetyStopClock, SAFETY_STOP_SECONDS } from './safety-stop-clock.js';
 
 // This module deliberately has no network adapter. Visitors own the optional exported JSON.
 const stylesheet = document.createElement('link');
 stylesheet.rel = 'stylesheet'; stylesheet.href = new URL('./expedition-interactions.css', import.meta.url).href;
 document.head.append(stylesheet);
+const ratingStylesheet = document.createElement('link');
+ratingStylesheet.rel = 'stylesheet'; ratingStylesheet.href = new URL('./safety-rating.css', import.meta.url).href;
+document.head.append(ratingStylesheet);
 const dock = document.createElement('aside'); dock.className = 'expedition-tools'; dock.hidden = true;
 dock.setAttribute('aria-label', 'Expedition tools');
 dock.innerHTML = '<button type="button" data-stop hidden>Pause at 5 m <kbd>F2</kbd></button><button type="button" data-photo hidden>Photo <kbd>H</kbd></button><button type="button" data-inventory hidden>Finds <span data-score>0</span></button>';
@@ -23,6 +28,38 @@ const finds = [
 ].map(([name,x,z],id)=>({id,name,x,z,y:0,collected:false}));
 let mesh = null, nearest = null, active = '', previousFocus = null, heldDepth = 0, noticeLeft = 0, elapsed = 0, photos = 0;
 let lastScore = -1, lastPrompt = '', lastSubmerged = null;
+const stopClock = createSafetyStopClock();
+let countdown = null, countdownFill = null, countdownTime = null, completion = null, completionLeft = 0, lastSecond = -1;
+function startStopClock() {
+  stopClock.start(); lastSecond = -1; completionLeft = 0;
+  countdown = dialog.querySelector('.safety-countdown');
+  countdownFill = dialog.querySelector('.safety-countdown-fill');
+  countdownTime = dialog.querySelector('.safety-countdown-time');
+  completion = dialog.querySelector('.safety-complete');
+  renderStopClock();
+}
+function renderStopClock() {
+  if (!countdown) return;
+  const seconds = Math.ceil(stopClock.remaining);
+  if (seconds !== lastSecond) {
+    lastSecond = seconds;
+    countdownTime.textContent = stopClock.completed ? 'Complete' : `0:${String(seconds).padStart(2,'0')}`;
+    countdown.setAttribute('aria-valuenow', String(SAFETY_STOP_SECONDS - seconds));
+    countdown.setAttribute('aria-valuetext', stopClock.completed ? 'Safety stop complete' : `${seconds} seconds remaining`);
+  }
+  countdownFill.style.transform = `scaleX(${stopClock.progress})`;
+}
+function updateStopClock(dt) {
+  if (active !== 'stop' || !dialog.open) return;
+  if (completionLeft > 0) { completionLeft -= dt; if (completionLeft <= 0) completion.hidden = true; }
+  if (stopClock.advance(dt)) {
+    countdown.dataset.complete = 'true'; completion.hidden = false; completionLeft = 2.6;
+    dialog.querySelector('.stop-hold').textContent = 'Stop complete. Finish your note or keep exploring.';
+    dialog.querySelector('[data-skip]').textContent = 'Keep exploring';
+    window.dispatchEvent(new CustomEvent('oceansafetystopcomplete'));
+  }
+  renderStopClock();
+}
 function say(message) { notice.textContent = message; noticeLeft = 3; }
 function download(blob, filename) {
   const url = URL.createObjectURL(blob), link = document.createElement('a');
@@ -42,6 +79,7 @@ function begin(title, contents, mode) {
   dialog.showModal(); dialog.querySelector('[data-close]').focus(); return true;
 }
 dialog.addEventListener('close',()=> {
+  stopClock.cancel(); countdown = countdownFill = countdownTime = completion = null; completionLeft = 0;
   if (active === 'stop') window.oceanControls?.setSafetyStop?.(false);
   delete document.body.dataset.safetyStop;
   active = ''; window.oceanControls?.setInterfaceOpen(false);
@@ -54,9 +92,10 @@ function openStop() {
   if (!state?.submerged || (!ascending && (controls?.getMode() !== 'diver' || controls?.getTransition()))) return;
   point.copy(controls.getPlayerPosition()); heldDepth = toDisplayDepth(-point.y);
   if (heldDepth < 4 || heldDepth > 6) return;
-  const tooth = '<svg viewBox="0 0 40 44" aria-hidden="true"><path d="M4 7 12 3 20 6 28 3 36 7 32 15 22 39Q20 43 18 39L8 15Z"/><path class="tooth-root" d="M8 14Q20 9 32 14"/></svg>';
-  if (!begin('Safety stop', `<p class="stop-hold"><span aria-hidden="true">⌛</span> A quiet moment at ${heldDepth.toFixed(1)} m</p>
-    <form id="reef-feedback"><fieldset class="tooth-rating"><legend>How was your dive?</legend><p>Leave a little signal from the deep.</p><div class="tooth-options">${[1,2,3,4,5].map(value=>`<label><input type="radio" name="rating" value="${value}" required aria-label="${value} out of 5"><span>${tooth}<small>${value}</small></span></label>`).join('')}</div><span class="rating-caption" aria-live="polite">Choose 1–5 shark teeth</span></fieldset>
+  if (!begin('Safety stop', `<div class="safety-countdown" role="progressbar" aria-label="Safety stop" aria-valuemin="0" aria-valuemax="45" aria-valuenow="0"><div><span>SAFETY STOP</span><strong class="safety-countdown-time">0:45</strong></div><span class="safety-countdown-track"><i class="safety-countdown-fill"></i></span></div>
+    <div class="safety-complete" role="status" hidden><span>Safety stop</span><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/><path d="m10 18 6 6 11-12"/></svg><span class="sr-only">complete</span></div>
+    <p class="stop-hold"><span aria-hidden="true">⌛</span> 45 seconds to pause at ${heldDepth.toFixed(1)} m</p>
+    <form id="reef-feedback">${safetyRatingMarkup()}
     <section class="feedback-details" hidden aria-label="Optional field note">
     <label>Anything to share? <small>optional</small><textarea name="feedback" maxlength="2000" rows="3" placeholder="A favourite moment, an idea, or something to improve…"></textarea></label>
     <div class="feedback-contact"><label>Name <small>optional</small><input name="name" autocomplete="name" maxlength="100"></label><label>Email <small>optional</small><input name="email" type="email" autocomplete="email" maxlength="254"></label></div>
@@ -64,13 +103,14 @@ function openStop() {
     <p class="feedback-privacy">This demo downloads your note as JSON. Nothing is sent to Anshul or saved to a server. Contact details are included only if you opt in.</p>
     </section><p class="feedback-error" role="alert" hidden></p><div class="feedback-actions"><button type="button" data-skip>Skip & keep exploring</button><button type="submit" class="expedition-primary" hidden>Save field note ↓</button></div></form>`, 'stop')) return;
   const form = dialog.querySelector('form');
+  startStopClock();
   form.addEventListener('change', event => {
     if (event.target.name !== 'rating') return;
     const rating = Number(event.target.value);
     dialog.querySelector('.feedback-details').hidden = false;
     dialog.querySelector('[type=submit]').hidden = false;
     dialog.querySelector('.rating-caption').textContent = `${rating} of 5 · ${['','Room to improve','Finding its feet','A good dive','Loved exploring','An unforgettable dive'][rating]}`;
-    dialog.querySelectorAll('.tooth-options label').forEach((label,index)=>label.classList.toggle('rated',index < rating));
+    dialog.querySelectorAll('.star-options label').forEach((label,index)=>label.classList.toggle('rated',index < rating));
   });
   dialog.querySelector('[data-skip]').addEventListener('click',()=>dialog.close());
   dialog.querySelector('form').addEventListener('submit', event=> {
@@ -120,6 +160,7 @@ function buildArtifacts(controls) {
   mesh.instanceMatrix.needsUpdate = true; controls.getScene().add(mesh);
 }
 onTick(dt=> {
+  updateStopClock(dt);
   const controls = window.oceanControls, state = window.oceanDiagnostics;
   if (noticeLeft > 0) { noticeLeft -= dt; if (noticeLeft <= 0) notice.textContent = ''; }
   if (!controls || !state?.ready) return;
@@ -158,4 +199,4 @@ addEventListener('keydown',event=> {
   else if (event.code === 'KeyH' && !dialog.open && !ui.dialog) { event.preventDefault(); takePhoto(); }
   else if (event.code === 'KeyF' && nearest && !dialog.open && !ui.dialog && !window.oceanDiagnostics?.nearbyLandmark) { event.preventDefault(); event.stopImmediatePropagation(); collect(); }
 }, {capture:true});
-window.oceanExpedition = {openStop,openInventory,takePhoto,collect,get inventory(){return finds.filter(item=>item.collected).map(({id,name})=>({id,name}));},get locations(){return finds.map(({id,name,x,y,z})=>({id,name,x,y,z}));},get score(){return finds.filter(item=>item.collected).length*100;},get photos(){return photos;},get holding(){return active === 'stop';}};
+window.oceanExpedition = {openStop,openInventory,takePhoto,collect,get safetyStop(){return {remaining:stopClock.remaining,completed:stopClock.completed,active:stopClock.active};},get inventory(){return finds.filter(item=>item.collected).map(({id,name})=>({id,name}));},get locations(){return finds.map(({id,name,x,y,z})=>({id,name,x,y,z}));},get score(){return finds.filter(item=>item.collected).length*100;},get photos(){return photos;},get holding(){return active === 'stop';}};

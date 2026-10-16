@@ -7,6 +7,7 @@ import { drawPreparedChart } from './prepared-charts.js';
 import * as THREE from './vendor/three.module.min.js';
 import { createClouds, seededRandom, shareSteps, setPacer } from './assets.js';
 import { createDiver } from './diver.js';
+import { createDiverAnimator } from './diver-animation.js';
 import { createWristComputer } from './wrist-computer.js';
 import { reefSteps, LANDMARKS, terrainHeightAt } from './reef.js';
 import { marineLifeSteps } from './marine-life.js';
@@ -32,6 +33,8 @@ let selectedNight=savedTheme?savedTheme==='night':themeMedia.matches;
 let reducedMotion=motionMedia.matches,paused=reducedMotion;
 let renderer,scene,camera,water,waterCalm,waterRough,waterFine,waterCoarse,diver,reef,skySystem,marine,clouds,sunlight,ambient,beamGroup,motes,bubbleMesh,diveLamp;
 let viewerOrbit=null,scooterModel=null;
+let diverAnimator=null;
+const diverAnimationState={};
 const beams=[],beamPose=new THREE.Object3D();
 let setPieces=null,heroFormations=null,livingWorld=null;
 // Weather drifts on its own unless the visitor holds it; a locked clock stops the automatic day/night advance only.
@@ -719,7 +722,10 @@ function updateWorld(dt,clockDt=dt){
     const stopAim=scratchB.set(playerPosition.x-Math.sin(yaw)*composition,playerPosition.y-(mobile?2.1:.65),playerPosition.z-Math.cos(yaw)*composition);
     cameraGoal.lerp(stopCamera,safetyStop.blend);lookTarget.lerp(stopAim,safetyStop.blend);
   }
-  const settledView=!(ascending||dive!==diveTarget||surfaceLandingTime>0||safetyStop.blend>0);
+  // The descent keeps easing after swimming becomes available. Hand the camera to the
+  // same controls at that point; waiting for the transition's tail makes aim feel heavy.
+  const descentControlled=diveTarget===1&&nav.mode==='diver';
+  const settledView=!(ascending||dive!==diveTarget&&!descentControlled||surfaceLandingTime>0||safetyStop.blend>0);
   if(cameraWas!==nav.perspective){if(cameraWas)cameraShift=1;cameraWas=nav.perspective;}
   if(reducedMotion||snapCamera||diagnostic.frames===0){camera.position.copy(cameraGoal);cameraVelocity.set(0,0,0);cameraShift=0;}
   else {
@@ -808,9 +814,11 @@ function updateWorld(dt,clockDt=dt){
   diveLamp.position.copy(playerPosition);diveLamp.position.y+=.4;diveLamp.intensity=nav.lamp?underwater*((night>.5?70:55)+depthLight*18):0;
   diveLamp.target.position.copy(playerPosition).addScaledVector(swimDirection,45);
   diagnostic.flashlightRange=diveLamp.distance;diagnostic.flashlightIntensity=diveLamp.intensity;diagnostic.neutralBrightness=look.uLookBrightness.value;
-  for(const {shoulder,forearm,side} of diver.arms){shoulder.rotation.z=side*(.13-easedDive*.03);shoulder.rotation.x=-.08-easedDive*.17;forearm.rotation.x=-.28-easedDive*.72;}
-  for(const {hip,shin,side} of diver.legs){const kick=paused?0:Math.sin(elapsed*settings.kickFrequency+(side===1?Math.PI:0));hip.rotation.x=kick*easedDive*settings.kickAmplitude;shin.rotation.x=.08+easedDive*.16+kick*easedDive*settings.kickAmplitude*.79;}
-  if(safetyStop.blend>0){for(const {shoulder,forearm,side} of diver.arms){const hold=safetyStop.blend;shoulder.rotation.x=THREE.MathUtils.lerp(shoulder.rotation.x,side<0?-.75:-.35,hold);shoulder.rotation.z=THREE.MathUtils.lerp(shoulder.rotation.z,side<0?-.22:.3,hold);forearm.rotation.x=THREE.MathUtils.lerp(forearm.rotation.x,side<0?-1.65:-.6,hold);}for(const {hip,shin} of diver.legs){hip.rotation.x*=1-safetyStop.blend;shin.rotation.x=THREE.MathUtils.lerp(shin.rotation.x,.1,safetyStop.blend);}}
+  diverAnimationState.dive=easedDive;diverAnimationState.moving=nav.moving;diverAnimationState.ascending=ascending;
+  diverAnimationState.safetyStop=safetyStop.blend;diverAnimationState.wristOpen=computerOpen;
+  diverAnimationState.kickFrequency=settings.kickFrequency;diverAnimationState.kickAmplitude=settings.kickAmplitude;
+  diverAnimationState.reducedMotion=reducedMotion;diverAnimationState.paused=paused;
+  diverAnimator?.update(dt,diverAnimationState);
   scooterModel?.update(dt,{active:nav.scooter,allowed:nav.mode==='diver'&&underwater>.55&&!getTransition()&&!interfaceOpen&&!movementPanelOpen&&!viewerOrbit,firstPerson,reducedMotion,wristOpen:computerOpen});
   if(largeMarine)largeMarine.root.visible=underwater>.01&&largeMarine.diagnostics.loaded&&prepared.has(largeMarine.root);
   if(built){extraLife.root.visible=Boolean(viewerOrbit)||underwater>.01;reef.visible=Boolean(viewerOrbit)||underwater>.01;marine.root.visible=Boolean(viewerOrbit)||underwater>.01;beamGroup.visible=underwater>.01;motes.visible=underwater>.01;}
@@ -972,7 +980,7 @@ async function boot(){
   if(post)early(post.stage,post.camera,post.stage);
   await stage('renderer');
   // The diver first: its programs are the largest of the surface's, and they compile while the sky and the sea are built.
-  diver=createDiver();stylizeTree(diver.root,{toon:.45,rim:.4,caustics:.6,glow:'flat',glowColor:diverGlow});for(const material of Object.values(diver.materials))stylize(material,{toon:.45,rim:.4,caustics:.6,glow:'flat',glowColor:diverGlow});scene.add(diver.root);
+  diver=createDiver();diverAnimator=createDiverAnimator(diver);diagnostic.diverAnimation=diverAnimator.diagnostics;stylizeTree(diver.root,{toon:.45,rim:.4,caustics:.6,glow:'flat',glowColor:diverGlow});for(const material of Object.values(diver.materials))stylize(material,{toon:.45,rim:.4,caustics:.6,glow:'flat',glowColor:diverGlow});scene.add(diver.root);
   early(diver.root);
   await stage('diver');
   skySystem=createSkySystem(uniforms,rng);scene.add(skySystem.root);expeditionUI=createExpeditionUI({sky:skySystem,getPhase:()=>phase,setPhase:value=>{phase=value;phaseTarget=null;wake();},frameSurface});

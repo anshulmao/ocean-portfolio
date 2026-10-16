@@ -33,11 +33,25 @@ try {
   await page.locator('[name=name]').fill('Test visitor');
   await page.locator('[name=email]').fill('visitor@example.com');
   await page.locator('[name=feedback]').fill('Readable and peaceful.');
+  await page.evaluate(()=>{
+    window.completedStops=0;addEventListener('oceansafetystopcomplete',()=>completedStops++);
+    oceanUi.tick(oceanExpedition.safetyStop.remaining-.5);
+  });
+  assert.equal(await page.evaluate(()=>oceanExpedition.safetyStop.completed),false);
+  await page.evaluate(()=>oceanUi.tick(.6));
+  assert.equal(await page.evaluate(()=>oceanExpedition.safetyStop.completed),true);
+  assert.equal(await page.locator('.safety-complete').isVisible(),true);
+  assert.equal(await page.locator('[name=feedback]').inputValue(),'Readable and peaceful.');
+  assert.equal(await page.evaluate(()=>window.hold && window.staged),true,'Completion must preserve the note and staged pose');
+  await page.evaluate(()=>oceanUi.tick(3));
+  assert.equal(await page.evaluate(()=>completedStops),1);
+  assert.equal(await page.locator('.safety-complete').isVisible(),false);
   const exported = page.waitForEvent('download'); await page.locator('[type=submit]').click();
   const download = await exported, data=JSON.parse(await fs.readFile(await download.path(),'utf8'));
   assert.equal(data.rating,5); assert.equal(data.depthMeters,5); assert.equal(data.contact,null);
   await page.waitForFunction(()=>window.hold===false && window.staged===false);
   await page.keyboard.press('F2');
+  assert.ok(await page.evaluate(()=>oceanExpedition.safetyStop.remaining>44),'Reopening starts a fresh stop');
   await page.getByRole('radio',{name:'4 out of 5',exact:true}).check();
   await page.locator('[name=email]').fill('visitor@example.com');
   await page.locator('[name=consent]').check();
@@ -80,5 +94,5 @@ try {
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.locator('[data-skip]').click();
   assert.deepEqual(errors,[]);
-  console.log('Expedition checks passed: contextual 4–6m stop, staged restore/Skip/Escape, progressive shark-tooth rating, opt-in-only contact JSON, artifact priority, photo export, portrait fit.');
+  console.log('Expedition checks passed: 45-second stop, single completion tick, preserved feedback, contextual 4–6m stop, staged restore/Skip/Escape, stars, opt-in-only contact JSON, artifact priority, photo export, portrait fit.');
 } finally { await browser.close(); }

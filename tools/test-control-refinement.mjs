@@ -5,8 +5,9 @@ const browser=await chromium.launch({channel:'chrome',headless:true});
 const report={checks:[],errors:[]};
 try{
  const page=await browser.newPage({viewport:{width:1440,height:900},acceptDownloads:true});
+ await page.addInitScript(()=>localStorage.setItem('ocean-theme','day'));
  page.on('pageerror',e=>report.errors.push(e.message));
- await page.goto('http://127.0.0.1:4210/ocean-refined/',{waitUntil:'domcontentloaded'});
+ await page.goto(process.env.OCEAN_TEST_URL||'http://127.0.0.1:4210/ocean-refined/',{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>window.oceanDiagnostics?.ready,null,{timeout:120000});
  await page.waitForFunction(()=>window.oceanDiagnostics.landmarksReady,null,{timeout:120000});
  report.prewarm=await page.evaluate(()=>({startup:oceanDiagnostics.startup,landmarks:Object.keys(oceanControls.landmarks||{})}));
@@ -22,8 +23,15 @@ try{
  await page.screenshot({path:`${process.env.TEMP}/safety-stage-desktop.png`});
  await page.getByRole('radio',{name:'4 out of 5',exact:true}).check();
  assert.equal(await page.locator('.feedback-details').isVisible(),true);
+ await page.locator('[name=feedback]').fill('A calm safety stop.');
+ await page.evaluate(()=>oceanUi.tick(oceanExpedition.safetyStop.remaining+.1));
+ assert.equal(await page.evaluate(()=>oceanExpedition.safetyStop.completed),true);
+ assert.equal(await page.locator('.safety-complete').isVisible(),true);
+ assert.equal(await page.locator('[name=feedback]').inputValue(),'A calm safety stop.');
+ await page.screenshot({path:`${process.env.TEMP}/safety-stop-complete.png`});
  const download=page.waitForEvent('download');await page.locator('.safety-feedback [type=submit]').click();
  const file=await download;const note=JSON.parse(await fs.readFile(await file.path(),'utf8'));assert.equal(note.rating,4);assert.equal(note.contact,null);
+ await page.waitForFunction(()=>!oceanExpedition.holding);
  await page.evaluate(()=>oceanControls.step(2));
  assert.equal(await page.evaluate(()=>oceanDiagnostics.cameraMode),'first');
  report.checks.push('Background landmarks ready before first dive; staged camera; rating/export; first-person restored');
@@ -33,9 +41,11 @@ try{
  await page.screenshot({path:`${process.env.TEMP}/safety-stage-mobile.png`});
  const box=await page.locator('.safety-feedback').boundingBox();assert.ok(box.x>=0&&box.x+box.width<=391&&box.y+box.height<=845);
  await page.locator('.safety-feedback [data-skip]').click();
+ await page.waitForFunction(()=>!oceanExpedition.holding);
  await page.evaluate(()=>{oceanControls.surface();oceanControls.step(.1);oceanExpedition.openStop();oceanControls.step(4);});
  assert.equal(await page.evaluate(()=>oceanExpedition.holding),true);
  await page.locator('.safety-feedback [data-close]').click();
+ await page.waitForFunction(()=>!oceanExpedition.holding);
  await page.evaluate(()=>oceanControls.step(24));
  assert.equal(await page.evaluate(()=>oceanControls.getMode()),'surface');
  report.splash=await page.evaluate(()=>oceanDiagnostics.waterlineSplash());

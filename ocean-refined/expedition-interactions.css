@@ -39,6 +39,21 @@
 .safety-feedback [data-close]{background:transparent;border:0;font-size:22px;line-height:1;padding:3px 5px}
 @keyframes field-note-in{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
 @keyframes field-details-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* The timer occupies the heading tape's slot while the scene is staged. */
+.safety-feedback{animation-name:stop-panel-in!important}
+@keyframes stop-panel-in{from{opacity:0}to{opacity:1}}
+.safety-countdown{position:fixed;top:max(22px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(320px,calc(100vw - 48px));color:#e6f7fa;pointer-events:none;font:500 11px/1.3 system-ui,sans-serif}
+.safety-countdown>div{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;letter-spacing:.16em}
+.safety-countdown-time{font-variant-numeric:tabular-nums;font-size:15px;letter-spacing:.06em}
+.safety-countdown-track{display:block;height:4px;border-radius:4px;background:#bce8ed28;overflow:hidden}
+.safety-countdown-fill{display:block;height:100%;width:100%;background:#c5f3ee;transform:scaleX(0);transform-origin:left;transition:transform .1s linear}
+.safety-countdown[data-complete="true"] .safety-countdown-fill{background:#b5ecd8}
+.safety-complete{position:fixed;left:50%;top:96px;transform:translateX(-50%);display:flex;align-items:center;gap:14px;white-space:nowrap;padding:12px 20px;border:1px solid #c5edf24a;border-radius:14px;background:#123b49ed;color:#e6f7fa;font-size:22px;letter-spacing:-.03em;pointer-events:none;animation:stop-panel-in .25s ease-out}
+.safety-complete svg{width:36px;height:36px;fill:none;stroke:#c5f3df;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.safety-complete circle{opacity:.35}.safety-complete path{stroke-dasharray:32;stroke-dashoffset:0;animation:stop-tick .45s .12s ease-out both}
+.safety-complete .sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+@keyframes stop-tick{from{stroke-dashoffset:32}to{stroke-dashoffset:0}}
+@media(prefers-reduced-motion:reduce){.safety-feedback{animation:none!important}.safety-complete,.safety-complete path{animation:none}.safety-countdown-fill{transition:none}}
 @media(max-width:650px){
  .expedition-dialog.safety-feedback{inset:auto 12px max(12px,env(safe-area-inset-bottom)) 12px;margin:0;width:calc(100% - 24px);max-width:none;max-height:64dvh;padding:20px;border-radius:18px}
  .expedition-dialog.safety-feedback::backdrop{background:linear-gradient(transparent 25%,#02142122)}
@@ -53,4 +68,4 @@
 .expedition-dialog .tooth-options input[type=radio]{position:absolute;inset:0;z-index:1;width:100%;height:100%;margin:0;padding:0;opacity:0;cursor:pointer;pointer-events:auto}
 /* Give the staged diver and field note room, without moving the normal instruments. */
 body[data-safety-stop="true"] :is(.masthead,.hero,.reef-map) *{visibility:hidden!important;pointer-events:none!important}
-body[data-safety-stop="true"] :is(.masthead,.heading-indicator,.reef-map,.depth,.air-gauge,.scene-footer,.touch-deck,.capture-hint,.crosshair,.expedition-tools,.artifact-prompt,.ascent-status,.interact-prompt,.dive-computer-toggle,.archive-toggle,.status,.journey-toast,.zone-card,.waypoint,.journey-progress,.tour-card,.lamp-notice,#reef-labels,#sky-labels){visibility:hidden!important;pointer-events:none!important;transition:none!important}
+body[data-safety-stop="true"] :is(.masthead,.heading-indicator,.reef-map,.depth,.air-gauge,.scene-footer,.touch-deck,.capture-hint,.crosshair,.expedition-tools,.artifact-prompt,.ascent-status,.interact-prompt,.dive-computer-toggle,.archive-toggle,.status,.journey-toast,.zone-card,.waypoint,.journey-progress,.tour-card,.lamp-notice,#reef-labels,#sky-labels){opacity:0!important;visibility:hidden!important;pointer-events:none!important;transition:none!important}
