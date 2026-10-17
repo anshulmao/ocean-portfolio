@@ -38,12 +38,12 @@
    half a second. The hold releases by itself if the scene never reports back.
    html.js is set by the first script in the page, so without JavaScript nothing is held back. */
 .surface-copy h1 em{display:inline-block}
-html.js body:not([data-ready="true"],[data-fallback="true"]) :is(.menu-toggle,.wordmark,.sky-cluster,.surface-copy>*,.dive-button,.explore-button,.view-controls,.scene-footer){animation:motion-hold 9s linear backwards}
-body[data-ready="true"] :is(.menu-toggle,.wordmark,.sky-cluster,.surface-copy>*,.dive-button,.explore-button,.view-controls,.scene-footer){animation:motion-rise var(--journey-standard) var(--journey-in) var(--arrive,0ms) backwards}
+html.js body:not([data-ready="true"],[data-fallback="true"]) :is(.menu-toggle,.wordmark,.surface-copy>*,.dive-button,.explore-button,.view-controls,.scene-footer){animation:motion-hold 9s linear backwards}
+body[data-ready="true"] :is(.menu-toggle,.wordmark,.surface-copy>*,.dive-button,.explore-button,.view-controls,.scene-footer){animation:motion-rise var(--journey-standard) var(--journey-in) var(--arrive,0ms) backwards}
 body[data-ready="true"] .surface-copy h1{--rise:26px;animation-duration:var(--journey-slow)}
 body[data-ready="true"] .surface-copy h1 em{--rise:.16em;animation:motion-rise var(--journey-slow) var(--journey-in) 110ms backwards}
-.surface-copy .eyebrow{--arrive:60ms}.surface-copy .lede{--arrive:120ms}.dive-button{--arrive:190ms}.explore-button,.menu-toggle{--arrive:250ms}.wordmark{--arrive:300ms}.sky-cluster{--arrive:350ms}.view-controls{--arrive:420ms}.scene-footer{--arrive:450ms}
-:is(.menu-toggle,.wordmark,.sky-cluster,.view-controls,.scene-footer){--rise:10px}
+.surface-copy .eyebrow{--arrive:60ms}.surface-copy .lede{--arrive:120ms}.dive-button{--arrive:190ms}.explore-button,.menu-toggle{--arrive:250ms}.wordmark{--arrive:300ms}.view-controls{--arrive:420ms}.scene-footer{--arrive:450ms}
+:is(.menu-toggle,.wordmark,.view-controls,.scene-footer){--rise:10px}
 .status{transition:opacity var(--journey-standard) var(--journey-ease),translate var(--journey-standard) var(--journey-in)}
 .status:empty{translate:0 8px;transition-duration:var(--motion-exit);transition-timing-function:var(--journey-out)}
 body:not([data-ready="true"],[data-fallback="true"]) .status:not(:empty)::before{content:'';display:inline-block;width:6px;height:6px;margin-right:9px;border-radius:50%;background:currentColor;vertical-align:middle;animation:motion-breathe 1.8s var(--motion-sine) infinite}
@@ -150,16 +150,7 @@ body[data-ready="true"]:not([data-submerged="true"],[data-exploring="true"]) .di
 .interact-prompt kbd{position:relative}
 .interact-prompt kbd::after{content:'';position:absolute;inset:-1px;border:1px solid currentColor;border-radius:inherit;pointer-events:none;--ring:1.6;animation:motion-ring 2.4s var(--motion-sine) 500ms infinite backwards}
 
-/* 6. Scene controls, credits and the Dive Explorer: panels rise, their contents
-   follow, and the scrim fades rather than cutting. */
-.movement-panel{--m-rise:-10px;--m-scale:var(--journey-standard);transform-origin:0 0}.movement-panel[hidden]{--m-scale:var(--motion-exit);scale:.985}
-@starting-style{.movement-panel:not([hidden]){scale:.985}}
-.movement-panel>*{transition:opacity var(--journey-standard) var(--journey-ease) var(--follow,60ms),translate var(--journey-standard) var(--journey-in) var(--follow,60ms)}
-.movement-panel>.movement-intro{--follow:100ms}.movement-panel>.movement-fields{--follow:140ms}.movement-panel>.movement-footer{--follow:180ms}
-@starting-style{.movement-panel:not([hidden])>*{opacity:0;translate:0 8px}}
-body[data-movement-panel="open"]::after{transition:opacity var(--journey-standard) var(--journey-ease)}
-@starting-style{body[data-movement-panel="open"]::after{opacity:0}}
-@media(max-width:600px){.movement-panel{--m-rise:24px;transform-origin:50% 100%}}
+/* 6. Credits and the Dive Explorer: panels rise, their contents follow. */
 /* Only Chromium keeps a closing dialog in the top layer (the overlay transition). Elsewhere it fades from the page
    itself, so it is pinned where the top layer had it and kept above the instruments while it leaves. */
 .ocean-dialog{position:fixed;inset:0;margin:auto;z-index:30;opacity:0;translate:0 12px;pointer-events:none;transition:opacity var(--motion-exit) var(--journey-out),translate var(--motion-exit) var(--journey-out),scale var(--motion-exit) var(--journey-out),overlay var(--motion-exit) allow-discrete,display var(--motion-exit) allow-discrete}

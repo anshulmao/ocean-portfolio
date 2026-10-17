@@ -1,3 +1,4 @@
+import { createWaterlineSplash } from './waterline-splash.js';
 import { toDisplayDepth, DISPLAY_MAX_DEPTH } from './depth-metrics.js';
 import {createDiveScooter} from './scooter.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
@@ -6,6 +7,7 @@ import { drawPreparedChart } from './prepared-charts.js';
 import * as THREE from './vendor/three.module.min.js';
 import { createClouds, seededRandom, shareSteps, setPacer } from './assets.js';
 import { createDiver } from './diver.js';
+import { createDiverAnimator } from './diver-animation.js';
 import { createWristComputer } from './wrist-computer.js';
 import { reefSteps, LANDMARKS, terrainHeightAt } from './reef.js';
 import { marineLifeSteps } from './marine-life.js';
@@ -26,11 +28,12 @@ import { refreshRate, drawStride, windowPace, windowHitch, workBudget, createSca
 
 const $=s=>document.querySelector(s), canvas=$('#world'), status=$('#status');
 const themeMedia=matchMedia('(prefers-color-scheme: dark)'), motionMedia=matchMedia('(prefers-reduced-motion: reduce)');
-let savedTheme;try{savedTheme=localStorage.getItem('ocean-theme');}catch{}
-let selectedNight=savedTheme?savedTheme==='night':themeMedia.matches;
+let selectedNight=false;
 let reducedMotion=motionMedia.matches,paused=reducedMotion;
 let renderer,scene,camera,water,waterCalm,waterRough,waterFine,waterCoarse,diver,reef,skySystem,marine,clouds,sunlight,ambient,beamGroup,motes,bubbleMesh,diveLamp;
 let viewerOrbit=null,scooterModel=null;
+let diverAnimator=null;
+const diverAnimationState={};
 const beams=[],beamPose=new THREE.Object3D();
 let setPieces=null,heroFormations=null,livingWorld=null;
 // Weather drifts on its own unless the visitor holds it; a locked clock stops the automatic day/night advance only.
@@ -52,7 +55,9 @@ let mapCollapsed=mobile;
 let previousMode='surface',surfaceX=0,surfaceZ=0,surfaceFramingYaw=0,expeditionUI=null;
 let ascentCameraTime=0,surfaceLandingTime=0;const ascentCameraStart=new THREE.Vector3(),ascentAimStart=new THREE.Vector3();
 const aimObject=new THREE.Object3D(),aimQuaternion=new THREE.Quaternion();
-let wristComputer=null,computerOpen=false,interfaceOpen=false,movementPanelOpen=false;
+let wristComputer=null,computerOpen=false,interfaceOpen=false,movementPanelOpen=false,settingsMenuOpen=false;
+const safetyStop={active:false,blend:0,yaw:0,computerWas:false};
+let waterlineSplash=null;const splashState={cameraY:2,transition:false,reducedMotion:false};
 const rng=seededRandom(541),dummy=new THREE.Object3D(),lookTarget=new THREE.Vector3(),viewDirection=new THREE.Vector3();
 const emitter=new THREE.Vector3(),relative=new THREE.Vector3(),projected=new THREE.Vector3(),labelDirection=new THREE.Vector3();
 const playerPosition=new THREE.Vector3(),chasePosition=new THREE.Vector3();
@@ -100,7 +105,7 @@ createMovementPanel(()=>{
   if(camera){camera.fov=settings.cameraFov+(mobile?7:0);camera.updateProjectionMatrix();}
   if(!settings.pointerLock&&document.pointerLockElement===canvas)document.exitPointerLock();
   wake();
-},open=>{movementPanelOpen=open;exploration.suspend(open);wake();});
+},open=>{movementPanelOpen=open;syncControlSuspension();});
 
 const hud=selector=>{let node=hudNodes.get(selector);if(!node?.isConnected){node=$(selector);if(node)hudNodes.set(selector,node);}return node;};
 // Text is compared with what was last written here, not read back from the page, and goes straight into the node's text when that is all it holds.
@@ -112,8 +117,19 @@ const setStyle=(selector,name,value)=>{const key=selector+name;if(hudStyles.get(
 function getPlayerPosition(){return exploration.getPlayerPosition(new THREE.Vector3()).clone();}
 function getMode(){return exploration.state.transition||Math.abs(dive-diveTarget)>.002?'transition':exploration.state.mode;}
 function getTransition(){return exploration.state.transition||Math.abs(dive-diveTarget)>.002;}
-function setInterfaceOpen(value){interfaceOpen=Boolean(value);exploration.setInterfaceOpen(value);wake();}
+function syncControlSuspension(){
+  movementPanelOpen=Boolean($('#movement-panel')?.open);
+  exploration.setInterfaceOpen(interfaceOpen||movementPanelOpen||settingsMenuOpen);wake();
+}
+function setInterfaceOpen(value){interfaceOpen=Boolean(value);syncControlSuspension();}
+function setSettingsMenuOpen(value){settingsMenuOpen=Boolean(value);syncControlSuspension();}
 function setComputerOpen(value){computerOpen=Boolean(value);wake();return computerOpen;}
+function setSafetyStop(value){
+  const active=Boolean(value);if(active===safetyStop.active)return active;
+  if(active){safetyStop.yaw=exploration.state.yaw;safetyStop.computerWas=computerOpen;computerOpen=false;}
+  else computerOpen=safetyStop.computerWas;
+  safetyStop.active=active;document.body.dataset.safetyStop=String(active);diagnostic.safetyStop=active;wake();return active;
+}
 function toggleCamera(){const active=exploration.toggleFreeCam();const button=$('#camera-toggle');if(button){button.setAttribute('aria-pressed',String(active));setText(button,active?'First-person view':'Third-person view');}wake();return active;}
 // A model is first drawn only once its shaders have compiled (off the main thread where the browser allows it) and
 // its textures have been uploaded one per frame: it appears a moment later instead of stalling the frame it appears in.
@@ -292,28 +308,34 @@ async function prepare(root){
   if(uniforms.uDive.value===0)warmLater(root);
   prepared.add(root);wake();
 }
-// The models load on the first dive, or just before it: when the visitor reaches for the dive button, or after a few
-// idle seconds on a fast connection. Phones and data-saving visitors keep to the dive itself.
+// Prewarm after the surface is interactive; the dive button can request it sooner.
+// Visitors who explicitly enable data saving defer these downloads until diving.
 function preloadModels(){
-  if(quality!=='standard'||navigator.connection?.saveData||viewerOrbit)return;
-  const start=()=>{if(diagnostic.ready)beginModels();},button=$('#dive');
+  // Begin only after the surface is interactive. Work remains frame-budgeted on
+  // phones too; an explicit data-saving preference defers model downloads.
+  const button=$('#dive');
+  const start=()=>{if(!diagnostic.ready)return;modelsWanted=true;startUnderwater();beginModels();wake();};
   button.addEventListener('pointerenter',start,{once:true});button.addEventListener('focus',start,{once:true});
-  if(navigator.connection?.effectiveType==='4g')setTimeout(()=>window.requestIdleCallback?requestIdleCallback(start,{timeout:2500}):start(),3500);
+  if(navigator.connection?.saveData){diagnostic.prewarm='data-saver';return;}
+  diagnostic.prewarm='scheduled';
+  setTimeout(()=>{diagnostic.prewarm='loading';startup.prewarmAt=Math.round(performance.now());start();},450);
 }
+
 function beginModels(){
   // The models stand on the reef: asked for sooner, they start the moment it is built.
   if(!built){modelsWanted=true;return;}
   if(modelsLoading||modelScene)return;modelsLoading=true;
   // Three pipelines parse, bake and compile for a few seconds; the frame-rate windows wait for all of them (see frame()).
   const busy=promise=>{modelsBusy++;return promise.finally(()=>{modelsBusy--;scaler.state.settling=1;});};
-  // The creature set (user-creatures.js): residents on the reef, schools by the coral, and big animals that come and go.
-  busy(import('./user-creatures.js').then(({createUserCreatures})=>{userCreatures=createUserCreatures({terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy',sites:{formations:heroFormations?.sites||[],life:livingWorld?.sites||[],landmarks:LANDMARKS,patches:()=>userCorals?.diagnostics?.patches||[]}});scene.add(userCreatures.root);userCreatures.root.visible=false;diagnostic.userCreatures=userCreatures.diagnostics;return userCreatures.load();}).then(()=>{stylizeTree(userCreatures.root,{toon:.25,rim:.22,caustics:.45});return prepare(userCreatures.root);}).catch(error=>console.warn('New creature set unavailable:',error)));
-  busy(import('./user-corals.js').then(({createUserCorals})=>{userCorals=createUserCorals({terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy'});scene.add(userCorals.root);userCorals.root.visible=false;diagnostic.userCorals=userCorals.diagnostics;return userCorals.load();}).then(()=>{stylizeTree(userCorals.root,{toon:.3,rim:.2,caustics:.55});return prepare(userCorals.root);}).catch(error=>console.warn('New coral set unavailable:',error)));
   busy(import('./model-scene.js').then(({createModelScene})=>{
     if(!reef)return;modelScene=createModelScene({reef,terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy',onStatus:value=>{if(value.status==='loading')diagnostic.modelLoading=true;diagnostic.modelsLoaded=value.loaded??diagnostic.modelsLoaded??0;diagnostic.modelsFailed=value.failed??diagnostic.modelsFailed??0;if(value.status==='fallback'&&value.message&&!exploration.state.transition)status.textContent='Some optional ocean models could not load.';}});
     scene.add(modelScene.root);interactionTargets=modelScene.landmarks||[];
-    return modelScene.load().then(async result=>{stylizeImported(modelScene.root,{glow:'near'});if(setPieces)await later('landmark props',()=>{const props=setPieces.place(modelScene.landmarks)||[];stylizeTree(setPieces.root);diagnostic.setPieces=setPieces.counts;for(const mesh of props){mesh.userData.waiting=true;mesh.visible=false;}showWhenReady(props);},{cost:20});modelScene.update(0,elapsed,playerPosition,night);diagnostic.modelLoading=false;diagnostic.modelsLoaded=result.loaded;diagnostic.modelsFailed=result.failed;for(const item of reefLabels){const placed=modelScene.landmarks.find(p=>p.id===item.landmark.id);if(placed){item.anchor.fromArray(placed.position).add(new THREE.Vector3(0,1.2,0));const marker=document.querySelector(`[data-landmark="${placed.id}"]`);if(marker){marker.style.left=`${(placed.position[0]+62)/124*100}%`;marker.style.top=`${(placed.position[2]+105)/140*100}%`;}item.label.querySelector("span").textContent=`Seafloor landmark · ${Math.round(toDisplayDepth(-placed.position[1]))} m`;}}diagnostic.reefFishCount=result.reefFishCount;diagnostic.reefFishGroups=result.reefFishGroups;return prepare(modelScene.root);});
-  }).catch(error=>{console.warn('Optional landmark models could not load:',error);diagnostic.modelLoading=false;}).finally(()=>{modelsLoading=false;wake();}));
+    return modelScene.load().then(async result=>{stylizeImported(modelScene.root,{glow:'near'});if(setPieces)await later('landmark props',()=>{const props=setPieces.place(modelScene.landmarks)||[];stylizeTree(setPieces.root);diagnostic.setPieces=setPieces.counts;for(const mesh of props){mesh.userData.waiting=true;mesh.visible=false;}showWhenReady(props);},{cost:20});modelScene.update(0,elapsed,playerPosition,night);diagnostic.modelLoading=false;diagnostic.modelsLoaded=result.loaded;diagnostic.modelsFailed=result.failed;for(const item of reefLabels){const placed=modelScene.landmarks.find(p=>p.id===item.landmark.id);if(placed){item.anchor.fromArray(placed.position).add(new THREE.Vector3(0,1.2,0));const marker=document.querySelector(`[data-landmark="${placed.id}"]`);if(marker){marker.style.left=`${(placed.position[0]+62)/124*100}%`;marker.style.top=`${(placed.position[2]+105)/140*100}%`;}item.label.querySelector("span").textContent=`Seafloor landmark · ${Math.round(toDisplayDepth(-placed.position[1]))} m`;}}diagnostic.reefFishCount=result.reefFishCount;diagnostic.reefFishGroups=result.reefFishGroups;return prepare(modelScene.root).then(()=>{diagnostic.landmarksReady=true;startup.landmarksReadyAt=Math.round(performance.now());});});
+  }).catch(error=>{console.warn('Optional landmark models could not load:',error);diagnostic.modelLoading=false;}).finally(()=>{modelsLoading=false;diagnostic.landmarksSettled=true;wake();}));
+  // The creature set (user-creatures.js): residents on the reef, schools by the coral, and big animals that come and go.
+  busy(import('./user-creatures.js').then(({createUserCreatures})=>{userCreatures=createUserCreatures({terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy',sites:{formations:heroFormations?.sites||[],life:livingWorld?.sites||[],landmarks:LANDMARKS,patches:()=>userCorals?.diagnostics?.patches||[]}});scene.add(userCreatures.root);userCreatures.root.visible=false;diagnostic.userCreatures=userCreatures.diagnostics;return userCreatures.load();}).then(()=>{stylizeTree(userCreatures.root,{toon:.25,rim:.22,caustics:.45});return prepare(userCreatures.root);}).catch(error=>console.warn('New creature set unavailable:',error)));
+  busy(import('./user-corals.js').then(({createUserCorals})=>{userCorals=createUserCorals({terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy'});scene.add(userCorals.root);userCorals.root.visible=false;diagnostic.userCorals=userCorals.diagnostics;return userCorals.load();}).then(()=>{stylizeTree(userCorals.root,{toon:.3,rim:.2,caustics:.55});return prepare(userCorals.root);}).catch(error=>console.warn('New coral set unavailable:',error)));
+
 }
 // Set for one frame when the diver is moved at once (start-at-site, tour cuts): the camera cuts with it instead of sweeping.
 let snapCamera=false;
@@ -342,7 +364,7 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   surface(){if(diveTarget!==1||exploration.state.mode!=='diver')return false;$('#dive').click();return true;},
   get nav(){return exploration.state;},get settings(){return settings;},get landmarks(){return modelScene?.landmarks||null;},get formations(){return heroFormations?.sites||[];},get life(){return livingWorld;},get creatures(){return userCreatures;},
   get flashlight(){return exploration.state.lamp;},set flashlight(value){exploration.setLamp(value);},get scooter(){return exploration.state.scooter;},
-  get setPieces(){return setPieces;},get models(){return modelScene;},get reef(){return reef;},setInterfaceOpen,setComputerOpen,recapture:()=>exploration.recapture(),toggleCamera}});
+  get setPieces(){return setPieces;},get models(){return modelScene;},get reef(){return reef;},setInterfaceOpen,setSettingsMenuOpen,setComputerOpen,setSafetyStop,recapture:()=>exploration.recapture(),toggleCamera}});
 
 function paintTheme(isNight,preset=isNight?'night':'day'){
   const theme=isNight?'night':'day';selectedNight=isNight;
@@ -371,8 +393,6 @@ function frameSurface(phaseValue=phase){
   exploration.frameSky(surfaceFramingYaw);
 }
 function updateMotionUI(){
-  $('#motion').setAttribute('aria-pressed',String(paused));$('#motion').setAttribute('aria-label',paused?'Resume animation':'Pause animation');
-  $('#motion-label').textContent=paused?'Resume motion':'Pause motion';$('#motion-icon').innerHTML=paused?'<path d="m8 5 11 7-11 7Z"/>':'<path d="M9 5v14M15 5v14"/>';
   diagnostic.paused=paused;
 }
 function setExploring(value){
@@ -381,7 +401,6 @@ function setExploring(value){
 }
 $('#day').addEventListener('click',()=>setTheme(false));$('#night').addEventListener('click',()=>setTheme(true));
 $('#dawn').addEventListener('click',()=>setSkyPreset('dawn'));$('#dusk').addEventListener('click',()=>setSkyPreset('dusk'));
-$('#motion').addEventListener('click',()=>{paused=!paused;updateMotionUI();wake();});
 $('#explore').addEventListener('click',()=>{if(exploring){exploration.setInterfaceOpen(false);setExploring(false);}else{exploration.recapture();setExploring(true);}});
 function paintAtlas(){
   $('.reef-map').dataset.collapsed=String(mapCollapsed);$('#map-toggle').setAttribute('aria-expanded',String(!mapCollapsed));$('#map-toggle').setAttribute('aria-label',mapCollapsed?'Expand reef atlas':'Collapse reef atlas');$('#map-toggle').textContent=mapCollapsed?'＋':'−';
@@ -472,7 +491,7 @@ function* buildUnderwater(linking){
   yield;stylizeTree(reef,{glow:'near'});yield* compileSteps(reef,linking);
   buildStage='chart';yield* chartSteps();
   buildStage='animals';yield 8;
-  marine=yield* marineLifeSteps({economy,terrainHeightAt});marine.root.visible=false;scene.add(marine.root);diagnostic.fishCount=marine.count;
+  marine=yield* marineLifeSteps({economy,terrainHeightAt,collisions:reef.userData.collisions});marine.root.visible=false;scene.add(marine.root);diagnostic.fishCount=marine.count;
   yield;extraLife=yield* underwaterLifeSteps({economy,terrainHeightAt});extraLife.root.visible=false;scene.add(extraLife.root);diagnostic.extraLife=extraLife.counts;
   yield 5;setPieces=createSetPieces({terrainHeightAt,collisions:reef.userData.collisions,economy});setPieces.root.visible=false;scene.add(setPieces.root);diagnostic.setPieces=setPieces.counts;
   yield;stylizeTree(marine.root,{toon:.35,rim:.45,caustics:.5});stylizeTree(extraLife.root,{rim:.42});stylizeTree(setPieces.root);
@@ -634,11 +653,12 @@ function updateWorld(dt,clockDt=dt){
   // A dive asked for before the world under the water is ready waits in the first tenth of the transition, the camera
   // still above the surface, while the rest is built with most of every frame's time (see afterFrame); the status line
   // says so if that takes more than a moment. The first draws get up to two and a half seconds of it as well.
-  if(diveTarget===1&&(!underReady||warmQueue.length&&diveHeldFor>0&&diveHeldFor<2.5)){if(!buildSteps)startUnderwater();dive=Math.min(dive,DIVE_HOLD);diveHeldFor+=Math.max(dt,1e-4);hurry=2;if(diveHeldFor>.7&&!underReady&&!holdNoted){holdNoted=true;status.textContent=HOLD_NOTE;}}
+  if(diveTarget===1&&(!underReady||!diagnostic.landmarksSettled||warmQueue.length&&diveHeldFor>0&&diveHeldFor<2.5)){if(!buildSteps)startUnderwater();modelsWanted=true;if(built)beginModels();dive=Math.min(dive,DIVE_HOLD);diveHeldFor+=Math.max(dt,1e-4);hurry=2;if(diveHeldFor>.7&&(!underReady||!diagnostic.landmarksSettled)&&!holdNoted){holdNoted=true;status.textContent=HOLD_NOTE;}}
   else if(diveHeldFor){diveHeldFor=0;hurry=1;if(holdNoted){holdNoted=false;if(status.textContent===HOLD_NOTE)status.textContent='';}if(reducedMotion&&diveTarget===1)dive=diveTarget;}
   let easedDive=THREE.MathUtils.smoothstep(dive,0,1);let underwater=THREE.MathUtils.smoothstep(easedDive,.13,.27);
   uniforms.uTime.value=elapsed;uniforms.uNight.value=night;uniforms.uDive.value=underwater;
   const nav=exploration.update(dt,easedDive>.95,reducedMotion,reef?.userData.safeAscentRoute);
+  safetyStop.blend=reducedMotion?Number(safetyStop.active):THREE.MathUtils.lerp(safetyStop.blend,Number(safetyStop.active),1-Math.exp(-dt*6));if(safetyStop.blend<.001)safetyStop.blend=0;
   if(nav.mode==='transition'&&previousMode!=='transition'){ascentCameraTime=0;ascentCameraStart.copy(camera.position);camera.getWorldDirection(ascentAimStart);ascentAimStart.multiplyScalar(10).add(camera.position);}
   if(nav.mode==='transition')ascentCameraTime+=dt;
   surfaceLandingTime=Math.max(0,surfaceLandingTime-dt);
@@ -696,7 +716,17 @@ function updateWorld(dt,clockDt=dt){
     const reveal=THREE.MathUtils.smootherstep(ascentCameraTime,0,1.6);
     cameraGoal.lerp(ascentCameraStart,1-reveal);lookTarget.lerp(ascentAimStart,1-reveal);
   }
-  const settledView=!(ascending||dive!==diveTarget||surfaceLandingTime>0);
+  if(safetyStop.blend>0){
+    const yaw=safetyStop.yaw,side=mobile?8:7,forward=mobile?1.2:2.2;
+    const stopCamera=scratchA.set(playerPosition.x+Math.cos(yaw)*side-Math.sin(yaw)*forward,playerPosition.y+(mobile?1.2:.6),playerPosition.z-Math.sin(yaw)*side-Math.cos(yaw)*forward);
+    const composition=mobile?.05:Math.min(2.3,camera.aspect*1.25);
+    const stopAim=scratchB.set(playerPosition.x-Math.sin(yaw)*composition,playerPosition.y-(mobile?2.1:.65),playerPosition.z-Math.cos(yaw)*composition);
+    cameraGoal.lerp(stopCamera,safetyStop.blend);lookTarget.lerp(stopAim,safetyStop.blend);
+  }
+  // The descent keeps easing after swimming becomes available. Hand the camera to the
+  // same controls at that point; waiting for the transition's tail makes aim feel heavy.
+  const descentControlled=diveTarget===1&&nav.mode==='diver';
+  const settledView=!(ascending||dive!==diveTarget&&!descentControlled||surfaceLandingTime>0||safetyStop.blend>0);
   if(cameraWas!==nav.perspective){if(cameraWas)cameraShift=1;cameraWas=nav.perspective;}
   if(reducedMotion||snapCamera||diagnostic.frames===0){camera.position.copy(cameraGoal);cameraVelocity.set(0,0,0);cameraShift=0;}
   else {
@@ -724,6 +754,7 @@ function updateWorld(dt,clockDt=dt){
   const aimAngle=camera.quaternion.angleTo(aimQuaternion),aimBlend=1-Math.exp(-dt*(settledView?THREE.MathUtils.lerp(settings.cameraResponse*(firstPerson?4:1.5),8,Math.min(1,cameraShift*1.6)):3));
   camera.quaternion.slerp(aimQuaternion,reducedMotion||snapCamera||diagnostic.frames===0?1:settledView?aimBlend:Math.min(aimBlend,dt*2.8/Math.max(.0001,aimAngle)));snapCamera=false;}else{viewerOrbit.update();diagnostic.cameraMoving=true;}camera.getWorldDirection(viewDirection);camera.updateMatrixWorld(true);
   underwater=THREE.MathUtils.smoothstep(-camera.position.y,-.12,1.2);uniforms.uDive.value=underwater;
+  splashState.cameraY=camera.position.y;splashState.transition=dive!==diveTarget||nav.mode==='transition'||surfaceLandingTime>0;splashState.reducedMotion=reducedMotion;waterlineSplash?.update(splashState);
   const skyState=skySystem.update(phase,camera.position,night,underwater,elapsed);
   // Weather sets the sea state before anything below reads waveHeight(), and its light before the lighting is built.
   weather.update(paused?0:dt,elapsed,camera.position,underwater,night);
@@ -763,7 +794,7 @@ function updateWorld(dt,clockDt=dt){
   const fovGoal=settings.cameraFov+(mobile?7:0)+(reducedMotion?0:nav.scooter*5);if(Math.abs(camera.fov-fovGoal)>.01){camera.fov=fovGoal;camera.updateProjectionMatrix();}
   const scale=settings.diverScale*(mobile?1.03/1.35:camera.aspect<1?1.17/1.35:1);
   diver.root.scale.setScalar(scale);
-  diver.root.visible=ascending||diveTarget===0||!(firstPerson&&easedDive>.92);
+  diver.root.visible=safetyStop.blend>.01||ascending||diveTarget===0||!(firstPerson&&easedDive>.92);
   const surfaceX=Math.tan(THREE.MathUtils.degToRad(camera.fov*.5))*camera.aspect*7.2*.66;
   const framingYaw=surfaceFramingYaw;
   relative.set(surfaceX,0,-7.2).applyAxisAngle(axisY,framingYaw);
@@ -775,11 +806,20 @@ function updateWorld(dt,clockDt=dt){
   poseYaw.setFromAxisAngle(axisY,THREE.MathUtils.lerp(framingYaw-.2,Math.PI+nav.yaw,diverBlend));posePitch.setFromAxisAngle(axisX,diverBlend*(ascending?.22:Math.PI/2-settings.diverTrim-nav.pitch-(nav.pitchLead||0)));
   // The body banks into a turn and sways a little at rest (exploration.js: roll and lean, in radians, zero under reduced motion).
   diver.root.quaternion.copy(poseYaw).multiply(posePitch).multiply(scratchQ.setFromAxisAngle(axisY,-diverBlend*((nav.roll||0)+(nav.lean||0))));lookGlowAt(diver.root.position,diverGlow);
+  if(safetyStop.blend>0){
+    const hold=safetyStop.blend;
+    poseYaw.setFromAxisAngle(axisY,Math.PI+safetyStop.yaw);posePitch.setFromAxisAngle(axisX,.1);
+    scratchQ.copy(poseYaw).multiply(posePitch);diver.root.quaternion.slerp(scratchQ,hold);
+    diver.root.position.y+=reducedMotion?0:Math.sin(elapsed*1.35)*.07*hold;
+  }
   diveLamp.position.copy(playerPosition);diveLamp.position.y+=.4;diveLamp.intensity=nav.lamp?underwater*((night>.5?70:55)+depthLight*18):0;
   diveLamp.target.position.copy(playerPosition).addScaledVector(swimDirection,45);
   diagnostic.flashlightRange=diveLamp.distance;diagnostic.flashlightIntensity=diveLamp.intensity;diagnostic.neutralBrightness=look.uLookBrightness.value;
-  for(const {shoulder,forearm,side} of diver.arms){shoulder.rotation.z=side*(.13-easedDive*.03);shoulder.rotation.x=-.08-easedDive*.17;forearm.rotation.x=-.28-easedDive*.72;}
-  for(const {hip,shin,side} of diver.legs){const kick=paused?0:Math.sin(elapsed*settings.kickFrequency+(side===1?Math.PI:0));hip.rotation.x=kick*easedDive*settings.kickAmplitude;shin.rotation.x=.08+easedDive*.16+kick*easedDive*settings.kickAmplitude*.79;}
+  diverAnimationState.dive=easedDive;diverAnimationState.moving=nav.moving;diverAnimationState.ascending=ascending;
+  diverAnimationState.safetyStop=safetyStop.blend;diverAnimationState.wristOpen=computerOpen;
+  diverAnimationState.kickFrequency=settings.kickFrequency;diverAnimationState.kickAmplitude=settings.kickAmplitude;
+  diverAnimationState.reducedMotion=reducedMotion;diverAnimationState.paused=paused;
+  diverAnimator?.update(dt,diverAnimationState);
   scooterModel?.update(dt,{active:nav.scooter,allowed:nav.mode==='diver'&&underwater>.55&&!getTransition()&&!interfaceOpen&&!movementPanelOpen&&!viewerOrbit,firstPerson,reducedMotion,wristOpen:computerOpen});
   if(largeMarine)largeMarine.root.visible=underwater>.01&&largeMarine.diagnostics.loaded&&prepared.has(largeMarine.root);
   if(built){extraLife.root.visible=Boolean(viewerOrbit)||underwater>.01;reef.visible=Boolean(viewerOrbit)||underwater>.01;marine.root.visible=Boolean(viewerOrbit)||underwater>.01;beamGroup.visible=underwater>.01;motes.visible=underwater>.01;}
@@ -808,7 +848,7 @@ function updateWorld(dt,clockDt=dt){
   const depth=Math.max(0,-diver.root.position.y),edge=Math.abs(playerPosition.x)>32||playerPosition.z< -65||playerPosition.z>15;
   wristComputer?.update(dt,{open:computerOpen,allowed:firstPerson&&nav.mode==='diver'&&easedDive>.95&&!getTransition()&&!interfaceOpen&&!movementPanelOpen,reducedMotion,depth,location:edge?'REEF DROP-OFF':'CORAL GARDENS',data:diagnostic.diveComputer});
   // Fields other scripts poll stay current every frame; the rest follow the HUD.
-  diagnostic.depth=Number(depth.toFixed(2));diagnostic.displayDepth=Number(toDisplayDepth(depth).toFixed(2));diagnostic.transition=nav.transition||dive!==diveTarget||phaseTarget!==null;diagnostic.phase=phase;diagnostic.night=night;diagnostic.position=camera.position.toArray();diagnostic.playerPosition=playerPosition.toArray();diagnostic.exploring=exploring;diagnostic.swimming=nav.moving;diagnostic.colliding=nav.colliding;diagnostic.contacts=nav.contacts;diagnostic.pointerLocked=Boolean(nav.pointerLocked);diagnostic.cameraMode=nav.mode==='surface'?'third':nav.perspective;
+  diagnostic.depth=Number(depth.toFixed(2));diagnostic.displayDepth=Number(toDisplayDepth(depth).toFixed(2));diagnostic.transition=nav.transition||dive!==diveTarget||phaseTarget!==null;diagnostic.phase=phase;diagnostic.night=night;diagnostic.position=camera.position.toArray();diagnostic.playerPosition=playerPosition.toArray();diagnostic.exploring=exploring;diagnostic.swimming=nav.moving;diagnostic.colliding=nav.colliding;diagnostic.contacts=nav.contacts;diagnostic.pointerLocked=Boolean(nav.pointerLocked);diagnostic.cameraMode=safetyStop.active?'third':nav.mode==='surface'?'third':nav.perspective;diagnostic.safetyStopBlend=+safetyStop.blend.toFixed(3);
   // A paused scene stops its loop as soon as it settles, so it paints every frame and never ends on a stale HUD.
   const clock=performance.now(),paint=hudForce||paused||clock-hudPainted>=80;
   if(paint||phaseTarget!==null||expeditionUI?.isScrubbing())expeditionUI?.update(skyState);
@@ -864,7 +904,7 @@ function gpuPoll(){
 function renderBudget(){
   if(budgetAsked!=='auto')return budgetAsked;
   if(interfaceOpen)return 'idle';
-  if(movementPanelOpen)return 'reduced';
+  if(movementPanelOpen||settingsMenuOpen)return 'reduced';
   // (Not while the first dive is still being warmed up: that work is paced by drawn frames and should be done before the visitor dives.)
   return exploration.state.mode==='surface'&&diveTarget===0&&!viewerOrbit&&!warmQueue.length&&!modelsBusy&&performance.now()-lastInput>IDLE_AFTER?'reduced':'full';
 }
@@ -941,13 +981,12 @@ async function boot(){
   if(post)early(post.stage,post.camera,post.stage);
   await stage('renderer');
   // The diver first: its programs are the largest of the surface's, and they compile while the sky and the sea are built.
-  diver=createDiver();stylizeTree(diver.root,{toon:.45,rim:.4,caustics:.6,glow:'flat',glowColor:diverGlow});for(const material of Object.values(diver.materials))stylize(material,{toon:.45,rim:.4,caustics:.6,glow:'flat',glowColor:diverGlow});scene.add(diver.root);
+  diver=createDiver();diverAnimator=createDiverAnimator(diver);diagnostic.diverAnimation=diverAnimator.diagnostics;stylizeTree(diver.root,{toon:.45,rim:.4,caustics:.6,glow:'flat',glowColor:diverGlow});for(const material of Object.values(diver.materials))stylize(material,{toon:.45,rim:.4,caustics:.6,glow:'flat',glowColor:diverGlow});scene.add(diver.root);
   early(diver.root);
   await stage('diver');
   skySystem=createSkySystem(uniforms,rng);scene.add(skySystem.root);expeditionUI=createExpeditionUI({sky:skySystem,getPhase:()=>phase,setPhase:value=>{phase=value;phaseTarget=null;wake();},frameSurface});
   diagnostic.starCount=skySystem.starCount;diagnostic.constellationCount=skySystem.constellationCount;
-  if(!savedTheme)phase=skySystem.initialPhase;
-  else if(skySystem.presets[savedTheme]!==undefined){phase=skySystem.presets[savedTheme];paintTheme(savedTheme==='night',savedTheme);}
+  phase=skySystem.openingPhase;paintTheme(false,'dawn');diagnostic.openingSunAltitude=skySystem.getState(phase).sunAltitude;
   for(const item of skySystem.labels){const label=document.createElement('div');label.className='constellation-label';label.innerHTML=`<i></i>${item.name.toUpperCase()}`;$('#sky-labels').append(label);label.style.left=label.style.top='0';skyLabels.push({label,shift:'',anchor:item.anchor});}
   early(skySystem.root);for(const material of skySystem.prepare(renderer))linking.add(material);
   await stage('sky');
@@ -957,6 +996,7 @@ async function boot(){
   await stage('sea');
   makeLandmarkMarks();exploration.setTerrain(terrainHeightAt);resize();
   scooterModel=createDiveScooter(camera,diver.root);diagnostic.scooterModel=scooterModel.diagnostics;
+  waterlineSplash=createWaterlineSplash();diagnostic.waterlineSplash=waterlineSplash.diagnostics;
   wristComputer=createWristComputer(camera,diver.materials);diagnostic.wristComputer=wristComputer.diagnostics;
   // The orbit viewer looks at the whole reef: it is all there before its first frame.
   if(window.oceanViewer){viewerOrbit=new OrbitControls(camera,canvas);viewerOrbit.enableDamping=true;viewerOrbit.dampingFactor=.08;viewerOrbit.minDistance=1;viewerOrbit.maxDistance=250;viewerOrbit.addEventListener('change',wake);exploration.suspend(true);finishUnderwater();beginModels();}

@@ -331,29 +331,19 @@ calm.addEventListener('change', () => { held = false; if (enabled) start(); });
 addEventListener('oceanlightning', event => { if (timer && !calm.matches) { thunderAt = ctx.currentTime + span(THUNDER.delay); thunderPower = (event.detail?.power ?? 1) * intensity.storm; } });
 addEventListener('oceanlamp', () => { if (timer) play(graph, 'lamp'); });
 
-// 5. Controls: a speaker button beside the sun / moon button and a Sound group
-// in the settings menu, built from the menu's own switch and slider recipes.
-const SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3l4-3.5v12l-4-3.5H4Z"/><path class="sound-on" d="M14.5 9.2a4 4 0 0 1 0 5.6M17 6.8a7.4 7.4 0 0 1 0 10.4"/><path class="sound-off" d="m15 9.5 5 5m0-5-5 5"/></svg>';
-const button = document.createElement('button'), group = document.createElement('section');
-button.id = 'sound-toggle'; button.type = 'button'; button.className = 'time-cycle sound-toggle'; button.innerHTML = SPEAKER;
-button.setAttribute('aria-label', 'Ambient sound');
-group.className = 'settings-group'; group.id = 'sound-settings'; group.setAttribute('aria-labelledby', 'settings-sound-title');
+// 5. General settings: ambient sound and its level sit with the sky controls.
+const group = document.createElement('section');
+group.className = 'settings-subgroup'; group.id = 'sound-settings'; group.setAttribute('aria-labelledby', 'settings-sound-title');
 group.innerHTML = '<h3 id="settings-sound-title" class="holo-label">Sound</h3>'
   + '<label class="holo-switch"><input id="sound-switch" type="checkbox" role="switch"><i aria-hidden="true"></i><span>Ambient sound</span><small>Water, weather and breathing</small></label>'
   + '<div class="movement-field sound-volume"><label for="sound-volume">Volume</label><output class="movement-output" for="sound-volume"></output><input id="sound-volume" type="range" min="0" max="100" step="1"></div>';
 const toggle = group.querySelector('#sound-switch'), slider = group.querySelector('#sound-volume'), reading = group.querySelector('output');
 function paint() {
-  const waiting = enabled && !timer && !document.hidden && !held;
-  button.setAttribute('aria-pressed', String(enabled)); button.dataset.waiting = String(waiting);
-  button.title = !enabled ? 'Sound off' : waiting ? 'Sound on · starts with your next click' : held ? 'Sound on · paused with the scene' : 'Sound on';
   toggle.checked = enabled; slider.value = String(Math.round(volume * 100)); reading.textContent = `${Math.round(volume * 100)}%`;
 }
-button.addEventListener('click', () => turn(!enabled, true));
 toggle.addEventListener('change', () => turn(toggle.checked, true));
 slider.addEventListener('input', () => setVolume(slider.value / 100));
-$('.sky-cluster')?.append(button);
-const body = $('#settings-menu .settings-body'), before = $('#settings-view-title')?.closest('.settings-group');
-if (before?.parentNode === body) before.before(group); else body?.append(group);
+$('#settings-general-content')?.append(group);
 paint();
 if (enabled) start();
 

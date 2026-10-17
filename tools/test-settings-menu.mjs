@@ -1,0 +1,50 @@
+import {chromium} from 'playwright';
+import assert from 'node:assert/strict';
+const browser=await chromium.launch({channel:'chrome',headless:true});
+const report={checks:[],errors:[]};
+try{
+ const page=await browser.newPage({viewport:{width:1440,height:900}});
+ page.on('pageerror',error=>report.errors.push(error.message));
+ await page.goto(process.env.OCEAN_TEST_URL||'http://127.0.0.1:4210/ocean-refined/',{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>window.oceanDiagnostics?.ready,null,{timeout:120000});
+ report.openingSunAltitude=await page.evaluate(()=>oceanDiagnostics.openingSunAltitude);
+ assert.ok(report.openingSunAltitude<0&&report.openingSunAltitude>-4,'Start just before sunrise');
+ const defaults=await page.evaluate(()=>({brightness:oceanControls.settings.brightnessBoost,aim:oceanControls.settings.mouseSensitivity,mode:oceanControls.settings.keyboardMode,preset:oceanControls.settings.preset}));
+ assert.deepEqual(defaults,{brightness:80,aim:.0019,mode:'strafe',preset:'responsive'});
+ assert.equal(await page.locator('#motion').count(),0);
+ for(const [name,width,height] of [['desktop',1440,900],['phone',390,844]]){
+  await page.setViewportSize({width,height});
+  await page.locator('#menu-toggle').click();
+  await page.waitForFunction(()=>oceanControls.nav.suspended);
+  const folders=await page.locator('#settings-menu .settings-body > details > summary').allTextContents();
+  assert.equal(folders[0],'General');assert.match(folders[1],/controls/);assert.equal(folders.at(-1),'Keyboard & touch');
+  for(const id of ['time-slider','weather-settings','sound-switch','sound-volume'])assert.equal(await page.locator(`#settings-menu #${id}`).count(),1);
+  assert.equal(await page.locator('.masthead #time-cycle').count(),0);
+  await page.locator('#movement-toggle').click();
+  await page.waitForFunction(()=>document.body.dataset.movementPanel==='open');
+  const view=page.locator('summary#settings-view-title');await view.click();
+  await page.evaluate(()=>{oceanControls.setInterfaceOpen(true);oceanControls.setInterfaceOpen(false);});
+  assert.equal(await page.evaluate(()=>oceanControls.nav.suspended),true,'Closing a dialog cannot release the open settings');
+  await page.locator('#settings-menu .settings-close').click();
+  await page.evaluate(()=>oceanExpedition.openInventory());
+  await page.waitForFunction(()=>document.querySelector('.expedition-dialog').open);
+  await page.waitForFunction(()=>!document.querySelector('#movement-panel').open);
+  assert.equal(await page.evaluate(()=>oceanControls.nav.suspended),true,'A delayed disclosure close cannot release a dialog');
+  await page.locator('.expedition-dialog [data-close]').click();
+  await page.waitForFunction(()=>!oceanControls.nav.suspended);
+  await page.locator('#menu-toggle').click();
+  await page.locator('#movement-toggle').click();
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(()=>!document.querySelector('#movement-panel').open);
+  assert.equal(await page.locator('#settings-menu').isVisible(),true);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(()=>document.querySelector('#settings-menu').hidden);
+  assert.equal(await page.evaluate(()=>document.activeElement.id),'menu-toggle');
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  await page.locator('#menu-toggle').click();
+  await page.screenshot({path:`${process.env.TEMP}/ocean-settings-${name}.png`});
+  await page.locator('#settings-menu .settings-close').click();
+  report.checks.push(`${name}: menu order, all general controls, defaults, suspension, nested Escape and no overflow`);
+ }
+ assert.deepEqual(report.errors,[]);report.passed=true;
+}finally{console.log(JSON.stringify(report,null,2));await browser.close();}

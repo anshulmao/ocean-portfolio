@@ -6,10 +6,8 @@ export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
   if (!trigger || !panel) throw new Error('Movement panel markup is missing.');
   const content = panel.querySelector('.movement-fields');
   const notice = panel.querySelector('.movement-save-status');
+  const keyBehavior = document.getElementById('key-ad-description');
   const controls = new Map();
-  let restoreFocus = trigger;
-  let open = false;
-  const inertBefore = new Map();
   const removers = [];
   const listen = (element,event,fn) => { element.addEventListener(event,fn); removers.push(() => element.removeEventListener(event,fn)); };
   const format = (item,value) => `${value}${item.unit ? ` ${item.unit}` : ''}`;
@@ -112,6 +110,7 @@ export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
       setSetting(item.key,value);
       refresh(source === input && item.type === 'number');
       refreshPreset();
+      refreshKeymap();
       notice.textContent = persistSettings() ? 'Saved on this device · changes apply live' : 'Changes apply live · browser storage unavailable';
       onChange(item.key,settings[item.key],settings);
     };
@@ -123,41 +122,24 @@ export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
   }
   refreshPreset();
 
-  function refresh() { for (const fn of controls.values()) fn(); refreshPreset(); }
-  function close() {
-    if (!open) return;
-    open = false;
-    panel.hidden = true;
-    trigger.setAttribute('aria-expanded','false');
-    document.body.removeAttribute('data-movement-panel');
-    for (const [element,wasInert] of inertBefore) element.inert=wasInert;
-    inertBefore.clear();
-    onOpen(false);
-    // The trigger lives in the settings menu, which closes when this panel opens: fall back to the menu button.
-    const focusTarget=restoreFocus?.isConnected && restoreFocus.getClientRects().length ? restoreFocus : document.getElementById('menu-toggle') || trigger;
-    focusTarget.focus({preventScroll:true});
-    // In short viewports the trigger was hidden behind the sheet. Wait for
-    // its visibility to return before restoring focus on Chromium touch views.
-    requestAnimationFrame(()=>{if(!open&&(document.activeElement===document.body||panel.contains(document.activeElement)))focusTarget.focus({preventScroll:true});});
+  function refreshKeymap() { if (keyBehavior) keyBehavior.textContent = settings.keyboardMode === 'turn' ? 'Turn' : 'Strafe'; }
+  function refresh() { for (const fn of controls.values()) fn(); refreshPreset(); refreshKeymap(); }
+  refreshKeymap();
+  let open = false;
+  function syncOpen() {
+    const next = panel.open;
+    trigger.setAttribute('aria-expanded', String(next));
+    if (next === open) return;
+    open = next;
+    if (open && document.pointerLockElement) document.exitPointerLock();
+    if (open) refresh();
+    document.body.toggleAttribute('data-movement-panel', open);
+    if (open) document.body.dataset.movementPanel = 'open';
+    onOpen(open);
   }
-  function show() {
-    if (open) return;
-    restoreFocus = trigger;
-    open = true;
-    if (document.pointerLockElement) document.exitPointerLock();
-    panel.hidden = false;
-    trigger.setAttribute('aria-expanded','true');
-    document.body.dataset.movementPanel = 'open';
-    for (const element of document.body.children) {
-      if(element===panel||element===trigger||element.tagName==='SCRIPT')continue;
-      inertBefore.set(element,element.inert);element.inert=true;
-    }
-    refresh();
-    onOpen(true);
-    panel.querySelector('.movement-close').focus({preventScroll:true});
-  }
-  listen(trigger,'click',() => open ? close() : show());
-  listen(panel.querySelector('.movement-close'),'click',close);
+  function close() { panel.open = false; syncOpen(); }
+  function show() { panel.open = true; syncOpen(); }
+  listen(panel,'toggle',syncOpen);
   listen(panel.querySelector('.movement-reset'),'click',() => {
     resetSettings();
     refresh();
@@ -174,17 +156,6 @@ export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url),1000);
     notice.textContent = 'Settings exported as JSON';
-  });
-  listen(document,'keydown',event => {
-    if (!open) return;
-    if (event.code === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); close(); return; }
-    if (panel.contains(event.target)) event.stopPropagation();
-    if (event.key === 'Tab') {
-      const focusable = [...panel.querySelectorAll('button,input,select,summary')].filter(element => element.getClientRects().length && !element.disabled);
-      const first = focusable[0], last = focusable.at(-1);
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    }
   });
   notice.textContent = persistSettings() ? 'Saved on this device · changes apply live' : 'Changes apply live · browser storage unavailable';
   return {open:show,close,refresh,get isOpen(){ return open; },destroy(){ close(); for (const remove of removers) remove(); content.replaceChildren(); }};

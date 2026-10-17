@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import { movementDefaults } from '../movement-defaults.js';
+const data = new Map([['anshul-ocean-refinement-v2',JSON.stringify({_version:2,brightnessBoost:0,mouseSensitivity:.01,keyboardMode:'turn'})]]);
+globalThis.localStorage = {getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value)};
+const profile = await import('../movement-settings.js?profile-fresh');
+assert.deepEqual(profile.defaults,movementDefaults);
+assert.deepEqual(profile.settings,movementDefaults,'Previous default generation must not override the supplied profile');
+if(process.argv[2]) assert.deepEqual(profile.defaults,JSON.parse(await fs.readFile(process.argv[2],'utf8')),'Every supplied value must match');
+profile.setSetting('mouseSensitivity',.0031);
+const returning = await import('../movement-settings.js?profile-returning');
+assert.equal(returning.settings.mouseSensitivity,.0031,'Subsequent visitor adjustments persist');
+returning.resetSettings();
+assert.deepEqual(returning.settings,movementDefaults,'Reset must restore the complete supplied profile');
+assert.equal(profile.defaults.keyboardMode,'strafe');
+assert.equal(profile.defaults.mouseSmoothing,false);
+assert.equal(profile.defaults.swimTowardLook,true);
+console.log(`Movement profile passed: ${Object.keys(profile.defaults).length} defaults, legacy reset, visitor persistence and Reset.`);

@@ -168,6 +168,8 @@ function setMenu(open, refocus = true) {
   menuToggle.setAttribute('aria-expanded', String(open));
   menuToggle.setAttribute('aria-label', open ? 'Close settings menu' : 'Open settings menu');
   if (open) document.body.dataset.menu = 'open'; else delete document.body.dataset.menu;
+  if (!open) $('#movement-panel')?.removeAttribute('open');
+  window.oceanControls?.setSettingsMenuOpen?.(open);
   if (open) {
     if (document.pointerLockElement) document.exitPointerLock();
     paintLocks();
@@ -176,15 +178,35 @@ function setMenu(open, refocus = true) {
 }
 menuToggle?.addEventListener('click', () => setMenu(menu.hidden));
 menu?.querySelector('.settings-close').addEventListener('click', () => setMenu(false));
-// Scene controls is a modal panel of its own: the menu steps aside for it.
-$('#movement-toggle')?.addEventListener('click', () => setMenu(false, false));
 document.addEventListener('keydown', event => {
-  if (event.key !== 'Escape' || !menu || menu.hidden || document.querySelector('dialog[open]')) return;
-  setMenu(false);
+  if (!menu || menu.hidden || document.querySelector('dialog[open]')) return;
+  if (event.key === 'Escape') {
+    const movement = $('#movement-panel');
+    if (movement?.open) {
+      movement.open = false;
+      $('#movement-toggle')?.focus({preventScroll:true});
+      event.preventDefault(); event.stopImmediatePropagation();
+    } else setMenu(false);
+    return;
+  }
+  if (event.key !== 'Tab') return;
+  const focusable = [...menu.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),summary,[href],[tabindex]:not([tabindex="-1"])')]
+    .filter(element => {
+      if (!element.getClientRects().length || getComputedStyle(element).visibility === 'hidden') return false;
+      for (let parent = element.parentElement; parent && parent !== menu; parent = parent.parentElement) {
+        if (parent.tagName === 'DETAILS' && !parent.open && element !== parent.querySelector(':scope > summary')) return false;
+      }
+      return true;
+    });
+  const first = focusable[0], last = focusable.at(-1);
+  if (!first || !last) return;
+  if (!menu.contains(document.activeElement)) { event.preventDefault(); first.focus({preventScroll:true}); }
+  else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus({preventScroll:true}); }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus({preventScroll:true}); }
 });
 document.addEventListener('pointerdown', event => {
   if (!menu || menu.hidden) return;
-  if (event.target.closest?.('#settings-menu, #menu-toggle, #movement-panel, dialog')) return;
+  if (event.target.closest?.('#settings-menu, #menu-toggle, dialog')) return;
   setMenu(false, false);
 });
 document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement) setMenu(false, false); });

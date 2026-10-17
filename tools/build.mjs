@@ -18,7 +18,7 @@ while(pending.length){const rel=pending.pop();if(seen.has(rel))continue;seen.add
  for(const ref of refs)pending.push(path.normalize(path.join(path.dirname(rel),ref)));
 }
 // Runtime-injected stylesheets.
-for(const name of ['ambient-audio.css','expedition-interactions.css','controls.css'])await copy(name);
+for(const name of ['ambient-audio.css','expedition-interactions.css','controls.css','waterline-splash.css','safety-rating.css'])await copy(name);
 await copy('favicon.svg');await tree('assets/fonts');await tree('assets/portfolio',f=>!f.endsWith('.md'));await tree('assets/prepared/charts',f=>!f.endsWith('.png'));
 const active=['anchor.glb','sunken_ship_low_poly.glb','treasure_chest.glb','coral_waterverbruik_gezond.glb','coral_landbouw_gezond.glb','coral_anker_kleur.glb','coral_uitstoot_gezond.glb','coral_visnet_gezond_fish.glb','manifest.json','CREDITS.md'];
 for(const f of active)await copy('assets/models/'+f);
