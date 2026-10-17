@@ -1798,6 +1798,8 @@ export function createSkySystem(uniforms, rng) {
   const presets={day:0,night:Math.PI,
     dawn:(sunrise.date-reference)/DAY_MS*TAU,
     dusk:(sunset.date-reference)/DAY_MS*TAU};
+  // Begin just before sunrise on the current local date, keeping the real sky.
+  const openingPhase=presets.dawn-12*60*1000/DAY_MS*TAU;
   const rotationMatrix=new THREE.Matrix4(),sunDirection=new THREE.Vector3(),moonDirection=new THREE.Vector3(),moonLight=new THREE.Vector3();
   let cachedPhase=NaN,cachedState,turnedFor=null;
   const atPhase=phase=>new Date(reference.getTime()+phase/TAU*DAY_MS);
@@ -1880,6 +1882,6 @@ export function createSkySystem(uniforms, rng) {
     return state;
   }
   return {root,update,bake,prepare,labels,starCount:CATALOG.length,constellationCount:PATTERNS.length,
-    initialPhase,presets,referenceUTC:reference.toISOString(),observer:OBSERVER,
+    initialPhase,openingPhase,presets,referenceUTC:reference.toISOString(),observer:OBSERVER,
     getNightFactor:phase=>skyState(phase).night,getState:skyState};
 }

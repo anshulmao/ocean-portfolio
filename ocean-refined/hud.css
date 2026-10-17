@@ -1,5 +1,5 @@
 /* In-scene HUD: dive instruments drawn in projected light (tokens and the .holo panel recipe live in hologram.css).
-   Layout: menu button and wordmark top left, compass card top centre, sun / moon button and the sonar
+   Layout: menu button and wordmark top left, compass card top centre and the sonar
    scope (minimap) top right, depth gauge down the left edge, dive console (computer face and pressure
    gauge) bottom right. Notes, the mask frame and the surface board are in instruments.css.
    Nothing here blurs the canvas, and nothing here moves: every transition and keyframe is in motion.css. */
@@ -56,6 +56,7 @@ html[data-sky-preset="night"] .sky-glyph .sky-night,html:not([data-sky-preset])[
 
 /* 2. Settings menu, under the menu button. */
 .settings-menu{position:absolute;top:calc(var(--hud-top) + 50px);left:var(--pad);z-index:11;display:flex;flex-direction:column;width:min(340px,calc(100vw - 32px));max-height:calc(100dvh - var(--hud-top) - 66px);text-shadow:none;color-scheme:dark;--holo-tint-solid:#04202feb}
+.settings-menu.holo{background:linear-gradient(150deg,#153c4cf5,#082733fa)}
 .settings-head{display:flex;align-items:center;justify-content:space-between;flex:none;padding:10px 10px 10px 16px;border-bottom:1px solid var(--holo-faint)}
 .settings-head .holo-label{font-size:11px;text-shadow:var(--holo-text-glow)}
 .settings-close{display:grid;place-items:center;width:30px;height:30px;padding:0}
@@ -63,7 +64,17 @@ html[data-sky-preset="night"] .sky-glyph .sky-night,html:not([data-sky-preset])[
 .settings-body{min-height:0;padding:0 16px 12px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--holo-dim) #0000}
 .settings-group{padding:14px 0 13px;border-bottom:1px solid var(--holo-faint)}
 .settings-group:last-child{padding-bottom:4px;border-bottom:0}
-.settings-group h3{margin:0 0 11px;color:var(--holo)}
+.settings-folder>summary{position:relative;display:flex;align-items:center;justify-content:space-between;min-height:24px;padding:0 22px 0 0;color:var(--holo);font:500 11px/1.3 var(--holo-font);letter-spacing:.16em;text-transform:uppercase;cursor:pointer;list-style:none}
+.settings-folder>summary::-webkit-details-marker{display:none}
+.settings-folder>summary::after{content:'+';position:absolute;right:2px;font:400 16px/1 var(--holo-mono);color:var(--holo)}
+.settings-folder[open]>summary::after{content:'−'}
+.settings-folder>summary:focus-visible{outline:2px solid var(--holo-focus);outline-offset:3px}
+.settings-group-body{padding-top:12px}
+.settings-group h3{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px;color:var(--holo)}
+.settings-subgroup{padding:12px 0 0;border-top:1px solid var(--holo-faint)}
+.settings-subgroup+.settings-subgroup{margin-top:14px}
+.settings-inline-control{display:flex;align-items:center;justify-content:space-between;margin:0 0 12px;color:var(--holo-ink);font:500 13px/1.2 var(--holo-font)}
+.settings-inline-control .time-cycle{width:36px;height:36px}
 .theme-control{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;min-width:0;margin:0;padding:0;border:0}
 .time-scrubber{grid-column:1/-1}
 .time-title{display:flex;justify-content:space-between;align-items:baseline;font:500 10px/1 var(--holo-font);letter-spacing:.14em;color:var(--holo-strong)}
@@ -345,14 +356,11 @@ body[data-submerged="true"] .dive-button:focus-visible{outline:2px solid var(--h
 /* At the surface the ring takes the button's own colour (dark by day, pale at night), which always stands off the water. */
 body:not([data-submerged="true"]) .dive-button:focus-visible{outline-color:var(--button)}
 
-/* 10. Scene controls: the tuning panel opened from the settings menu. */
-.movement-panel{position:absolute;top:calc(var(--hud-top) + 50px);left:var(--pad);z-index:12;display:flex;flex-direction:column;width:min(390px,calc(100vw - 32px));max-height:calc(100dvh - var(--hud-top) - 66px);overflow:hidden;text-shadow:none;color-scheme:dark;--holo-tint-solid:#04202feb}
-.movement-header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-shrink:0;padding:16px 14px 10px 18px}
-.movement-header p{margin:0 0 7px;font:500 9px/1 var(--holo-font);letter-spacing:.2em;color:var(--holo)}
-.movement-header h2{font:400 22px/1.1 var(--holo-font);letter-spacing:-.01em;color:var(--holo-ink);text-shadow:var(--holo-text-glow)}
-.movement-close{flex:none;width:32px;height:32px;padding:0;font-size:20px;line-height:1}
-.movement-intro{flex-shrink:0;margin:0 0 10px;padding:0 18px;font:400 12px/1.6 var(--holo-font);color:#c4e9f1}
-.movement-fields{min-height:0;padding:0 18px 14px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--holo-dim) #0000}
+/* 10. Scene controls: live tuning inside the settings menu. */
+.movement-panel{color-scheme:dark}
+.movement-content{padding-top:9px}
+.movement-intro{margin:0 0 8px;font:400 12px/1.6 var(--holo-font);color:#c4e9f1}
+.movement-fields{min-height:0;padding:0 0 8px}
 .movement-fields details{margin:0;border-top:1px solid var(--holo-faint)}
 .movement-fields summary{display:flex;justify-content:space-between;align-items:center;padding:13px 0;font:500 11px/1 var(--holo-font);letter-spacing:.16em;text-transform:uppercase;color:var(--holo-strong);cursor:pointer;list-style:none}
 .movement-fields summary::-webkit-details-marker{display:none}
@@ -371,11 +379,10 @@ body:not([data-submerged="true"]) .dive-button:focus-visible{outline-color:var(-
 .movement-field input[type="checkbox"]:checked::before{translate:18px 0;background:var(--holo-ink);box-shadow:0 0 8px var(--holo)}
 .movement-field p{grid-column:1/-1;margin:0 0 2px;font:400 11px/1.55 var(--holo-font);color:#a9d8e3}
 .movement-fields :is(input,select,summary):focus-visible{outline:2px solid var(--holo-focus);outline-offset:3px}
-.movement-footer{flex-shrink:0;padding:12px 18px 14px;border-top:1px solid var(--holo-faint)}
+.movement-footer{padding:12px 0 0;border-top:1px solid var(--holo-faint)}
 .movement-actions{display:flex;justify-content:space-between;gap:8px}
 .movement-actions>button{min-height:34px;padding:7px 12px;font-size:12px}
 .movement-save-status{min-height:12px;margin:9px 0 0;font:400 9px/1.4 var(--holo-mono);letter-spacing:.06em;color:var(--holo)}
-body[data-movement-panel="open"]::after{content:'';position:fixed;inset:0;z-index:10;background:#00293824}
 
 /* 11. Model credits. Scoped to the credits dialog: the archive dialog has its own stylesheet. */
 .credits-dialog{width:min(560px,calc(100vw - 32px));padding:40px 30px 26px;border:1px solid var(--holo-dim);border-radius:3px;background:linear-gradient(#04202feb,#04202feb),repeating-linear-gradient(0deg,#8ff4ff0a 0 1px,#0000 1px 3px);box-shadow:inset 0 0 28px #5fe9ff14,var(--holo-glow);color:var(--holo-ink);font-family:var(--holo-font);scrollbar-width:thin;scrollbar-color:var(--holo-dim) #0000}
@@ -397,7 +404,7 @@ body[data-movement-panel="open"]::after{content:'';position:fixed;inset:0;z-inde
   .menu-toggle,.time-cycle{width:40px;height:40px}
   .wordmark{font-size:12px}
   .weather-glyph{width:24px;height:24px}
-  .settings-menu,.movement-panel{left:12px;width:auto;right:12px}
+.settings-menu{left:12px;width:auto;right:12px}
   .settings-close{width:40px;height:40px}
   .settings-actions>button{min-height:42px}
   .holo-switch{min-height:40px}
@@ -448,10 +455,9 @@ body[data-movement-panel="open"]::after{content:'';position:fixed;inset:0;z-inde
   .interact-prompt{bottom:236px;padding:9px 14px 9px 10px}
   .status{bottom:172px}
   .view-controls>button{min-height:44px;min-width:44px}
-  .movement-panel{position:fixed;top:auto;bottom:max(12px,env(safe-area-inset-bottom));max-height:calc(100dvh - 120px)}
   .movement-field input[type="number"],.movement-field select{min-height:40px}
   :is(#time-slider,.movement-field input[type="range"]){height:40px}
-  .movement-close{width:40px;height:40px}.movement-actions>button{min-height:42px}.movement-fields summary{min-height:44px}
+  .movement-actions>button{min-height:42px}.movement-fields summary{min-height:44px}
   .credits-dialog{padding:40px 22px 22px}
 }
 @media(max-width:900px) and (min-width:601px){.look-hint{display:none}}
@@ -463,14 +469,11 @@ body[data-movement-panel="open"]::after{content:'';position:fixed;inset:0;z-inde
   .depth{display:none}
   .capture-hint{bottom:56px}.interact-prompt{bottom:112px}.status{bottom:auto;top:calc(var(--hud-top) + 76px)}
   .view-controls{bottom:58px}
-  .movement-panel{position:fixed;top:12px;bottom:12px;max-height:calc(100dvh - 24px)}
-  .movement-header{align-items:center;padding:12px 14px 8px 18px}.movement-header p{display:none}
   .movement-intro{margin-bottom:6px;font-size:11px;line-height:1.5}
   .computer-profile{display:none}
 }
-/* The menu and the scene controls cover the headline and the left-hand instruments: they step back meanwhile,
-   out of the tab order too, so keyboard focus never lands on something that cannot be seen. */
-body:is([data-menu="open"],[data-movement-panel="open"]) :is(.hero,.archive-toggle,.dive-computer-toggle,.depth){opacity:0;visibility:hidden;pointer-events:none}
+/* The settings menu covers the headline and left-hand instruments; the settings folder shares that state. */
+body:is([data-menu="open"],[data-movement-panel="open"]) :is(.hero,.archive-toggle,.dive-computer-toggle,.depth,.view-controls,.scene-footer,.touch-deck,.capture-hint,.quiet-ui-toggle){opacity:0;visibility:hidden;pointer-events:none}
 .hero{transition:opacity .6s,transform .6s,visibility .6s}
 body[data-menu="open"] .hero *{pointer-events:none}
 @media(max-width:600px){body:is([data-menu="open"],[data-movement-panel="open"]) .heading-indicator{opacity:0}}

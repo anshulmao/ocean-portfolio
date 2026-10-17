@@ -1,12 +1,8 @@
+import { movementDefaults } from './movement-defaults.js';
 // The scene and tuning panel share this object. Storage is optional.
-// Version 2 of the store: the swimming model changed (eased springs instead of straight blends), so a record saved
-// by version 1 is read once, mapped key by key, and left where it was. See migrate() below.
-const STORAGE_KEY = 'anshul-ocean-refinement-v2';
-const VERSION = 2;
-const V1_KEY = 'anshul-ocean-refinement-v1', V0_KEY = 'anshul-ocean-movement-v1';
-// Set once a visitor picks an A / D behaviour themselves. Every record written
-// before turning became the default holds 'strafe' whether or not it was chosen.
-const KEYBOARD_CHOICE = 'anshul-ocean-keyboard-choice';
+// Version 3 adopts the supplied profile without overwriting older saved records.
+const STORAGE_KEY = 'anshul-ocean-refinement-v3';
+const VERSION = 3;
 const number = (key, label, group, value, min, max, step, unit = '', description = '') => ({key, label, group, type:'number', value, min, max, step, unit, description});
 const toggle = (key, label, group, value, description = '') => ({key, label, group, type:'boolean', value, description});
 const choice = (key, label, group, value, options, description = '') => ({key, label, group, type:'select', value, options, description});
@@ -73,12 +69,14 @@ export const schema = [
 // How the controls feel, as three starting points. Choosing one sets these keys; moving any of them afterwards makes the feel 'custom'.
 export const presets = Object.freeze({
   relaxed:    {label:'Relaxed',    description:'Soft starts, long glides, slow turns.',      values:{acceleration:5,  deceleration:3.4, turnSpeed:1.15, turnEase:.26, carve:.5,  mouseSmoothing:true,  lookResponse:13, cameraResponse:9,  bank:1.2, idleMotion:1.2}},
-  standard:   {label:'Standard',   description:'Calm and predictable. The default.',         values:{acceleration:7,  deceleration:5,   turnSpeed:1.4,  turnEase:.2,  carve:.6,  mouseSmoothing:true,  lookResponse:18, cameraResponse:12, bank:1,   idleMotion:1}},
+  standard:   {label:'Standard',   description:'Calm and predictable.',                      values:{acceleration:7,  deceleration:5,   turnSpeed:1.4,  turnEase:.2,  carve:.6,  mouseSmoothing:true,  lookResponse:18, cameraResponse:12, bank:1,   idleMotion:1}},
   responsive: {label:'Responsive', description:'Quick starts and stops, raw aim, tight turns.', values:{acceleration:11, deceleration:8,   turnSpeed:1.8,  turnEase:.12, carve:.8,  mouseSmoothing:false, lookResponse:26, cameraResponse:16, bank:.6,  idleMotion:.6}},
 });
 const presetKeys = new Set(Object.keys(presets.standard.values));
 
-export const defaults = Object.freeze({...Object.fromEntries(schema.map(item => [item.key,item.value])), preset:'standard'});
+// Normalize fallbacks and Reset use the same imported profile as a fresh visit.
+for (const item of schema) if (Object.hasOwn(movementDefaults,item.key)) item.value = movementDefaults[item.key];
+export const defaults = Object.freeze({...Object.fromEntries(schema.map(item => [item.key,item.value])), preset:movementDefaults.preset});
 export const settings = {...defaults};
 const byKey = new Map(schema.map(item => [item.key,item]));
 
@@ -106,7 +104,6 @@ export function setSetting(key, value) {
   if (!item) return undefined;
   settings[key] = normalize(item, value);
   if (presetKeys.has(key)) settings.preset = matchPreset();
-  if (key === 'keyboardMode') try { localStorage.setItem(KEYBOARD_CHOICE, '1'); } catch {}
   persistSettings();
   return settings[key];
 }
@@ -126,33 +123,12 @@ export function resetSettings() {
   return settings;
 }
 
-// Version 1 defaults that version 2 retuned. A saved value equal to its old default was never chosen, so the new default
-// replaces it; a value somebody did choose keeps its place on the old scale (the same fraction of the way from the old
-// default to the end of the range), because the number means something else now: `acceleration` and `deceleration` were
-// the rates of a straight blend and are the frequencies of a critically damped spring, and `lookResponse` only smooths
-// the mouse now that the keys ease by themselves.
-const V1_RETUNED = {acceleration:5.5, deceleration:7, lookResponse:12};
-function migrate(saved, fromV0) {
-  for (const item of schema) {
-    if (!Object.hasOwn(saved, item.key)) continue;
-    if (item.key === 'pointerLock' && fromV0) continue;
-    if (item.key === 'keyboardMode' && localStorage.getItem(KEYBOARD_CHOICE) === null) continue;
-    const value = normalize(item, saved[item.key]), was = V1_RETUNED[item.key];
-    if (was === undefined) { settings[item.key] = value; continue; }
-    if (typeof saved[item.key] !== 'number' || Math.abs(value - was) < 1e-9) continue;
-    const share = value > was ? (value - was) / (item.max - was) : (value - was) / (was - item.min);
-    settings[item.key] = normalize(item, item.value + share * (share > 0 ? item.max - item.value : item.value - item.min));
-  }
-  settings.preset = matchPreset();
-}
-
 try {
   const current = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
   if (current && typeof current === 'object' && !Array.isArray(current) && current._version === VERSION) {
     for (const item of schema) if (Object.hasOwn(current, item.key)) settings[item.key] = normalize(item, current[item.key]);
     settings.preset = matchPreset();
-  } else {
-    const v1 = localStorage.getItem(V1_KEY), legacy = JSON.parse(v1 ?? localStorage.getItem(V0_KEY) ?? 'null');
-    if (legacy && typeof legacy === 'object' && !Array.isArray(legacy)) { migrate(legacy, v1 === null); persistSettings(); }
   }
+  // v3 adopts the supplied profile once. Older saved profiles are left in
+  // storage, while subsequent visitor adjustments persist under this version.
 } catch { /* A corrupt record or unavailable storage leaves sensible defaults. */ }

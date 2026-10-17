@@ -14,7 +14,7 @@ try {
   await page.waitForFunction(()=>oceanDiagnostics.landmarksSettled,null,{timeout:120000});
   await page.evaluate(()=>oceanControls.step(10));
   await page.waitForFunction(()=>oceanExpedition.locations[0].y!==0);
-  await page.evaluate(()=>{oceanControls.place([0,-7.5,0]);oceanControls.step(2);});
+  await page.evaluate(()=>{oceanControls.place([0,-6,0]);oceanControls.step(2);});
   console.log(await page.evaluate(()=>({mode:oceanControls.getMode(),transition:oceanControls.getTransition(),depth:oceanDiagnostics.depth,nav:oceanControls.nav.mode,dialogs:[...document.querySelectorAll('dialog[open]')].map(x=>x.id),submerged:oceanDiagnostics.submerged,ui:oceanUi.ui,player:oceanControls.getPlayerPosition({copy(v){return {x:v.x,y:v.y,z:v.z}}})})));
   await page.evaluate(()=>oceanExpedition.openStop());
   assert.equal(await page.evaluate(()=>oceanExpedition.holding),true);
@@ -29,7 +29,7 @@ try {
   const file=await exported,data=JSON.parse(await fs.readFile(await file.path(),'utf8'));
   assert.equal(data.contact,null);assert.equal(data.rating,4);report.checks.push({name:'Local-only field note JSON',contact:data.contact});
   await page.keyboard.press('Escape');await page.waitForFunction(()=>!oceanExpedition.holding);
-  await page.evaluate(()=>{oceanControls.place([0,-7.5,0]);oceanControls.step(2);oceanControls.surface();oceanControls.step(.1);});
+  await page.evaluate(()=>{oceanControls.place([0,-6,0]);oceanControls.step(2);oceanControls.surface();oceanControls.step(.1);});
   assert.equal(await page.evaluate(()=>oceanControls.nav.mode),'transition');
   await page.evaluate(()=>oceanExpedition.openStop());
   assert.equal(await page.evaluate(()=>oceanExpedition.holding),true);

@@ -28,8 +28,7 @@ import { refreshRate, drawStride, windowPace, windowHitch, workBudget, createSca
 
 const $=s=>document.querySelector(s), canvas=$('#world'), status=$('#status');
 const themeMedia=matchMedia('(prefers-color-scheme: dark)'), motionMedia=matchMedia('(prefers-reduced-motion: reduce)');
-let savedTheme;try{savedTheme=localStorage.getItem('ocean-theme');}catch{}
-let selectedNight=savedTheme?savedTheme==='night':themeMedia.matches;
+let selectedNight=false;
 let reducedMotion=motionMedia.matches,paused=reducedMotion;
 let renderer,scene,camera,water,waterCalm,waterRough,waterFine,waterCoarse,diver,reef,skySystem,marine,clouds,sunlight,ambient,beamGroup,motes,bubbleMesh,diveLamp;
 let viewerOrbit=null,scooterModel=null;
@@ -56,7 +55,7 @@ let mapCollapsed=mobile;
 let previousMode='surface',surfaceX=0,surfaceZ=0,surfaceFramingYaw=0,expeditionUI=null;
 let ascentCameraTime=0,surfaceLandingTime=0;const ascentCameraStart=new THREE.Vector3(),ascentAimStart=new THREE.Vector3();
 const aimObject=new THREE.Object3D(),aimQuaternion=new THREE.Quaternion();
-let wristComputer=null,computerOpen=false,interfaceOpen=false,movementPanelOpen=false;
+let wristComputer=null,computerOpen=false,interfaceOpen=false,movementPanelOpen=false,settingsMenuOpen=false;
 const safetyStop={active:false,blend:0,yaw:0,computerWas:false};
 let waterlineSplash=null;const splashState={cameraY:2,transition:false,reducedMotion:false};
 const rng=seededRandom(541),dummy=new THREE.Object3D(),lookTarget=new THREE.Vector3(),viewDirection=new THREE.Vector3();
@@ -106,7 +105,7 @@ createMovementPanel(()=>{
   if(camera){camera.fov=settings.cameraFov+(mobile?7:0);camera.updateProjectionMatrix();}
   if(!settings.pointerLock&&document.pointerLockElement===canvas)document.exitPointerLock();
   wake();
-},open=>{movementPanelOpen=open;exploration.suspend(open);wake();});
+},open=>{movementPanelOpen=open;syncControlSuspension();});
 
 const hud=selector=>{let node=hudNodes.get(selector);if(!node?.isConnected){node=$(selector);if(node)hudNodes.set(selector,node);}return node;};
 // Text is compared with what was last written here, not read back from the page, and goes straight into the node's text when that is all it holds.
@@ -118,7 +117,12 @@ const setStyle=(selector,name,value)=>{const key=selector+name;if(hudStyles.get(
 function getPlayerPosition(){return exploration.getPlayerPosition(new THREE.Vector3()).clone();}
 function getMode(){return exploration.state.transition||Math.abs(dive-diveTarget)>.002?'transition':exploration.state.mode;}
 function getTransition(){return exploration.state.transition||Math.abs(dive-diveTarget)>.002;}
-function setInterfaceOpen(value){interfaceOpen=Boolean(value);exploration.setInterfaceOpen(value);wake();}
+function syncControlSuspension(){
+  movementPanelOpen=Boolean($('#movement-panel')?.open);
+  exploration.setInterfaceOpen(interfaceOpen||movementPanelOpen||settingsMenuOpen);wake();
+}
+function setInterfaceOpen(value){interfaceOpen=Boolean(value);syncControlSuspension();}
+function setSettingsMenuOpen(value){settingsMenuOpen=Boolean(value);syncControlSuspension();}
 function setComputerOpen(value){computerOpen=Boolean(value);wake();return computerOpen;}
 function setSafetyStop(value){
   const active=Boolean(value);if(active===safetyStop.active)return active;
@@ -360,7 +364,7 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   surface(){if(diveTarget!==1||exploration.state.mode!=='diver')return false;$('#dive').click();return true;},
   get nav(){return exploration.state;},get settings(){return settings;},get landmarks(){return modelScene?.landmarks||null;},get formations(){return heroFormations?.sites||[];},get life(){return livingWorld;},get creatures(){return userCreatures;},
   get flashlight(){return exploration.state.lamp;},set flashlight(value){exploration.setLamp(value);},get scooter(){return exploration.state.scooter;},
-  get setPieces(){return setPieces;},get models(){return modelScene;},get reef(){return reef;},setInterfaceOpen,setComputerOpen,setSafetyStop,recapture:()=>exploration.recapture(),toggleCamera}});
+  get setPieces(){return setPieces;},get models(){return modelScene;},get reef(){return reef;},setInterfaceOpen,setSettingsMenuOpen,setComputerOpen,setSafetyStop,recapture:()=>exploration.recapture(),toggleCamera}});
 
 function paintTheme(isNight,preset=isNight?'night':'day'){
   const theme=isNight?'night':'day';selectedNight=isNight;
@@ -389,8 +393,6 @@ function frameSurface(phaseValue=phase){
   exploration.frameSky(surfaceFramingYaw);
 }
 function updateMotionUI(){
-  $('#motion').setAttribute('aria-pressed',String(paused));$('#motion').setAttribute('aria-label',paused?'Resume animation':'Pause animation');
-  $('#motion-label').textContent=paused?'Resume motion':'Pause motion';$('#motion-icon').innerHTML=paused?'<path d="m8 5 11 7-11 7Z"/>':'<path d="M9 5v14M15 5v14"/>';
   diagnostic.paused=paused;
 }
 function setExploring(value){
@@ -399,7 +401,6 @@ function setExploring(value){
 }
 $('#day').addEventListener('click',()=>setTheme(false));$('#night').addEventListener('click',()=>setTheme(true));
 $('#dawn').addEventListener('click',()=>setSkyPreset('dawn'));$('#dusk').addEventListener('click',()=>setSkyPreset('dusk'));
-$('#motion').addEventListener('click',()=>{paused=!paused;updateMotionUI();wake();});
 $('#explore').addEventListener('click',()=>{if(exploring){exploration.setInterfaceOpen(false);setExploring(false);}else{exploration.recapture();setExploring(true);}});
 function paintAtlas(){
   $('.reef-map').dataset.collapsed=String(mapCollapsed);$('#map-toggle').setAttribute('aria-expanded',String(!mapCollapsed));$('#map-toggle').setAttribute('aria-label',mapCollapsed?'Expand reef atlas':'Collapse reef atlas');$('#map-toggle').textContent=mapCollapsed?'＋':'−';
@@ -490,7 +491,7 @@ function* buildUnderwater(linking){
   yield;stylizeTree(reef,{glow:'near'});yield* compileSteps(reef,linking);
   buildStage='chart';yield* chartSteps();
   buildStage='animals';yield 8;
-  marine=yield* marineLifeSteps({economy,terrainHeightAt});marine.root.visible=false;scene.add(marine.root);diagnostic.fishCount=marine.count;
+  marine=yield* marineLifeSteps({economy,terrainHeightAt,collisions:reef.userData.collisions});marine.root.visible=false;scene.add(marine.root);diagnostic.fishCount=marine.count;
   yield;extraLife=yield* underwaterLifeSteps({economy,terrainHeightAt});extraLife.root.visible=false;scene.add(extraLife.root);diagnostic.extraLife=extraLife.counts;
   yield 5;setPieces=createSetPieces({terrainHeightAt,collisions:reef.userData.collisions,economy});setPieces.root.visible=false;scene.add(setPieces.root);diagnostic.setPieces=setPieces.counts;
   yield;stylizeTree(marine.root,{toon:.35,rim:.45,caustics:.5});stylizeTree(extraLife.root,{rim:.42});stylizeTree(setPieces.root);
@@ -903,7 +904,7 @@ function gpuPoll(){
 function renderBudget(){
   if(budgetAsked!=='auto')return budgetAsked;
   if(interfaceOpen)return 'idle';
-  if(movementPanelOpen)return 'reduced';
+  if(movementPanelOpen||settingsMenuOpen)return 'reduced';
   // (Not while the first dive is still being warmed up: that work is paced by drawn frames and should be done before the visitor dives.)
   return exploration.state.mode==='surface'&&diveTarget===0&&!viewerOrbit&&!warmQueue.length&&!modelsBusy&&performance.now()-lastInput>IDLE_AFTER?'reduced':'full';
 }
@@ -985,8 +986,7 @@ async function boot(){
   await stage('diver');
   skySystem=createSkySystem(uniforms,rng);scene.add(skySystem.root);expeditionUI=createExpeditionUI({sky:skySystem,getPhase:()=>phase,setPhase:value=>{phase=value;phaseTarget=null;wake();},frameSurface});
   diagnostic.starCount=skySystem.starCount;diagnostic.constellationCount=skySystem.constellationCount;
-  if(!savedTheme)phase=skySystem.initialPhase;
-  else if(skySystem.presets[savedTheme]!==undefined){phase=skySystem.presets[savedTheme];paintTheme(savedTheme==='night',savedTheme);}
+  phase=skySystem.openingPhase;paintTheme(false,'dawn');diagnostic.openingSunAltitude=skySystem.getState(phase).sunAltitude;
   for(const item of skySystem.labels){const label=document.createElement('div');label.className='constellation-label';label.innerHTML=`<i></i>${item.name.toUpperCase()}`;$('#sky-labels').append(label);label.style.left=label.style.top='0';skyLabels.push({label,shift:'',anchor:item.anchor});}
   early(skySystem.root);for(const material of skySystem.prepare(renderer))linking.add(material);
   await stage('sky');

@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import { createSafetyStopClock } from '../safety-stop-clock.js';
+import { createSafetyStopClock, inSafetyStopRange } from '../safety-stop-clock.js';
+for(const depth of [3,3.5,4,5]) assert.equal(inSafetyStopRange(depth),true);
+for(const depth of [2.999,5.001,6,NaN,Infinity]) assert.equal(inSafetyStopRange(depth),false);
 const clock = createSafetyStopClock();
 clock.start();
 assert.equal(clock.remaining,45);

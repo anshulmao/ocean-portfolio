@@ -2,7 +2,7 @@ import { toDisplayDepth } from './depth-metrics.js';
 import * as THREE from './vendor/three.module.min.js';
 import { onTick, ui } from './ui-ticker.js';
 import { safetyRatingMarkup } from './safety-rating.js';
-import { createSafetyStopClock, SAFETY_STOP_SECONDS } from './safety-stop-clock.js';
+import { createSafetyStopClock, SAFETY_STOP_SECONDS, inSafetyStopRange } from './safety-stop-clock.js';
 
 // This module deliberately has no network adapter. Visitors own the optional exported JSON.
 const stylesheet = document.createElement('link');
@@ -13,7 +13,7 @@ ratingStylesheet.rel = 'stylesheet'; ratingStylesheet.href = new URL('./safety-r
 document.head.append(ratingStylesheet);
 const dock = document.createElement('aside'); dock.className = 'expedition-tools'; dock.hidden = true;
 dock.setAttribute('aria-label', 'Expedition tools');
-dock.innerHTML = '<button type="button" data-stop hidden>Pause at 5 m <kbd>F2</kbd></button><button type="button" data-photo hidden>Photo <kbd>H</kbd></button><button type="button" data-inventory hidden>Finds <span data-score>0</span></button>';
+dock.innerHTML = '<button type="button" data-stop hidden>Safety stop · 3–5 m <kbd>F2</kbd></button><button type="button" data-photo hidden>Photo <kbd>H</kbd></button><button type="button" data-inventory hidden>Finds <span data-score>0</span></button>';
 const notice = document.createElement('div'); notice.className = 'expedition-notice'; notice.setAttribute('role', 'status'); notice.setAttribute('aria-live', 'polite');
 const prompt = document.createElement('div'); prompt.className = 'artifact-prompt'; prompt.hidden = true;
 const dialog = document.createElement('dialog'); dialog.className = 'expedition-dialog'; dialog.setAttribute('aria-labelledby', 'expedition-title');
@@ -91,7 +91,7 @@ function openStop() {
   const ascending = controls?.nav?.mode === 'transition' && controls.nav.transition;
   if (!state?.submerged || (!ascending && (controls?.getMode() !== 'diver' || controls?.getTransition()))) return;
   point.copy(controls.getPlayerPosition()); heldDepth = toDisplayDepth(-point.y);
-  if (heldDepth < 4 || heldDepth > 6) return;
+  if (!inSafetyStopRange(heldDepth)) return;
   if (!begin('Safety stop', `<div class="safety-countdown" role="progressbar" aria-label="Safety stop" aria-valuemin="0" aria-valuemax="45" aria-valuenow="0"><div><span>SAFETY STOP</span><strong class="safety-countdown-time">0:45</strong></div><span class="safety-countdown-track"><i class="safety-countdown-fill"></i></span></div>
     <div class="safety-complete" role="status" hidden><span>Safety stop</span><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/><path d="m10 18 6 6 11-12"/></svg><span class="sr-only">complete</span></div>
     <p class="stop-hold"><span aria-hidden="true">⌛</span> 45 seconds to pause at ${heldDepth.toFixed(1)} m</p>
@@ -169,7 +169,7 @@ onTick(dt=> {
   if (underwater !== lastSubmerged) { lastSubmerged = underwater; dock.hidden = !underwater; }
   photoButton.disabled = state.cameraMode !== 'first' || Boolean(controls.getTransition());
   const reading = toDisplayDepth(-controls.getPlayerPosition().y);
-  stopButton.hidden = !underwater || reading < 4 || reading > 6 || dialog.open || Boolean(ui.dialog || ui.panel);
+  stopButton.hidden = !underwater || !inSafetyStopRange(reading) || dialog.open || Boolean(ui.dialog || ui.panel);
   if (mesh) mesh.visible = underwater;
   const count = finds.reduce((total,item)=>total+Number(item.collected),0);
   if (count !== lastScore) { lastScore = count; score.textContent = String(count); }

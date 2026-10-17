@@ -13,7 +13,7 @@ try{
  report.prewarm=await page.evaluate(()=>({startup:oceanDiagnostics.startup,landmarks:Object.keys(oceanControls.landmarks||{})}));
  await page.evaluate(()=>{oceanControls.startDive();oceanControls.step(12);});
  await page.waitForFunction(()=>!oceanDiagnostics.transition&&oceanDiagnostics.submerged,null,{timeout:60000});
- await page.evaluate(()=>{oceanControls.place([0,-7.5,-10]);oceanControls.step(2);oceanExpedition.openStop();oceanControls.step(2);});
+ await page.evaluate(()=>{oceanControls.place([0,-6,-10]);oceanControls.step(2);oceanExpedition.openStop();oceanControls.step(2);});
  assert.equal(await page.evaluate(()=>oceanExpedition.holding),true);
  assert.equal(await page.evaluate(()=>oceanDiagnostics.cameraMode),'third');
  report.stage=await page.evaluate(()=>{const diver=oceanControls.viewer.layers().diver;const p=diver.position.clone().project(oceanControls.getCamera());return {screenX:(p.x+1)/2,screenY:(1-p.y)/2,depth:oceanDiagnostics.displayDepth};});

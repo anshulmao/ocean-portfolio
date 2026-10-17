@@ -1,5 +1,8 @@
 // Uses the shared UI clock, so hidden tabs do not silently complete the stop.
 export const SAFETY_STOP_SECONDS = 45;
+export const SAFETY_STOP_MIN_DEPTH = 3;
+export const SAFETY_STOP_MAX_DEPTH = 5;
+export const inSafetyStopRange = depth => Number.isFinite(depth) && depth >= SAFETY_STOP_MIN_DEPTH && depth <= SAFETY_STOP_MAX_DEPTH;
 export function createSafetyStopClock() {
   let elapsed = 0, active = false, completed = false;
   return {

@@ -67,7 +67,7 @@
   <link rel="modulepreload" href="./instruments.js">
 </head>
 <body>
-  <canvas id="world" tabindex="0" aria-label="Explore the ocean. Click the ocean to capture the mouse and look around; Escape releases it. W and S swim, A and D turn, Space ascends, Shift descends, hold E while swimming for a scooter boost, Q toggles the flashlight, V switches first and third person, U clears or restores the interface and F interacts. The arrow keys also look around. On a touch screen a thumb-stick swims and a drag on the water looks; a gamepad works too."></canvas>
+  <canvas id="world" tabindex="0" aria-label="Explore the ocean. Click the ocean to capture the mouse and look around; Escape releases it. W and S swim, A and D strafe or turn according to the selected control mode, Space ascends, Shift descends, hold E while swimming for a scooter boost, Q toggles the flashlight, V switches first and third person, U clears or restores the interface and F interacts. The arrow keys also look around. On a touch screen a thumb-stick swims and a drag on the water looks; a gamepad works too."></canvas>
   <div class="scene-shade" aria-hidden="true"></div>
   <div class="underwater-tint" aria-hidden="true"></div>
   <div class="mask-frame" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
@@ -76,16 +76,14 @@
       <button id="menu-toggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="settings-menu" aria-label="Open settings menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg></button>
       <div class="wordmark">ANSHUL<span>A WORLD TO EXPLORE</span></div>
     </div>
-    <div class="sky-cluster">
-      <span id="weather-glyph" class="weather-glyph" role="img" aria-label="Weather: clear" data-weather="clear" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><g data-w="clear"><path d="M4 10q4-3.4 8 0t8 0M4 15.5q4-3.4 8 0t8 0"/></g><g data-w="rain"><path d="M7 14h10a3.6 3.6 0 0 0 .3-7.2A5.4 5.4 0 0 0 7 8.2 3 3 0 0 0 7 14ZM9 17l-1 3M13 17l-1 3M17 17l-1 3"/></g><g data-w="storm"><path d="M7 14h10a3.6 3.6 0 0 0 .3-7.2A5.4 5.4 0 0 0 7 8.2 3 3 0 0 0 7 14ZM12.5 15.5 10 19h3l-1.5 3.5"/></g></svg><i class="lock-pip" aria-hidden="true"></i></span>
-      <button id="time-cycle" class="time-cycle" type="button" aria-label="Time of day: day. Switch to dusk."><svg class="sky-glyph" viewBox="0 0 24 24" aria-hidden="true"><g class="sky-day"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></g><g class="sky-low"><path d="M2 16h20M6.5 16a5.5 5.5 0 0 1 11 0M12 5v2.5M4.6 8.6l1.8 1.8M19.4 8.6l-1.8 1.8"/><path class="sky-up" d="m9.5 21 2.5-2 2.5 2"/><path class="sky-down" d="m9.5 19 2.5 2 2.5-2"/></g><g class="sky-night"><path d="M19.5 14.6A7.6 7.6 0 0 1 9.4 4.5a7.6 7.6 0 1 0 10.1 10.1Z"/><path d="M17.5 4v2.4M16.3 5.2h2.4"/></g></svg><i class="lock-pip" aria-hidden="true"></i></button>
-    </div>
   </header>
   <aside id="settings-menu" class="settings-menu holo holo--reading" aria-label="Settings" hidden>
     <header class="settings-head"><span class="holo-label">Settings</span><button type="button" class="settings-close" aria-label="Close settings menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>
     <div class="settings-body">
-    <section class="settings-group" aria-labelledby="settings-sky-title">
-      <h3 id="settings-sky-title" class="holo-label">Sky time</h3>
+    <details id="settings-general" class="settings-group settings-folder" open>
+      <summary id="settings-sky-title" class="holo-label">General</summary>
+      <div class="settings-group-body" id="settings-general-content">
+      <div class="settings-inline-control"><span class="settings-control-label">Time of day</span><button id="time-cycle" class="time-cycle" type="button" aria-label="Time of day: day. Switch to dusk."><svg class="sky-glyph" viewBox="0 0 24 24" aria-hidden="true"><g class="sky-day"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></g><g class="sky-low"><path d="M2 16h20M6.5 16a5.5 5.5 0 0 1 11 0M12 5v2.5M4.6 8.6l1.8 1.8M19.4 8.6l-1.8 1.8"/><path class="sky-up" d="m9.5 21 2.5-2 2.5 2"/><path class="sky-down" d="m9.5 19 2.5 2 2.5-2"/></g><g class="sky-night"><path d="M19.5 14.6A7.6 7.6 0 0 1 9.4 4.5a7.6 7.6 0 1 0 10.1 10.1Z"/><path d="M17.5 4v2.4M16.3 5.2h2.4"/></g></svg><i class="lock-pip" aria-hidden="true"></i></button></div>
       <fieldset class="theme-control" aria-label="Time of day">
       <legend class="sr-only">Choose the time in Kuala Lumpur</legend>
       <div class="time-scrubber"><div class="time-title"><label for="time-slider">KUALA LUMPUR</label><output id="time-reading" for="time-slider">07:00</output></div><div class="time-track"><i id="time-orb" aria-hidden="true"></i><input id="time-slider" type="range" min="0" max="1439" step="1" value="420" aria-label="Time of day in Kuala Lumpur"></div><div class="time-labels"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div></div>
@@ -96,43 +94,50 @@
       </fieldset>
       <div class="sky-clock" id="sky-clock">DAYLIGHT · 20 MIN CYCLE</div>
       <label class="holo-switch" id="time-lock-row" hidden><input id="time-lock" type="checkbox" role="switch"><i aria-hidden="true"></i><span>Lock time</span><small>Hold the sky where it is</small></label>
-    </section>
-    <section class="settings-group" id="weather-settings" aria-labelledby="settings-weather-title" hidden>
-      <h3 id="settings-weather-title" class="holo-label">Weather</h3>
+    <section class="settings-subgroup" id="weather-settings" aria-labelledby="settings-weather-title" hidden>
+      <h3 id="settings-weather-title" class="holo-label"><span>Weather</span><span id="weather-glyph" class="weather-glyph" role="img" aria-label="Weather: clear" data-weather="clear" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><g data-w="clear"><path d="M4 10q4-3.4 8 0t8 0M4 15.5q4-3.4 8 0t8 0"/></g><g data-w="rain"><path d="M7 14h10a3.6 3.6 0 0 0 .3-7.2A5.4 5.4 0 0 0 7 8.2 3 3 0 0 0 7 14ZM9 17l-1 3M13 17l-1 3M17 17l-1 3"/></g><g data-w="storm"><path d="M7 14h10a3.6 3.6 0 0 0 .3-7.2A5.4 5.4 0 0 0 7 8.2 3 3 0 0 0 7 14ZM12.5 15.5 10 19h3l-1.5 3.5"/></g></svg><i class="lock-pip" aria-hidden="true"></i></span></h3>
       <div class="weather-picker" role="group" aria-label="Weather"><button type="button" data-weather="clear" aria-pressed="false">Clear</button><button type="button" data-weather="rain" aria-pressed="false">Light rain</button><button type="button" data-weather="storm" aria-pressed="false">Storm</button><button type="button" data-weather="auto" aria-pressed="false">Auto</button></div>
       <label class="holo-switch"><input id="weather-lock" type="checkbox" role="switch"><i aria-hidden="true"></i><span>Lock weather</span><small>Stop it drifting</small></label>
     </section>
-    <section class="settings-group" aria-labelledby="settings-view-title">
-      <h3 id="settings-view-title" class="holo-label">View</h3>
+      </div>
+    </details>
+    <details class="settings-group settings-folder movement-panel" id="movement-panel" aria-labelledby="movement-toggle">
+      <summary id="movement-toggle" class="holo-label" aria-expanded="false" aria-controls="movement-content">Mouse &amp; keyboard controls</summary>
+      <div id="movement-content" class="settings-group-body movement-content" aria-describedby="movement-intro">
+        <p id="movement-intro" class="movement-intro">Tune how the scene responds. Changes apply as you explore.</p>
+        <div class="movement-fields"></div>
+        <footer class="movement-footer"><div class="movement-actions"><button type="button" class="movement-reset">Restore defaults</button><button type="button" class="movement-export">Export JSON</button></div><p class="movement-save-status" role="status" aria-live="polite">Changes apply live</p></footer>
+      </div>
+    </details>
+    <details class="settings-group settings-folder" aria-labelledby="settings-view-title">
+      <summary id="settings-view-title" class="holo-label">View</summary>
+      <div class="settings-group-body">
       <div class="settings-actions">
       <button id="camera-toggle" class="camera-toggle" type="button" aria-pressed="false" hidden>Third-person view <kbd>V</kbd></button>
       <button id="clear-ui-settings" class="motion-control" type="button" aria-pressed="false">Clear screen <kbd>U</kbd></button>
       <button id="photo-settings" class="motion-control" type="button">Take a photo <kbd>H</kbd></button>
       <button id="finds-settings" class="motion-control" type="button">Reef finds</button>
-      <button id="motion" class="motion-control" type="button" aria-pressed="false" aria-label="Pause animation"><svg viewBox="0 0 24 24" aria-hidden="true" id="motion-icon"><path d="M9 5v14M15 5v14"/></svg><span id="motion-label">Pause motion</span></button>
-      <button id="movement-toggle" class="movement-toggle" type="button" aria-expanded="false" aria-controls="movement-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M9 4v6m6 4v6"/></svg><span>Scene controls</span></button>
       <button id="credits-toggle" class="credits-toggle" type="button">Model credits</button>
       </div>
-    </section>
-    <section class="settings-group" aria-labelledby="settings-keys-title">
-      <h3 id="settings-keys-title" class="holo-label">Controls</h3>
-      <dl class="key-reference"><div><dt><kbd>W</kbd><kbd>S</kbd></dt><dd>Forward / back</dd></div><div><dt><kbd>A</kbd><kbd>D</kbd></dt><dd>Turn</dd></div><div><dt><kbd>Space</kbd></dt><dd>Rise</dd></div><div><dt><kbd>Shift</kbd></dt><dd>Sink</dd></div><div><dt><kbd>E</kbd></dt><dd>Scooter boost while swimming</dd></div><div><dt><kbd>Q</kbd></dt><dd>Flashlight</dd></div><div><dt><kbd>F</kbd></dt><dd>Interact</dd></div><div><dt><kbd>C</kbd></dt><dd>Dive computer</dd></div><div><dt><kbd>V</kbd></dt><dd>Camera</dd></div><div><dt><kbd>U</kbd></dt><dd>Clear / restore screen</dd></div><div><dt><kbd>H</kbd></dt><dd>Take a photo</dd></div><div><dt><kbd>F2</kbd></dt><dd>Safety stop at 5 m</dd></div><div><dt><kbd>Esc</kbd></dt><dd>Release mouse</dd></div><div><dt>Touch</dt><dd>Thumb-stick swims · drag to look</dd></div><div><dt>Gamepad</dt><dd>Sticks swim and look · triggers rise / sink</dd></div></dl>
-    </section>
+      </div>
+    </details>
+
+
+    <details class="settings-group settings-folder" aria-labelledby="settings-keys-title">
+      <summary id="settings-keys-title" class="holo-label">Keyboard &amp; touch</summary>
+      <div class="settings-group-body">
+      <dl class="key-reference"><div><dt><kbd>W</kbd><kbd>S</kbd></dt><dd>Forward / back</dd></div><div><dt><kbd>A</kbd><kbd>D</kbd></dt><dd id="key-ad-description">Strafe</dd></div><div><dt><kbd>Space</kbd></dt><dd>Rise</dd></div><div><dt><kbd>Shift</kbd></dt><dd>Sink</dd></div><div><dt><kbd>E</kbd></dt><dd>Scooter boost while swimming</dd></div><div><dt><kbd>Q</kbd></dt><dd>Flashlight</dd></div><div><dt><kbd>F</kbd></dt><dd>Interact</dd></div><div><dt><kbd>C</kbd></dt><dd>Dive computer</dd></div><div><dt><kbd>V</kbd></dt><dd>Camera</dd></div><div><dt><kbd>U</kbd></dt><dd>Clear / restore screen</dd></div><div><dt><kbd>H</kbd></dt><dd>Take a photo</dd></div><div><dt><kbd>F2</kbd></dt><dd>Safety stop from 3–5 m</dd></div><div><dt><kbd>Esc</kbd></dt><dd>Release mouse</dd></div><div><dt>Touch</dt><dd>Thumb-stick swims · drag to look</dd></div><div><dt>Gamepad</dt><dd>Sticks swim and look · triggers rise / sink</dd></div></dl>
+      </div>
+    </details>
     </div>
   </aside>
   <button id="clear-ui-toggle" class="quiet-ui-toggle" type="button" aria-label="Clear screen. U restores the interface" aria-pressed="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg><span>Clear screen</span><kbd>U</kbd></button>
   <button id="restore-ui" class="quiet-ui-restore" type="button" hidden>Restore interface</button>
   <div id="quiet-ui-status" class="sr-only" role="status" aria-live="polite"></div>
   <div id="crosshair" class="crosshair" aria-hidden="true" hidden><i></i><b></b></div>
-  <button id="capture-hint" class="capture-hint holo" type="button" hidden><strong>Click to swim</strong><span>Mouse to aim · W/S swim · A/D turn · hold E to boost · Esc for cursor</span></button>
+  <button id="capture-hint" class="capture-hint holo" type="button" hidden><strong>Click to swim</strong><span>Mouse to aim · W/S swim · A/D strafe or turn as configured · hold E to boost · Esc for cursor</span></button>
   <div id="ascent-status" class="ascent-status holo" role="status" aria-live="polite" hidden></div>
   <button id="interact-prompt" class="interact-prompt holo" type="button" hidden><kbd>F</kbd><span>Explore</span></button>
-  <aside id="movement-panel" class="movement-panel holo holo--reading" role="dialog" aria-modal="true" aria-labelledby="movement-title" aria-describedby="movement-intro" hidden>
-    <header class="movement-header"><div><p>MAKE IT YOUR OWN</p><h2 id="movement-title">Lighting & movement</h2></div><button type="button" class="movement-close" aria-label="Close movement settings">×</button></header>
-    <p id="movement-intro" class="movement-intro">Tune while you explore. Click the ocean to aim above or below the surface; Esc frees your cursor. W and S swim, A and D turn, Space rises and Shift descends. Hold E while swimming for a scooter boost; Q toggles the flashlight. V switches between first person and a camera following the diver. On a touch screen the thumb-stick swims and a drag looks; a gamepad's sticks do the same. Pick a control feel below, then fine-tune it.</p>
-    <div class="movement-fields"></div>
-    <footer class="movement-footer"><div class="movement-actions"><button type="button" class="movement-reset">Restore defaults</button><button type="button" class="movement-export">Export JSON</button></div><p class="movement-save-status" role="status" aria-live="polite">Changes apply live</p></footer>
-  </aside>
   <div class="heading-indicator" role="group" aria-label="Viewing direction"><div class="heading-window" aria-hidden="true"><div class="heading-tape" id="heading-tape"></div></div><i class="heading-lubber" aria-hidden="true"></i><i class="heading-caret" aria-hidden="true"></i><i class="heading-turn" aria-hidden="true"></i><div class="heading-readout"><span>HDG</span><strong id="heading-cardinal">E</strong><strong id="heading-value">090°</strong></div></div>
   <main class="hero" id="main">
     <div class="surface-copy">
@@ -188,7 +193,7 @@
   </div>
   <footer class="scene-footer holo-deep">
     <div class="location"><span class="location-dot"></span><span id="scene-location">AT THE SURFACE</span><span class="separator">/</span><span id="depth-value">00 M</span></div>
-    <p class="look-hint" id="look-hint">Click to swim · W/S swim · A/D turn · Space / Shift · E scooter · Q light</p>
+    <p class="look-hint" id="look-hint">Click to swim · W/S swim · A/D strafe or turn as configured · Space / Shift · E scooter · Q light</p>
   </footer>
   <p id="status" class="status holo holo-deep" role="status" aria-live="polite">Preparing your quiet corner of the ocean…</p>
   <button id="archive-toggle" class="archive-toggle" type="button" hidden>Dive records <span>↗</span></button>

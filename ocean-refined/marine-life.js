@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
+import { fishNavigator } from './fish-navigation.js';
 
 const TAU = Math.PI * 2;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -120,7 +121,7 @@ function trimGeometry() {
 
 export function createMarineLife(options) { const steps = marineLifeSteps(options); let step; while (!(step = steps.next()).done); return step.value; }
 // The same build, pausing (yielding) between its parts so the page can do it between frames.
-export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54, debug = false } = {}) {
+export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54, collisions = null, debug = false } = {}) {
   const root = new THREE.Group(); root.name = 'Schooling reef fish';
   const random = seededRandom(906);
   // Forty-nine small habitats keep neighbor work local. The outer row lives
@@ -197,10 +198,23 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
   yield;
   const GRID_X = -86, GRID_Z = -130, GRID_STEP = 2, GRID_W = 87, GRID_H = 95, floorGrid = new Float32Array(GRID_W * GRID_H);
   for (let gz = 0; gz < GRID_H; gz++) for (let gx = 0; gx < GRID_W; gx++) floorGrid[gz * GRID_W + gx] = terrainHeightAt(GRID_X + gx * GRID_STEP, GRID_Z + gz * GRID_STEP);
+  for (const { box } of collisions?.boxes || []) {
+    const x0 = Math.max(0, Math.floor((box.min.x - GRID_X) / GRID_STEP)), x1 = Math.min(GRID_W - 1, Math.ceil((box.max.x - GRID_X) / GRID_STEP));
+    const z0 = Math.max(0, Math.floor((box.min.z - GRID_Z) / GRID_STEP)), z1 = Math.min(GRID_H - 1, Math.ceil((box.max.z - GRID_Z) / GRID_STEP));
+    for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) floorGrid[z * GRID_W + x] = Math.max(floorGrid[z * GRID_W + x], box.max.y);
+  }
   function floorAt(x, z) {
     const fx = Math.min(Math.max((x - GRID_X) / GRID_STEP, 0), GRID_W - 1.001), fz = Math.min(Math.max((z - GRID_Z) / GRID_STEP, 0), GRID_H - 1.001);
     const ix = fx | 0, iz = fz | 0, tx = fx - ix, tz = fz - iz, i = iz * GRID_W + ix;
     return (floorGrid[i] * (1 - tx) + floorGrid[i + 1] * tx) * (1 - tz) + (floorGrid[i + GRID_W] * (1 - tx) + floorGrid[i + GRID_W + 1] * tx) * tz;
+  }
+  const navigation = fishNavigator(floorAt), swimTarget = { x: 0, y: 0, z: 0 };
+  for (const f of fish) {
+    const { x, z } = f.position, r = f.size * .45;
+    const startFloor = Math.max(floorAt(x, z), floorAt(x - r, z - r), floorAt(x - r, z + r), floorAt(x + r, z - r), floorAt(x + r, z + r));
+    f.position.y = Math.max(f.position.y, startFloor + 1.95);
+    f.nav = navigation.create(f.position.x, f.position.y, f.position.z, Math.atan2(f.velocity.x, f.velocity.z));
+    f.navOptions = { speed: 1, clearance: 1.7, radius: f.size * .45, ceiling: -1.6 };
   }
 
   const dummy = new THREE.Object3D(), orientation = new THREE.Quaternion();
@@ -373,7 +387,12 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
           if (speed < .00001) v.copy(home.travel).multiplyScalar(minSpeed);
           else if (speed < minSpeed) v.setLength(minSpeed);
           else if (speed > maxSpeed) v.setLength(maxSpeed);
-          p.addScaledVector(v, h);
+          // Flocking supplies the desired direction; cached look-ahead steering supplies a swimmable route.
+          // The former integration moved straight through the reef and then snapped p.y up to its new floor.
+          swimTarget.x = p.x + v.x * 3; swimTarget.y = p.y + v.y; swimTarget.z = p.z + v.z * 3;
+          const nav = f.nav; nav.x = p.x; nav.y = p.y; nav.z = p.z;
+          f.navOptions.speed = Math.hypot(v.x, v.z); navigation.step(nav, swimTarget, h, f.navOptions);
+          p.set(nav.x, nav.y, nav.z); v.set(nav.vx, nav.vy, nav.vz);
           if (hasSwimmer && home.near) {
             // Swept-body clearance catches an advancing diver between frames.
             closest.copy(swimmerPosition);
@@ -392,8 +411,6 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
               if (inwardSpeed < 0) v.addScaledVector(offset, -inwardSpeed);
             }
           }
-          const floor = floorAt(p.x, p.z) + 1.7;
-          if (p.y < floor) { p.y = floor; v.y = Math.abs(v.y) * .35; }
           if (p.x < bounds.x[0] || p.x > bounds.x[1]) { p.x = THREE.MathUtils.clamp(p.x, bounds.x[0], bounds.x[1]); v.x *= -.45; }
           if (p.y < bounds.y[0] || p.y > bounds.y[1]) { p.y = THREE.MathUtils.clamp(p.y, bounds.y[0], bounds.y[1]); v.y *= -.45; }
           if (p.z < bounds.z[0] || p.z > bounds.z[1]) { p.z = THREE.MathUtils.clamp(p.z, bounds.z[0], bounds.z[1]); v.z *= -.45; }

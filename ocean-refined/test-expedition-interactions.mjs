@@ -11,7 +11,7 @@ const errors = []; page.on('pageerror',error=>errors.push(error.message));
 await page.route('http://kit.test/**',async route=> {
   const pathname = new URL(route.request().url()).pathname;
   if (pathname === '/') return route.fulfill({contentType:'text/html',body:`<!doctype html><body><canvas id="world" width="80" height="60"></canvas><script>
-    window.position={x:0,y:-7.5,z:0};window.hold=false;window.staged=false;
+    window.position={x:0,y:-6,z:0};window.hold=false;window.staged=false;
     window.oceanDiagnostics={ready:true,submerged:true,cameraMode:'first',frames:1};
     window.oceanControls={getPlayerPosition(){return {...position}},getMode(){return 'diver'},getTransition(){return false},setSafetyStop(v){window.staged=v},setInterfaceOpen(v){window.hold=v},getScene(){return{add(mesh){window.tokenCount=mesh.count}}},reef:{userData:{terrainHeightAt:()=>-20}},render(){const c=document.querySelector('canvas');const g=c.getContext('2d');g.fillStyle='#176e84';g.fillRect(0,0,80,60)},getRenderer(){return {domElement:document.querySelector('canvas')}}};
     </script><script type="module" src="/expedition-interactions.js"></script></body>`});
@@ -48,7 +48,7 @@ try {
   assert.equal(await page.locator('.safety-complete').isVisible(),false);
   const exported = page.waitForEvent('download'); await page.locator('[type=submit]').click();
   const download = await exported, data=JSON.parse(await fs.readFile(await download.path(),'utf8'));
-  assert.equal(data.rating,5); assert.equal(data.depthMeters,5); assert.equal(data.contact,null);
+  assert.equal(data.rating,5); assert.equal(data.depthMeters,4); assert.equal(data.contact,null);
   await page.waitForFunction(()=>window.hold===false && window.staged===false);
   await page.keyboard.press('F2');
   assert.ok(await page.evaluate(()=>oceanExpedition.safetyStop.remaining>44),'Reopening starts a fresh stop');
@@ -85,7 +85,7 @@ try {
   assert.equal(await page.evaluate(()=>oceanExpedition.photos),1);
   // Narrow portrait layout leaves the top of the scene clear and fits within the viewport.
   await page.setViewportSize({width:390,height:844});
-  await page.evaluate(()=>{position.y=-7.5;oceanDiagnostics.cameraMode='first';});
+  await page.evaluate(()=>{position.y=-6;oceanDiagnostics.cameraMode='first';});
   await page.keyboard.press('F2');
   await page.locator('dialog').evaluate(el=>Promise.all(el.getAnimations().map(animation=>animation.finished)));
   const box=await page.locator('dialog').boundingBox();
@@ -94,5 +94,5 @@ try {
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.locator('[data-skip]').click();
   assert.deepEqual(errors,[]);
-  console.log('Expedition checks passed: 45-second stop, single completion tick, preserved feedback, contextual 4–6m stop, staged restore/Skip/Escape, stars, opt-in-only contact JSON, artifact priority, photo export, portrait fit.');
+  console.log('Expedition checks passed: 45-second stop, single completion tick, preserved feedback, contextual 3–5m stop, staged restore/Skip/Escape, stars, opt-in-only contact JSON, artifact priority, photo export, portrait fit.');
 } finally { await browser.close(); }

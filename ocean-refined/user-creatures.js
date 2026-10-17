@@ -4,6 +4,8 @@ import { clone } from './vendor/SkeletonUtils.js';
 import { floatSkinIndices, turn } from './assets.js';
 import { creatureGeometry, speciesById } from './creature-species.js';
 import { ENCOUNTERS, RESIDENTS, SCHOOLS } from './user-creature-routes.js';
+import { fishNavigator } from './fish-navigation.js';
+import { createMorayDenMotion, updateMorayDenMotion } from './moray-resident.js';
 
 // The creature set at home in the ocean (see user-creature-routes.js for the numbers).
 //
@@ -70,6 +72,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     return (soft[i] * (1 - tx) + soft[i + 1] * tx) * (1 - tz) + (soft[i + GW] * (1 - tx) + soft[i + GW + 1] * tx) * tz;
   }
   const ground = (x, z) => hard[clamp(Math.round(z - GZ), 0, GH - 1) * GW + clamp(Math.round(x - GX), 0, GW - 1)];
+  const navigation = fishNavigator(cover);
   const solid = (x, z) => ground(x, z) > floor(x, z) + .25;
   /** Open, fairly level sand near a wished-for spot: for the animals that lie on the bottom. */
   function sand(x, z, radius = 2) {
@@ -138,22 +141,52 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   const level = (y, swing = 0, period = 30, phase = rr(0, TAU)) => (x, z, t) => y + swing * Math.sin(t * TAU / period + phase);
   const A = new THREE.Vector3(), B = new THREE.Vector3(), C = new THREE.Vector3(), want = new THREE.Vector3(), spot = { yaw: 0, pitch: 0 };
   const member = (back = 0, side = 0, up = 0, { drift = .3, bob = .2, scale = 1 } = {}) => ({ back, side, up, drift, bob, scale, w1: rr(.25, .6), w2: rr(.3, .8), p1: rr(0, TAU), p2: rr(0, TAU), beat: rr(0, TAU) });
-  // Where a member of a group belongs now: fills `want`, returns its heading and climb.
-  function station(g, m, t) {
+  // The orbit suggests a destination; the swimmer chooses a traversable approach. Keeping x/z fixed to the
+  // ellipse while replacing y with cover(x,z) used to force fish vertically up every steep reef/coral wall.
+  function station(g, m, t, dt = 0, player = null) {
     const r = g.route, theta = r.theta - m.back / r.radius * r.dir;
     along(r, theta, A); along(r, theta + .03 * r.dir, B);
     let tx = B.x - A.x, tz = B.z - A.z; const span = Math.hypot(tx, tz) || 1; tx /= span; tz /= span;
     want.x = A.x - tz * m.side + Math.sin(t * m.w1 + m.p1) * m.drift; want.z = A.z + tx * m.side + Math.cos(t * m.w1 * .83 + m.p2) * m.drift;
     const here = g.height(want.x, want.z, t) + m.up + Math.sin(t * m.w2 + m.p2) * m.bob, ahead = g.height(want.x + tx * g.look, want.z + tz * g.look, t) + m.up;
     want.y = here; spot.yaw = Math.atan2(tx, tz); spot.pitch = clamp(Math.atan2(ahead - here, g.look), -.45, .45);
+    if (!m.nav) {
+      const length = m.actor?.L || facts.get(g.k.species).lengthMetres * m.scale;
+      m.clearance = Math.max(.24, length * .22);
+      m.navLength = length;
+      m.navRadius = Math.max(.16, Math.min(1.5, length * .4));
+      const r = m.navRadius, startFloor = Math.max(cover(want.x, want.z), cover(want.x - r, want.z - r), cover(want.x - r, want.z + r), cover(want.x + r, want.z - r), cover(want.x + r, want.z + r));
+      m.nav = navigation.create(want.x, Math.max(want.y, startFloor + m.clearance + .25), want.z, spot.yaw);
+      m.navOptions = { speed: g.speed, clearance: m.clearance, radius: m.navRadius };
+    }
+    if (dt > 0) {
+      // Keep a nearby point in front of the swimmer rather than steering directly toward its current station.
+      want.x += tx * Math.max(1, g.speed * 1.8); want.z += tz * Math.max(1, g.speed * 1.8);
+      want.y = g.height(m.nav.x, m.nav.z, t) + m.up + Math.sin(t * m.w2 + m.p2) * m.bob;
+      // Members keep their own lanes while a detour compresses the formation; no forced positional offsets
+      // after navigation, which would put a safe fish back inside the obstacle it has just avoided.
+      for (const other of g.members) {
+        if (other === m || !other.nav) continue;
+        const dx = m.nav.x - other.nav.x, dz = m.nav.z - other.nav.z, dy = m.nav.y - other.nav.y;
+        const distance = Math.hypot(dx, dy, dz), room = (m.navLength + other.navLength) * .35;
+        if (distance > .01 && distance < room) { const push = Math.min(2, (room - distance) * 1.5) / distance; want.x += dx * push; want.z += dz * push; }
+      }
+      if (player) {
+        const dx = m.nav.x - player.x, dz = m.nav.z - player.z, distance = Math.hypot(dx, dz), room = 3 + (m.actor?.L || 1) * .4;
+        if (Math.abs(m.nav.y - player.y) < room && distance < room && distance > .01) { want.x += dx / distance * (room - distance) * 2; want.z += dz / distance * (room - distance) * 2; }
+      }
+      m.navOptions.speed = g.speed * (g.pace ?? 1); navigation.step(m.nav, want, dt, m.navOptions);
+    }
+    want.set(m.nav.x, m.nav.y, m.nav.z); spot.yaw = m.nav.yaw; spot.pitch = m.nav.pitch;
     return spot;
   }
   function driveHerd(g, dt, t, player) {
     g.route.theta += g.route.dir * g.speed * g.pace * dt / g.route.radius;
     for (const m of g.members) {
-      const a = m.actor, p = station(g, m, t);
-      if (player) { C.copy(want).sub(player); const d = C.length(), room = 3 + a.L * .4; if (d < room && d > .01) want.addScaledVector(C, (room - d) * .6 / d); }
-      place(a, want, p.yaw, p.pitch, -g.route.dir * g.bank, dt);
+      const a = m.actor, p = station(g, m, t, dt, player);
+      // Navigation already limits speed/heading; another positional lerp cuts the cleared corner.
+      a.pos.copy(want); a.yaw = p.yaw; a.pitch = p.pitch; a.roll = clamp(-m.nav.turn * .07, -.16, .16); a.started = true;
+      a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(-a.pitch, a.yaw, a.roll, 'YXZ');
       a.mixer.timeScale = clamp(g.speed * g.pace / a.stride, .3, 2.2);
     }
   }
@@ -287,7 +320,14 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       while (edge < f.radius * 2.5 && (solid(f.x + dx * edge, f.z + dz * edge) || cover(f.x + dx * edge, f.z + dz * edge) > floor(f.x + dx * edge, f.z + dz * edge) + .8)) edge += .5;
       const x = f.x + dx * (edge - a.L * .08), z = f.z + dz * (edge - a.L * .08);
       a.pos.set(x, floor(f.x + dx * edge, f.z + dz * edge) + a.L * .06, z); a.yaw = d.angle; a.pitch = .12; a.started = true; a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(-a.pitch, a.yaw, 0, 'YXZ');
-      dens.push({ actor: a, rest: 0 });
+      const motion = d.species === 'giant-moray' ? createMorayDenMotion({ mouth: { x: f.x + dx * edge, y: a.pos.y, z: f.z + dz * edge }, yaw: d.angle, length: a.L, scale: a.scale }) : null;
+      const pose = {};
+      if (motion) {
+        updateMorayDenMotion(motion, 0, null, pose);
+        a.pos.set(pose.x, pose.y, pose.z); a.pitch = 0;
+        a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(0, a.yaw, 0, 'YXZ');
+      }
+      dens.push({ actor: a, rest: 0, motion, pose });
     }
   }
   function driveResidents(dt, player) {
@@ -327,6 +367,12 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     }
     for (const d of dens) {
       const a = d.actor; d.rest -= dt;
+      if (d.motion) {
+        const pose = updateMorayDenMotion(d.motion, dt, player, d.pose);
+        a.pos.set(pose.x, pose.y, pose.z); a.yaw = pose.yaw;
+        a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(0, a.yaw, 0, 'YXZ');
+        continue;
+      }
       if (player && d.rest <= 0) {
         C.copy(player).sub(a.pos); const dist = C.length(), facing = (Math.sin(a.yaw) * C.x + Math.cos(a.yaw) * C.z) / Math.max(dist, .01);
         if (dist < a.L * .9 && facing > .5) { play(a, 'strike', .15, true, 'breathe'); d.rest = 7; }
@@ -413,12 +459,22 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     for (const g of groups) {
       if (!g.active || !g.k.mesh) continue;
       if (g.kind === 'shoal') { g.route.theta += g.route.dir * g.speed * dt / g.route.radius; if (g.ring) g.centre.set(g.route.cx, g.height(g.route.cx, g.route.cz, t), g.route.cz); else { along(g.route, g.route.theta, A); g.centre.set(A.x, g.height(A.x, A.z, t), A.z); } }
+      if (g.kind === 'shoal' && g.members[0]?.nav) {
+        g.centre.set(0, 0, 0);
+        for (const m of g.members) { g.centre.x += m.nav.x; g.centre.y += m.nav.y; g.centre.z += m.nav.z; }
+        g.centre.multiplyScalar(1 / g.members.length);
+        let reach = 0;
+        for (const m of g.members) reach = Math.max(reach, Math.hypot(m.nav.x - g.centre.x, m.nav.y - g.centre.y, m.nav.z - g.centre.z));
+        g.radius = facts.get(g.k.species).lengthMetres + reach;
+      }
       if (g.kind === 'encounter') { const e = casts.get('tuna'); if (!e?.path) continue; onPath(e, clamp(e.u, 0, 1), A, T); g.centre.set(A.x, bandHeight(e, A.x, A.z, 0), A.z); g.radius = g.spread[0] + 6; }
       g.shown = true;
       if (view) { sphere.center.copy(g.centre); sphere.radius = g.radius; g.shown = view.eye.distanceTo(g.centre) - g.radius < view.range * (g.kind === 'cloud' || g.kind === 'burrows' ? .55 : .8) && view.frustum.intersectsSphere(sphere); }
-      if (!g.shown) continue;
+      // A hidden school continues navigating (without rendering) so re-entering view cannot teleport it up
+      // a different terrain sample. Only the bounded height-grid probes run for these small moving groups.
+      if (!g.shown) { if (g.kind === 'shoal') for (const m of g.members) station(g, m, t, dt, player); continue; }
       const k = g.k;
-      if (g.kind === 'shoal') for (const m of g.members) { const p = station(g, m, t); write(k, want.x, want.y, want.z, p.yaw, p.pitch, 0, m.scale, m.beat); }
+      if (g.kind === 'shoal') for (const m of g.members) { const p = station(g, m, t, dt, player); write(k, want.x, want.y, want.z, p.yaw, p.pitch, clamp(-m.nav.turn * .06, -.15, .15), m.scale, m.beat); }
       else if (g.kind === 'cloud') {
         // Holding station facing the current, darting a little; they sink into the coral as the diver comes close.
         let near = 0; if (player) near = 1 - smoothstep(player.distanceTo(g.centre), g.radius + 1, g.radius + 7);
@@ -483,6 +539,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   const sitesNow = () => [...actors.filter(a => a.active).map(a => ({ id: a.name, species: a.species, kind: 'animal', position: a.pos.toArray(), length: a.L, seen: a.seen })),
     ...groups.filter(g => g.active).map(g => ({ id: g.name, species: g.k.species, kind: g.kind, position: g.centre.toArray(), length: g.radius, seen: g.shown }))];
   const debug = {
+    swimmers: () => [...herds, ...groups.filter(g => g.kind === 'shoal')].flatMap(g => g.members.filter(m => m.nav).map(m => ({ species: m.actor?.species || g.k.species, x: m.nav.x, y: m.nav.y, z: m.nav.z, yaw: m.nav.yaw, pitch: m.nav.pitch, floor: cover(m.nav.x, m.nav.z), clearance: m.clearance, speed: g.speed, blocked: m.nav.blocked }))),
     /** Bring an encounter in now, wherever the diver is: 'whale', 'whale-shark', 'orcas', 'dolphins', 'blacktips', 'tuna'. */
     spawn(id, player = null, view = null) { const e = casts.get(id); if (!e) return false; const s = slots.find(item => item.slot === e.slot); if (s.active) end(s.active); begin(e, player, view); s.active = e; return true; },
     slots: () => slots.map(s => ({ slot: s.slot, active: s.active?.id || null, wait: Math.round(s.wait), progress: s.active ? +s.active.u.toFixed(3) : null })),
