@@ -14,14 +14,39 @@ try{
  assert.equal(await page.locator('#motion').count(),0);
  for(const [name,width,height] of [['desktop',1440,900],['phone',390,844]]){
   await page.setViewportSize({width,height});
+  assert.equal(await page.locator('.brightness-quick').isVisible(),true);
+  await page.locator('#brightness-quick').fill('35');
+  assert.equal(await page.evaluate(()=>oceanControls.settings.brightnessBoost),35);
   await page.locator('#menu-toggle').click();
   await page.waitForFunction(()=>oceanControls.nav.suspended);
   const folders=await page.locator('#settings-menu .settings-body > details > summary').allTextContents();
   assert.equal(folders[0],'General');assert.match(folders[1],/controls/);assert.equal(folders.at(-1),'Keyboard & touch');
   for(const id of ['time-slider','weather-settings','sound-switch','sound-volume'])assert.equal(await page.locator(`#settings-menu #${id}`).count(),1);
+  assert.equal(await page.locator('.brightness-quick').isVisible(),false);
+  assert.equal(await page.locator('#settings-general #movement-brightnessBoost').inputValue(),'35');
+  await page.locator('#movement-brightnessBoost').fill('65');
+  assert.equal(await page.locator('#brightness-quick').inputValue(),'65');
+  const weather=page.locator('#weather-slider');await weather.focus();await page.keyboard.press('Home');
+  assert.deepEqual(await page.evaluate(()=>({target:oceanControls.weather.target,locked:oceanControls.weather.locked})),{target:'clear',locked:true});
+  await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>oceanControls.weather.target),'rain');
+  await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>oceanControls.weather.target),'storm');
+  await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>oceanControls.weather.locked),false);
+  await page.locator('#weather-glyph').click();assert.equal(await page.evaluate(()=>oceanControls.weather.target),'clear');
+  await page.locator('#weather-glyph').click();assert.equal(await page.evaluate(()=>oceanControls.weather.target),'rain');
+  await page.locator('#sound-volume').fill('40');
+  await page.locator('#sound-mute').click();
+  assert.equal(await page.evaluate(()=>oceanAudio.enabled),true);
+  await page.locator('#sound-mute').click();
+  assert.equal(await page.evaluate(()=>oceanAudio.enabled),false);
+  assert.equal(await page.locator('#sound-volume').inputValue(),'40');
+  await page.locator('#sound-volume').fill('0');await page.locator('#sound-mute').click();
+  assert.equal(await page.locator('#sound-volume').inputValue(),'40');
+  await page.locator('#sound-mute').click();
   assert.equal(await page.locator('.masthead #time-cycle').count(),0);
   await page.locator('#movement-toggle').click();
   await page.waitForFunction(()=>document.body.dataset.movementPanel==='open');
+  await page.locator('.movement-reset').click();
+  assert.equal(await page.locator('#brightness-quick').inputValue(),'80');
   const view=page.locator('summary#settings-view-title');await view.click();
   await page.evaluate(()=>{oceanControls.setInterfaceOpen(true);oceanControls.setInterfaceOpen(false);});
   assert.equal(await page.evaluate(()=>oceanControls.nav.suspended),true,'Closing a dialog cannot release the open settings');
@@ -44,7 +69,7 @@ try{
   await page.locator('#menu-toggle').click();
   await page.screenshot({path:`${process.env.TEMP}/ocean-settings-${name}.png`});
   await page.locator('#settings-menu .settings-close').click();
-  report.checks.push(`${name}: menu order, all general controls, defaults, suspension, nested Escape and no overflow`);
+  report.checks.push(`${name}: synced brightness, weather slider/cycle, mute/volume restore, menu order, defaults, suspension, nested Escape and no overflow`);
  }
  assert.deepEqual(report.errors,[]);report.passed=true;
 }finally{console.log(JSON.stringify(report,null,2));await browser.close();}

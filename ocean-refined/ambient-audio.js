@@ -321,6 +321,7 @@ function turn(on, fromGesture = false) {
 }
 function setVolume(value) {
   volume = clamp(Number(value) || 0, 0, 1); write('ocean-sound-volume', String(volume));
+  if(volume>0)lastAudibleVolume=volume;
   if (timer) graph.master.gain.setTargetAtTime(MASTER * loudness(volume), ctx.currentTime, .05);
   paint();
 }
@@ -334,15 +335,20 @@ addEventListener('oceanlamp', () => { if (timer) play(graph, 'lamp'); });
 // 5. General settings: ambient sound and its level sit with the sky controls.
 const group = document.createElement('section');
 group.className = 'settings-subgroup'; group.id = 'sound-settings'; group.setAttribute('aria-labelledby', 'settings-sound-title');
-group.innerHTML = '<h3 id="settings-sound-title" class="holo-label">Sound</h3>'
+group.innerHTML = '<div class="settings-inline-control"><h3 id="settings-sound-title" class="holo-label">Sound</h3><button id="sound-mute" class="time-cycle sound-mute" type="button" aria-label="Unmute ambient sound" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3l4-3.5v12l-4-3.5H4Z"/><g class="sound-on"><path d="M14.5 9.2a4 4 0 0 1 0 5.6M17 6.8a7.4 7.4 0 0 1 0 10.4"/></g><g class="sound-off"><path d="m15 9.5 5 5m0-5-5 5"/></g></svg></button></div>'
   + '<label class="holo-switch"><input id="sound-switch" type="checkbox" role="switch"><i aria-hidden="true"></i><span>Ambient sound</span><small>Water, weather and breathing</small></label>'
   + '<div class="movement-field sound-volume"><label for="sound-volume">Volume</label><output class="movement-output" for="sound-volume"></output><input id="sound-volume" type="range" min="0" max="100" step="1"></div>';
 const toggle = group.querySelector('#sound-switch'), slider = group.querySelector('#sound-volume'), reading = group.querySelector('output');
+const mute=group.querySelector('#sound-mute');let lastAudibleVolume=volume||.7;
 function paint() {
   toggle.checked = enabled; slider.value = String(Math.round(volume * 100)); reading.textContent = `${Math.round(volume * 100)}%`;
+  const muted=!enabled||volume===0;
+  mute.dataset.muted=String(muted);mute.setAttribute('aria-pressed',String(muted));
+  mute.setAttribute('aria-label',muted?'Unmute ambient sound':'Mute ambient sound');mute.title=muted?'Click to unmute':'Click to mute';
 }
 toggle.addEventListener('change', () => turn(toggle.checked, true));
 slider.addEventListener('input', () => setVolume(slider.value / 100));
+mute.addEventListener('click',()=>{if(enabled&&volume>0)turn(false,true);else{if(volume===0)setVolume(lastAudibleVolume);turn(true,true);}});
 $('#settings-general-content')?.append(group);
 paint();
 if (enabled) start();

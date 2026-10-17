@@ -2,6 +2,7 @@ import * as THREE from './vendor/three.module.min.js';
 import { onTick } from './ui-ticker.js';
 import { icon } from './ui-icons.js';
 import { conditions } from './instruments.js';
+import { settings, setSetting } from './movement-settings.js';
 
 // HUD wiring: the compass card and its bezel marker, the sonar scope (the round
 // minimap), the settings menu, the sun / moon button, the time and weather locks
@@ -255,8 +256,10 @@ new MutationObserver(paintTime).observe(root, {attributes:true, attributeFilter:
 // 6. Locks and weather. The scene owns and persists these values; the menu only
 // reflects them, and each control hides itself when the scene does not offer it.
 const WEATHER = {clear:'clear', rain:'light rain', storm:'storm'};
+const WEATHER_MODES=['clear','rain','storm','auto'];
 const timeLockRow = $('#time-lock-row'), timeLock = $('#time-lock'), weatherLock = $('#weather-lock');
 const weatherSection = $('#weather-settings'), weatherGlyph = $('#weather-glyph'), weatherButtons = [...document.querySelectorAll('.weather-picker button')];
+const weatherSlider=$('#weather-slider'),weatherReading=$('#weather-reading'),weatherOrb=$('#weather-orb');
 function skyApi() {
   const controls = window.oceanControls, time = controls?.time, weather = controls?.weather;
   return {time: typeof time?.lock === 'function' ? time : null, weather: typeof weather?.set === 'function' ? weather : null};
@@ -271,9 +274,14 @@ function paintLocks() {
   const state = weather.state in WEATHER ? weather.state : 'clear', locked = Boolean(weather.locked);
   // While the sky is still changing, the picker shows where it is heading and the glyph shows what is overhead.
   const aim = weather.target in WEATHER ? weather.target : state;
-  weatherGlyph.dataset.weather = state; weatherGlyph.dataset.locked = String(locked);
-  weatherGlyph.setAttribute('aria-label', `Weather: ${WEATHER[state]}${locked ? ', locked' : ''}`);
-  weatherGlyph.title = `Weather: ${WEATHER[state]}${locked ? ' · locked' : ''}`;
+  const mode=locked?aim:'auto',index=WEATHER_MODES.indexOf(mode),next=WEATHER_MODES[(index+1)%4];
+  const label=mode==='auto'?'Auto':WEATHER[mode];
+  weatherGlyph.dataset.weather = mode; weatherGlyph.dataset.locked = String(locked);
+  weatherGlyph.setAttribute('aria-label', `Weather: ${label}. Switch to ${WEATHER[next]||'auto'}.`);
+  weatherGlyph.title = `${label} · click for ${WEATHER[next]||'auto'}`;
+  if(weatherSlider){weatherSlider.value=String(index);weatherSlider.setAttribute('aria-valuetext',label);}
+  if(weatherReading)weatherReading.value=label;
+  if(weatherOrb){weatherOrb.dataset.weather=mode;weatherOrb.style.left=`calc(${index/3*100}% + ${13-26*index/3}px)`;}
   if (weatherLock) { weatherLock.checked = locked; weatherLock.disabled = typeof weather.lock !== 'function'; }
   for (const button of weatherButtons) {
     const name = button.dataset.weather;
@@ -285,11 +293,28 @@ function paintLocks() {
 timeLock?.addEventListener('change', () => { skyApi().time?.lock(timeLock.checked); paintLocks(); });
 weatherLock?.addEventListener('change', () => { skyApi().weather?.lock?.(weatherLock.checked); paintLocks(); });
 for (const button of weatherButtons) button.addEventListener('click', () => { skyApi().weather?.set(button.dataset.weather); paintLocks(); });
+weatherSlider?.addEventListener('input',()=>{skyApi().weather?.set(WEATHER_MODES[Number(weatherSlider.value)]);paintLocks();});
+weatherGlyph?.addEventListener('click',()=>{
+  const weather=skyApi().weather;if(!weather)return;
+  const current=weather.locked?weather.target:'auto';
+  weather.set(WEATHER_MODES[(WEATHER_MODES.indexOf(current)+1)%4]);paintLocks();
+});
 addEventListener('oceanweatherchange', paintLocks);
 addEventListener('oceantimelockchange', paintLocks);
 // The scene may attach its sky controls while it initialises.
 new MutationObserver(paintLocks).observe(document.body, {attributes:true, attributeFilter:['data-ready']});
 paintLocks();
+
+// Two brightness sliders share one persisted value and the scene's existing update path.
+const brightnessQuick=$('#brightness-quick'),brightnessReading=$('#brightness-quick-value');
+function paintBrightness(){if(!brightnessQuick)return;brightnessQuick.value=String(settings.brightnessBoost);brightnessReading.value=`${settings.brightnessBoost}%`;}
+brightnessQuick?.addEventListener('input',()=>{
+  const control=$('#movement-brightnessBoost');
+  if(control){control.value=brightnessQuick.value;control.dispatchEvent(new Event('input',{bubbles:true}));}
+  else setSetting('brightnessBoost',Number(brightnessQuick.value));
+  paintBrightness();
+});
+addEventListener('oceanmovementchange',paintBrightness);paintBrightness();
 
 // QA hook: paint one frame by hand when the tab is not painting.
 window.oceanHud = {sync, aim, setMenu, setMapView, paintLocks, paintConditions};

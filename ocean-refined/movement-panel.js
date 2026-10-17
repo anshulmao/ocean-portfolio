@@ -34,7 +34,8 @@ export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
   }
 
   for (const item of schema) {
-    if (group?.dataset.group !== item.group) {
+    const general = item.group === 'Lighting' ? document.getElementById('general-brightness') : null;
+    if (!general && group?.dataset.group !== item.group) {
       group = document.createElement('details');
       group.dataset.group = item.group;
       group.open = item.group === 'Lighting';
@@ -94,7 +95,7 @@ export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
       input.setAttribute('aria-describedby',description.id);
       range?.setAttribute('aria-describedby',description.id);
     }
-    group.append(row);
+    (general || group).append(row);
     const refresh = (keepNumberDraft = false) => {
       if (item.type === 'boolean') input.checked = settings[item.key];
       else if (!keepNumberDraft) input.value = settings[item.key];
@@ -113,6 +114,7 @@ export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
       refreshKeymap();
       notice.textContent = persistSettings() ? 'Saved on this device · changes apply live' : 'Changes apply live · browser storage unavailable';
       onChange(item.key,settings[item.key],settings);
+      window.dispatchEvent(new CustomEvent('oceanmovementchange',{detail:{key:item.key}}));
     };
     listen(input,item.type === 'number' ? 'input' : 'change',() => update(input));
     if (range) listen(range,'input',() => update(range));
@@ -123,7 +125,7 @@ export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
   refreshPreset();
 
   function refreshKeymap() { if (keyBehavior) keyBehavior.textContent = settings.keyboardMode === 'turn' ? 'Turn' : 'Strafe'; }
-  function refresh() { for (const fn of controls.values()) fn(); refreshPreset(); refreshKeymap(); }
+  function refresh() { for (const fn of controls.values()) fn(); refreshPreset(); refreshKeymap(); window.dispatchEvent(new CustomEvent('oceanmovementchange')); }
   refreshKeymap();
   let open = false;
   function syncOpen() {

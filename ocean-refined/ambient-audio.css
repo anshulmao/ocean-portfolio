@@ -2,3 +2,7 @@
 .sound-volume{margin-top:12px;padding:0}
 .sound-volume label{font-weight:500}
 .sound-volume input[type="range"]{grid-column:1/-1}
+.sound-mute svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.sound-mute .sound-on,.sound-mute .sound-off{transition:opacity .18s ease}
+.sound-mute[data-muted="true"] .sound-on,.sound-mute[data-muted="false"] .sound-off{opacity:0}
+@media(prefers-reduced-motion:reduce){.sound-mute .sound-on,.sound-mute .sound-off{transition:none}}

@@ -104,6 +104,29 @@ html[data-sky-preset="night"] .sky-glyph .sky-night,html:not([data-sky-preset])[
 .weather-picker{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .weather-picker>button{position:relative;min-height:36px;padding:6px 2px;font-size:11px;letter-spacing:.02em}
 .weather-picker>button[data-current="true"]::after{content:"";position:absolute;right:4px;top:4px;width:5px;height:5px;border-radius:50%;background:var(--holo-mint);box-shadow:0 0 6px var(--holo-mint)}
+.weather-picker>button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:58px}
+.weather-picker svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.weather-glyph[data-weather="auto"] g[data-w="auto"],.weather-orb[data-weather="auto"] g[data-w="auto"],.weather-orb[data-weather="clear"] g[data-w="clear"],.weather-orb[data-weather="rain"] g[data-w="rain"],.weather-orb[data-weather="storm"] g[data-w="storm"]{opacity:1;scale:1}
+.weather-track{position:relative;height:44px;margin:2px 0 8px}
+.weather-track::before{content:"";position:absolute;top:21px;left:13px;right:13px;height:2px;background:var(--holo-dim)}
+#weather-slider{position:relative;z-index:1;appearance:none;-webkit-appearance:none;width:100%;height:44px;margin:0;background:transparent;cursor:pointer;outline-offset:2px}
+#weather-slider::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:26px;height:32px;border:0;background:transparent}
+#weather-slider::-moz-range-thumb{width:26px;height:32px;border:0;background:transparent}
+.weather-orb{position:absolute;top:9px;left:calc(100% - 13px);width:26px;height:26px;transform:translateX(-50%);color:var(--holo-strong);pointer-events:none;transition:left .18s ease}
+.weather-orb svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.5;filter:drop-shadow(0 0 5px #b1eaf55c)}
+.weather-orb g{opacity:0;transform-origin:center;transition:opacity .18s ease}
+#settings-weather-title output{display:block;font:400 11px/1.4 var(--holo-font);letter-spacing:0;text-transform:none;margin-top:5px;color:var(--holo-ink)}
+#settings-weather-title{display:flex;align-items:baseline;gap:10px}
+#brightness-settings{margin-bottom:18px}
+#general-brightness .movement-field{padding:8px 0 0}
+.brightness-quick{position:fixed;top:var(--hud-top);right:var(--pad);z-index:7;width:155px;padding:10px 12px;background:#092835e8}
+.brightness-quick>div{display:flex;align-items:center;justify-content:space-between;font:500 11px/1.4 var(--holo-font)}
+.brightness-quick output{font-variant-numeric:tabular-nums;color:var(--holo-strong)}
+.brightness-quick input{display:block;width:100%;height:24px;margin:5px 0 0;accent-color:var(--holo-strong);cursor:pointer}
+body[data-submerged="true"] .brightness-quick{right:calc(var(--pad) + var(--map-size,136px) + 18px)}
+body:is([data-menu="open"],[data-clear-ui="true"],[data-safety-stop="true"],[data-dialog="open"]) .brightness-quick{display:none}
+@media(max-width:600px){.brightness-quick{width:112px;padding:8px 10px}body[data-submerged="true"] .brightness-quick{right:var(--pad);top:calc(var(--hud-top) + 176px)}}
+@media(prefers-reduced-motion:reduce){.weather-orb,.weather-orb g{transition:none}}
 .settings-actions{display:grid;gap:6px}
 .settings-actions>button{display:flex;align-items:center;gap:10px;width:100%;min-height:38px;padding:8px 12px;font-size:13px;text-align:left}
 .settings-actions>button svg{flex:none;width:15px;height:15px}
