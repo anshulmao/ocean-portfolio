@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
+import {checkPortfolioPages} from './check-portfolio-pages.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const run=file=>{const result=spawnSync(process.execPath,[path.join(root,file)],{cwd:root,encoding:'utf8'});assert.equal(result.status,0,result.stderr);};
 await fs.mkdir(path.join(root,'dist'),{recursive:true});
@@ -20,3 +21,5 @@ const code=await fs.readFile(path.join(root,'dist/user-creatures.js'),'utf8');co
 console.log('Build checks passed: stale files removed, retired assets excluded, 27 species and coral cache inputs valid');
 
 await assert.rejects(fs.access(path.join(root,'dist/assets/models/user-sets/sets')));
+const {PORTFOLIO_CONTENT}=await import('../ocean-refined/portfolio-content.js');
+console.log('Static portfolio integrity:',await checkPortfolioPages({out:path.join(root,'dist'),content:PORTFOLIO_CONTENT,siteURL:'https://anshul-portfolio-rho.vercel.app'}));

@@ -62,7 +62,7 @@ export const PORTFOLIO_CONTENT = {
         tag: "Twimbit · Sep 2024 — Jan 2025",
         org: "Twimbit", start: "2024-09", end: "2025-01",
         summary: "Built AI-accelerated content operations, combining structured intake, workflow automation, research assistants, and human review.",
-        body: ["Built AI-accelerated content operations for a three-person team, combining structured intake, workflow automation, research assistants, and human review."],
+        body: ["I connected structured request intake to research, verification, and production for a three-person team. Human review remained a checkpoint before publication."],
         facts: ["Structured intake", "Workflow automation", "Human review"],
         links: []
       },
@@ -162,6 +162,91 @@ export const PORTFOLIO_CONTENT = {
     }]
   }
 
+};
+
+// Editorial expansions restate existing public copy and qualitative evidence from the experience bank.
+// No client metrics, internal artifacts, pilot targets, or clinical outcomes are claimed.
+const PROJECT_STORIES = {
+  rae: {
+    role: "Product leadership and hands-on response-quality contribution",
+    problem: "A live sales-enablement platform needed clearer priorities, reliable answers, and a path from feature releases to repeat use.",
+    decision: "Pair frontline discovery with behavioral evidence. Improve retrieval, search and routing alongside planned activation and enablement, rather than treating each feature launch as the finish line.",
+    outcome: "Product work connected the roadmap, requirements, response engine, analytics and launch activity around an existing live platform. These are contributions to an enterprise product, not a solo platform build.",
+    learning: "A useful AI answer and an adopted AI product require different work. Response quality and the habits around it both belong in the product loop.",
+    evidence: "The linked public product story shows the platform context. The diagram below is an original explanation of the approach, not a screenshot of private systems."
+  },
+  reengage: {
+    role: "Pilot ownership and direct build contribution",
+    problem: "Business-plan enquiries needed a more structured path from an initial question to useful qualification and sales follow-up.",
+    decision: "Constrain the initial pilot to business mobile plans. Design the conversation, qualification information and stakeholder handoffs around that focused use case.",
+    outcome: "A customer-facing assistant can be explored in the public work sample. My scope covered problem framing, requirements, stakeholder alignment and a hands-on build contribution; no conversion result is claimed here.",
+    learning: "A focused pilot makes the central product hypothesis easier to examine before adding more product categories or integrations.",
+    evidence: "Browser capture of the public customer-facing assistant. Rae Engage is presented separately from the enterprise Rae platform."
+  },
+  wattmana: {
+    role: "Independent product design and working prototypes",
+    problem: "A dense electricity bill makes it difficult to understand what changed and which household decisions might matter.",
+    decision: "Start with the bill story, show ringgit and kWh together, and keep modeled device costs visibly separate from measurements on the bill.",
+    outcome: "Working web and mobile prototypes connect bill explanation, household use and learning. Device costs remain estimates with visible confidence ranges; they are not meter observations or proven savings.",
+    learning: "An explanation earns trust when the interface makes the source and uncertainty of each number visible.",
+    evidence: "Screenshot of the working browser prototype. This is a prototype story, with no household savings or production adoption claim."
+  },
+  sage: {
+    role: "Solo product scope, design and working build",
+    problem: "Symptoms, questions and changes between appointments can be difficult to capture consistently and recall during a visit.",
+    decision: "Make voice capture a low-friction entry point, connected to check-ins, documents, visit notes and a longitudinal timeline.",
+    outcome: "A working voice-enabled health-organization experience built with Lovable, Supabase, the Claude API and Web Speech API. It supports preparation and organization; it does not replace clinical judgment.",
+    learning: "The product opportunity is continuity: useful daily context that can be brought back into the next appointment. Clinical effectiveness has not been established by this build.",
+    evidence: "Screenshot of the public demo, shown without existing personal health records. The demo is linked below."
+  },
+  openclaw: {
+    role: "Independent build, operation and documentation",
+    problem: "Always-on agents offer persistent context, but also introduce infrastructure, cost and security tradeoffs.",
+    decision: "Build and operate an environment with a personal knowledge base, scheduled jobs and Git synchronization, then document where persistence is useful and where bounded automation is simpler.",
+    outcome: "An operated agent environment, open-sourced work and written reflections on its practical tradeoffs. The link below is my GitHub profile, not a verified project repository link.",
+    learning: "Persistence is valuable when context compounds and timing matters. It should earn its operational complexity.",
+    evidence: "Original conceptual diagram of the documented workflow components. It is not a product interface or an internal architecture disclosure."
+  },
+  'ocean-world': {
+    role: "Product direction and iterative AI-assisted implementation",
+    problem: "Make a personal portfolio feel exploratory and memorable while keeping professional information easy to reach.",
+    decision: "Offer direct reading alongside the Three.js world. Use familiar portfolio sections, optional guided travel, clear controls and progressive asset preparation.",
+    outcome: "This browser experience brings together a cycling sky, underwater terrain, creature behaviors, a dive computer and portfolio records. The reading path remains available without learning to swim.",
+    learning: "The world must invite attention without consuming all of it. Movement, loading and discovery need the same care as the case studies they introduce.",
+    evidence: "Capture of this portfolio world. The features described here can be explored directly; this is an evolving build, not a claim of measured visitor outcomes."
+  }
+};
+PORTFOLIO_CONTENT.projects.entries.push({
+  id: "ocean-world", title: "A world to explore", tag: "Creative web · This portfolio",
+  summary: "A portfolio you can swim through, with a direct path to the work.",
+  body: ["A browser-based ocean built with Three.js, shaped through repeated testing of movement, lighting, navigation, creatures and portfolio presentation.", "A personal experiment in balancing atmosphere, discovery and ease of use."],
+  facts: ["Three.js world and lightweight reading path", "First- and third-person exploration", "Iterated controls, loading and accessibility"], links: []
+});
+for (const entry of PORTFOLIO_CONTENT.projects.entries) {
+  entry.caseStudy = PROJECT_STORIES[entry.id];
+  entry.role = entry.caseStudy.role;
+}
+PORTFOLIO_CONTENT.projects.entries.find(entry => entry.id === 'rae').diagram = {
+  label: "From evidence to product use", steps: ["Discover real workflows", "Shape & improve the product", "Activate, observe & learn"],
+  caption: "Conceptual product loop · An original explanation, not private product UI"
+};
+PORTFOLIO_CONTENT.projects.entries.find(entry => entry.id === 'openclaw').diagram = {
+  label: "When context needs to persist", steps: ["Retain useful context", "Run a bounded recurring task", "Review & synchronize"],
+  caption: "Conceptual workflow · An original explanation, not a product screenshot"
+};
+PORTFOLIO_CONTENT.about.entries.find(entry => entry.id === 'approach').examples = [
+  { title: "Evidence before scope", text: "On Rae, combine frontline discovery with behavior data to shape priorities.", project: "rae" },
+  { title: "Adoption is product work", text: "Connect enterprise releases with activation, education and enablement.", project: "rae" },
+  { title: "Make uncertainty visible", text: "In WattMana, separate measured bill information from modeled appliance estimates.", project: "wattmana" }
+];
+
+export const PORTFOLIO_MEDIA = {
+  overview: { src: './assets/portfolio/ocean-world.png', alt: 'The living reef in my browser-based portfolio', caption: 'A world to explore · This portfolio', kind: 'scene', width: 1280, height: 800 },
+  'ocean-world': { src: './assets/portfolio/ocean-world.png', alt: 'The living reef in this browser-based portfolio', caption: 'A world to explore · This portfolio', kind: 'scene', width: 1280, height: 800 },
+  reengage: { src: './assets/portfolio/reengage.jpg', alt: 'Rae Engage chat widget open on the CelcomDigi business website', caption: 'Rae Engage · Live public work sample', kind: 'product', width: 1265, height: 712 },
+  sage: { src: './assets/portfolio/sage.jpg', alt: 'Sage personal health demo interface', caption: 'Sage · Live demo interface', kind: 'product', width: 1280, height: 720 },
+  wattmana: { src: './assets/portfolio/wattmana.png', alt: 'WattMana electricity bill explanation interface', caption: 'WattMana · Working browser prototype', kind: 'product', width: 1440, height: 1000 },
+  'portfolio-resume': { src: './assets/portfolio/resume.png', alt: 'Preview of the existing portfolio resume PDF', caption: 'AI Product Manager · July 2026', kind: 'document', width: 850, height: 1100 },
 };
 
 // New introduction drafts: selectable for review, awaiting user approval.

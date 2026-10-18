@@ -3,7 +3,7 @@ import { LANDMARKS, terrainHeightAt } from './reef.js';
 import { drawPreparedChart } from './prepared-charts.js';
 import { PORTFOLIO_CONTENT } from './portfolio-content.js';
 import { onFrame, say } from './journey.js';
-import { startTour, tourPlan, tourStatus, STOPS, DIVE_IN } from './guided-dive.js';
+import { startTour, tourPlan, tourStatus, DIVE_IN } from './guided-dive.js';
 
 // Plan your dive: the surface entry points, the site map signboard, starting a
 // dive at a chosen site, links that open straight onto a dive, and the summary
@@ -61,7 +61,9 @@ function viewpoint(site) {
     return { point: [px, Math.max(floor, terrainHeightAt(px, pz)) + 5, pz], focus: [x, floor + 1.5, z], ready: false };
   }
   // The arch is viewed from where the tour stops: its deep, open side.
-  if (site.name === 'The arch') { const stop = STOPS.find(item => item.key === 'arch'); return { point: stop.point, focus: stop.focus, ready: true }; }
+  // The scenic arch remains independently selectable, even though the guided
+  // story now has only its three portfolio stops. View it from its deep side.
+  if (site.name === 'The arch') return { point: [20, -52, -87.5], focus: [20, -50.5, -72], ready: true };
   // Scenic formations are viewed from the side that faces the middle of the reef.
   const dx = -x, dz = -42 - z, length = Math.hypot(dx, dz) || 1, reach = site.radius + 6.5, px = x + dx / length * reach, pz = z + dz / length * reach;
   return { point: [px, Math.max(terrainHeightAt(px, pz) + 3, floor + Math.min(site.height * .55, 6.5)), pz], focus: [x, floor + site.height * .45, z], ready: true };
@@ -101,9 +103,10 @@ function about(seconds) {
 }
 const metres = value => value < 20 ? Math.max(1, Math.round(value)) : Math.round(value / 5) * 5;
 
-// Surface entry: two quiet choices beside the dive button.
-const entry = node('div', 'dive-entry', '<button type="button" id="guided-dive" class="holo-chip">Take a guided dive <span aria-hidden="true">→</span></button><button type="button" id="plan-dive" class="holo-chip" aria-haspopup="dialog">Plan your dive <span aria-hidden="true">→</span></button>');
-$('#dive')?.after(entry);
+// Optional routes live in a native disclosure. The primary choices remain
+// exploring the world or reading the work; every existing route hook survives.
+const entry = node('div', 'dive-entry', '<button type="button" id="guided-dive" class="holo-chip">Show me around <span aria-hidden="true">→</span></button><button type="button" id="plan-dive" class="holo-chip" aria-haspopup="dialog">Choose a destination <span aria-hidden="true">→</span></button><p class="route-note">Three stories. Read at your own pace, or swim off whenever you like.</p>');
+$('#dive-options')?.prepend(entry);
 
 // The site map: a signboard on two posts carrying the reef chart.
 const plan = node('dialog', 'dive-plan holo-deep', `<div class="plan-wrap">
@@ -170,7 +173,7 @@ function build() {
   }));
   const plan3 = tourPlan();
   plan.querySelector('.plan-overview ol').replaceChildren(...PRIMARY.map(site => { const item = node('li', '', `<b>0${site.number}</b><span>${site.name}</span><em>${depthOf(site)} m</em>`); item.style.setProperty('--signal', site.signal); return item; }));
-  plan.querySelector('.plan-total').textContent = `Guided dive · ${plan3.stops} stops · about ${Math.round(plan3.distance / 10) * 10} m · ${about(plan3.seconds)}`;
+  plan.querySelector('.plan-total').textContent = `Guided dive · ${plan3.stops} stories · about ${Math.round(plan3.distance / 10) * 10} m · ${about(plan3.seconds)} swimming, plus reading at your pace`;
   select(sites.find(site => site.id === selected.id) || sites[0]);
 }
 export function openPlan(siteId) {

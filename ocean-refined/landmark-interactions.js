@@ -59,9 +59,9 @@ function interact() {
 // hero so it never depends on which buttons its siblings are.
 const logbookLink = document.createElement('button');
 logbookLink.type = 'button'; logbookLink.id = 'logbook-link'; logbookLink.className = 'logbook-link';
-logbookLink.append(icon('resume'), document.createTextNode('Read the logbook'));
-logbookLink.addEventListener('click', () => openArchive(archive.GLANCE));
-document.querySelector('#main')?.append(logbookLink);
+logbookLink.append(icon('resume'), document.createTextNode('View my work'));
+logbookLink.addEventListener('click', () => openArchive('projects'));
+document.querySelector('.portfolio-actions')?.append(logbookLink);
 
 window.oceanArchive = {
   // open('log', 'product-manager'): section ids or their hash names; the entry is optional.
@@ -82,16 +82,18 @@ window.oceanArchive = {
 };
 // #records, #profile, #log, #finds and #resume open a section once the page is ready; every entry has its
 // own link (#profile/rules, #log/product-manager, #finds/sage). archive.js keeps the address in step while reading.
-let pendingHash = null;
-function readHash() { pendingHash = archive.parseHash(location.hash); }
-// Timer-driven so it does not depend on the render loop; gives up waiting for the scene after 9 s.
+let pendingHash = null, hashDeadline = 0;
+function readHash() { pendingHash = archive.parseHash(location.hash); hashDeadline = performance.now() + 15000; }
+// Reading does not depend on WebGL or scene readiness. Try immediately; only a
+// currently blocked dialog or camera transition needs a short, bounded retry.
 let hashTimer = 0;
 function openFromHash() {
   clearTimeout(hashTimer);
   if (!pendingHash) return;
-  const ready = window.oceanDiagnostics?.ready || document.body.dataset.ready === 'true' || document.body.dataset.fallback === 'true' || performance.now() > 9000;
-  if (ready && (window.oceanArchive.open(pendingHash.id, pendingHash.entry) || credits.open)) pendingHash = null;
-  else hashTimer = setTimeout(openFromHash, 200);
+  if (window.oceanArchive.open(pendingHash.id, pendingHash.entry)) { pendingHash = null; return; }
+  const controls = window.oceanControls;
+  const blocked = credits.open || controls?.getTransition() || controls?.getMode() === 'transition';
+  if (blocked && performance.now() < hashDeadline) hashTimer = setTimeout(openFromHash, 200);
 }
 readHash(); openFromHash();
 addEventListener('hashchange', () => { readHash(); openFromHash(); });

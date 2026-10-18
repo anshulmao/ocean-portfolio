@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="./ambient-audio.css">
   <link rel="stylesheet" href="./controls.css">
   <link rel="stylesheet" href="./quiet-ui.css">
+  <link rel="stylesheet" href="./portfolio-entry.css">
   <!-- The four faces the first view is set in: requested with the stylesheets, not after the first layout. -->
   <link rel="preload" as="font" type="font/woff2" crossorigin href="./assets/fonts/outfit-400.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="./assets/fonts/outfit-500.woff2">
@@ -144,15 +145,17 @@
     <div class="surface-copy">
       <p class="eyebrow"><span></span>HELLO, I’M ANSHUL</p>
       <h1>Go a little<br><em>deeper.</em></h1>
-      <p class="lede">There’s always more beneath the surface.</p>
+      <p class="lede">I’m Anshul, an applied AI product manager and hands-on solutions builder. I connect real user workflows, model behavior, evaluation, and adoption.</p>
+      <p class="surface-invitation">Explore the world. Discover the thinking behind the work.</p>
     </div>
     <div class="deep-copy" aria-hidden="true">
       <p class="eyebrow"><span></span>A DIFFERENT PERSPECTIVE</p>
       <h2>A little<br><em>closer to calm.</em></h2>
       <p class="lede">A reef full of stories. Take your time exploring.</p>
     </div>
-    <button class="dive-button" id="dive" type="button" disabled><i class="dive-flag" aria-hidden="true"></i><span id="dive-label">Preparing the ocean</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15m-6-6 6 6 6-6"/></svg></button>
-    <button class="explore-button" id="explore" type="button" aria-pressed="false">Look around <span>↗</span></button>
+    <div class="portfolio-actions"><button class="dive-button" id="dive" type="button" disabled><i class="dive-flag" aria-hidden="true"></i><span id="dive-label">Preparing the ocean</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15m-6-6 6 6 6-6"/></svg></button></div>
+    <details id="portfolio-options" class="portfolio-options"><summary>Guided route &amp; reef map <span aria-hidden="true">+</span></summary><div id="dive-options"><button class="explore-button" id="explore" type="button" aria-pressed="false">Look around <span>↗</span></button></div></details>
+    <nav class="portfolio-links" aria-label="Portfolio shortcuts"><a href="./profile.html">Reading view <span aria-hidden="true">↗</span></a><a href="./assets/portfolio/portfolio-resume.pdf" target="_blank" rel="noopener" aria-label="Open résumé PDF in a new tab">Résumé <span aria-hidden="true">↗</span></a><a href="mailto:anshulramprasad@gmail.com">Get in touch <span aria-hidden="true">↗</span></a></nav>
   </main>
   <div id="sky-labels" aria-hidden="true"></div>
   <div id="reef-labels"></div>
@@ -197,7 +200,7 @@
     <p class="look-hint" id="look-hint">Click to swim · W/S swim · A/D strafe or turn as configured · Space / Shift · E scooter · Q light</p>
   </footer>
   <p id="status" class="status holo holo-deep" role="status" aria-live="polite">Preparing your quiet corner of the ocean…</p>
-  <button id="archive-toggle" class="archive-toggle" type="button" hidden>Dive records <span>↗</span></button>
+  <button id="archive-toggle" class="archive-toggle" type="button" hidden>Portfolio <span>↗</span></button>
   <button id="dive-computer-toggle" class="dive-computer-toggle" type="button" aria-expanded="false" aria-controls="dive-computer" hidden><span aria-hidden="true">▦</span> Dive computer <kbd>C</kbd></button>
   <aside id="dive-computer" class="dive-computer holo" aria-label="Dive computer" hidden>
     <div class="computer-top"><span><i></i> AIR 21% · SIMULATED</span><span id="computer-mode">DIVE</span></div>

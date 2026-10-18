@@ -1,10 +1,10 @@
 // Dive Explorer archive: renders the portfolio as a diver's records inside
-// <dialog id="landmark-dialog">. At a glance (the opening view), Diver profile (About), Dive log (Experience),
-// Salvage finds (Projects) and C-card (Resume). Every value shown comes from PORTFOLIO_CONTENT; derived fields
+// <dialog id="landmark-dialog">. At a glance (the opening view), About, Experience,
+// Projects and Résumé, with nautical cues as secondary labels. Every value shown comes from PORTFOLIO_CONTENT; derived fields
 // (dive numbers, bottom time, find numbers, chart shapes) are computed here from that data and labelled as such
 // in the interface. Nothing here runs while the dialog is closed: pages are built when they are shown, entry
 // motion is CSS on the shared tokens in motion.css, and the only listeners left idle are for printing.
-import { PORTFOLIO_CONTENT, COPY_VARIANTS } from './portfolio-content.js';
+import { PORTFOLIO_CONTENT, PORTFOLIO_MEDIA, COPY_VARIANTS } from './portfolio-content.js';
 import { icon } from './ui-icons.js';
 import { openLightbox, closeLightbox, lightboxOpen } from './archive-lightbox.js';
 
@@ -19,18 +19,12 @@ const nextButton = panel.querySelector('#archive-next');
 export const GLANCE = 'glance';
 export const SECTIONS = {
   glance: { hash: 'records', label: 'At a glance', short: 'Glance', site: 'START HERE' },
-  about: { hash: 'profile', label: 'Diver profile', short: 'Profile', site: 'THE ANCHOR', line: 'An anchor for my story.' },
-  experience: { hash: 'log', label: 'Dive log', short: 'Log', site: 'THE WRECK', line: 'Explore the chapters of my journey.' },
-  projects: { hash: 'finds', label: 'Salvage finds', short: 'Finds', site: 'THE TREASURE', line: 'Discover what I’ve been building.' },
-  resume: { hash: 'resume', label: 'C-card', short: 'C-card', site: 'THE LOGBOOK', line: 'The work, on one page.' },
+  about: { hash: 'profile', label: 'About', short: 'About', site: 'THE ANCHOR', line: 'An anchor for my story.' },
+  experience: { hash: 'log', label: 'Experience', short: 'Experience', site: 'THE WRECK', line: 'Explore the chapters of my journey.' },
+  projects: { hash: 'finds', label: 'Projects', short: 'Projects', site: 'THE TREASURE', line: 'Discover what I’ve been building.' },
+  resume: { hash: 'resume', label: 'Résumé', short: 'Résumé', site: 'THE LOGBOOK', line: 'The work, on one page.' },
 };
-const media = {
-  overview: { src: './assets/portfolio/ocean-world.png', alt: 'The living reef in my browser-based portfolio', caption: 'A world to explore · This portfolio', kind: 'scene', width: 1280, height: 800 },
-  reengage: { src: './assets/portfolio/reengage.jpg', alt: 'Rae Engage chat widget open on the CelcomDigi business website', caption: 'Rae Engage · Live public work sample', kind: 'product', width: 1265, height: 712 },
-  sage: { src: './assets/portfolio/sage.jpg', alt: 'Sage personal health demo interface', caption: 'Sage · Live demo interface', kind: 'product', width: 1280, height: 720 },
-  wattmana: { src: './assets/portfolio/wattmana.png', alt: 'WattMana electricity bill explanation interface', caption: 'WattMana · Working browser prototype', kind: 'product', width: 1440, height: 1000 },
-  'portfolio-resume': { src: './assets/portfolio/resume.png', alt: 'Preview of the existing portfolio resume PDF', caption: 'AI Product Manager · July 2026', kind: 'document', width: 850, height: 1100 },
-};
+const media = PORTFOLIO_MEDIA;
 // Images carry their pixel size and decode off the main thread; the stylesheet still decides the box each one is
 // drawn in. They are only created when a page that shows them is rendered, so there is nothing to defer further.
 const picture = visual => el('img', { decoding: 'async', width: visual.width, height: visual.height, src: visual.src, alt: visual.alt });
@@ -124,11 +118,19 @@ function figure(id, extraClass = '') {
       picture(visual), el('span', { class: 'arc-expand', 'aria-hidden': 'true' }, glyph('expand'), 'Enlarge')),
     el('figcaption', { text: visual.caption }));
 }
-// A find without a picture gets a specimen plate with its catalogue number, never another find's image.
+// Original diagrams describe decisions without inventing a product screenshot.
+function diagram(entry, compact = false) {
+  const data = entry.diagram;
+  if (!data) return null;
+  return el('div', { class: `arc-diagram${compact ? ' arc-diagram--compact' : ''}`, role: 'img', 'aria-label': `${data.label}: ${data.steps.join(' → ')}` },
+    el('span', { class: 'holo-label', text: data.label }),
+    el('ol', {}, data.steps.map((text, index) => el('li', {}, el('span', { class: 'arc-diagram-dot', 'aria-hidden': 'true', text: pad(index + 1) }), el('strong', { text })))),
+    !compact && el('small', { text: data.caption }));
+}
 function plate(find, size = 'full') {
-  return el('span', { class: `arc-noimage arc-noimage--${size}`, role: 'img', 'aria-label': `No image catalogued for ${find.entry.title}` },
+  return diagram(find.entry, size === 'thumb') || el('span', { class: `arc-noimage arc-noimage--${size}`, role: 'img', 'aria-label': `${find.entry.title} field notes` },
     el('span', { class: 'arc-noimage-no', 'aria-hidden': 'true', text: pad(find.number) }), icon(find.entry.id),
-    size === 'full' && el('span', { class: 'holo-label', 'aria-hidden': 'true', text: 'Not photographed' }));
+    size === 'full' && el('span', { class: 'holo-label', 'aria-hidden': 'true', text: 'Field notes' }));
 }
 const thumb = find => media[find.entry.id] ? picture(media[find.entry.id]) : plate(find, 'thumb');
 // The reading-style select swaps the intro line for an unapproved draft, so the draft is labelled.
@@ -167,11 +169,11 @@ function sequence() {
   if (cachedStops) return cachedStops;
   const content = PORTFOLIO_CONTENT, list = [{ section: GLANCE, id: GLANCE, slug: null, code: 'START', title: SECTIONS.glance.label, glyph: 'compass' }];
   content.about.entries.forEach((entry, index) => list.push(entry.id === 'approach'
-    ? { section: 'about', id: entry.id, slug: 'rules', code: 'RULES', title: 'Dive rules', icon: entry.id }
-    : index === 0 ? { section: 'about', id: entry.id, slug: null, aliases: ['card'], code: 'CARD', title: 'Diver card', icon: entry.id }
+    ? { section: 'about', id: entry.id, slug: 'rules', code: 'RULES', title: 'How I think', icon: entry.id }
+    : index === 0 ? { section: 'about', id: entry.id, slug: null, aliases: ['card'], code: 'CARD', title: 'About me', icon: entry.id }
       : { section: 'about', id: entry.id, slug: entry.id, code: pad(index + 1), title: entry.title, icon: entry.id }));
   for (const dive of dives()) list.push({ section: 'experience', id: dive.entry.id, slug: dive.entry.id, code: dive.number ? `DIVE ${pad(dive.number)}` : 'DIVE', mark: dive.number && pad(dive.number), title: dive.entry.title, icon: 'experience' });
-  list.push({ section: 'projects', id: CATALOGUE, slug: null, aliases: ['all'], code: 'ALL', title: 'All finds', glyph: 'grid' });
+  list.push({ section: 'projects', id: CATALOGUE, slug: null, aliases: ['all'], code: 'ALL', title: 'Selected work', glyph: 'grid' });
   for (const find of finds()) list.push({ section: 'projects', id: find.entry.id, slug: find.entry.id, code: `FIND ${pad(find.number)}`, mark: pad(find.number), title: find.entry.title, icon: find.entry.id });
   content.resume.entries.forEach((entry, index) => list.push({ section: 'resume', id: entry.id, slug: index ? entry.id : null, aliases: index ? [] : ['card'], code: 'PDF', title: content.resume.entries.length === 1 ? SECTIONS.resume.label : entry.title, icon: 'resume' }));
   list.forEach((stop, index) => { stop.index = index; stop.hash = SECTIONS[stop.section].hash + (stop.slug ? `/${stop.slug}` : ''); });
@@ -322,33 +324,33 @@ function renderGlance() {
     const source = dive ? [dive.number && `Dive ${pad(dive.number)}`, entry.tag] : [`Find ${pad(find.number)}`, find.status || find.kind];
     return el('li', {}, el('button', { type: 'button', class: 'arc-proof', 'data-go': `${SECTIONS[section].hash}/${id}` },
       el('span', { class: 'holo-label', text: source.filter(Boolean).join(' · ') }), el('strong', { text: entry.title }), el('span', { class: 'arc-proof-line', text: quote }),
-      el('span', { class: 'arc-proof-more' }, dive ? 'Read the dive' : 'Open the find', glyph('next'))));
+      el('span', { class: 'arc-proof-more' }, dive ? 'Explore the role' : 'Explore the project', glyph('next'))));
   }).filter(Boolean);
   const logged = list.filter(dive => dive.entry.start), career = careerChart(list), contact = contactTiles(card.links);
   return [
     el('header', { class: 'arc-glance', 'data-hero': true },
       el('div', { class: 'arc-glance-lead' },
-        el('p', { class: 'holo-label', text: `${card.name ? `${card.name} · ` : ''}Diver’s records at a glance` }),
+        el('p', { class: 'holo-label', text: `${card.name ? `${card.name} · ` : ''}The portfolio at a glance` }),
         el('h3', { id: 'archive-entry-title', text: card.title }),
         intro('about', card.summary, false),
         el('p', { class: 'arc-strap', text: about.subtitle }),
         el('div', { class: 'arc-actions' },
-          el('button', { type: 'button', class: 'arc-action arc-action--primary', 'data-step': '1' }, 'Start reading', glyph('next')),
+          el('button', { type: 'button', class: 'arc-action arc-action--primary', 'data-step': '1' }, 'Meet Anshul', glyph('next')),
           resume && anchorFor(resume, icon('download'), resume.label),
           mail && anchorFor(mail, glyph('mail'), mail.label)),
         resumeStop && resumeStop.section !== GLANCE && el('button', { type: 'button', class: 'arc-resume', 'data-go': resumeStop.hash },
           el('span', { class: 'holo-label', text: 'Pick up where you left off' }), el('strong', { text: `${SECTIONS[resumeStop.section].label} · ${stopName(resumeStop)}` }), glyph('next'))),
       el('dl', { class: 'arc-plate' }, [
-        now && ['Current dive', now.entry.title, now.entry.tag],
-        card.tag && ['Rating', card.tag],
+        now && ['Current role', now.entry.title, now.entry.tag],
+        card.tag && ['Focus', card.tag],
         card.base && ['Based in', card.base],
-        logged.length && ['Logged', `${pad(logged.length)} dives · ${pad(found.length)} finds`],
+        logged.length && ['Explore', `${logged.length} career chapters · ${found.length} projects`],
       ].filter(Boolean).map(([label, value, note]) => el('div', {}, el('dt', { class: 'holo-label', text: label }), el('dd', {}, el('strong', { text: value }), note && el('span', { text: note })))))),
-    proof.length && block(['From the records', null, 'quoted from the entries they link to'], 'arc-proof-title', el('ul', { class: 'arc-proofs' }, proof)),
-    block(['Salvage finds', null, `${pad(found.length)} in the catalogue`], 'arc-reel-title', el('ul', { class: 'arc-reel' }, found.map(find =>
+    proof.length && block(['The work behind the words', null, 'Choose a story'], 'arc-proof-title', el('ul', { class: 'arc-proofs' }, proof)),
+    block(['Selected work', null, 'Enterprise products & independent builds'], 'arc-reel-title', el('ul', { class: 'arc-reel' }, found.map(find =>
       el('li', {}, el('button', { type: 'button', class: 'arc-reel-find', 'data-go': `finds/${find.entry.id}` },
         el('span', { class: 'arc-thumb' }, thumb(find)), el('span', { class: 'holo-label', text: `Find ${pad(find.number)}` }), el('strong', { text: find.entry.title }), el('span', { class: 'arc-find-kind', text: find.kind })))))),
-    career && block(['Dive log', null, PORTFOLIO_CONTENT.experience.subtitle], 'arc-career-title', career),
+    career && block(['Experience', null, PORTFOLIO_CONTENT.experience.subtitle], 'arc-career-title', career),
     contact && block('Surface contact', 'arc-contact', contact),
   ];
 }
@@ -356,21 +358,21 @@ function renderGlance() {
 function certificate(section, card, rules) {
   const base = card.base ? `Based in ${card.base}` : null, capabilities = card.facts.filter(fact => fact !== base);
   const now = dives().find(dive => dive.entry.start && !dive.entry.end), art = media[card.id];
-  const front = el('section', { class: 'arc-cert-face arc-cert-front', 'aria-label': 'Certification card, front' },
-    el('p', { class: 'arc-cert-band' }, el('span', { text: 'Dive Explorer' }), el('span', { text: 'Certification card' })),
+  const front = el('section', { class: 'arc-cert-face arc-cert-front', 'aria-label': 'Profile card, front' },
+    el('p', { class: 'arc-cert-band' }, el('span', { text: 'Dive Explorer' }), el('span', { text: 'Profile card' })),
     el('div', { class: 'arc-cert-body' },
       art && el('span', { class: 'arc-cert-art' }, picture(art)),
       el('div', { class: 'arc-cert-id' },
         el('p', { class: 'holo-label', text: 'Diver' }),
         el('p', { class: 'arc-cert-name', text: card.name || card.title }),
         card.role && el('p', { class: 'arc-cert-role', text: card.role }),
-        el('dl', {}, [['Rating', card.tag], card.base && ['Based in', card.base], now && ['Current dive', `${now.entry.title} · ${now.entry.org || now.entry.tag}`]].filter(Boolean).map(([label, value]) =>
+        el('dl', {}, [['Focus', card.tag], card.base && ['Based in', card.base], now && ['Current dive', `${now.entry.title} · ${now.entry.org || now.entry.tag}`]].filter(Boolean).map(([label, value]) =>
           el('div', {}, el('dt', { class: 'holo-label', text: label }), el('dd', { text: value })))))),
     el('p', { class: 'arc-cert-strap', text: section.subtitle }));
-  const back = el('section', { class: 'arc-cert-face arc-cert-back', 'aria-label': 'Certification card, back', inert: true },
-    el('p', { class: 'arc-cert-band' }, el('span', { text: 'Certifications' }), el('span', { text: card.name || '' })),
+  const back = el('section', { class: 'arc-cert-face arc-cert-back', 'aria-label': 'Profile card, back', inert: true },
+    el('p', { class: 'arc-cert-band' }, el('span', { text: 'Capabilities' }), el('span', { text: card.name || '' })),
     el('div', { class: 'arc-cert-lists' },
-      capabilities.length && el('ul', { class: 'arc-certs', 'aria-label': 'Certifications' }, capabilities.map(text => el('li', {}, glyph('stamp'), el('span', { text })))),
+      capabilities.length && el('ul', { class: 'arc-certs', 'aria-label': 'Capabilities' }, capabilities.map(text => el('li', {}, glyph('stamp'), el('span', { text })))),
       rules && el('div', {}, el('p', { class: 'holo-label', text: 'Dives by these rules' }),
         el('ol', { class: 'arc-cert-rules' }, rules.facts.map((text, index) => el('li', {}, el('span', { 'aria-hidden': 'true', text: pad(index + 1) }), text))))),
     rules && el('button', { type: 'button', class: 'arc-cert-more', 'data-go': 'profile/rules' }, 'Read the dive rules', glyph('next')));
@@ -383,7 +385,7 @@ function renderProfile() {
   return [
     el('div', { class: 'arc-id' },
       el('header', { class: 'arc-pagehead', 'data-hero': true },
-        el('p', { class: 'holo-label', text: `${SECTIONS.about.label} · Certification card` }),
+        el('p', { class: 'holo-label', text: `${SECTIONS.about.label} · The anchor` }),
         el('h3', { id: 'archive-entry-title', text: card.title }),
         intro('about', card.summary, false)),
       certificate(section, card, rules),
@@ -400,6 +402,8 @@ function renderRules(id) {
       el('p', { class: 'arc-intro', text: rules.summary })),
     rules.facts.length && el('ol', { class: 'arc-rule-list', 'data-rise': true, 'aria-label': 'Dive rules' }, rules.facts.map((text, index) =>
       el('li', {}, el('span', { class: 'arc-rule-no', 'aria-hidden': 'true', text: pad(index + 1) }), el('span', { class: 'holo-label', text: `Rule ${pad(index + 1)}` }), el('strong', { text })))),
+    rules.examples?.length && el('div', { class: 'arc-principles', 'data-rise': true }, rules.examples.map(example =>
+      el('article', {}, el('h4', { text: example.title }), el('p', { text: example.text }), el('button', { type: 'button', class: 'arc-back', 'data-go': `finds/${example.project}` }, 'See it in the work', glyph('next'))))),
     block('Notes on the rules', 'arc-notes', el('div', { class: 'arc-prose' }, paragraphs(rules.body))),
     linkList(rules.links, 'Dive rule links') && block('Links', 'arc-links-title', linkList(rules.links, 'Dive rule links')),
   ];
@@ -412,7 +416,7 @@ function renderDive(id) {
   return [el('div', { class: 'arc-sheet' },
     el('header', { class: 'arc-sheet-head', 'data-hero': true },
       el('div', {},
-        el('p', { class: 'holo-label', text: `${SECTIONS.experience.label} · ${dive.number ? `Page ${pad(dive.number)} of ${pad(total)}` : 'Undated page'}` }),
+        el('p', { class: 'holo-label', text: `${SECTIONS.experience.label} · The wreck · ${dive.number ? `Chapter ${pad(dive.number)} of ${pad(total)}` : 'Career chapter'}` }),
         el('h3', { id: 'archive-entry-title', text: entry.title })),
       dive.number && el('p', { class: 'arc-diveno' }, el('span', { class: 'holo-label', text: 'Dive no.' }), el('strong', { text: pad(dive.number) }))),
     // The role is the page heading, so the boxes start with the facts the heading does not carry.
@@ -457,28 +461,36 @@ function renderCatalogue() {
   const section = PORTFOLIO_CONTENT.projects, list = finds();
   return [
     el('header', { class: 'arc-pagehead', 'data-hero': true },
-      el('p', { class: 'holo-label', text: `Catalogue · ${pad(list.length)} finds recovered from the treasure site` }),
+      el('p', { class: 'holo-label', text: `Projects · The treasure · ${list.length} stories` }),
       el('h3', { id: 'archive-entry-title', text: SECTIONS.projects.label }),
       intro('projects', section.subtitle, false)),
     el('ul', { class: 'arc-grid' }, list.map(findCard)),
   ];
 }
-// One catalogued artefact: tag, picture, then the same three parts for every find.
+// Each project offers a quick brief, the decision behind it, and an optional deeper reading layer.
 function renderFind(id) {
-  const list = finds(), find = list.find(item => item.entry.id === id) || list[0], entry = find.entry;
+  const list = finds(), find = list.find(item => item.entry.id === id) || list[0], entry = find.entry, story = entry.caseStudy;
   const links = linkList(entry.links, `${entry.title} links`);
+  const visual = figure(entry.id) || diagram(entry);
   return [
-    el('header', { class: 'arc-pagehead', 'data-hero': true },
-      el('button', { type: 'button', class: 'arc-back', 'data-go': 'finds', 'data-focus': `.arc-find[data-entry="${entry.id}"]` }, glyph('previous'), 'All finds'),
-      el('p', { class: 'holo-label', text: `Find ${pad(find.number)} of ${pad(list.length)} · Recovered from the treasure site` }),
+    el('header', { class: 'arc-pagehead arc-case-head', 'data-hero': true },
+      el('button', { type: 'button', class: 'arc-back', 'data-go': 'finds', 'data-focus': `.arc-find[data-entry="${entry.id}"]` }, glyph('previous'), 'All projects'),
+      el('p', { class: 'holo-label', text: `Project ${pad(find.number)} · ${entry.tag}` }),
       el('h3', { id: 'archive-entry-title', text: entry.title }),
-      el('p', { class: 'arc-intro', text: entry.summary })),
-    fields([['Find no.', pad(find.number)], ['Type', find.kind], find.status && ['Built as', find.status], entry.role && ['Role', entry.role], entry.team && ['Crew', entry.team], entry.year && ['Recovered', String(entry.year)]], 'arc-tag'),
-    figure(entry.id) || el('figure', { class: 'arc-media arc-media--empty', 'data-rise': true }, plate(find), el('figcaption', { text: `${entry.title} · No image in the catalogue` })),
-    block(['What it is', '01'], 'arc-what', el('div', { class: 'arc-prose' }, paragraphs(entry.body))),
-    entry.facts.length && block(['Highlights', '02'], 'arc-highlights', el('ul', { class: 'arc-facts' }, entry.facts.map(text => el('li', { text })))),
-    entry.outcome && block(['Outcome', '03'], 'arc-outcome', el('div', { class: 'arc-prose' }, paragraphs([].concat(entry.outcome)))),
-    links && block(['Open the find', entry.outcome ? '04' : '03'], 'arc-open', links),
+      el('p', { class: 'arc-intro', text: entry.summary }),
+      story && el('p', { class: 'arc-role' }, el('span', { class: 'holo-label', text: 'My role' }), el('span', { text: story.role }))),
+    visual && el('div', { class: 'arc-case-visual', 'data-project': entry.id, 'data-rise': true }, visual),
+    story ? el('div', { class: 'arc-story' },
+      block(['The problem', '01'], 'arc-problem', el('p', { text: story.problem })),
+      block(['The decision', '02'], 'arc-decision', el('p', { text: story.decision })),
+      block(['What came out of it', '03'], 'arc-outcome', el('p', { text: story.outcome })),
+      block(['The takeaway', '04'], 'arc-learning', el('p', { text: story.learning }))) : block('Overview', 'arc-what', el('div', { class: 'arc-prose' }, paragraphs(entry.body))),
+    entry.facts.length && el('details', { class: 'arc-depth', 'data-rise': true },
+      el('summary', {}, 'Go a little deeper', glyph('next')),
+      el('div', { class: 'arc-prose' }, paragraphs(entry.body)),
+      el('ul', { class: 'arc-facts' }, entry.facts.map(text => el('li', { text })))),
+    story?.evidence && el('aside', { class: 'arc-evidence', 'data-rise': true }, glyph('compass'), el('p', {}, el('strong', { text: 'About the evidence. ' }), story.evidence)),
+    links && block('Explore the work', 'arc-open', links),
   ];
 }
 // The resume as a document in its sleeve: preview, download, open, and the printable summary of the records.
@@ -487,7 +499,7 @@ function renderCard(id) {
   const print = el('button', { type: 'button', class: 'arc-linklike', 'data-print': true }, glyph('print'), 'Print the records summary');
   return [
     el('header', { class: 'arc-pagehead', 'data-hero': true },
-      el('p', { class: 'holo-label', text: 'C-card · Logbook export' }),
+      el('p', { class: 'holo-label', text: 'Résumé · The logbook' }),
       el('h3', { id: 'archive-entry-title', text: entry.title }),
       intro('resume', entry.summary, false)),
     el('div', { class: 'arc-export' },
@@ -679,7 +691,7 @@ function printable() {
       el('p', { class: 'arc-print-lead', text: card.summary }),
       el('p', { class: 'arc-print-meta', text: [content.about.subtitle, base].filter(Boolean).join(' · ') }),
       inline(card.links)),
-    el('section', {}, el('h2', { text: SECTIONS.about.label }), paragraphs(card.body), facts(card.facts.filter(fact => fact !== base), 'Certifications'),
+    el('section', {}, el('h2', { text: SECTIONS.about.label }), paragraphs(card.body), facts(card.facts.filter(fact => fact !== base), 'Capabilities'),
       rules && [el('h3', { text: `Dive rules · ${rules.title}` }), el('p', { text: rules.summary }), el('ol', {}, rules.facts.map(text => el('li', { text }))), ...paragraphs(rules.body)]),
     el('section', {}, el('h2', { text: `${SECTIONS.experience.label} · ${content.experience.subtitle}` }), list.map(dive => {
       const entry = dive.entry, months = bottomTime(entry);
@@ -712,7 +724,7 @@ function flip(button) {
   card.dataset.face = turned ? 'back' : 'front';
   card.querySelector('.arc-cert-front').inert = turned; card.querySelector('.arc-cert-back').inert = !turned;
   button.setAttribute('aria-pressed', String(turned)); button.querySelector('span').textContent = turned ? 'Turn the card back' : 'Turn the card over';
-  live.textContent = announced = turned ? 'Card back: certifications and dive rules.' : 'Card front.';
+  live.textContent = announced = turned ? 'Card back: capabilities and operating principles.' : 'Card front.';
 }
 
 ensureShell();

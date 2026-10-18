@@ -59,6 +59,10 @@ body[data-computer-open="true"][data-camera="third"] section.tour-card{bottom:29
 .tour-title{width:fit-content;margin:10px 0 9px;font-size:22px;line-height:1.15}
 .tour-lines{margin:0;min-height:44px;font-size:14.5px;line-height:22px}
 .tour-card[data-state="travel"] .tour-lines{opacity:.72}
+.tour-pace{margin:10px 0 0;font-size:11px;line-height:1.5;opacity:.72}
+.tour-pace:empty{display:none}
+.tour-card[data-state="dwell"] .tour-progress i{will-change:auto}
+@media(max-height:650px){section.tour-card{max-height:calc(100dvh - 210px);overflow-y:auto;overscroll-behavior:contain}}
 .tour-progress{height:1px;margin:11px 0 11px;background:var(--holo-faint)}
 /* The bar grows many times a second while a stop is narrated: on its own layer that is a compositor move, not a repaint of the card. */
 .tour-progress i{display:block;height:100%;background:var(--signal,var(--holo));box-shadow:0 0 6px var(--signal,var(--holo));transform:scaleX(0);transform-origin:left;will-change:transform}

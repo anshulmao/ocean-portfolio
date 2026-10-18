@@ -33,15 +33,15 @@
 @keyframes holo-in{0%{opacity:0}16%{opacity:.78}28%{opacity:.34}44%{opacity:.92}58%{opacity:.7}100%{opacity:1}}
 @keyframes holo-in-b{0%{opacity:0}16%{opacity:.78}28%{opacity:.34}44%{opacity:.92}58%{opacity:.7}100%{opacity:1}}
 
-/* 1. Arrival. Nothing is shown while the ocean prepares (the status line carries
-   the wait); once ready the headline leads and the instruments follow within
-   half a second. The hold releases by itself if the scene never reports back.
-   html.js is set by the first script in the page, so without JavaScript nothing is held back. */
+/* 1. Arrival. Identity, work and navigation are readable immediately, independent
+   of WebGL preparation. Only the scene's own instruments await world readiness.
+   The entry motion runs once on page load, so ready does not replay the copy. */
 .surface-copy h1 em{display:inline-block}
-html.js body:not([data-ready="true"],[data-fallback="true"]) :is(.menu-toggle,.wordmark,.surface-copy>*,.dive-button,.explore-button,.view-controls,.scene-footer){animation:motion-hold 9s linear backwards}
-body[data-ready="true"] :is(.menu-toggle,.wordmark,.surface-copy>*,.dive-button,.explore-button,.view-controls,.scene-footer){animation:motion-rise var(--journey-standard) var(--journey-in) var(--arrive,0ms) backwards}
-body[data-ready="true"] .surface-copy h1{--rise:26px;animation-duration:var(--journey-slow)}
-body[data-ready="true"] .surface-copy h1 em{--rise:.16em;animation:motion-rise var(--journey-slow) var(--journey-in) 110ms backwards}
+html.js body:not([data-ready="true"],[data-fallback="true"]) :is(.view-controls,.scene-footer){animation:motion-hold 9s linear backwards}
+:is(.menu-toggle,.wordmark,.surface-copy>*,.dive-button,.portfolio-options,.portfolio-links){animation:motion-rise var(--journey-standard) var(--journey-in) var(--arrive,0ms) backwards}
+body[data-ready="true"] :is(.view-controls,.scene-footer){animation:motion-rise var(--journey-standard) var(--journey-in) var(--arrive,0ms) backwards}
+.surface-copy h1{--rise:26px;animation-duration:var(--journey-slow)}
+.surface-copy h1 em{--rise:.16em;animation:motion-rise var(--journey-slow) var(--journey-in) 110ms backwards}
 .surface-copy .eyebrow{--arrive:60ms}.surface-copy .lede{--arrive:120ms}.dive-button{--arrive:190ms}.explore-button,.menu-toggle{--arrive:250ms}.wordmark{--arrive:300ms}.view-controls{--arrive:420ms}.scene-footer{--arrive:450ms}
 :is(.menu-toggle,.wordmark,.view-controls,.scene-footer){--rise:10px}
 .status{transition:opacity var(--journey-standard) var(--journey-ease),translate var(--journey-standard) var(--journey-in)}

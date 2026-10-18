@@ -1,3 +1,4 @@
+import { createExperienceMetrics } from './experience-performance.js';
 import { createWaterlineSplash } from './waterline-splash.js';
 import { toDisplayDepth, DISPLAY_MAX_DEPTH } from './depth-metrics.js';
 import {createDiveScooter} from './scooter.js';
@@ -39,7 +40,7 @@ let setPieces=null,heroFormations=null,livingWorld=null;
 // Weather drifts on its own unless the visitor holds it; a locked clock stops the automatic day/night advance only.
 let weather=null,timeLocked=false;try{timeLocked=localStorage.getItem('ocean-time-lock')==='1';}catch{}
 let userCreatures=null,userCorals=null;
-let largeMarine=null,extraLife=null,distantScenery=null,birds=null,modelScene=null,modelsLoading=false,modelsBusy=0,interactionTargets=[];
+let largeMarine=null,extraLife=null,distantScenery=null,birds=null,modelScene=null,modelsLoading=false,modelsBusy=0,optionalModelsStarted=false,interactionTargets=[];
 // The surface is on screen first; the world under the water is built behind it, in steps (see buildUnderwater).
 // built: every part exists. underReady: its shaders have linked as well, so a dive can go under without waiting on one.
 let built=false,underReady=false,buildSteps=null,buildStage='reef',modelsWanted=false,diveHeldFor=0,holdNoted=false;
@@ -98,6 +99,7 @@ window.oceanDiagnostics=diagnostic;
 // Start-up timings in ms. modules: when this file began to run. Then the main-thread time of each stage up to the first
 // frame (shaders: the wait for the browser to compile the surface's programs, which blocks nothing), and under: the
 // main-thread time of each part of the world built after it.
+const experienceMetrics=window.oceanExperienceMetrics=createExperienceMetrics();
 const startup=diagnostic.startup={modules:Math.round(performance.now()),under:{}};let markAt=performance.now();
 const mark=name=>{const now=performance.now();startup[name]=+((startup[name]||0)+now-markAt).toFixed(1);markAt=now;};
 const exploration=createExploration(canvas,wake),bubbleData=[],skyLabels=[],reefLabels=[];
@@ -327,15 +329,24 @@ function beginModels(){
   if(modelsLoading||modelScene)return;modelsLoading=true;
   // Three pipelines parse, bake and compile for a few seconds; the frame-rate windows wait for all of them (see frame()).
   const busy=promise=>{modelsBusy++;return promise.finally(()=>{modelsBusy--;scaler.state.settling=1;});};
-  busy(import('./model-scene.js').then(({createModelScene})=>{
+  const landmarksLoad=busy(import('./model-scene.js').then(({createModelScene})=>{
     if(!reef)return;modelScene=createModelScene({reef,terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy',onStatus:value=>{if(value.status==='loading')diagnostic.modelLoading=true;diagnostic.modelsLoaded=value.loaded??diagnostic.modelsLoaded??0;diagnostic.modelsFailed=value.failed??diagnostic.modelsFailed??0;if(value.status==='fallback'&&value.message&&!exploration.state.transition)status.textContent='Some optional ocean models could not load.';}});
     scene.add(modelScene.root);interactionTargets=modelScene.landmarks||[];
-    return modelScene.load().then(async result=>{stylizeImported(modelScene.root,{glow:'near'});if(setPieces)await later('landmark props',()=>{const props=setPieces.place(modelScene.landmarks)||[];stylizeTree(setPieces.root);diagnostic.setPieces=setPieces.counts;for(const mesh of props){mesh.userData.waiting=true;mesh.visible=false;}showWhenReady(props);},{cost:20});modelScene.update(0,elapsed,playerPosition,night);diagnostic.modelLoading=false;diagnostic.modelsLoaded=result.loaded;diagnostic.modelsFailed=result.failed;for(const item of reefLabels){const placed=modelScene.landmarks.find(p=>p.id===item.landmark.id);if(placed){item.anchor.fromArray(placed.position).add(new THREE.Vector3(0,1.2,0));const marker=document.querySelector(`[data-landmark="${placed.id}"]`);if(marker){marker.style.left=`${(placed.position[0]+62)/124*100}%`;marker.style.top=`${(placed.position[2]+105)/140*100}%`;}item.label.querySelector("span").textContent=`Seafloor landmark · ${Math.round(toDisplayDepth(-placed.position[1]))} m`;}}diagnostic.reefFishCount=result.reefFishCount;diagnostic.reefFishGroups=result.reefFishGroups;return prepare(modelScene.root).then(()=>{diagnostic.landmarksReady=true;startup.landmarksReadyAt=Math.round(performance.now());});});
+    return modelScene.load().then(async result=>{stylizeImported(modelScene.root,{glow:'near'});if(setPieces)await later('landmark props',()=>{const props=setPieces.place(modelScene.landmarks)||[];stylizeTree(setPieces.root);diagnostic.setPieces=setPieces.counts;for(const mesh of props){mesh.userData.waiting=true;mesh.visible=false;}showWhenReady(props);},{cost:20});modelScene.update(0,elapsed,playerPosition,night);diagnostic.modelLoading=false;diagnostic.modelsLoaded=result.loaded;diagnostic.modelsFailed=result.failed;for(const item of reefLabels){const placed=modelScene.landmarks.find(p=>p.id===item.landmark.id);if(placed){item.anchor.fromArray(placed.position).add(new THREE.Vector3(0,1.2,0));const marker=document.querySelector(`[data-landmark="${placed.id}"]`);if(marker){marker.style.left=`${(placed.position[0]+62)/124*100}%`;marker.style.top=`${(placed.position[2]+105)/140*100}%`;}item.label.querySelector("span").textContent=`Seafloor landmark · ${Math.round(toDisplayDepth(-placed.position[1]))} m`;}}diagnostic.reefFishCount=result.reefFishCount;diagnostic.reefFishGroups=result.reefFishGroups;return prepare(modelScene.root).then(()=>{diagnostic.landmarksReady=true;startup.landmarksReadyAt=Math.round(performance.now());experienceMetrics.mark('landmarksReady');});});
   }).catch(error=>{console.warn('Optional landmark models could not load:',error);diagnostic.modelLoading=false;}).finally(()=>{modelsLoading=false;diagnostic.landmarksSettled=true;wake();}));
+  // Keep the first dive's essential destinations ahead of optional model parsing and texture uploads.
+  // Existing generated schools/coral are already part of the reef; optional packs enrich them afterward.
+  // Failure still settles this promise, so missing landmark assets cannot prevent wildlife from loading.
+  diagnostic.optionalModels='waiting-for-landmarks';
+  landmarksLoad.then(()=>nextTask()).then(()=>{
+    if(diagnostic.error||optionalModelsStarted)return;optionalModelsStarted=true;
+    diagnostic.optionalModels='loading';startup.optionalModelsAt=Math.round(performance.now());
   // The creature set (user-creatures.js): residents on the reef, schools by the coral, and big animals that come and go.
-  busy(import('./user-creatures.js').then(({createUserCreatures})=>{userCreatures=createUserCreatures({terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy',sites:{formations:heroFormations?.sites||[],life:livingWorld?.sites||[],landmarks:LANDMARKS,patches:()=>userCorals?.diagnostics?.patches||[]}});scene.add(userCreatures.root);userCreatures.root.visible=false;diagnostic.userCreatures=userCreatures.diagnostics;return userCreatures.load();}).then(()=>{stylizeTree(userCreatures.root,{toon:.25,rim:.22,caustics:.45});return prepare(userCreatures.root);}).catch(error=>console.warn('New creature set unavailable:',error)));
-  busy(import('./user-corals.js').then(({createUserCorals})=>{userCorals=createUserCorals({terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy'});scene.add(userCorals.root);userCorals.root.visible=false;diagnostic.userCorals=userCorals.diagnostics;return userCorals.load();}).then(()=>{stylizeTree(userCorals.root,{toon:.3,rim:.2,caustics:.55});return prepare(userCorals.root);}).catch(error=>console.warn('New coral set unavailable:',error)));
+  const creaturesLoad=busy(import('./user-creatures.js').then(({createUserCreatures})=>{userCreatures=createUserCreatures({terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy',sites:{formations:heroFormations?.sites||[],life:livingWorld?.sites||[],landmarks:LANDMARKS,patches:()=>userCorals?.diagnostics?.patches||[]}});scene.add(userCreatures.root);userCreatures.root.visible=false;diagnostic.userCreatures=userCreatures.diagnostics;return userCreatures.load();}).then(()=>{stylizeTree(userCreatures.root,{toon:.25,rim:.22,caustics:.45});return prepare(userCreatures.root);}).catch(error=>console.warn('New creature set unavailable:',error)));
+  const coralsLoad=busy(import('./user-corals.js').then(({createUserCorals})=>{userCorals=createUserCorals({terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy'});scene.add(userCorals.root);userCorals.root.visible=false;diagnostic.userCorals=userCorals.diagnostics;return userCorals.load();}).then(()=>{stylizeTree(userCorals.root,{toon:.3,rim:.2,caustics:.55});return prepare(userCorals.root);}).catch(error=>console.warn('New coral set unavailable:',error)));
 
+    Promise.allSettled([creaturesLoad,coralsLoad]).then(()=>{diagnostic.optionalModels='settled';experienceMetrics.mark('optionalModelsSettled');});
+  }).catch(error=>console.warn('Optional ocean enrichment could not start:',error));
 }
 // Set for one frame when the diver is moved at once (start-at-site, tour cuts): the camera cuts with it instead of sweeping.
 let snapCamera=false;
@@ -539,7 +550,7 @@ function startUnderwater(){
   const tally=ms=>{startup.under[buildStage]=+((startup.under[buildStage]||0)+ms).toFixed(1);};
   const queued=later(buildName,()=>buildSteps,{tally});
   queued.then(()=>{startup.builtAt=Math.round(performance.now());if(modelsWanted)beginModels();return programsLinked(worldLinking);})
-    .then(()=>{if(diagnostic.error)return;underReady=true;diagnostic.underwater='ready';startup.underReadyAt??=Math.round(performance.now());scaler.state.settling=1;listWarm();worldReadyDone();wake();})
+    .then(()=>{if(diagnostic.error)return;underReady=true;diagnostic.underwater='ready';experienceMetrics.mark('reefReady');startup.underReadyAt??=Math.round(performance.now());scaler.state.settling=1;listWarm();worldReadyDone();wake();})
     .catch(fail);
 }
 // Builds whatever is left of the world at once: for the QA hooks, which step a scene nobody is drawing, and the orbit viewer.
@@ -549,7 +560,7 @@ function finishUnderwater(){
   const before=performance.now();let step;while(!(step=buildSteps.next()).done);
   startup.under.atOnce=+(performance.now()-before).toFixed(1);startup.builtAt??=Math.round(performance.now());
   // Its programs may still be compiling: a frame that needs one now simply waits for it, as the first frame of the page used to.
-  underReady=true;diagnostic.underwater='ready';startup.underReadyAt??=Math.round(performance.now());
+  underReady=true;diagnostic.underwater='ready';experienceMetrics.mark('reefReady');startup.underReadyAt??=Math.round(performance.now());
 }
 // The first draws of everything under the water (see warmLater), listed once.
 function listWarm(){
@@ -662,7 +673,7 @@ function updateWorld(dt,clockDt=dt){
   if(nav.mode==='transition'&&previousMode!=='transition'){ascentCameraTime=0;ascentCameraStart.copy(camera.position);camera.getWorldDirection(ascentAimStart);ascentAimStart.multiplyScalar(10).add(camera.position);}
   if(nav.mode==='transition')ascentCameraTime+=dt;
   surfaceLandingTime=Math.max(0,surfaceLandingTime-dt);
-  if(previousMode==='transition'&&nav.mode==='surface'){surfaceLandingTime=2;diveTarget=0;dive=0;frameSurface();computerOpen=false;$('#dive-label').textContent='Dive in';status.textContent='Back at the surface.';setTimeout(()=>{if(status.textContent==='Back at the surface.')status.textContent='';},1800);}
+  if(previousMode==='transition'&&nav.mode==='surface'){surfaceLandingTime=2;diveTarget=0;dive=0;frameSurface();computerOpen=false;$('#dive-label').textContent='Explore my world';status.textContent='Back at the surface.';setTimeout(()=>{if(status.textContent==='Back at the surface.')status.textContent='';},1800);}
   if(nav.mode==='surface'&&diveTarget===0)easedDive=0;
   previousMode=nav.mode;
   if(nav.mode==='diver'&&easedDive>.75)beginModels();
@@ -928,6 +939,8 @@ function frame(now){
   if(full||draw){const dt=Math.min(heldClock,.1);if(!paused)elapsed+=dt;try{updateWorld(dt,heldClock);}catch(error){running=false;fail(error);return;}heldClock=0;}
   if(draw){sinceDraw=0;
     gpuPoll();gpuBegin();drawFrame();gpuEnd();diagnostic.frames++;frameCount++;diagnostic.drawCalls=renderer.info.render.calls;diagnostic.triangles=renderer.info.render.triangles;
+    if(lastDraw&&full&&!getTransition())experienceMetrics.frame(now-lastDraw);
+    if(diagnostic.submerged&&getMode()==='diver'&&!getTransition())experienceMetrics.mark('firstUsableDive');
     if(lastDraw&&drawCount<drawGaps.length)drawGaps[drawCount++]=now-lastDraw;lastDraw=now;}
   // Windows of a second run whenever the scene draws at full pace, and each is handed to the scale controller with what
   // it cannot see for itself: whether background work, a model pipeline or a transition was running in it (their stalls
@@ -1010,7 +1023,7 @@ async function boot(){
   early(scene);if(linking.size){await programsLinked(linking);if(diagnostic.error)return;}
   markAt=performance.now();drawFrame();mark('firstDraw');
   if(diagnostic.error)return;
-  started=true;diagnostic.ready=true;diagnostic.readyAt=Math.round(performance.now());document.body.dataset.ready='true';$('#dive').disabled=false;$('#dive-label').textContent='Dive in';status.textContent='';preloadModels();
+  experienceMetrics.mark('surfaceReady');started=true;diagnostic.ready=true;diagnostic.readyAt=Math.round(performance.now());document.body.dataset.ready='true';$('#dive').disabled=false;$('#dive-label').textContent='Explore my world';status.textContent='';preloadModels();
   // The interface is arriving in these first moments: the build starts just behind it (and at once if a dive is asked for).
   if(!built)setTimeout(startUnderwater,350);
   wake();
