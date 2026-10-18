@@ -315,10 +315,11 @@ async function prepare(root){
 function preloadModels(){
   // Begin only after the surface is interactive. Work remains frame-budgeted on
   // phones too; an explicit data-saving preference defers model downloads.
+  // Check before attaching intent listeners: keyboard focus and hover are not a dive.
+  if(navigator.connection?.saveData){diagnostic.prewarm='data-saver';return;}
   const button=$('#dive');
   const start=()=>{if(!diagnostic.ready)return;modelsWanted=true;startUnderwater();beginModels();wake();};
   button.addEventListener('pointerenter',start,{once:true});button.addEventListener('focus',start,{once:true});
-  if(navigator.connection?.saveData){diagnostic.prewarm='data-saver';return;}
   diagnostic.prewarm='scheduled';
   setTimeout(()=>{diagnostic.prewarm='loading';startup.prewarmAt=Math.round(performance.now());start();},450);
 }

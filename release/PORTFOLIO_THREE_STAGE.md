@@ -43,6 +43,7 @@ All three implementation stages complete and independently reviewed. This is a t
 - Static integrity: seven no-runtime-JavaScript reading pages, 126 local links/assets/fragments, eight images with alt text and dimensions. Desktop 1440 x 900 and phone 390 x 844 routes load with JavaScript disabled and request no Three.js or GLB assets.
 - Functional browser checks: immediate work entry, all six case studies, mobile archive, correct ocean deep links, WebGL-blocked Rae link, essential landmark loading before optional model processing, three-stop tour with unlimited reading pace and movement takeover passed.
 - Existing regression suite: desktop/mobile brightness, weather and sound settings, suspension/focus, first-dive aim handoff, staged safety-stop camera/rating/local export, mobile fit, ascent and waterline splash passed. No page errors.
+- Final completion audit: Data Saver now defers model downloads on hover/focus as well as on its timer; an explicit dive still loads landmarks and reaches controllable exploration. Browser tests also verified keyboard entry, Escape focus restoration and route disclosure.
 - Bounded performance diagnostics unit checks passed; report available locally through `oceanExperienceMetrics.snapshot()` with no persistence or network transmission.
 - Final local Chrome run: surface ready 1,790 ms from navigation; reading-page LCP signal 1,244 ms; work-panel open observation about 105 ms after its click event; active rendered-frame p95 approximately 18 ms. Background preparation still included eight frame gaps over 50 ms (worst 197 ms) and 13 long tasks (longest 232 ms). These are observations from one local lab session, not field INP/Core Web Vitals or proof of a production speedup. First usable dive timestamp includes time spent reading and test actions and must not be interpreted as dive load duration.
 - Local static project document loads ranged 63–97 ms in that run. Real-network/physical-phone performance remains to be measured after deployment.
@@ -60,6 +61,7 @@ Use the built `/dist/` preview for the full experience; reading pages are genera
 Automated verification commands:
 
 - `node tools/test-portfolio-experience.mjs`
+- `node tools/test-portfolio-data-saver.mjs`
 - `node tools/test-settings-menu.mjs`
 - `node tools/test-dive-handoff.mjs`
 - `node tools/test-control-refinement.mjs`
