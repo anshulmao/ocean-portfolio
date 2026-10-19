@@ -104,6 +104,10 @@ aside.dive-summary[data-show="true"]{opacity:1;translate:0 0;visibility:visible;
 .summary-close{width:28px;height:28px;margin:-6px -8px -6px 0;padding:0;border:0;background:none;color:var(--holo-strong);font:300 20px/1 var(--holo-font);cursor:pointer}
 .sum-note{font-size:13px;line-height:1.45}
 .sum-log{justify-self:start}
+.dive-summary-toggle{position:fixed;left:var(--pad,24px);top:145px;z-index:6;min-height:40px}
+.dive-summary-toggle[hidden]{display:none}
+body:is([data-submerged="true"],[data-menu="open"],[data-movement-panel="open"],[data-clear-ui="true"],[data-dialog="open"]) :is(.dive-summary-toggle,aside.dive-summary){visibility:hidden;pointer-events:none}
+body:has(dialog[open]) :is(.dive-summary-toggle,aside.dive-summary){visibility:hidden;pointer-events:none}
 
 @media(max-width:760px){
   dialog.dive-plan{padding:14px}
@@ -123,6 +127,7 @@ aside.dive-summary[data-show="true"]{opacity:1;translate:0 0;visibility:visible;
   .dive-entry .holo-chip{padding:9px 10px;font-size:10px;letter-spacing:.08em;gap:6px}
   /* The summary takes the place of the look arrows while it is up (dive-plan.js marks the body), so it clears the entry buttons. */
   aside.dive-summary{top:auto;right:16px;bottom:56px;left:16px;width:auto}
+  .dive-summary-toggle{top:calc(var(--hud-top,24px) + 64px);min-height:44px}
   body[data-summary="true"]:not([data-submerged="true"]) .view-controls{visibility:hidden}
 }
 /* Finger-sized targets on phones and touch screens: the drawing of a marker stays the same, its button grows. */

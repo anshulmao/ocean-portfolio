@@ -125,8 +125,13 @@ plan.id = 'dive-plan'; plan.setAttribute('aria-labelledby', 'dive-plan-title');
 const prompt = node('dialog', 'dive-prompt holo holo--reading', '<p class="holo-label">Dive link</p><h2 id="dive-prompt-title"></h2><p class="prompt-note"></p><div><button type="button" class="holo-chip holo-chip--go" data-go>Start dive <span aria-hidden="true">→</span></button><button type="button" class="holo-chip" data-skip>Not now</button></div>');
 prompt.setAttribute('aria-labelledby', 'dive-prompt-title');
 const summary = node('aside', 'dive-summary holo holo--reading', '<header><p class="holo-label">Dive summary</p><button type="button" class="summary-close" aria-label="Dismiss the dive summary">×</button></header><dl><div><dt>Sites found</dt><dd class="sum-found"></dd></div><div><dt>Max depth</dt><dd class="sum-depth"></dd></div><div><dt>Dive time</dt><dd class="sum-time"></dd></div></dl><p class="sum-note" role="status"></p><button type="button" class="holo-chip sum-log">Open the logbook <span aria-hidden="true">→</span></button>');
+summary.id = 'dive-summary';
 summary.setAttribute('aria-label', 'Dive summary'); summary.dataset.show = 'false'; summary.inert = true;
-document.body.append(plan, prompt, summary);
+const summaryToggle = node('button', 'dive-summary-toggle holo-chip', 'Show dive summary');
+summaryToggle.type = 'button'; summaryToggle.hidden = true;
+summaryToggle.setAttribute('aria-controls', summary.id);
+summaryToggle.setAttribute('aria-expanded', 'false');
+document.body.append(plan, prompt, summaryToggle, summary);
 const marks = plan.querySelector('.plan-marks'), info = plan.querySelector('.plan-info');
 let charted = false, opener = null, pending = null, linkHandled = false, linkAction = null, held = false;
 // The scene's controls are suspended while a dialog is up. Releasing is done in step with the action that follows,
@@ -267,8 +272,16 @@ prompt.querySelector('[data-skip]').addEventListener('click', () => prompt.close
 prompt.addEventListener('close', release);
 addEventListener('hashchange', readLink);
 
-// Dive summary: a short card once the diver is back on the surface.
-function hideSummary() { summary.dataset.show = 'false'; summary.inert = true; delete document.body.dataset.summary; }
+// Keep the surface quiet: the last dive's details are available on demand.
+function hideSummary() {
+  summary.dataset.show = 'false'; summary.inert = true; delete document.body.dataset.summary;
+  summaryToggle.setAttribute('aria-expanded', 'false'); summaryToggle.textContent = 'Show dive summary';
+}
+summaryToggle.addEventListener('click', () => {
+  if (summary.dataset.show === 'true') { hideSummary(); return; }
+  summary.dataset.show = 'true'; summary.inert = false; document.body.dataset.summary = 'true';
+  summaryToggle.setAttribute('aria-expanded', 'true'); summaryToggle.textContent = 'Hide dive summary';
+});
 addEventListener('oceandiveend', event => {
   const { time, maxDepth, found } = event.detail;
   if (time < 4) return;
@@ -276,10 +289,17 @@ addEventListener('oceandiveend', event => {
   summary.querySelector('.sum-depth').textContent = `${maxDepth.toFixed(1)} m`;
   summary.querySelector('.sum-time').textContent = `${String(Math.floor(time / 60)).padStart(2, '0')}:${String(Math.floor(time % 60)).padStart(2, '0')}`;
   summary.querySelector('.sum-note').textContent = found === 3 ? 'All three sites found. The whole story is in the logbook.' : found ? 'There is more down there. The lights mark what is left.' : 'Three lights mark the sites. Follow one next time.';
-  summary.dataset.show = 'true'; summary.inert = false; document.body.dataset.summary = 'true';
+  hideSummary(); summaryToggle.hidden = false;
 });
-addEventListener('oceanmediumchange', () => { if (window.oceanDiagnostics?.submerged) hideSummary(); });
-summary.querySelector('.summary-close').addEventListener('click', hideSummary);
+addEventListener('oceanmediumchange', () => {
+  if (window.oceanDiagnostics?.submerged) { hideSummary(); summaryToggle.hidden = true; }
+});
+summary.querySelector('.summary-close').addEventListener('click', () => { hideSummary(); summaryToggle.focus(); });
+addEventListener('keydown', event => {
+  if (event.key === 'Escape' && summary.dataset.show === 'true' && !$('dialog[open]')) {
+    hideSummary(); summaryToggle.focus();
+  }
+});
 summary.querySelector('.sum-log').addEventListener('click', () => {
   if (window.oceanArchive?.open) window.oceanArchive.open('experience'); else $('#archive-toggle')?.click();
   // The archive only opens underwater in some builds: say so rather than do nothing.

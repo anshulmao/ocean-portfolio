@@ -53,7 +53,7 @@ dialog.dive-prompt{padding-left:24px}
 }
 
 /* The return summary stays on the left-hand surface rail. */
-@media(min-width:601px){aside.dive-summary{left:var(--pad);right:auto;top:145px;width:min(300px,29vw)}}
+@media(min-width:601px){aside.dive-summary{left:var(--pad);right:auto;top:197px;width:min(300px,29vw);max-height:calc(100dvh - 270px);overflow:auto}}
 /* The surface arrows have their own bottom-right lane. */
 body:not([data-submerged="true"]) .view-controls{left:auto;right:var(--pad);bottom:54px}
 @media(max-width:600px){
