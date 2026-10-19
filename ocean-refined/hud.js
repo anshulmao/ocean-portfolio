@@ -161,7 +161,12 @@ onTick(aim, 4);
 
 // 4. Settings menu: a disclosure under the menu button. Escape, the close
 // button, a click elsewhere or capturing the mouse closes it.
-const menu = $('#settings-menu'), menuToggle = $('#menu-toggle');
+const menu = $('#settings-menu'), menuToggle = $('#menu-toggle'), surfaceButton = $('#settings-surface-now');
+function paintMenuActions(){
+  if(!surfaceButton)return;
+  surfaceButton.hidden=!window.oceanDiagnostics?.submerged;
+  surfaceButton.disabled=!window.oceanDiagnostics?.ready;
+}
 function setMenu(open, refocus = true) {
   if (!menu || menu.hidden === !open) return;
   const hadFocus = menu.contains(document.activeElement);
@@ -174,11 +179,20 @@ function setMenu(open, refocus = true) {
   if (open) {
     if (document.pointerLockElement) document.exitPointerLock();
     paintLocks();
+    paintMenuActions();
     if (refocus) menu.querySelector('.settings-close').focus({preventScroll:true});
   } else if (refocus && hadFocus) menuToggle.focus({preventScroll:true});
 }
 menuToggle?.addEventListener('click', () => setMenu(menu.hidden));
 menu?.querySelector('.settings-close').addEventListener('click', () => setMenu(false));
+surfaceButton?.addEventListener('click',()=>{
+  const controls=window.oceanControls;
+  if(!controls?.surface||!window.oceanDiagnostics?.submerged)return;
+  setMenu(false,false);
+  controls.surface({instant:true});
+  menuToggle.focus({preventScroll:true});
+});
+addEventListener('oceanmediumchange',paintMenuActions);
 document.addEventListener('keydown', event => {
   if (!menu || menu.hidden || document.querySelector('dialog[open]')) return;
   if (event.key === 'Escape') {

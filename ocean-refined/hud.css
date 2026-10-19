@@ -61,15 +61,15 @@ html[data-sky-preset="night"] .sky-glyph .sky-night,html:not([data-sky-preset])[
 .settings-head .holo-label{font-size:11px;text-shadow:var(--holo-text-glow)}
 .settings-close{display:grid;place-items:center;width:30px;height:30px;padding:0}
 .settings-close svg{width:14px;height:14px}
-.settings-body{min-height:0;padding:0 16px 12px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--holo-dim) #0000}
-.settings-group{padding:14px 0 13px;border-bottom:1px solid var(--holo-faint)}
+.settings-body{--settings-gap:10px;--settings-section:14px;min-height:0;padding:0 16px 16px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--holo-dim) #0000}
+.settings-group{padding:16px 0;border-bottom:1px solid var(--holo-faint)}
 .settings-group:last-child{padding-bottom:4px;border-bottom:0}
 .settings-folder>summary{position:relative;display:flex;align-items:center;justify-content:space-between;min-height:24px;padding:0 22px 0 0;color:var(--holo);font:500 11px/1.3 var(--holo-font);letter-spacing:.16em;text-transform:uppercase;cursor:pointer;list-style:none}
 .settings-folder>summary::-webkit-details-marker{display:none}
 .settings-folder>summary::after{content:'+';position:absolute;right:2px;font:400 16px/1 var(--holo-mono);color:var(--holo)}
 .settings-folder[open]>summary::after{content:'−'}
 .settings-folder>summary:focus-visible{outline:2px solid var(--holo-focus);outline-offset:3px}
-.settings-group-body{padding-top:12px}
+.settings-group-body{padding-top:var(--settings-gap)}
 .settings-group h3{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px;color:var(--holo)}
 .settings-subgroup{padding:12px 0 0;border-top:1px solid var(--holo-faint)}
 .settings-subgroup+.settings-subgroup{margin-top:14px}
@@ -89,8 +89,8 @@ html[data-sky-preset="night"] .sky-glyph .sky-night,html:not([data-sky-preset])[
 :is(#time-slider,.movement-field input[type="range"])::-moz-range-thumb{width:7px;height:17px;border:1px solid var(--holo-strong);border-radius:1px;background:#0a3a4f}
 :is(#time-slider,.movement-field input[type="range"]):focus-visible{outline:2px solid var(--holo-focus);outline-offset:2px}
 .time-labels{display:flex;justify-content:space-between;margin:1px 0 9px;font:400 9px/1 var(--holo-mono);letter-spacing:.06em;color:var(--holo)}
-.theme-control>button{display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 2px 7px;font-size:11px;letter-spacing:.04em}
-.theme-control>button svg{width:16px;height:16px}
+.theme-control>button{display:flex;align-items:center;justify-content:center;gap:4px;min-height:36px;padding:6px 4px;font-size:10px;letter-spacing:.01em;white-space:nowrap}
+.theme-control>button svg{width:14px;height:14px;flex:none}
 .sky-clock{margin-top:10px;font:400 10px/1 var(--holo-mono);letter-spacing:.1em;color:var(--holo)}
 .holo-switch{position:relative;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:3px 12px;margin-top:12px;cursor:pointer}
 .holo-switch input{position:absolute;left:0;top:50%;width:38px;height:22px;margin:-11px 0 0;opacity:0;cursor:pointer}
@@ -104,8 +104,8 @@ html[data-sky-preset="night"] .sky-glyph .sky-night,html:not([data-sky-preset])[
 .weather-picker{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .weather-picker>button{position:relative;min-height:36px;padding:6px 2px;font-size:11px;letter-spacing:.02em}
 .weather-picker>button[data-current="true"]::after{content:"";position:absolute;right:4px;top:4px;width:5px;height:5px;border-radius:50%;background:var(--holo-mint);box-shadow:0 0 6px var(--holo-mint)}
-.weather-picker>button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:58px}
-.weather-picker svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.weather-picker>button{display:flex;align-items:center;justify-content:center;gap:4px;min-width:0;min-height:36px;padding:6px 4px;font-size:10px;letter-spacing:0;white-space:nowrap}
+.weather-picker svg{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .weather-glyph[data-weather="auto"] g[data-w="auto"],.weather-orb[data-weather="auto"] g[data-w="auto"],.weather-orb[data-weather="clear"] g[data-w="clear"],.weather-orb[data-weather="rain"] g[data-w="rain"],.weather-orb[data-weather="storm"] g[data-w="storm"]{opacity:1;scale:1}
 .weather-track{position:relative;height:44px;margin:2px 0 8px}
 .weather-track::before{content:"";position:absolute;top:21px;left:13px;right:13px;height:2px;background:var(--holo-dim)}
@@ -117,8 +117,32 @@ html[data-sky-preset="night"] .sky-glyph .sky-night,html:not([data-sky-preset])[
 .weather-orb g{opacity:0;transform-origin:center;transition:opacity .18s ease}
 #settings-weather-title output{display:block;font:400 11px/1.4 var(--holo-font);letter-spacing:0;text-transform:none;margin-top:5px;color:var(--holo-ink)}
 #settings-weather-title{display:flex;align-items:baseline;gap:10px}
-#brightness-settings{margin-bottom:18px}
-#general-brightness .movement-field{padding:8px 0 0}
+/* General has one spacing system: 10 px within a section, 14 px on either
+   side of its divider. Native switches and presets keep their touch targets. */
+#settings-general-content{display:grid;gap:0}
+#settings-general-content>.settings-subgroup{display:grid;gap:var(--settings-gap);padding:var(--settings-section) 0;margin:0;border-top:1px solid var(--holo-faint)}
+#settings-general-content>#brightness-settings{padding-top:0;border-top:0}
+#settings-general-content>.settings-subgroup:last-child{padding-bottom:0}
+#settings-general-content :is(h3,.settings-inline-control,.holo-switch,.sky-clock,.sound-volume){margin:0}
+#settings-general-content .settings-inline-control{min-height:32px}
+#settings-general-content h3{line-height:1.4}
+#settings-general-content .holo-switch{min-height:36px;column-gap:10px}
+#general-brightness .movement-field{padding:0;gap:8px 12px}
+#general-brightness .movement-field p{margin:0}
+#settings-general-content .time-scrubber{display:grid;gap:4px}
+#settings-general-content .time-track{margin:0 6px;padding-top:18px}
+#settings-general-content .time-track input{display:block}
+#settings-general-content #time-orb{top:8px}
+#settings-general-content .time-labels{margin:0}
+#settings-general-content .weather-track{margin:0}
+#settings-general-content .sound-volume{padding:0;gap:8px 12px}
+#settings-general-content #settings-weather-title{justify-content:flex-start}
+#settings-general-content #settings-weather-title output{margin:0}
+.settings-surface{justify-self:end;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;margin:0 0 16px;padding:7px 12px;border:1px solid var(--holo-dim);border-radius:4px;background:var(--holo-fill);color:var(--holo-strong);font:500 11px/1.3 var(--holo-font)}
+.settings-surface[hidden]{display:none}
+.settings-surface svg{width:15px;height:15px}
+.settings-surface:hover{border-color:var(--holo-strong);background:var(--holo-fill-hover)}
+.settings-surface:focus-visible{outline:2px solid var(--holo-focus);outline-offset:3px}
 .brightness-quick{position:fixed;top:var(--hud-top);right:var(--pad);z-index:7;width:155px;padding:10px 12px;background:#092835e8}
 .brightness-quick>div{display:flex;align-items:center;justify-content:space-between;font:500 11px/1.4 var(--holo-font)}
 .brightness-quick output{font-variant-numeric:tabular-nums;color:var(--holo-strong)}
@@ -432,6 +456,7 @@ body:not([data-submerged="true"]) .dive-button:focus-visible{outline-color:var(-
   .settings-actions>button{min-height:42px}
   .holo-switch{min-height:40px}
   .weather-picker>button,.theme-control>button{min-height:44px}
+  #settings-general-content .holo-switch,.settings-surface{min-height:44px}
   body[data-submerged="true"] .heading-indicator{left:calc((100% - var(--map-size) - 12px)/2)}
   .heading-indicator{top:calc(var(--hud-top) + 54px)}
   .heading-readout{margin-top:11px}

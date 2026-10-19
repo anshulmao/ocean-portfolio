@@ -154,6 +154,16 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   cleanup.push(()=>touch.destroy(),()=>gamepad.destroy());
 
   function reset(){base.set(0,lastSubmerged?0:8,0);offset.copy(base);halt();look.yaw=defaultYaw;look.pitch=0;blockedTime=0;state.travelBlocked=false;ascent=null;surfaceLocked=!lastSubmerged;state.mode=lastSubmerged?'diver':'surface';takeControl();boost=spool=0;floorStale=true;requireRecapture();}
+  // An explicit quick return, separate from the normal collision-routed ascent.
+  function returnToSurface(){
+    ascent=null;pendingDive=null;lastSubmerged=false;surfaceLocked=true;
+    takeControl();requireRecapture();halt();boost=spool=coast=0;
+    base.y=8;offset.copy(base);drift.set(0,0,0);floorStale=true;
+    look.yaw=defaultYaw;look.pitch=0;state.yaw=look.yaw;state.pitch=0;
+    state.mode='surface';state.transition=false;state.ascentProgress=1;state.ascentDepth=0;
+    state.speed=state.scooter=0;state.moving=state.travelling=state.colliding=false;state.contacts=0;
+    state.travelBlocked=false;blockedTime=0;wake();
+  }
   function frameSky(value){defaultYaw=value;if(!state.exploring){look.yaw=value;lag.yaw=pend.yaw=spin.yaw=0;state.yaw=value;}}
   function setTerrain(fn){if(typeof fn==='function'){terrain=fn;floorStale=true;}}
   function setCollisions(value){collisions=value;}
@@ -417,5 +427,5 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   }
   // QA hook: scripted aim (pixels) and a scripted thumb-stick, for checks where no pointer can be captured.
   window.oceanInput={aim:(dx,dy)=>aim(dx,dy),axis(x=0,y=0){stick.x=clamp(x,-1,1);stick.y=clamp(y,-1,1);stick.active=Boolean(x||y);if(stick.active&&state.mode==='diver'&&!suspended){captureRequired=false;state.exploring=true;}wake();},pad,stick,get gamepad(){return gamepad.connected;}};
-  return {state,update,reset,startDive,prepareDive,travel,place,setGuided,setLamp,frameSky,setTerrain,setCollisions,suspend,setInterfaceOpen,beginAscent,togglePerspective,toggleFreeCam,setFreeCam:value=>toggleFreeCam(value),recapture,getPlayerPosition,getCameraPose:()=>({perspective:state.perspective}),bounds,destroy(){cleanup.forEach(fn=>fn());}};
+  return {state,update,reset,returnToSurface,startDive,prepareDive,travel,place,setGuided,setLamp,frameSky,setTerrain,setCollisions,suspend,setInterfaceOpen,beginAscent,togglePerspective,toggleFreeCam,setFreeCam:value=>toggleFreeCam(value),recapture,getPlayerPosition,getCameraPose:()=>({perspective:state.perspective}),bounds,destroy(){cleanup.forEach(fn=>fn());}};
 }

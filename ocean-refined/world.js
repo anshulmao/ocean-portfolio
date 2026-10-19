@@ -373,7 +373,7 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   // Dive planner and guided tour hooks: autopilot, instant placement, dive start / surfacing, and the flashlight and scooter state.
   travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free){exploration.setGuided(value,free);},
   startDive(options){if(!diagnostic.ready||diveTarget===1||getMode()!=='surface')return false;exploration.prepareDive(options);if(options?.at)snapCamera=true;$('#dive').click();return true;},
-  surface(){if(diveTarget!==1||exploration.state.mode!=='diver')return false;$('#dive').click();return true;},
+  surface(options){if(options?.instant)return surfaceNow();if(diveTarget!==1||exploration.state.mode!=='diver')return false;$('#dive').click();return true;},
   get nav(){return exploration.state;},get settings(){return settings;},get landmarks(){return modelScene?.landmarks||null;},get formations(){return heroFormations?.sites||[];},get life(){return livingWorld;},get creatures(){return userCreatures;},
   get flashlight(){return exploration.state.lamp;},set flashlight(value){exploration.setLamp(value);},get scooter(){return exploration.state.scooter;},
   get setPieces(){return setPieces;},get models(){return modelScene;},get reef(){return reef;},setInterfaceOpen,setSettingsMenuOpen,setComputerOpen,setSafetyStop,recapture:()=>exploration.recapture(),toggleCamera}});
@@ -423,6 +423,15 @@ for(const type of ['pointerenter','focus'])$('#dive').addEventListener(type,()=>
 $('#camera-toggle')?.addEventListener('click',toggleCamera);
 $('#capture-hint')?.addEventListener('click',()=>exploration.recapture());
 $('#reset-view').addEventListener('click',()=>{exploration.reset();mapDestination=null;$('#map-caption').textContent='Choose a marker to swim closer.';});
+function surfaceNow(){
+  if(!diagnostic.ready||(!diagnostic.submerged&&diveTarget===0)||document.querySelector('dialog[open]'))return false;
+  window.oceanTour?.stop();exploration.returnToSurface();
+  dive=diveTarget=0;previousMode='surface';surfaceLandingTime=ascentCameraTime=0;
+  computerOpen=false;mapDestination=null;snapCamera=true;hudForce=true;
+  $('#map-caption').textContent='Choose a marker to swim closer.';
+  $('#dive-label').textContent='Explore my world';status.textContent='';
+  frameSurface();setExploring(false);updateWorld(1/60);wake();return true;
+}
 $('#dive').addEventListener('click',()=>{
   if(!diagnostic.ready)return;const wasDiving=diveTarget===1;mapDestination=null;$('#map-caption').textContent='Choose a marker to swim closer.';
   diveTarget=wasDiving?1:1;
@@ -857,7 +866,7 @@ function updateWorld(dt,clockDt=dt){
   }
   const submerged=nav.mode==='transition'||underwater>.55;
   if(diagnostic.submerged!==submerged){diagnostic.submerged=submerged;scaler.state.costs.length=0;document.body.dataset.submerged=String(submerged);$('.deep-copy').setAttribute('aria-hidden',String(!submerged));$('.surface-copy').setAttribute('aria-hidden',String(submerged));$('.reef-map').hidden=!submerged;$('.swim-controls').hidden=!submerged;window.dispatchEvent(new Event('oceanmediumchange'));}
-  const depth=Math.max(0,-diver.root.position.y),edge=Math.abs(playerPosition.x)>32||playerPosition.z< -65||playerPosition.z>15;
+  const depth=nav.mode==='surface'?0:Math.max(0,-diver.root.position.y),edge=Math.abs(playerPosition.x)>32||playerPosition.z< -65||playerPosition.z>15;
   wristComputer?.update(dt,{open:computerOpen,allowed:firstPerson&&nav.mode==='diver'&&easedDive>.95&&!getTransition()&&!interfaceOpen&&!movementPanelOpen,reducedMotion,depth,location:edge?'REEF DROP-OFF':'CORAL GARDENS',data:diagnostic.diveComputer});
   // Fields other scripts poll stay current every frame; the rest follow the HUD.
   diagnostic.depth=Number(depth.toFixed(2));diagnostic.displayDepth=Number(toDisplayDepth(depth).toFixed(2));diagnostic.transition=nav.transition||dive!==diveTarget||phaseTarget!==null;diagnostic.phase=phase;diagnostic.night=night;diagnostic.position=camera.position.toArray();diagnostic.playerPosition=playerPosition.toArray();diagnostic.exploring=exploring;diagnostic.swimming=nav.moving;diagnostic.colliding=nav.colliding;diagnostic.contacts=nav.contacts;diagnostic.pointerLocked=Boolean(nav.pointerLocked);diagnostic.cameraMode=safetyStop.active?'third':nav.mode==='surface'?'third':nav.perspective;diagnostic.safetyStopBlend=+safetyStop.blend.toFixed(3);
