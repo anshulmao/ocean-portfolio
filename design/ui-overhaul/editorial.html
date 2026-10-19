@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Direction B · Light editorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="board.css">
+<style>
+/* ===== Direction B tokens: one light field-journal look everywhere ===== */
+.canvas{
+  --paper:#f5f1e8;--paper-2:#ece6d8;--paper-3:#e2dac8;--card:#fbf9f4;
+  --ink:#13242a;--ink-2:#45545a;--muted:#7a8285;--rule:#d8cfbd;--rule-2:#c7bca6;
+  --sea:#1e6f6c;--coral:#d9643f;
+  --rae:#c8553d;--engage:#2f8f83;--watt:#c99a12;--sage:#5f8f3e;--claw:#5b6bb8;--world:#2f7fb0;
+  --chip:rgba(245,241,232,.86);
+  --serif:"Newsreader",Georgia,serif;--sans:"Outfit",system-ui,sans-serif;
+  font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased;
+}
+.canvas *{box-sizing:border-box}
+.canvas a{color:inherit;text-decoration:none}
+.canvas p,.canvas h1,.canvas h2,.canvas h3,.canvas ol,.canvas ul,.canvas figure{margin:0}
+.canvas h1,.canvas h2,.canvas h3{text-wrap:balance;font-family:var(--serif);font-weight:300}
+.sc{font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;font-weight:500}
+.btn{display:inline-flex;align-items:center;justify-content:space-between;gap:16px;height:54px;padding:0 22px;border-radius:6px;font-size:16px;font-weight:500;white-space:nowrap}
+.btn.ink{background:var(--ink);color:var(--paper)}
+.btn.paper{background:var(--chip);backdrop-filter:blur(10px);border:1px solid var(--rule-2)}
+.btn.line{border:1px solid var(--ink)}
+.icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.annot{position:absolute;z-index:5;font:500 12px/1.35 "Outfit";color:#fff;background:#d6533b;padding:6px 10px;border-radius:8px;max-width:230px;box-shadow:0 8px 20px -8px rgba(0,0,0,.4)}
+.annot::before{content:attr(data-n);display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#fff;color:#d6533b;font-size:11px;margin-right:6px}
+
+/* tokens sheet */
+.tok{display:grid;grid-template-columns:1.2fr 1fr;gap:28px}
+.tok-card{background:#fbf9f4;border-radius:14px;padding:24px}
+.ramp{display:flex;height:120px;border-radius:10px;overflow:hidden;border:1px solid #e2dac8}
+.ramp div{flex:1;display:flex;align-items:flex-end;padding:10px;font:500 11px "Outfit";letter-spacing:.06em;color:#13242a}
+.ramp div.d{color:#f5f1e8}
+.accents{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.accents span{display:flex;align-items:center;gap:8px;font-size:13px;padding:6px 12px 6px 6px;border-radius:999px;background:#efeadf}
+.accents i{width:18px;height:18px;border-radius:50%}
+.spec .d{font:300 66px/1 "Newsreader";letter-spacing:-.02em;color:#13242a}
+.spec .d em{font-style:italic}
+.spec .h{font:400 26px "Newsreader";margin-top:12px}
+.spec .b{font-size:16px;color:#45545a;margin-top:8px;max-width:46ch}
+.spec .m{font:500 11.5px "Outfit";letter-spacing:.2em;text-transform:uppercase;margin-top:14px;color:#1e6f6c}
+@media (max-width:900px){.tok{grid-template-columns:1fr}}
+
+/* 1 · surface */
+.s1{position:absolute;inset:0;background:#cfe3e6 url(img/surface.jpg) 0 62%/1900px auto no-repeat}
+.s1::after{content:"";position:absolute;inset:0;background:radial-gradient(60% 55% at 50% 36%,rgba(245,241,232,.55),transparent 70%)}
+.mast{position:absolute;z-index:3;left:56px;right:56px;top:0;height:92px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-bottom:1px solid rgba(19,36,42,.18)}
+.mast .l,.mast .rt{display:flex;gap:28px;font-size:15px}
+.mast .rt{justify-content:flex-end;align-items:center}
+.mast .c{font:400 26px var(--serif);letter-spacing:.02em}
+.mast .c small{display:block;text-align:center;font:500 9.5px var(--sans);letter-spacing:.3em;text-transform:uppercase;color:var(--ink-2);margin-top:2px}
+.mast .gear{width:40px;height:40px;border-radius:6px;display:grid;place-items:center;border:1px solid rgba(19,36,42,.25)}
+.hero{position:absolute;z-index:2;left:0;right:0;top:186px;text-align:center}
+.hero .sc{color:var(--ink-2)}
+.hero h1{font-size:156px;line-height:.9;letter-spacing:-.035em;margin-top:26px}
+.hero h1 em{font-style:italic;font-weight:300;color:var(--sea)}
+.hero .lead{font:300 24px/1.45 var(--serif);color:var(--ink-2);max-width:560px;margin:26px auto 0}
+.hero .ctas{display:flex;gap:12px;justify-content:center;margin-top:36px}
+.hero .ctas .btn{min-width:200px}
+.figcap{position:absolute;z-index:3;left:56px;right:56px;bottom:34px;display:flex;justify-content:space-between;align-items:center;color:var(--paper);font:italic 300 16px var(--serif);padding-top:14px;border-top:1px solid rgba(245,241,232,.4)}
+.figcap b{font:500 11px var(--sans);letter-spacing:.2em;text-transform:uppercase;font-style:normal;margin-right:12px}
+
+/* 2 · HUD as paper labels */
+.s2{position:absolute;inset:0;background:#0c4552 url(img/shallows.jpg) center/cover}
+.chip{background:var(--chip);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.6);border-radius:8px;color:var(--ink);box-shadow:0 18px 40px -20px rgba(4,30,36,.6)}
+.h-top{position:absolute;z-index:3;left:40px;right:212px;top:28px;display:flex;justify-content:space-between;align-items:center}
+.h-top .wm{padding:10px 16px;font:400 20px var(--serif)}
+.h-top .hdg{padding:10px 18px;font-size:14px;display:flex;gap:14px;align-items:center}
+.h-top .hdg b{font:400 20px var(--serif)}
+.h-top .menu{display:flex;gap:8px}
+.h-top .menu span{padding:10px 16px;font-size:14px}
+.chart{position:absolute;z-index:3;right:40px;top:14px;width:160px;height:160px;padding:10px;display:flex;flex-direction:column}
+.chart svg{flex:1;width:100%;border-radius:4px;background:var(--paper-2)}
+.chart small{font:500 10px var(--sans);letter-spacing:.18em;text-transform:uppercase;margin-top:8px;display:flex;justify-content:space-between}
+.dcard{position:absolute;z-index:3;left:40px;bottom:40px;width:300px;padding:20px 22px}
+.dcard .sc{color:var(--muted);font-size:10.5px}
+.dcard .n{font:300 84px/1 var(--serif);letter-spacing:-.03em;margin-top:8px;font-variant-numeric:lining-nums tabular-nums}
+.dcard .n small{font-size:26px;margin-left:4px;font-style:italic}
+.dcard p{font:italic 300 17px var(--serif);color:var(--ink-2);margin-top:6px}
+.dcard .bar{margin-top:14px;height:3px;background:var(--rule);position:relative}
+.dcard .bar::before{content:"";position:absolute;left:0;top:0;bottom:0;width:13%;background:var(--sea)}
+.acard{position:absolute;z-index:3;right:40px;bottom:40px;width:400px;padding:22px 24px}
+.acard .sc{color:var(--coral);font-size:10.5px}
+.acard h3{font-size:36px;margin-top:8px;letter-spacing:-.01em}
+.acard h3 em{font-style:italic}
+.acard p{color:var(--ink-2);font-size:15px;margin-top:6px;line-height:1.5}
+.acard .act{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--rule);font-size:15px;font-weight:500}
+.acard kbd{font:500 12px var(--sans);padding:4px 8px;border-radius:4px;border:1px solid var(--ink);margin-left:8px}
+.tag{position:absolute;z-index:3;left:1150px;top:506px;display:flex;align-items:center}
+.tag::before{content:"";width:12px;height:12px;border-radius:50%;background:var(--paper);box-shadow:0 0 0 4px rgba(245,241,232,.35)}
+.tag i{width:46px;height:1px;background:var(--paper)}
+.tag span{padding:7px 12px;font:italic 400 16px var(--serif)}
+.h-hint{position:absolute;z-index:3;left:50%;bottom:44px;translate:-50% 0;padding:8px 14px;font-size:13px;color:var(--ink-2);display:flex;gap:16px}
+
+/* 3 · archive as a paper sheet */
+.s3{position:absolute;inset:0;background:#061c24 url(img/deep.jpg) center/cover}
+.s3::before{content:"";position:absolute;inset:0;backdrop-filter:blur(5px) brightness(.6)}
+.sheet{position:absolute;inset:34px 64px;border-radius:6px;background:var(--paper);box-shadow:0 50px 90px -30px rgba(0,0,0,.75);display:grid;grid-template-columns:250px 1fr;grid-template-rows:64px 1fr 60px;overflow:hidden}
+.sh-head{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:0 32px;border-bottom:1px solid var(--rule)}
+.sh-head .t{font:400 20px var(--serif)}
+.sh-head .t span{font:500 10.5px var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-left:14px}
+.sh-head .tools{display:flex;gap:20px;font-size:14px;color:var(--ink-2)}
+.toc{padding:26px 24px 26px 32px;border-right:1px solid var(--rule)}
+.toc .sc{color:var(--muted);font-size:10px}
+.toc ol{list-style:none;padding:0;margin-top:14px;display:grid;gap:2px}
+.toc li{display:flex;justify-content:space-between;font-size:14.5px;padding:7px 0;border-bottom:1px dotted var(--rule-2);color:var(--ink-2)}
+.toc li small{font:400 13px var(--serif);font-style:italic}
+.toc li.h{font:400 17px var(--serif);color:var(--ink);border:0;padding-top:16px}
+.toc li.on{color:var(--rae);font-weight:500}
+.art{padding:30px 48px 0;display:grid;grid-template-columns:1fr 250px;gap:44px;overflow:hidden}
+.art .sc{color:var(--rae);font-size:10.5px}
+.art h2{font-size:96px;line-height:.92;letter-spacing:-.03em;margin-top:12px}
+.art .deck{font:italic 300 26px/1.3 var(--serif);color:var(--ink-2);margin-top:14px;max-width:26ch}
+.art .body{margin-top:24px;columns:2;column-gap:36px;font:400 16.5px/1.6 var(--serif);color:var(--ink)}
+.art .body p+p{margin-top:12px}
+.art .body p:first-child::first-letter{float:left;font:300 64px/.82 var(--serif);margin:6px 10px 0 0;color:var(--rae)}
+.art .side{border-left:1px solid var(--rule);padding-left:22px;display:grid;gap:16px;align-content:start}
+.art .side figure{background:var(--card);border:1px solid var(--rule);border-radius:4px;aspect-ratio:1.1;display:grid;place-items:center}
+.art .side figure svg{width:92%;height:92%}
+.art .side figcaption{font:italic 300 13px var(--serif);color:var(--muted);margin-top:6px}
+.art .side dl{margin:0;display:grid;gap:12px}
+.art .side dt{font:500 10px var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.art .side dd{margin:3px 0 0;font-size:14px;line-height:1.45}
+.sh-foot{grid-column:1/-1;border-top:1px solid var(--rule);display:flex;justify-content:space-between;align-items:center;padding:0 32px;font-size:14px;color:var(--ink-2)}
+.sh-foot em{font:italic 300 15px var(--serif)}
+.sh-foot b{font-weight:500;color:var(--ink)}
+
+/* 4 · reading home */
+.r{position:absolute;inset:0;background:var(--paper)}
+.rmast{position:absolute;z-index:3;left:96px;right:96px;top:0;height:86px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-bottom:1px solid var(--ink)}
+.rmast .l,.rmast .r2{display:flex;gap:26px;font-size:14.5px;align-items:center}
+.rmast .r2{justify-content:flex-end}
+.rmast .c{font:400 24px var(--serif)}
+.rmast .dive{height:38px;padding:0 14px;border-radius:5px;background:var(--ink);color:var(--paper);display:inline-flex;align-items:center;gap:8px}
+.col{position:absolute;left:96px;right:96px}
+.rh{top:130px;display:grid;grid-template-columns:7fr 5fr;gap:56px}
+.rh .sc{color:var(--sea)}
+.rh h1{font-size:108px;line-height:.94;letter-spacing:-.035em;margin-top:22px}
+.rh h1 em{font-style:italic;color:var(--sea)}
+.rh .lead{font:300 24px/1.45 var(--serif);color:var(--ink-2);margin-top:26px;max-width:32ch}
+.rh .ctas{display:flex;gap:12px;margin-top:34px}
+.rh .meta{display:grid;grid-template-columns:repeat(3,1fr);margin-top:44px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.rh .meta div{padding:14px 0}
+.rh .meta div+div{padding-left:20px;border-left:1px solid var(--rule)}
+.rh .meta small{display:block;font:500 10px var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.rh .meta b{display:block;font:400 18px var(--serif);margin-top:4px}
+.rh figure .im{height:560px;border-radius:4px;background:url(img/surface.jpg) -330px 50%/auto 118%}
+.rh figcaption{font:italic 300 15px var(--serif);color:var(--ink-2);margin-top:10px;display:flex;justify-content:space-between}
+.rh figcaption a{font:500 13px var(--sans);font-style:normal;border-bottom:1px solid currentColor}
+.sec{display:grid;grid-template-columns:3fr 9fr;gap:24px;align-items:baseline;border-top:1px solid var(--ink);padding-top:18px;margin-bottom:34px}
+.sec .sc{color:var(--muted)}
+.sec h2{font-size:56px;letter-spacing:-.025em;line-height:1}
+.sec h2 em{font-style:italic}
+.work{top:900px}
+.idx{list-style:none;padding:0;display:grid}
+.idx li{display:grid;grid-template-columns:3fr 5fr 4fr;gap:24px;padding:26px 0;border-bottom:1px solid var(--rule);align-items:center}
+.idx .no{display:flex;gap:18px;align-items:baseline}
+.idx .no span{font:italic 300 22px var(--serif);color:var(--muted)}
+.idx .no small{font:500 10px var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--c)}
+.idx h3{font-size:44px;letter-spacing:-.02em;line-height:1}
+.idx p{font:300 19px/1.4 var(--serif);color:var(--ink-2);margin-top:8px}
+.idx .th{height:150px;border-radius:4px;overflow:hidden;background:var(--paper-2);position:relative}
+.idx .th img{width:100%;height:100%;object-fit:cover;object-position:top}
+.idx .th svg{position:absolute;inset:0;width:100%;height:100%}
+.idx li.feat{grid-template-columns:3fr 9fr;align-items:start}
+.idx li.feat .fx{display:grid;grid-template-columns:5fr 4fr;gap:24px}
+.idx li.feat h3{font-size:84px}
+.idx li.feat .th{height:330px}
+.idx li.feat .read{display:inline-block;margin-top:20px;font-weight:500;font-size:15px;border-bottom:1px solid var(--ink);padding-bottom:2px}
+.about{top:2480px}
+.essay{display:grid;grid-template-columns:3fr 9fr;gap:24px}
+.essay .notes2{display:grid;gap:22px;align-content:start}
+.essay .notes2 div{border-top:1px solid var(--rule);padding-top:10px}
+.essay .notes2 small{font:italic 300 15px var(--serif);color:var(--muted)}
+.essay .notes2 b{display:block;font:400 19px var(--serif);margin-top:2px}
+.essay .txt{columns:2;column-gap:44px;font:400 19px/1.6 var(--serif)}
+.essay .txt p+p{margin-top:14px}
+.essay .txt p:first-child::first-letter{float:left;font:300 84px/.8 var(--serif);margin:8px 12px 0 0;color:var(--sea)}
+.exp{top:2960px}
+.tbl{width:100%;border-collapse:collapse}
+.tbl td{padding:22px 0;border-bottom:1px solid var(--rule);vertical-align:baseline}
+.tbl td:first-child{width:25%;font:italic 300 18px var(--serif);color:var(--muted)}
+.tbl td:nth-child(2){width:33%;font:400 30px var(--serif);letter-spacing:-.01em}
+.tbl td:nth-child(3){font-size:16px;color:var(--ink-2);line-height:1.55}
+.contact{top:3560px;height:520px;background:var(--paper-2);left:0;right:0;padding:64px 96px;display:grid;grid-template-columns:7fr 5fr;gap:56px;align-items:end}
+.contact h2{font-size:120px;line-height:.9;letter-spacing:-.035em}
+.contact h2 em{font-style:italic;color:var(--coral)}
+.contact .side p{font:300 21px/1.45 var(--serif);color:var(--ink-2)}
+.contact .side .b2{display:grid;gap:10px;margin-top:22px}
+.rfoot{position:absolute;left:96px;right:96px;top:4120px;display:flex;justify-content:space-between;font-size:14px;color:var(--ink-2);border-top:1px solid var(--rule-2);padding-top:20px}
+.rfoot em{font:italic 300 16px var(--serif)}
+.rfoot div{display:flex;gap:24px}
+
+/* 5 · project article */
+.p{position:absolute;inset:0;background:var(--paper)}
+.ah{position:absolute;left:0;right:0;top:150px;text-align:center}
+.ah .sc{color:#a07a00}
+.ah h1{font-size:156px;letter-spacing:-.04em;line-height:.9;margin-top:22px}
+.ah .deck{font:italic 300 32px/1.3 var(--serif);color:var(--ink-2);margin-top:20px}
+.by{position:absolute;left:240px;right:240px;top:500px;display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--ink);border-bottom:1px solid var(--rule)}
+.by>*{padding:14px 18px}
+.by>*+*{border-left:1px solid var(--rule)}
+.by small{display:block;font:500 10px var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.by b{display:block;font:400 17px/1.35 var(--serif);margin-top:4px}
+.by a b{border-bottom:1px solid currentColor;display:inline}
+.pf{position:absolute;left:96px;right:96px;top:640px}
+.pf .im{height:600px;border-radius:4px;background:linear-gradient(110deg,#ffcf5a 0 46%,#111 46%);position:relative;overflow:hidden}
+.pf .im img{position:absolute;left:50%;top:40px;translate:-50% 0;height:640px;border-radius:14px;box-shadow:0 40px 80px -30px rgba(0,0,0,.6)}
+.pf figcaption{font:italic 300 15px var(--serif);color:var(--ink-2);margin-top:10px}
+.pbody{position:absolute;left:0;right:0;top:1330px;display:grid;grid-template-columns:1fr 680px 1fr;column-gap:48px}
+.pbody .main{grid-column:2;font:400 20px/1.65 var(--serif)}
+.pbody .main h2{font:400 15px var(--sans);letter-spacing:.2em;text-transform:uppercase;color:#a07a00;margin:34px 0 8px}
+.pbody .main h2:first-child{margin-top:0}
+.pbody .main p:first-of-type::first-letter{float:left;font:300 78px/.8 var(--serif);margin:8px 12px 0 0;color:#c99a12}
+.pbody .aside{grid-column:3;font-size:14px;color:var(--ink-2);display:grid;gap:22px;align-content:start;padding-top:6px;max-width:250px}
+.pbody .aside div{border-top:1px solid var(--rule);padding-top:10px}
+.pbody .aside small{font:italic 300 15px var(--serif);color:var(--muted);display:block}
+.pq{grid-column:1/-1;margin:46px 96px 0;padding:44px 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--rule);text-align:center}
+.pq p{font:italic 300 52px/1.15 var(--serif);letter-spacing:-.02em;max-width:24ch;margin:0 auto}
+.pq small{display:block;margin-top:16px;font:500 10.5px var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.pnext{position:absolute;left:96px;right:96px;top:2090px;display:grid;grid-template-columns:5fr 7fr;gap:40px;align-items:center;border-top:1px solid var(--ink);padding-top:30px}
+.pnext small{font:500 10.5px var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--sage)}
+.pnext h3{font-size:96px;letter-spacing:-.03em;margin-top:10px}
+.pnext h3 em{font-style:italic}
+.pnext p{font:italic 300 22px var(--serif);color:var(--ink-2)}
+.pnext .im{height:280px;border-radius:4px;background:url(../../ocean-refined/assets/portfolio/sage.jpg) center 20%/cover}
+
+/* phones */
+.m1{position:absolute;inset:0;background:url(img/surface.jpg) 58% 0/auto 100% no-repeat}
+.m1::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(245,241,232,.5),transparent 45%,rgba(6,40,48,.3))}
+.mm{position:absolute;z-index:2;left:20px;right:20px;top:0;height:70px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(19,36,42,.18)}
+.mm .c{font:400 22px var(--serif)}
+.mm .g{width:40px;height:40px;border-radius:6px;display:grid;place-items:center;border:1px solid rgba(19,36,42,.3)}
+.mh{position:absolute;z-index:2;left:20px;right:20px;top:120px;text-align:center}
+.mh .sc{font-size:10px;color:var(--ink-2)}
+.mh h1{font-size:76px;line-height:.9;letter-spacing:-.035em;margin-top:18px}
+.mh h1 em{font-style:italic;color:var(--sea)}
+.mh p{font:300 19px/1.4 var(--serif);color:var(--ink-2);margin-top:16px}
+.mb{position:absolute;z-index:2;left:20px;right:20px;bottom:84px;display:grid;gap:10px}
+.mcap{position:absolute;z-index:2;left:20px;right:20px;bottom:30px;color:var(--paper);font:italic 300 14px var(--serif);border-top:1px solid rgba(245,241,232,.4);padding-top:10px}
+.m2{position:absolute;inset:0;background:var(--paper)}
+.ph2 .mm{border-color:var(--ink)}
+.ph2 .mm .g{background:var(--ink);color:var(--paper);border:0}
+.ph2 .mh{text-align:left;top:104px}
+.ph2 .mh h1{font-size:54px;line-height:.96}
+.ph2 .mh .btn{margin-top:22px;width:100%}
+.ph2 .mi{position:absolute;left:20px;right:20px;top:500px}
+.ph2 .mi .sc{color:var(--muted);font-size:10px;border-top:1px solid var(--ink);padding-top:12px;display:block}
+.ph2 .mi .row{display:grid;grid-template-columns:1fr 110px;gap:14px;padding:16px 0;border-bottom:1px solid var(--rule);align-items:center}
+.ph2 .mi h3{font-size:30px;line-height:1}
+.ph2 .mi p{font:300 15px/1.35 var(--serif);color:var(--ink-2);margin-top:6px}
+.ph2 .mi .th{height:80px;border-radius:4px;overflow:hidden;background:var(--paper-2);position:relative}
+.ph2 .mi .th img{width:100%;height:100%;object-fit:cover;object-position:top}
+.ph2 .mi .th svg{position:absolute;inset:0;width:100%;height:100%}
+</style>
+</head>
+<body class="board">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs><marker id="arrB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#c8553d"/></marker></defs>
+  <symbol id="rae-ink" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid meet">
+    <circle cx="300" cy="200" r="120" fill="none" stroke="#13242a" stroke-opacity=".25" stroke-dasharray="2 6"/>
+    <path d="M322 82 A120 120 0 0 1 410 246" fill="none" stroke="#c8553d" stroke-width="2" marker-end="url(#arrB)"/>
+    <path d="M384 290 A120 120 0 0 1 216 290" fill="none" stroke="#c8553d" stroke-width="2" marker-end="url(#arrB)"/>
+    <path d="M190 246 A120 120 0 0 1 278 82" fill="none" stroke="#c8553d" stroke-width="2" marker-end="url(#arrB)"/>
+    <g fill="#fbf9f4" stroke="#13242a" stroke-width="1.5"><circle cx="300" cy="80" r="16"/><circle cx="404" cy="260" r="16"/><circle cx="196" cy="260" r="16"/></g>
+    <g font-family="Newsreader" font-size="15" fill="#13242a" text-anchor="middle" font-style="italic"><text x="300" y="85">i</text><text x="404" y="265">ii</text><text x="196" y="265">iii</text></g>
+    <g font-family="Newsreader" font-size="19" fill="#13242a" text-anchor="middle"><text x="300" y="44">Discover real workflows</text><text x="470" y="320">Shape &amp; improve</text><text x="130" y="320">Activate, observe, learn</text></g>
+    <text x="300" y="206" font-family="Newsreader" font-style="italic" font-size="20" fill="#45545a" text-anchor="middle">evidence → use</text>
+  </symbol>
+  <symbol id="claw-ink" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid meet">
+    <g fill="none" stroke="#5b6bb8"><circle cx="300" cy="200" r="40"/><circle cx="300" cy="200" r="80" stroke-opacity=".6"/><circle cx="300" cy="200" r="120" stroke-opacity=".35"/><circle cx="300" cy="200" r="160" stroke-opacity=".18"/></g>
+    <path d="M300 200 L372 140" stroke="#13242a" stroke-width="1.6"/><circle cx="300" cy="200" r="4" fill="#13242a"/>
+    <g font-family="Newsreader" font-size="20" fill="#13242a" text-anchor="middle"><text x="120" y="70">Retain context</text><text x="490" y="70">Run bounded tasks</text><text x="490" y="350">Review &amp; sync</text></g>
+  </symbol>
+</svg>
+
+<header class="board-head">
+  <div>
+    <h1>B · Light editorial</h1>
+    <p>One light look everywhere, like a field journal. A serif display face, paper tones and ink rules carry from the surface through the dive UI into the logbook and the reading site. The ocean is the only dark thing on screen, so the content always reads like a well-set page.</p>
+  </div>
+  <nav class="board-switch"><a href="depth.html">A · Depth</a><a href="editorial.html" aria-current="page">B · Light editorial</a><a href="index.html">Compare</a></nav>
+</header>
+
+<section class="board-section">
+  <div class="board-label"><em>00</em><b>Tokens</b><span>Shared by the world UI and the reading template</span></div>
+  <div class="tok">
+    <div class="tok-card">
+      <div class="ramp"><div style="background:#fbf9f4">card</div><div style="background:#f5f1e8">paper</div><div style="background:#ece6d8">paper 2</div><div style="background:#e2dac8">paper 3</div><div style="background:#d8cfbd">rule</div><div class="d" style="background:#1e6f6c">sea</div><div class="d" style="background:#45545a">ink 2</div><div class="d" style="background:#13242a">ink</div></div>
+      <div class="accents"><span><i style="background:#d9643f"></i>Coral · UI accent</span><span><i style="background:#c8553d"></i>Rae</span><span><i style="background:#2f8f83"></i>Rae Engage</span><span><i style="background:#c99a12"></i>WattMana</span><span><i style="background:#5f8f3e"></i>Sage</span><span><i style="background:#5b6bb8"></i>OpenClaw</span><span><i style="background:#2f7fb0"></i>The world</span></div>
+    </div>
+    <div class="tok-card spec">
+      <div class="d">Go a little <em>deeper.</em></div>
+      <div class="h">Newsreader 300 for display, with italics for emphasis</div>
+      <div class="b">Outfit for UI and short body text. Long reading uses Newsreader at 19–20 px. Drop caps and pull quotes give the case studies a magazine rhythm.</div>
+      <div class="m">Small caps labels · Outfit 500 · 0.2em tracking</div>
+    </div>
+  </div>
+</section>
+
+<section class="board-section">
+  <div class="board-label"><em>01</em><b>Surface · first paint</b><span>1440 × 900</span></div>
+  <div class="screen" data-w="1440" data-h="900"><div class="canvas">
+    <div class="s1"></div>
+    <div class="mast"><div class="l"><a>Work</a><a>About</a><a>Experience</a></div><div class="c">Anshul<small>A world to explore</small></div><div class="rt"><a>Résumé</a><a>Contact</a><span class="gear"><svg class="icon" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></span></div></div>
+    <div class="hero">
+      <p class="sc">Anshul Ramprasad · Applied AI product manager · Kuala Lumpur</p>
+      <h1>Go a little <em>deeper.</em></h1>
+      <p class="lead">I turn AI into products people use, connecting real workflows, model behaviour, evaluation and adoption.</p>
+      <div class="ctas"><a class="btn ink">Dive in <span>↓</span></a><a class="btn paper">Read the work <span>→</span></a></div>
+    </div>
+    <div class="figcap"><span><b>Fig. 1</b>The surface, 07:40 in Kuala Lumpur. Scroll to descend.</span><span>No 3D? <u>The portfolio reads as a page, too.</u></span></div>
+    <span class="annot" data-n="1" style="left:180px;top:160px">The text and buttons show at first paint, as in A.</span>
+    <span class="annot" data-n="2" style="right:56px;top:100px">A masthead header: navigation either side of the name.</span>
+    <span class="annot" data-n="3" style="left:56px;bottom:84px">The status strip becomes a figure caption, the first editorial cue.</span>
+  </div></div>
+  <ul class="notes"><li>The headline stays centred: a symmetrical magazine cover.</li><li>“deeper.” is set in italic sea-green, giving emphasis by type rather than effect.</li><li>Squared 6 px buttons match the paper and ink language.</li></ul>
+</section>
+
+<section class="board-section">
+  <div class="board-label"><em>02</em><b>Dive HUD · paper labels</b><span>1440 × 900</span></div>
+  <div class="screen" data-w="1440" data-h="900"><div class="canvas">
+    <div class="s2"></div>
+    <div class="h-top"><span class="chip wm">Anshul</span><span class="chip hdg"><span class="sc" style="font-size:10px;color:var(--muted)">Heading</span><b>042° NE</b></span><span class="menu"><span class="chip">Work</span><span class="chip">Settings</span></span></div>
+    <div class="chip chart"><svg viewBox="0 0 100 100" fill="none" stroke="#13242a" stroke-opacity=".5"><path d="M6 36c14-8 22 6 36-2s22-14 52-6M4 58c18-6 26 8 42 0s26-10 50-2" stroke-opacity=".25"/><path d="M28 72c4-14 14-20 24-18s16-10 22-16" stroke-dasharray="2 4"/><circle cx="52" cy="54" r="4" fill="#d9643f" stroke="none"/></svg><small><span>Chart</span><span>M</span></small></div>
+    <div class="tag"><i></i><span class="chip">The wreck</span></div>
+    <div class="chip dcard"><p class="sc">Depth</p><div class="n">5.3<small>m</small></div><p>Sunlit shallows, coral gardens</p><div class="bar"></div></div>
+    <div class="chip acard"><p class="sc">Ahead · 14 m</p><h3>The <em>wreck</em></h3><p>Experience. Three roles logged, from consulting research in 2023 to leading Rae today.</p><div class="act"><span>Open the chapter</span><span>Press<kbd>E</kbd></span></div></div>
+    <div class="chip h-hint"><span>Drag to look</span><span>WASD to swim</span><span>C for instruments</span></div>
+    <span class="annot" data-n="1" style="left:40px;bottom:250px">Instruments read as paper labels set on the water.</span>
+    <span class="annot" data-n="2" style="right:450px;bottom:200px">Landmarks are titled like chapters, with an italic serif.</span>
+  </div></div>
+  <ul class="notes"><li>The same four elements as A, but every surface is light paper with ink text.</li><li>It reads well in murky water, but loses some of the sense of immersion: the main trade-off of B.</li><li>The Instruments view (C) adds a paper dive slate with air and the timer.</li></ul>
+</section>
+
+<section class="board-section">
+  <div class="board-label"><em>03</em><b>Logbook · project page</b><span>A paper sheet over the dimmed scene · 1440 × 900</span></div>
+  <div class="screen" data-w="1440" data-h="900"><div class="canvas">
+    <div class="s3"></div>
+    <div class="sheet">
+      <div class="sh-head"><span class="t">The Logbook<span>Work · Chapter 01</span></span><span class="tools"><a>Copy link</a><a>Print</a><a>Close · Esc</a></span></div>
+      <aside class="toc"><p class="sc">Contents</p><ol>
+        <li class="h">About <small>the anchor</small></li><li class="h">Experience <small>the wreck</small></li><li class="h">Work <small>the treasure</small></li>
+        <li class="on">Rae <small>8</small></li><li>Rae Engage <small>9</small></li><li>WattMana <small>10</small></li><li>Sage <small>11</small></li><li>OpenClaw <small>12</small></li><li>A world to explore <small>13</small></li>
+        <li class="h">Résumé <small>14</small></li></ol></aside>
+      <article class="art">
+        <div>
+          <p class="sc">Enterprise B2B AI · Live product</p>
+          <h2>Rae</h2>
+          <p class="deck">From scattered AI features to an evidence-led product and adoption system.</p>
+          <div class="body"><p>A live sales-enablement platform needed clearer priorities, reliable answers, and a path from feature releases to repeat use.</p><p>The decision was to pair frontline discovery with behavioural evidence: improve retrieval, search and routing alongside planned activation and enablement, rather than treating each launch as the finish line.</p><p>A useful AI answer and an adopted AI product require different work. Both belong in the product loop.</p></div>
+        </div>
+        <aside class="side"><figure><svg><use href="#rae-ink"/></svg></figure><figcaption>Fig. 8 · The product loop. An original diagram, not private UI.</figcaption><dl><div><dt>My role</dt><dd>Product leadership and hands-on response quality</dd></div><div><dt>System</dt><dd>RAG, search, routing, prompts</dd></div></dl></aside>
+      </article>
+      <div class="sh-foot"><span>← Selected work</span><em>page 8 of 14</em><b>Rae Engage →</b></div>
+    </div>
+    <span class="annot" data-n="1" style="left:90px;top:120px">The contents list replaces the sidebar, with page numbers instead of 14 dots.</span>
+    <span class="annot" data-n="2" style="left:560px;top:430px">A drop cap and two columns: the case study reads like an article.</span>
+  </div></div>
+  <ul class="notes"><li>Rae's cover becomes a drawn figure with a caption, which is honest about being a diagram.</li><li>Nautical names survive as italic subtitles in the contents.</li></ul>
+</section>
+
+<section class="board-section">
+  <div class="board-label"><em>04</em><b>Reading site · home</b><span>Full page at 1440 wide · a magazine front</span></div>
+  <div class="screen" data-w="1440" data-h="4210"><div class="canvas">
+    <div class="r"></div>
+    <div class="rmast"><div class="l"><a>Work</a><a>About</a><a>Experience</a></div><div class="c">Anshul Ramprasad</div><div class="r2"><a>Résumé</a><a>Contact</a><a class="dive">Dive in ↗</a></div></div>
+    <div class="col rh">
+      <div>
+        <p class="sc">Applied AI product · Kuala Lumpur</p>
+        <h1>I turn AI into products <em>people use.</em></h1>
+        <p class="lead">I connect real user workflows, model behaviour, evaluation and adoption to move enterprise AI from promising demo to daily work.</p>
+        <div class="ctas"><a class="btn ink">Selected work <span>↓</span></a><a class="btn line">Résumé · PDF <span>↓</span></a></div>
+        <div class="meta"><div><small>Now</small><b>Product Manager, Twimbit</b></div><div><small>Leading</small><b>Rae, enterprise AI</b></div><div><small>Focus</small><b>RAG, evaluation, agents</b></div></div>
+      </div>
+      <figure><div class="im"></div><figcaption><span>Fig. 1 · This portfolio is also an ocean.</span><a>Dive in ↗</a></figcaption></figure>
+    </div>
+
+    <div class="col work">
+      <div class="sec"><p class="sc">No. 01 · Selected work</p><h2>Work across the <em>full</em> AI product loop.</h2></div>
+      <ol class="idx">
+        <li class="feat" style="--c:var(--rae)"><div class="no"><span>i.</span><small>Featured · Enterprise B2B AI</small></div><div class="fx"><div><h3>Rae</h3><p>From scattered AI features to an evidence-led product and adoption system.</p><a class="read">Read the story →</a></div><div class="th" style="background:var(--card);border:1px solid var(--rule)"><svg><use href="#rae-ink"/></svg></div></div></li>
+        <li style="--c:var(--engage)"><div class="no"><span>ii.</span><small>Customer-facing AI</small></div><div><h3>Rae Engage</h3><p>A focused conversational path from plan discovery to a sales conversation.</p></div><div class="th"><img src="../../ocean-refined/assets/portfolio/reengage.jpg" alt=""></div></li>
+        <li style="--c:var(--watt)"><div class="no"><span>iii.</span><small>Energy product</small></div><div><h3>WattMana</h3><p>An electricity bill should explain itself.</p></div><div class="th"><img src="../../ocean-refined/assets/portfolio/wattmana.png" alt=""></div></li>
+        <li style="--c:var(--sage)"><div class="no"><span>iv.</span><small>Health AI</small></div><div><h3>Sage</h3><p>Continuity between appointments.</p></div><div class="th"><img src="../../ocean-refined/assets/portfolio/sage.jpg" alt=""></div></li>
+        <li style="--c:var(--claw)"><div class="no"><span>v.</span><small>Persistent agents</small></div><div><h3>OpenClaw</h3><p>Finding the useful edge of always-on agents.</p></div><div class="th" style="background:var(--card);border:1px solid var(--rule)"><svg><use href="#claw-ink"/></svg></div></li>
+        <li style="--c:var(--world)"><div class="no"><span>vi.</span><small>Creative web</small></div><div><h3>A world to explore</h3><p>This portfolio, as an ocean you can dive into.</p></div><div class="th"><img src="img/shallows.jpg" alt=""></div></li>
+      </ol>
+    </div>
+
+    <div class="col about">
+      <div class="sec"><p class="sc">No. 02 · How I work</p><h2>A model response is <em>not</em> a product outcome.</h2></div>
+      <div class="essay">
+        <div class="notes2"><div><small>i.</small><b>Evidence before scope</b></div><div><small>ii.</small><b>Adoption is product work</b></div><div><small>iii.</small><b>Bound autonomy</b></div></div>
+        <div class="txt"><p>The complete system includes the workflow, boundaries, evaluation, recovery path, instrumentation, and the reason a user returns.</p><p>I pair what people say with what their behaviour shows, then define the smallest useful intervention around the real constraint.</p><p>Clear tool limits, validation, human review and deterministic rules make automation useful without pretending uncertainty disappeared.</p></div>
+      </div>
+    </div>
+
+    <div class="col exp">
+      <div class="sec"><p class="sc">No. 03 · Experience</p><h2>From research to AI <em>product ownership.</em></h2></div>
+      <table class="tbl"><tr><td>Jan 2025 to now</td><td>Product Manager</td><td>Leading Rae across product strategy, discovery, requirements, analytics, AI solution design, launches and adoption.</td></tr><tr><td>Sep 2024 to Jan 2025</td><td>Product Content Manager</td><td>Built AI-accelerated content operations: structured intake, workflow automation, research assistants and human review.</td></tr><tr><td>Sep 2023 to Sep 2024</td><td>Consulting and research</td><td>Customer experience, strategy, competitive benchmarking and AI adoption research for regional technology and financial-services organisations.</td></tr></table>
+    </div>
+
+    <div class="col contact"><h2>Something worth <em>building?</em></h2><div class="side"><p>Get in touch about applied AI, product work, or an interesting problem.</p><div class="b2"><a class="btn ink">anshulramprasad@gmail.com <span>↗</span></a><a class="btn line">Download résumé · PDF, Jul 2026 <span>↓</span></a></div></div></div>
+    <div class="rfoot"><em>Curiosity below the surface. Useful work above it.</em><div><a>LinkedIn ↗</a><a>GitHub ↗</a><a>Privacy</a><a>Model credits</a></div></div>
+  </div></div>
+  <ul class="notes"><li>A masthead and issue-style numbering (No. 01, 02, 03).</li><li>The work is a contents list: scannable rows with thumbnails, Rae featured at the top.</li><li>About becomes a short essay with marginal principles. Experience becomes a ruled table.</li><li>Light throughout. The only colour comes from the project accents and the photography.</li></ul>
+</section>
+
+<section class="board-section">
+  <div class="board-label"><em>05</em><b>Reading site · project article</b><span>WattMana · full page at 1440 wide</span></div>
+  <div class="screen" data-w="1440" data-h="2440"><div class="canvas">
+    <div class="p"></div>
+    <div class="rmast"><div class="l"><a>Work</a><a>About</a><a>Experience</a></div><div class="c">Anshul Ramprasad</div><div class="r2"><a>Résumé</a><a>Contact</a><a class="dive">Dive in ↗</a></div></div>
+    <header class="ah"><p class="sc">iii. · Energy product · Independent build</p><h1>WattMana</h1><p class="deck">An electricity bill should explain itself.</p></header>
+    <div class="by"><div><small>Role</small><b>Independent product design and working prototypes</b></div><div><small>Built</small><b>Web and mobile prototypes</b></div><div><small>Focus</small><b>Ringgit and kWh together</b></div><a><small>Links</small><b>GitHub profile ↗</b></a></div>
+    <figure class="pf"><div class="im"><img src="../../ocean-refined/assets/portfolio/wattmana.png" alt=""></div><figcaption>Fig. 1 · The working browser prototype. A prototype story, with no household savings claimed.</figcaption></figure>
+    <div class="pbody">
+      <div class="main"><h2>The problem</h2><p>A dense electricity bill makes it difficult to understand what changed and which household decisions might matter.</p><h2>The decision</h2><p>Start with the bill story, show ringgit and kWh together, and keep modelled device costs visibly separate from measurements on the bill.</p><h2>What changed</h2><p>Working web and mobile prototypes connect bill explanation, household use and learning. Device costs remain estimates with visible confidence ranges.</p></div>
+      <aside class="aside"><div><small>Note</small>Device costs are modelled estimates, not meter observations.</div><div><small>Sections</small>Home, Bills, My Use and Learn.</div></aside>
+      <div class="pq"><p>“An explanation earns trust when the interface makes the source and uncertainty of each number visible.”</p><small>What I learned</small></div>
+    </div>
+    <a class="pnext"><div><small>Next · iv. Health AI</small><h3><em>Sage</em> →</h3><p>Continuity between appointments.</p></div><div class="im"></div></a>
+  </div></div>
+  <ul class="notes"><li>A centred article: title, italic deck, and a ruled byline table that answers role and scope.</li><li>A 680 px reading measure with sidenotes in the margin and a drop cap.</li><li>The takeaway becomes a centred pull quote. The next article is set like a magazine “continued” teaser.</li></ul>
+</section>
+
+<section class="board-section">
+  <div class="board-label"><em>06</em><b>Phone</b><span>390 × 844 · surface and reading home</span></div>
+  <div class="phones">
+    <div class="screen" data-w="390" data-h="844"><div class="canvas">
+      <div class="m1"></div>
+      <div class="mm"><span class="c">Anshul</span><span class="g"><svg class="icon" viewBox="0 0 24 24"><path d="M4 8h16M4 16h16"/></svg></span></div>
+      <div class="mh"><p class="sc">Applied AI product manager</p><h1>Go a little <em>deeper.</em></h1><p>I turn AI into products people use.</p></div>
+      <div class="mb"><a class="btn ink">Dive in <span>↓</span></a><a class="btn paper">Read the work <span>→</span></a></div>
+      <div class="mcap">Fig. 1 · The surface, 07:40 in Kuala Lumpur.</div>
+    </div></div>
+    <div class="screen" data-w="390" data-h="844"><div class="canvas ph2">
+      <div class="m2"></div>
+      <div class="mm"><span class="c">Anshul Ramprasad</span><span class="g"><svg class="icon" viewBox="0 0 24 24"><path d="M4 8h16M4 16h16"/></svg></span></div>
+      <div class="mh"><p class="sc" style="color:var(--sea)">Applied AI product</p><h1>I turn AI into products <em style="color:var(--sea)">people use.</em></h1><p>Workflows, model behaviour, evaluation and adoption, from demo to daily work.</p><a class="btn ink">Selected work <span>↓</span></a></div>
+      <div class="mi"><span class="sc">No. 01 · Selected work</span>
+        <div class="row"><div><h3>Rae</h3><p>An evidence-led product and adoption system.</p></div><div class="th" style="background:var(--card);border:1px solid var(--rule)"><svg><use href="#rae-ink"/></svg></div></div>
+        <div class="row"><div><h3>Rae Engage</h3><p>From plan discovery to a sales conversation.</p></div><div class="th"><img src="../../ocean-refined/assets/portfolio/reengage.jpg" alt=""></div></div>
+      </div>
+    </div></div>
+  </div>
+  <ul class="notes"><li>The cover stays centred on a phone, with full-width buttons in the thumb zone.</li><li>The contents-list rows suit a narrow screen better than cards.</li></ul>
+</section>
+<script src="board.js"></script>
+</body>
+</html>
