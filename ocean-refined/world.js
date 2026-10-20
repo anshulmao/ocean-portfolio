@@ -943,10 +943,11 @@ function frame(now){
   // finish the last frame, so a call that has to wait for it waits least here. A step that made this callback late rests a few frames.
   if(gpuRan){gpuRan=false;gpuRest=raw*1000>1500/displayHz?4:1;}
   if(draw&&jobs.length&&diagnostic.ready){if(gpuRest>0&&!hurry)gpuRest--;else gpuRan=runJobs(0,'gpu')>0;}
-  // At full pace the world moves on every callback, drawn or not (input stays crisp on a fast display); on a reduced
-  // budget it moves once per drawn frame, by the time that has passed since the last one.
+  // The world moves once per drawn frame, by the time that has passed since the last one. (It used to move on every
+  // callback at full pace, drawn or not: with a stride of 2, an economy 30 fps or a fast display, that doubled the
+  // simulation per frame seen, on machines whose main thread is already the limit.)
   heldClock+=raw;
-  if(full||draw){const dt=Math.min(heldClock,.1);if(!paused)elapsed+=dt;try{updateWorld(dt,heldClock);}catch(error){running=false;fail(error);return;}heldClock=0;}
+  if(draw){const dt=Math.min(heldClock,.1);if(!paused)elapsed+=dt;try{updateWorld(dt,heldClock);}catch(error){running=false;fail(error);return;}heldClock=0;}
   if(draw){sinceDraw=0;
     gpuPoll();gpuBegin();drawFrame();gpuEnd();diagnostic.frames++;frameCount++;diagnostic.drawCalls=renderer.info.render.calls;diagnostic.triangles=renderer.info.render.triangles;
     if(lastDraw&&full&&!getTransition())experienceMetrics.frame(now-lastDraw);

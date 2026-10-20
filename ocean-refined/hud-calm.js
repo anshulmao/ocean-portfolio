@@ -2,7 +2,7 @@ import { onTick } from './ui-ticker.js';
 import { DISPLAY_MAX_DEPTH } from './depth-metrics.js';
 
 // The calm dive HUD (design/ui-overhaul/depth.html, screen 02): one depth card bottom left and one
-// "ahead" card bottom right, on glass. It owns no instrument logic. It mirrors readings that
+// "ahead" card bottom right, as hologram panels. It owns no instrument logic. It mirrors readings that
 // dive-hud.js (console), journey.js (zone card, waypoint chip) and landmark-interactions.js
 // (interact prompt) already keep current, five times a second, and writes a node only when its
 // text would change. C (Instruments) shows the full console and depth scale instead; dive-calm.css
@@ -17,7 +17,7 @@ const NAMES = { about: 'The Anchor', experience: 'The Wreck', projects: 'The Tre
 const SIGNALS = { about: '#7ff0cf', experience: '#ffcf7a', projects: '#c9a2ff' };
 const card = (className, label, html) => {
   const node = document.createElement('section');
-  node.className = `calm-card ${className}`; node.setAttribute('aria-label', label); node.innerHTML = html;
+  node.className = `calm-card holo holo-deep ${className}`; node.setAttribute('aria-label', label); node.innerHTML = html;
   document.body.append(node); return node;
 };
 const depthCard = card('calm-depth', 'Depth', '<p class="calm-depth-number"><span>0.0</span><small>m</small></p><p class="calm-depth-zone"><span></span><b></b></p><div class="calm-depth-gauge" aria-hidden="true"><i></i></div><p class="calm-depth-vitals"></p>');

@@ -46,27 +46,45 @@ export function fishNavigator(heightAt) {
       }
       s.course = course; s.blocked = !found;
       const turn = angle(course - s.yaw); if (Math.abs(turn) > .2) s.side = Math.sign(turn);
+      // The look-ahead lift is decided with the course, not every frame: it is the costliest probe and moves
+      // little between quarter-second replans (the target height it feeds is eased anyway).
+      const ahead = Math.min(1.2, speed * 1.2);
+      s.lift = found && clear(s, course, ahead, clearance, radius, climb);
+      s.anticipated = envelope(s.x + Math.sin(course) * ahead, s.z + Math.cos(course) * ahead, radius) + clearance;
     }
-    s.yaw += clamp(angle(s.course - s.yaw), -turnRate * dt, turnRate * dt);
+    // Turn rate and pace ease toward their targets instead of switching: a fish banks into a turn and coasts to a
+    // stop. Hard switches (full turn rate on, speed to zero when the fan found no course) read as jitter on screen,
+    // because the course is only re-chosen every quarter second and walls re-block it from frame to frame.
+    const ease = rate => 1 - Math.exp(-dt * rate);
+    const wantRate = clamp(angle(s.course - s.yaw) * 3, -turnRate, turnRate);
+    s.yawRate = (s.yawRate ?? 0) + (wantRate - (s.yawRate ?? 0)) * ease(6);
+    s.yaw += s.yawRate * dt;
     // Slowing into a turn prevents lateral skating. The final swept test handles the curved approach while
     // the slower fan refresh keeps hundreds of fish inexpensive. No analytic terrain or collision raycasts.
-    let travel = speed * dt * Math.max(.15, Math.cos(angle(s.course - s.yaw)));
-    if (s.blocked || !clear(s, s.yaw, travel, clearance, radius, 0, false)) { travel = 0; s.next = 0; }
+    const pace = s.blocked ? 0 : speed * Math.max(.15, Math.cos(angle(s.course - s.yaw)));
+    s.pace = (s.pace ?? pace) + (pace - (s.pace ?? pace)) * ease(3.5);
+    let travel = s.pace * dt;
+    if (s.blocked) s.next = 0;
+    // The swept test still has the last word: a coasting fish never enters a wall. A fish riding exactly at its
+    // clearance can fail it now and then; it takes half the step, or holds for this frame only, and keeps its pace.
+    if (travel > 0 && !clear(s, s.yaw, travel, clearance, radius, 0, false)) { travel = clear(s, s.yaw, travel * .5, clearance, radius, 0, false) ? travel * .5 : 0; s.next = 0; }
     const x = s.x + Math.sin(s.yaw) * travel, z = s.z + Math.cos(s.yaw) * travel;
-    const ahead = Math.min(1.2, speed * 1.2), floor = envelope(x, z, radius) + clearance;
-    const anticipated = envelope(x + Math.sin(s.yaw) * ahead, z + Math.cos(s.yaw) * ahead, radius) + clearance;
+    const floor = envelope(x, z, radius) + clearance;
     // Lift gently over a swimmable slope; never climb a rejected wall while turning beside it.
     let targetY = Math.min(ceiling, Math.max(target.y, floor));
-    if (!s.blocked && clear(s, s.yaw, ahead, clearance, radius, climb)) targetY = Math.min(ceiling, Math.max(targetY, anticipated));
+    if (!s.blocked && s.lift) targetY = Math.min(ceiling, Math.max(targetY, s.anticipated));
     // Use the same body footprint for vertical clearance and route rejection. Center-only floor heights
     // let a fish beside a ledge descend below its own footprint, after which every horizontal course failed.
     const recover = floor > s.y + 1e-5 && floor <= ceiling;
     if (recover) targetY = Math.min(ceiling, Math.max(targetY, floor + .05));
-    const vy = travel > 0 || recover ? clamp((targetY - s.y) * 1.2, -speed * climb, speed * climb) : 0;
+    // Climbing out of the floor footprint answers at once; ordinary depth changes ease like the pace does.
+    const vyWant = travel > 0 || recover ? clamp((targetY - s.y) * 1.2, -speed * climb, speed * climb) : 0;
+    const vy = recover ? vyWant : (s.vy ?? 0) + (vyWant - (s.vy ?? 0)) * ease(3);
     s.vx = (x - s.x) / dt; s.vz = (z - s.z) / dt; s.vy = vy;
     s.x = x; s.z = z; s.y += vy * dt;
-    const pitch = Math.atan2(vy, Math.max(.001, travel / dt));
-    s.pitch += (pitch - s.pitch) * (1 - Math.exp(-dt * 4));
+    // Pitch against at least a quarter of cruising speed, so a fish slowing to a stop does not point straight up.
+    const pitch = Math.atan2(vy, Math.max(speed * .25 + .001, travel / dt));
+    s.pitch += (pitch - s.pitch) * ease(4);
     s.turn = angle(s.yaw - oldYaw) / dt;
     return s;
   }

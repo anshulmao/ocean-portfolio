@@ -2,9 +2,8 @@
 @font-face{font-family:Montserrat;src:url('./assets/fonts/montserrat-500.woff2') format('woff2');font-weight:500;font-display:swap}
 @font-face{font-family:Outfit;src:url('./assets/fonts/outfit-400.woff2') format('woff2');font-weight:400;font-display:swap}
 @font-face{font-family:Outfit;src:url('./assets/fonts/outfit-500.woff2') format('woff2');font-weight:500;font-display:swap}
-/* Surface colours come from tokens.css; the night set switches there with html[data-theme]. */
-:root{color-scheme:light;--ink:var(--o-ink);--muted:var(--o-ink-2);--line:var(--o-line);--glass:var(--o-g1);--active:var(--o-g2);--button:var(--o-btn);--button-ink:var(--o-btn-ink);--pad:clamp(24px,4.5vw,80px);--ease:cubic-bezier(.4,0,.2,1)}
-:root[data-theme="night"]{color-scheme:dark}
+:root{color-scheme:light;--ink:#123944;--muted:#305762;--line:#24525b33;--glass:#edf7f455;--active:#f5fcf7d9;--button:#123f49;--button-ink:#f6fcfa;--pad:clamp(24px,4.5vw,80px);--ease:cubic-bezier(.4,0,.2,1)}
+:root[data-theme="night"]{color-scheme:dark;--ink:#ecf5f4;--muted:#bfd1dd;--line:#b0c9e63b;--glass:#122c455c;--active:#c1ddfa23;--button:#ddf0ee;--button-ink:#123944}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden}body{font-family:Montserrat,system-ui,sans-serif;background:linear-gradient(#a9d8e9 45%,#2a8e9b 46%,#095868);color:var(--ink);transition:color 1.5s var(--ease);-webkit-font-smoothing:antialiased}
 button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}button:focus-visible{outline:3px solid currentColor;outline-offset:5px}button:disabled{cursor:wait;opacity:.7}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 #world{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:pan-y}.scene-shade{position:fixed;inset:0;pointer-events:none;background:linear-gradient(180deg,#ffffff0d,transparent 32%,transparent 70%,#022f455e);transition:opacity 1s}.underwater-tint{position:fixed;inset:0;pointer-events:none;opacity:0;background:linear-gradient(90deg,#0128335e,transparent 65%),linear-gradient(0deg,#0137445e,transparent 80%);transition:opacity 1s}

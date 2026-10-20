@@ -88,3 +88,22 @@ Phase 0, then a static design board (surface hero, HUD calm state, archive page,
 - **Phase 3 (done):** `logbook.css` (screen only, so `archive-print.css` still governs print) puts the logbook on a G4 glass sheet by re-pointing archive.css's variables at the tokens. The breadcrumb leads ("Logbook / Projects / Rae") and the tools are glass pills. The rail shows real labels first, with the nautical names as quiet mono text. Selection is a hue wash, and each project has its own accent. Cards are rounded, and solid fills become tinted glass. The pager shows only the current section's pages ("Projects 2 / 7"), counted in `archive.js`. On phones the sheet is full screen, with rounded tabs and a slim pager.
 - **Phase 4 (done):** `tools/render-portfolio.mjs` and `tools/templates/portfolio-reading.css` rebuild the reading pages with no runtime JavaScript. The home page descends: each section paints its own band of the depth ramp, and the bands meet in the padding between sections, so text never sits on a colour it wasn't set for. It has a glass pill nav, a hero with a porthole view of the surface (separate day and night stills), Rae as the featured project with a drawn loop cover, cards tinted per project, and principle cards from the approach examples. Experience shows as a dive profile, followed by résumé and contact. A scroll-driven depth gauge appears at 1600 px and wider, where supported. Project pages get a tinted at-a-glance facts card, large media, a sticky section index, the learning as a pull quote, and a next-project card. Dark mode follows the system setting (`:root:not([data-theme])` in tokens.css). On phones, the loop-cover labels get small.
 - `newqa/dive-hud.mjs` times out on unmodified `main` too (it is hard-wired to port 4175 and uses an older archive structure), so it was already failing before this work.
+
+## Revision (2026-10-20): in-game style back to hologram/CRT; performance and jitter
+
+- **In-game UI.** After review, the glass look stays only on the reading site. The surface, the dive HUD and the logbook use the original hologram/CRT style again (`hologram.css`, `archive.css`) but keep the new layout. Surface: navigation strip, settings at the right, left-aligned hero. HUD: compact depth and ahead cards, now `.holo.holo-deep` panels; instruments on C. Logbook: rail led by real labels, per-project signal colours, a pager counting within the section. `styles.css` is back to its original in-game colours.
+- **Blur removed in-game.** The glass panels used `backdrop-filter`, which the browser recomputes every frame over the moving WebGL scene. In the reef probe that put this branch at 27–35 fps against 47–58 on `main` at the wreck, mid-slope and deep ledge. The resolution scaler never reacted, because the cost is in the compositor, which the GPU timer does not see. With the blur gone, the two are level within this machine's run-to-run noise.
+- **Jitter fixes** (`fish-navigation.js`, `marine-life.js`, `user-creatures.js`, `model-scene.js`):
+  - Turn rate, pace and vertical speed now ease instead of switching, so a fish banks and coasts rather than stopping dead when a wall blocks its course.
+  - Boids face along the navigator's eased yaw and pitch. They no longer use the raw velocity, which is zero at a pause and turned the fish to face +X for a frame.
+  - Pitch is limited while slowing, so a stopping fish no longer points straight up.
+  - The lighter far mesh switches with a 21–27 m band instead of exactly at 24 m.
+  - Skinned animals animate at full rate out to 50 m (it was 24 m).
+  - Landmark clips use the same 0.1 s time-step cap as everything else.
+- **CPU fixes.**
+  - The look-ahead lift probe now runs once per course replan instead of every frame.
+  - Hidden shoals step every fourth frame with the time gathered since.
+  - The world simulates once per drawn frame; with a draw stride of 2 it used to simulate twice per frame seen.
+  - The steering unit benchmark dropped from 1,332 ms to 641 ms of CPU for the same 10 simulated seconds.
+- **Measured at the wreck.** The main thread was nearly saturated (about 3% idle) while the GPU needed about 11 ms per frame, so the frame rate is CPU-bound. Still unmeasured: real-time fps gains on a physical Vega 10 laptop, because headless timing on this machine varies by up to 50% between runs.
+- **Stale suites.** `newqa/creature-lifecycle.mjs` (it clicks the removed `#motion` button) and `newqa/dive-hud.mjs` fail on unmodified `main` as well.
