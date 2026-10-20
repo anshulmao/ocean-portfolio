@@ -3,6 +3,9 @@
    set by the sky). Surfaces are glass only: tiers differ by hue and opacity, never by
    solid fills. Source of truth: design/ui-overhaul/depth.html. Prefix --o- keeps these
    apart from the older per-file variables while they migrate. */
+/* Faces added by the overhaul; Outfit 400/500 are declared in styles.css. OFL licences sit beside the files. */
+@font-face{font-family:Outfit;src:url('./assets/fonts/outfit-300.woff2') format('woff2');font-weight:300;font-display:swap}
+@font-face{font-family:"Martian Mono";src:url('./assets/fonts/martian-mono-400.woff2') format('woff2');font-weight:400;font-display:swap}
 :root{
   /* depth ramp, day */
   --o-surface-0:#f3fbfa;--o-surface-1:#e2f4f1;--o-surface-2:#c9ece6;

@@ -1,0 +1,73 @@
+/* The dive HUD on the shared tokens (design/ui-overhaul/depth.html, screen 02). Loaded last.
+   Calm by default: heading, depth card, ahead card, map. C (Instruments, body[data-computer-open])
+   brings back the depth scale and the console and hides the calm cards; U still clears everything.
+   Every panel is G3 glass over the water; hue marks meaning (the ahead card takes its light's colour). */
+:root{--calm-glass:var(--o-g3);--calm-line:var(--o-g-line-deep);--calm-shadow:var(--o-g-shadow-deep)}
+html[data-theme="night"]{--calm-glass:hsla(228,60%,10%,.46)}
+
+/* Cards exist only under water and never over dialogs, the menu, a cleared screen or the safety stop */
+.calm-card{position:fixed;z-index:6;display:none;color:var(--o-foam);font-family:var(--o-display);background:var(--calm-glass);border:1px solid var(--calm-line);border-radius:var(--o-r-l);box-shadow:var(--calm-shadow);-webkit-backdrop-filter:var(--o-blur);backdrop-filter:var(--o-blur);pointer-events:none}
+.calm-card p,.calm-card h2{margin:0}
+body[data-submerged="true"]:not([data-computer-open="true"]) .calm-depth{display:block}
+body[data-submerged="true"]:not([data-computer-open="true"]) .calm-ahead[data-show="true"]{display:block}
+body:is([data-clear-ui="true"],[data-safety-stop="true"],[data-dialog="open"],[data-menu="open"],[data-summary="true"]) .calm-card,body:has(dialog[open]) .calm-card{display:none!important}
+
+/* Depth card */
+.calm-depth{left:var(--pad);bottom:40px;min-width:300px;padding:18px 24px 18px}
+.calm-depth-number{font:200 96px/1 var(--o-display);letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.calm-depth-number small{font-size:24px;font-weight:300;letter-spacing:0;margin-left:6px;opacity:.75}
+.calm-depth-zone{margin-top:8px!important;font-size:17px}
+.calm-depth-zone b{font-weight:400;opacity:.65}
+.calm-depth-gauge{position:relative;height:4px;margin:16px 0 12px;border-radius:2px;background:rgba(255,255,255,.18);overflow:hidden}
+.calm-depth-gauge i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:2px;background:linear-gradient(90deg,#bdf3e6,var(--o-accent));transition:width 400ms var(--ease)}
+.calm-depth-vitals{font:400 11px/1.4 var(--o-mono);letter-spacing:.08em;color:var(--o-foam-2)}
+.calm-depth[data-alert="true"]{border-color:color-mix(in oklab,#ff9b73 60%,transparent);background:linear-gradient(160deg,color-mix(in oklab,#ff9b73 22%,transparent),transparent 70%),var(--calm-glass)}
+.calm-depth[data-alert="true"] .calm-depth-vitals{color:#ffd2c2}
+.calm-depth[data-alert="true"] .calm-depth-vitals::before{content:"!  ";font-weight:500}
+
+/* Ahead card, tinted with the light it points to */
+.calm-ahead{--signal:var(--o-accent);right:var(--pad);bottom:40px;width:min(380px,32vw);padding:20px 24px;background:linear-gradient(160deg,color-mix(in oklab,var(--signal) 22%,transparent),transparent 62%),var(--calm-glass)}
+.calm-ahead-kicker{font:500 12px/1.3 var(--o-display);letter-spacing:.18em;text-transform:uppercase;color:var(--signal)}
+.calm-ahead-title{margin-top:8px!important;font:400 26px/1.15 var(--o-display);letter-spacing:-.01em}
+.calm-ahead-note{margin-top:6px!important;font-size:15px;line-height:1.45;color:var(--o-foam-2)}
+.calm-ahead-action{margin-top:16px!important;padding-top:14px;border-top:1px solid var(--calm-line);font-size:15px}
+.calm-ahead[data-near="true"] .calm-ahead-action{font-weight:500}
+
+/* Calm hides the second set of instruments; Instruments (C) brings them back */
+body[data-submerged="true"]:not([data-computer-open="true"]) :is(.depth,.air-gauge){display:none!important}
+body[data-submerged="true"]:not([data-computer-open="true"]) .scene-footer .location{display:none}
+body[data-submerged="true"]:not([data-computer-open="true"]) .reef-map :is(.map-reading,.journey-progress,.chart-key){display:none}
+
+/* Glass for what stays: masthead, heading tape, map lens, HUD chips, look hint, waypoint */
+html body[data-submerged="true"] .wordmark{color:var(--o-foam);text-shadow:0 1px 12px rgba(2,24,32,.45)}
+html body[data-submerged="true"] .settings-toggle{width:46px;height:46px;border-radius:50%;background:var(--calm-glass);border:1px solid var(--calm-line);box-shadow:var(--calm-shadow);color:var(--o-foam);-webkit-backdrop-filter:var(--o-blur);backdrop-filter:var(--o-blur)}
+html body[data-submerged="true"] .settings-toggle::before,html body[data-submerged="true"] .settings-toggle::after{display:none}
+html body[data-submerged="true"] .heading-indicator{padding:8px 20px 6px;border-radius:var(--o-r-pill);background:var(--calm-glass);border:1px solid var(--calm-line);-webkit-backdrop-filter:var(--o-blur);backdrop-filter:var(--o-blur)}
+html body[data-submerged="true"] .reef-map .map-lens{border-radius:50%;box-shadow:var(--calm-shadow),inset 0 0 0 1px var(--calm-line)}
+html body[data-submerged="true"] :is(.archive-toggle,.dive-computer-toggle,.quiet-ui-toggle){min-height:40px;padding:8px 14px;border-radius:var(--o-r-pill);background:var(--calm-glass);border:1px solid var(--calm-line);box-shadow:var(--calm-shadow);color:var(--o-foam);font:400 14px/1 var(--o-display);letter-spacing:0;text-shadow:none;-webkit-backdrop-filter:var(--o-blur);backdrop-filter:var(--o-blur)}
+html body[data-submerged="true"] :is(.archive-toggle,.dive-computer-toggle,.quiet-ui-toggle)::before,html body[data-submerged="true"] :is(.archive-toggle,.dive-computer-toggle,.quiet-ui-toggle)::after{display:none}
+html body[data-submerged="true"] :is(.archive-toggle,.dive-computer-toggle,.quiet-ui-toggle) kbd{font:500 10px var(--o-mono);padding:3px 6px;border-radius:5px;border:1px solid var(--calm-line);background:none}
+html body[data-submerged="true"][data-computer-open="true"] .dive-computer-toggle{background:linear-gradient(160deg,color-mix(in oklab,var(--o-accent) 26%,transparent),transparent 70%),var(--calm-glass);border-color:color-mix(in oklab,var(--o-accent) 50%,transparent)}
+html body[data-submerged="true"] .look-hint{padding:8px 16px;border-radius:var(--o-r-pill);background:var(--calm-glass);border:1px solid var(--calm-line);font:400 13px/1 var(--o-display);opacity:1;text-shadow:none;-webkit-backdrop-filter:var(--o-blur);backdrop-filter:var(--o-blur)}
+html body[data-submerged="true"] .scene-footer{bottom:40px}
+html body .waypoint{padding:7px 14px 7px 10px;border-radius:var(--o-r-pill);background:var(--calm-glass);border:1px solid color-mix(in oklab,var(--signal,#7ff0cf) 45%,transparent);box-shadow:var(--calm-shadow);font:400 13px/1 var(--o-display);text-shadow:none;-webkit-backdrop-filter:var(--o-blur);backdrop-filter:var(--o-blur)}
+html body[data-submerged="true"] :is(.interact-prompt,.journey-toast){background:var(--calm-glass);border:1px solid var(--calm-line);border-radius:var(--o-r-m);box-shadow:var(--calm-shadow);text-shadow:none;-webkit-backdrop-filter:var(--o-blur);backdrop-filter:var(--o-blur)}
+html body[data-submerged="true"] :is(.interact-prompt,.journey-toast)::before,html body[data-submerged="true"] :is(.interact-prompt,.journey-toast)::after{display:none}
+html body[data-submerged="true"] .interact-prompt{border-radius:var(--o-r-pill);padding-inline:10px 18px;font-family:var(--o-display)}
+.zone-card strong{font-family:var(--o-display);font-weight:300;font-size:clamp(28px,3.4vw,44px);rotate:none;letter-spacing:-.02em}
+.zone-card span{font-family:var(--o-mono);font-weight:400}
+
+/* Phones: the touch deck owns the bottom, so depth becomes a compact chip under the masthead and the
+   waypoint alone points the way */
+@media(max-width:600px){
+  .calm-depth{left:50%;right:auto;top:148px;bottom:auto;translate:-50% 0;min-width:0;max-width:calc(100vw - 32px);padding:7px 16px;border-radius:var(--o-r-pill);white-space:nowrap}
+  body[data-submerged="true"]:not([data-computer-open="true"]) .calm-depth{display:flex;align-items:baseline;gap:10px}
+  .calm-depth-number{font-size:22px;font-weight:300;letter-spacing:-.02em}
+  .calm-depth-number small{font-size:13px;margin-left:3px}
+  .calm-depth-zone{margin:0!important;font-size:13px}
+  .calm-depth-gauge,.calm-depth-zone b,.calm-depth-vitals{display:none}
+  .calm-depth[data-alert="true"] .calm-depth-zone{display:none}
+  .calm-depth[data-alert="true"] .calm-depth-vitals{display:block;margin:0!important;font-size:10px}
+  body[data-submerged="true"]:not([data-computer-open="true"]) .calm-ahead[data-show="true"]{display:none}
+}
+@media(max-height:620px) and (min-width:601px){.calm-depth-number{font-size:64px}.calm-ahead-note{display:none}}

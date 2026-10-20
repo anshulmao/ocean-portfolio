@@ -78,3 +78,11 @@ Direction A from `design/ui-overhaul/depth.html`, with these refinements:
 ## Suggested order
 
 Phase 0, then a static design board (surface hero, HUD calm state, archive page, reading home, project page) for sign-off, then Phases 1 to 4 against it, then Phase 5. Phases 2, 3 and 4 touch separate files and can run in parallel once the tokens land.
+
+## Progress
+
+- **Phase 0 (done, d52d987):** `ocean-refined/tokens.css` holds the day and night glass tokens. `styles.css` and the reading template read their colours from it.
+- **Phase 1 (done, d52d987):** `surface.css` covers the surface: glass navigation and buttons, a left-aligned hero, and one quiet reading row. The floating brightness panel is retired. The diver still shows at the surface, because hiding it is scene work in `world.js` and needs its own decision.
+- **Fonts:** Outfit 300 (headline) and Martian Mono 400 (instruments) are self-hosted under `assets/fonts` with their OFL licences.
+- **Phase 2 (done):** `hud-calm.js` and `dive-calm.css` add a calm dive HUD. A depth card shows depth, zone, air and the no-stop limit, which turns into an alert during stops. An ahead card names the nearest light, or "Here · press F" when one is in range. C (Instruments) brings back the depth scale and console. Chips, tape, map, prompt and toast are on G3 glass. On phones, depth is a single-line pill under the heading tape.
+- `newqa/dive-hud.mjs` times out on unmodified `main` too (it is hard-wired to port 4175 and uses an older archive structure), so it was already failing before this work.
