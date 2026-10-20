@@ -59,7 +59,7 @@ function interact() {
 // hero so it never depends on which buttons its siblings are.
 const logbookLink = document.createElement('button');
 logbookLink.type = 'button'; logbookLink.id = 'logbook-link'; logbookLink.className = 'logbook-link';
-logbookLink.append(icon('resume'), document.createTextNode('View my work'));
+logbookLink.append(icon('resume'), document.createTextNode('See the work'));
 logbookLink.addEventListener('click', () => openArchive('projects'));
 document.querySelector('.portfolio-actions')?.append(logbookLink);
 

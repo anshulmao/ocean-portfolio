@@ -1,0 +1,39 @@
+/* Logbook layout refinements on the hologram console (archive.css keeps the look). Screen only, so
+   archive-print.css still governs print. Three changes from design/ui-overhaul screen 03:
+   real section labels lead the rail with the nautical names as a quiet second label, each project in
+   Projects takes its own signal colour, and the pager shows only the current section's pages. */
+
+/* 1. Per-project signal inside Projects (hologram palette, so it sits with the other sections) */
+#landmark-dialog[data-section="projects"][data-entry="rae"]{--sig:#ff9d8a;--sig-soft:#ff9d8a1f;--sig-line:#ff9d8a66}
+#landmark-dialog[data-section="projects"][data-entry="reengage"]{--sig:#7ff0cf;--sig-soft:#7ff0cf1a;--sig-line:#7ff0cf5c}
+#landmark-dialog[data-section="projects"][data-entry="wattmana"]{--sig:#ffcf7a;--sig-soft:#ffcf7a1a;--sig-line:#ffcf7a5c}
+#landmark-dialog[data-section="projects"][data-entry="sage"]{--sig:#b6ef8a;--sig-soft:#b6ef8a1a;--sig-line:#b6ef8a5c}
+#landmark-dialog[data-section="projects"][data-entry="openclaw"]{--sig:#c9a2ff;--sig-soft:#c9a2ff1f;--sig-line:#c9a2ff66}
+#landmark-dialog[data-section="projects"][data-entry="ocean-world"]{--sig:#8fd6ff;--sig-soft:#8fd6ff1a;--sig-line:#8fd6ff5c}
+#landmark-dialog[data-section="projects"] .arc-case-visual[data-project]{--story-color:var(--sig)}
+#landmark-dialog [data-stop="finds/rae"]{--dot:#ff9d8a}
+#landmark-dialog [data-stop="finds/reengage"]{--dot:#7ff0cf}
+#landmark-dialog [data-stop="finds/wattmana"]{--dot:#ffcf7a}
+#landmark-dialog [data-stop="finds/sage"]{--dot:#b6ef8a}
+#landmark-dialog [data-stop="finds/openclaw"]{--dot:#c9a2ff}
+#landmark-dialog [data-stop="finds/ocean-world"]{--dot:#8fd6ff}
+#landmark-dialog .arc-rail-entries [data-stop^="finds/"] .holo-label{color:var(--dot,var(--arc-muted))}
+
+/* 2. Rail: the real label leads; the nautical name follows on the same line, quieter */
+@media(min-width:761px){
+  #landmark-dialog .arc-rail-name{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  #landmark-dialog .arc-rail-name small{display:block;text-transform:lowercase;letter-spacing:.02em;opacity:.75}
+  #landmark-dialog .arc-rail-no{display:none}
+}
+
+/* 3. Pager: only this section's pages; archive.js labels the count by section ("Projects 2 / 7") */
+#landmark-dialog #entry-number{white-space:nowrap;text-transform:uppercase}
+#landmark-dialog[data-section="glance"] .arc-progress-track i:not([data-group="glance"]),
+#landmark-dialog[data-section="about"] .arc-progress-track i:not([data-group="about"]),
+#landmark-dialog[data-section="experience"] .arc-progress-track i:not([data-group="experience"]),
+#landmark-dialog[data-section="projects"] .arc-progress-track i:not([data-group="projects"]),
+#landmark-dialog[data-section="resume"] .arc-progress-track i:not([data-group="resume"]){display:none}
+#landmark-dialog:is([data-section="glance"],[data-section="resume"]) .arc-progress-track{display:none}
+#landmark-dialog .arc-progress-track i{width:22px}
+#landmark-dialog .arc-progress-track i[data-first]{margin-left:0}
+@media(max-width:760px){#landmark-dialog #entry-number{font-size:10px;letter-spacing:.04em}#landmark-dialog .arc-progress-track i{width:auto}}

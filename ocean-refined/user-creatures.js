@@ -120,7 +120,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(-a.pitch, a.yaw, a.roll, 'YXZ');
   }
   const sphere = new THREE.Sphere();
-  // Drawn only in sight and within the haze; far off, a lighter mesh and a stroke stepped at half rate.
+  // Drawn only in sight and within the haze; far off a lighter mesh, and beyond 50 m a stroke at half rate.
   function present(a, dt, view) {
     if (!a.active) { a.wrapper.visible = a.seen = false; return; }
     let seen = true, d = 0;
@@ -128,9 +128,13 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     a.wrapper.visible = a.seen = seen;
     if (a.after && clock >= a.until) play(a, a.after, .5);
     a.tick += dt; if (!seen) return;
-    const far = Boolean(view) && d - a.L > 24, geometry = far && a.light ? a.light : a.full;
+    // A band around 24 m keeps the lighter mesh from flickering at the boundary. Animation keeps the full frame
+    // rate out to 50 m; a half-rate stroke closer than that reads as a stutter against the smooth body motion.
+    const gap = view ? d - a.L : 0;
+    a.far = Boolean(view) && (a.far ? gap > 21 : gap > 27);
+    const geometry = a.far && a.light ? a.light : a.full;
     if (a.mesh.geometry !== geometry) a.mesh.geometry = geometry;
-    if (far && (frame & 1)) return;
+    if (gap > 50 && (frame & 1)) return;
     a.mixer.update(a.tick); a.tick = 0;
   }
 
@@ -472,7 +476,13 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       if (view) { sphere.center.copy(g.centre); sphere.radius = g.radius; g.shown = view.eye.distanceTo(g.centre) - g.radius < view.range * (g.kind === 'cloud' || g.kind === 'burrows' ? .55 : .8) && view.frustum.intersectsSphere(sphere); }
       // A hidden school continues navigating (without rendering) so re-entering view cannot teleport it up
       // a different terrain sample. Only the bounded height-grid probes run for these small moving groups.
-      if (!g.shown) { if (g.kind === 'shoal') for (const m of g.members) station(g, m, t, dt, player); continue; }
+      // Out of sight it steps every fourth frame with the time gathered since; nothing on screen can stutter.
+      if (!g.shown) {
+        g.idle = (g.idle ?? 0) + dt; g.wake = ((g.wake ?? Math.floor(Math.random() * 4)) + 1) % 4;
+        if (g.kind === 'shoal' && g.wake === 0) { for (const m of g.members) station(g, m, t, g.idle, player); g.idle = 0; }
+        continue;
+      }
+      g.idle = 0;
       const k = g.k;
       if (g.kind === 'shoal') for (const m of g.members) { const p = station(g, m, t, dt, player); write(k, want.x, want.y, want.z, p.yaw, p.pitch, clamp(-m.nav.turn * .06, -.15, .15), m.scale, m.beat); }
       else if (g.kind === 'cloud') {

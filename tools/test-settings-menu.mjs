@@ -14,16 +14,16 @@ try{
  assert.equal(await page.locator('#motion').count(),0);
  for(const [name,width,height] of [['desktop',1440,900],['phone',390,844]]){
   await page.setViewportSize({width,height});
-  assert.equal(await page.locator('.brightness-quick').isVisible(),true);
-  await page.locator('#brightness-quick').fill('35');
-  assert.equal(await page.evaluate(()=>oceanControls.settings.brightnessBoost),35);
+  // The quick panel is retired (UI overhaul, surface.css); brightness lives in Settings → General.
+  assert.equal(await page.locator('.brightness-quick').isVisible(),false);
   await page.locator('#menu-toggle').click();
   await page.waitForFunction(()=>oceanControls.nav.suspended);
   const folders=await page.locator('#settings-menu .settings-body > details > summary').allTextContents();
   assert.equal(folders[0],'General');assert.match(folders[1],/controls/);assert.equal(folders.at(-1),'Keyboard & touch');
   for(const id of ['time-slider','weather-settings','sound-switch','sound-volume'])assert.equal(await page.locator(`#settings-menu #${id}`).count(),1);
   assert.equal(await page.locator('.brightness-quick').isVisible(),false);
-  assert.equal(await page.locator('#settings-general #movement-brightnessBoost').inputValue(),'35');
+  await page.locator('#settings-general #movement-brightnessBoost').fill('35');
+  assert.equal(await page.evaluate(()=>oceanControls.settings.brightnessBoost),35);
   await page.locator('#movement-brightnessBoost').fill('65');
   assert.equal(await page.locator('#brightness-quick').inputValue(),'65');
   const weather=page.locator('#weather-slider');await weather.focus();await page.keyboard.press('Home');

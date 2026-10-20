@@ -602,7 +602,8 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
   }
 
   function update(dt, elapsed, playerPosition, night = 0, view = null) {
-    const step = Math.min(Math.max(dt || 0, 0), .05);
+    // The same 0.1 s cap as the rest of the world, so clips do not slow down against movement below 20 fps.
+    const step = Math.min(Math.max(dt || 0, 0), .1);
     motionEnabled = step > 0;
     cull(view);
     for (const mixer of mixers) mixer.update(step);

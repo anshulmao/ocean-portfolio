@@ -1,0 +1,54 @@
+/* The calm dive HUD layout (design/ui-overhaul screen 02) in the hologram style (hologram.css).
+   Calm by default: heading tape, map, a compact depth card and an ahead card. C (Instruments,
+   body[data-computer-open]) brings back the depth scale and console and hides the calm cards; U still
+   clears everything. The cards are .holo.holo-deep panels: projected light, no backdrop blur, so they
+   cost nothing extra over the moving scene. Every other HUD element keeps its own hologram styling. */
+
+/* Cards exist only under water and never over dialogs, the menu, a cleared screen or the safety stop */
+.calm-card{position:fixed;z-index:6;display:none;pointer-events:none}
+.calm-card p,.calm-card h2{margin:0}
+body[data-submerged="true"]:not([data-computer-open="true"]) .calm-depth{display:block}
+body[data-submerged="true"]:not([data-computer-open="true"]) .calm-ahead[data-show="true"]{display:block}
+body:is([data-clear-ui="true"],[data-safety-stop="true"],[data-dialog="open"],[data-menu="open"],[data-summary="true"]) .calm-card,body:has(dialog[open]) .calm-card{display:none!important}
+
+/* Depth card: one reading, its zone, a thin scale and the vitals line */
+.calm-depth{left:var(--pad);bottom:22px;min-width:200px;padding:10px 14px 11px}
+.calm-depth-number{font:500 34px/1 var(--holo-mono);letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--holo-strong)}
+.calm-depth-number small{font-size:13px;letter-spacing:.04em;margin-left:4px;opacity:.75}
+.calm-depth-zone{margin-top:6px!important;font:500 12px/1.3 var(--holo-font);letter-spacing:.04em}
+.calm-depth-zone b{font-weight:400;opacity:.7}
+.calm-depth-gauge{position:relative;height:2px;margin:9px 0 7px;background:var(--holo-faint)}
+.calm-depth-gauge i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--holo);box-shadow:0 0 6px var(--holo);transition:width 400ms var(--ease)}
+.calm-depth-vitals{font:500 10px/1.4 var(--holo-mono);letter-spacing:.1em;color:var(--holo)}
+.calm-depth[data-alert="true"]{border-color:var(--holo-coral)}
+.calm-depth[data-alert="true"] .calm-depth-vitals{color:var(--holo-coral)}
+.calm-depth[data-alert="true"] .calm-depth-vitals::before{content:"! ";font-weight:600}
+
+/* Ahead card, edged in the colour of the light it points to */
+.calm-ahead{--signal:var(--holo);right:var(--pad);bottom:22px;width:min(260px,26vw);padding:10px 14px 11px;border-color:color-mix(in srgb,var(--signal),transparent 45%)}
+.calm-ahead::before,.calm-ahead::after{border-color:var(--signal)}
+.calm-ahead-kicker{font:500 10px/1.3 var(--holo-font);letter-spacing:.18em;text-transform:uppercase;color:var(--signal)}
+.calm-ahead-title{margin-top:5px!important;font:500 17px/1.2 var(--holo-font);letter-spacing:.01em;color:var(--holo-ink)}
+.calm-ahead-note{margin-top:3px!important;font:400 12px/1.4 var(--holo-font);opacity:.82}
+.calm-ahead-action{margin-top:8px!important;padding-top:7px;border-top:1px solid var(--holo-faint);font:500 10px/1.3 var(--holo-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--holo)}
+.calm-ahead[data-near="true"] .calm-ahead-action{color:var(--signal)}
+
+/* Calm hides the second set of instruments; Instruments (C) brings them back */
+body[data-submerged="true"]:not([data-computer-open="true"]) :is(.depth,.air-gauge){display:none!important}
+body[data-submerged="true"]:not([data-computer-open="true"]) .scene-footer .location{display:none}
+body[data-submerged="true"]:not([data-computer-open="true"]) .reef-map :is(.map-reading,.journey-progress,.chart-key){display:none}
+
+/* Phones: the touch deck owns the bottom, so depth becomes a one-line strip under the heading tape and the
+   waypoint alone points the way */
+@media(max-width:600px){
+  .calm-depth{left:50%;right:auto;top:148px;bottom:auto;translate:-50% 0;min-width:0;max-width:calc(100vw - 32px);padding:5px 12px;white-space:nowrap}
+  body[data-submerged="true"]:not([data-computer-open="true"]) .calm-depth{display:flex;align-items:baseline;gap:9px}
+  .calm-depth-number{font-size:17px}
+  .calm-depth-number small{font-size:11px;margin-left:2px}
+  .calm-depth-zone{margin:0!important;font-size:11px}
+  .calm-depth-gauge,.calm-depth-zone b,.calm-depth-vitals{display:none}
+  .calm-depth[data-alert="true"] .calm-depth-zone{display:none}
+  .calm-depth[data-alert="true"] .calm-depth-vitals{display:block;margin:0!important}
+  body[data-submerged="true"]:not([data-computer-open="true"]) .calm-ahead[data-show="true"]{display:none}
+}
+@media(max-height:620px) and (min-width:601px){.calm-ahead-note{display:none}}

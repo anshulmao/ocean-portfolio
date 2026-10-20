@@ -429,7 +429,7 @@ function surfaceNow(){
   dive=diveTarget=0;previousMode='surface';surfaceLandingTime=ascentCameraTime=0;
   computerOpen=false;mapDestination=null;snapCamera=true;hudForce=true;
   $('#map-caption').textContent='Choose a marker to swim closer.';
-  $('#dive-label').textContent='Explore my world';status.textContent='';
+  $('#dive-label').textContent='Dive in';status.textContent='';
   frameSurface();setExploring(false);updateWorld(1/60);wake();return true;
 }
 $('#dive').addEventListener('click',()=>{
@@ -683,7 +683,7 @@ function updateWorld(dt,clockDt=dt){
   if(nav.mode==='transition'&&previousMode!=='transition'){ascentCameraTime=0;ascentCameraStart.copy(camera.position);camera.getWorldDirection(ascentAimStart);ascentAimStart.multiplyScalar(10).add(camera.position);}
   if(nav.mode==='transition')ascentCameraTime+=dt;
   surfaceLandingTime=Math.max(0,surfaceLandingTime-dt);
-  if(previousMode==='transition'&&nav.mode==='surface'){surfaceLandingTime=2;diveTarget=0;dive=0;frameSurface();computerOpen=false;$('#dive-label').textContent='Explore my world';status.textContent='Back at the surface.';setTimeout(()=>{if(status.textContent==='Back at the surface.')status.textContent='';},1800);}
+  if(previousMode==='transition'&&nav.mode==='surface'){surfaceLandingTime=2;diveTarget=0;dive=0;frameSurface();computerOpen=false;$('#dive-label').textContent='Dive in';status.textContent='Back at the surface.';setTimeout(()=>{if(status.textContent==='Back at the surface.')status.textContent='';},1800);}
   if(nav.mode==='surface'&&diveTarget===0)easedDive=0;
   previousMode=nav.mode;
   if(nav.mode==='diver'&&easedDive>.75)beginModels();
@@ -943,10 +943,11 @@ function frame(now){
   // finish the last frame, so a call that has to wait for it waits least here. A step that made this callback late rests a few frames.
   if(gpuRan){gpuRan=false;gpuRest=raw*1000>1500/displayHz?4:1;}
   if(draw&&jobs.length&&diagnostic.ready){if(gpuRest>0&&!hurry)gpuRest--;else gpuRan=runJobs(0,'gpu')>0;}
-  // At full pace the world moves on every callback, drawn or not (input stays crisp on a fast display); on a reduced
-  // budget it moves once per drawn frame, by the time that has passed since the last one.
+  // The world moves once per drawn frame, by the time that has passed since the last one. (It used to move on every
+  // callback at full pace, drawn or not: with a stride of 2, an economy 30 fps or a fast display, that doubled the
+  // simulation per frame seen, on machines whose main thread is already the limit.)
   heldClock+=raw;
-  if(full||draw){const dt=Math.min(heldClock,.1);if(!paused)elapsed+=dt;try{updateWorld(dt,heldClock);}catch(error){running=false;fail(error);return;}heldClock=0;}
+  if(draw){const dt=Math.min(heldClock,.1);if(!paused)elapsed+=dt;try{updateWorld(dt,heldClock);}catch(error){running=false;fail(error);return;}heldClock=0;}
   if(draw){sinceDraw=0;
     gpuPoll();gpuBegin();drawFrame();gpuEnd();diagnostic.frames++;frameCount++;diagnostic.drawCalls=renderer.info.render.calls;diagnostic.triangles=renderer.info.render.triangles;
     if(lastDraw&&full&&!getTransition())experienceMetrics.frame(now-lastDraw);
@@ -1033,7 +1034,7 @@ async function boot(){
   early(scene);if(linking.size){await programsLinked(linking);if(diagnostic.error)return;}
   markAt=performance.now();drawFrame();mark('firstDraw');
   if(diagnostic.error)return;
-  experienceMetrics.mark('surfaceReady');started=true;diagnostic.ready=true;diagnostic.readyAt=Math.round(performance.now());document.body.dataset.ready='true';$('#dive').disabled=false;$('#dive-label').textContent='Explore my world';status.textContent='';preloadModels();
+  experienceMetrics.mark('surfaceReady');started=true;diagnostic.ready=true;diagnostic.readyAt=Math.round(performance.now());document.body.dataset.ready='true';$('#dive').disabled=false;$('#dive-label').textContent='Dive in';status.textContent='';preloadModels();
   // The interface is arriving in these first moments: the build starts just behind it (and at once if a dive is asked for).
   if(!built)setTimeout(startUnderwater,350);
   wake();

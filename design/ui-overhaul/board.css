@@ -1,0 +1,25 @@
+/* Board chrome shared by both direction boards. Screens are authored at real
+   pixel sizes (1440 wide desktop, 390 wide phone) and scaled to fit by board.js. */
+:root{--board-bg:#e6e9e7;--board-ink:#1b2422;--board-muted:#5f6b68;--board-line:#cdd3d0}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body.board{margin:0;background:var(--board-bg);color:var(--board-ink);font:15px/1.5 "Outfit",system-ui,sans-serif}
+.board-head{max-width:1360px;margin:0 auto;padding:56px 32px 24px;display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end}
+.board-head h1{margin:0;font-weight:400;font-size:clamp(32px,4vw,52px);letter-spacing:-.02em;line-height:1.05}
+.board-head p{margin:10px 0 0;color:var(--board-muted);max-width:62ch}
+.board-switch{display:flex;gap:8px;flex-wrap:wrap}
+.board-switch a{padding:9px 16px;border-radius:999px;border:1px solid var(--board-line);color:inherit;text-decoration:none;font-size:14px}
+.board-switch a[aria-current]{background:var(--board-ink);color:#fff;border-color:var(--board-ink)}
+.board-section{max-width:1360px;margin:0 auto;padding:28px 32px}
+.board-label{display:flex;gap:14px;align-items:baseline;margin:0 0 14px;flex-wrap:wrap}
+.board-label b{font-weight:500;font-size:18px}
+.board-label span{color:var(--board-muted);font-size:14px}
+.board-label em{font-style:normal;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--board-muted)}
+.notes{margin:14px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px 28px;color:var(--board-muted);font-size:14px}
+.notes li{padding-left:18px;position:relative}
+.notes li::before{content:"";position:absolute;left:0;top:.62em;width:8px;height:1px;background:currentColor}
+.screen{position:relative;width:100%;overflow:hidden;border-radius:14px;box-shadow:0 1px 0 rgba(0,0,0,.04),0 24px 60px -24px rgba(20,40,40,.35)}
+.screen>.canvas{position:absolute;left:0;top:0;transform-origin:0 0}
+.phones{display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start}
+.phones .screen{width:min(100%,330px);border-radius:28px}
+@media (max-width:700px){.board-head{grid-template-columns:1fr;padding:32px 16px 12px}.board-section{padding:20px 16px}}

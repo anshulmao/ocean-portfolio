@@ -260,7 +260,11 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
       const family = families[home.color], bodies = family.bodies;
       for (let m = 0; m < members.length; m++) {
         const f = members[m], slot = family.drawn++, index = total++;
-        direction.copy(f.velocity).normalize();
+        // Face along the navigator's eased yaw and pitch, not the raw velocity: the velocity is zero whenever a fish
+        // pauses at a wall, and normalising it would turn the fish to face +X for that frame.
+        const n = f.nav;
+        if (n) direction.set(Math.sin(n.yaw) * Math.cos(n.pitch), Math.sin(n.pitch), Math.cos(n.yaw) * Math.cos(n.pitch));
+        else direction.copy(f.velocity).normalize();
         heading.set(0, Math.atan2(-direction.z, direction.x), Math.atan2(direction.y, Math.hypot(direction.x, direction.z)), 'YZX');
         orientation.setFromEuler(heading);
         dummy.position.copy(f.position); dummy.quaternion.copy(orientation); dummy.scale.setScalar(f.size); dummy.updateMatrix();

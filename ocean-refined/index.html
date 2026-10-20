@@ -9,6 +9,7 @@
   <title>Refined · Anshul · Beneath the surface</title>
   <script>document.documentElement.classList.add('js');try{window.oceanGpuProbe=new Promise(function(done){var worker=new Worker(URL.createObjectURL(new Blob(["try{var gl=new OffscreenCanvas(1,1).getContext('webgl2',{powerPreference:'high-performance'}),info=gl.getExtension('WEBGL_debug_renderer_info');postMessage(String(gl.getParameter(info?info.UNMASKED_RENDERER_WEBGL:gl.RENDERER)||''));var lose=gl.getExtension('WEBGL_lose_context');lose&&lose.loseContext()}catch(error){postMessage(null)}close()"],{type:'text/javascript'})));worker.onmessage=function(event){done(event.data)};worker.onerror=function(){done(null)};setTimeout(function(){done(null)},2000)})}catch(error){}</script>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./tokens.css">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./dive-hud.css">
   <link rel="stylesheet" href="./ocean-ui.css">
@@ -24,9 +25,13 @@
   <link rel="stylesheet" href="./controls.css">
   <link rel="stylesheet" href="./quiet-ui.css">
   <link rel="stylesheet" href="./portfolio-entry.css">
+  <link rel="stylesheet" href="./surface.css">
+  <link rel="stylesheet" href="./dive-calm.css">
+  <link rel="stylesheet" media="screen" href="./logbook.css">
   <!-- The four faces the first view is set in: requested with the stylesheets, not after the first layout. -->
   <link rel="preload" as="font" type="font/woff2" crossorigin href="./assets/fonts/outfit-400.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="./assets/fonts/outfit-500.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="./assets/fonts/outfit-300.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="./assets/fonts/montserrat-400.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="./assets/fonts/montserrat-500.woff2">
   <!-- Every module the scripts below import statically, so they download side by side instead of being discovered
@@ -74,8 +79,11 @@
   <div class="mask-frame" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
   <header class="masthead">
     <div class="masthead-start">
-      <button id="menu-toggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="settings-menu" aria-label="Open settings menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg></button>
-      <div class="wordmark">ANSHUL<span>A WORLD TO EXPLORE</span></div>
+      <div class="wordmark">ANSHUL<span>APPLIED AI PRODUCT</span></div>
+    </div>
+    <div class="masthead-end">
+      <nav class="surface-nav" aria-label="Portfolio"><a href="#finds">Work</a><a href="#profile">About</a><a href="#log">Experience</a><a href="#resume">Résumé</a><a href="mailto:anshulramprasad@gmail.com">Contact</a></nav>
+      <button id="menu-toggle" class="menu-toggle settings-toggle" type="button" aria-expanded="false" aria-controls="settings-menu" aria-label="Open settings menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
     </div>
   </header>
   <aside id="settings-menu" class="settings-menu holo holo--reading" aria-label="Settings" hidden>
@@ -146,10 +154,9 @@
   <div class="heading-indicator" role="group" aria-label="Viewing direction"><div class="heading-window" aria-hidden="true"><div class="heading-tape" id="heading-tape"></div></div><i class="heading-lubber" aria-hidden="true"></i><i class="heading-caret" aria-hidden="true"></i><i class="heading-turn" aria-hidden="true"></i><div class="heading-readout"><span>HDG</span><strong id="heading-cardinal">E</strong><strong id="heading-value">090°</strong></div></div>
   <main class="hero" id="main">
     <div class="surface-copy">
-      <p class="eyebrow"><span></span>HELLO, I’M ANSHUL</p>
+      <p class="eyebrow"><span></span>ANSHUL RAMPRASAD · KUALA LUMPUR</p>
       <h1>Go a little<br><em>deeper.</em></h1>
-      <p class="lede">I’m Anshul, an applied AI product manager and hands-on solutions builder. I connect real user workflows, model behavior, evaluation, and adoption.</p>
-      <p class="surface-invitation">Explore the world. Discover the thinking behind the work.</p>
+      <p class="lede">I turn AI into products people use, connecting real user workflows, model behavior, evaluation, and adoption.</p>
     </div>
     <div class="deep-copy" aria-hidden="true">
       <p class="eyebrow"><span></span>A DIFFERENT PERSPECTIVE</p>
@@ -158,7 +165,7 @@
     </div>
     <div class="portfolio-actions"><button class="dive-button" id="dive" type="button" disabled><i class="dive-flag" aria-hidden="true"></i><span id="dive-label">Preparing the ocean</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15m-6-6 6 6 6-6"/></svg></button></div>
     <details id="portfolio-options" class="portfolio-options"><summary>Guided route &amp; reef map <span aria-hidden="true">+</span></summary><div id="dive-options"><button class="explore-button" id="explore" type="button" aria-pressed="false">Look around <span>↗</span></button></div></details>
-    <nav class="portfolio-links" aria-label="Portfolio shortcuts"><a href="./profile.html">Reading view <span aria-hidden="true">↗</span></a><a href="./assets/portfolio/portfolio-resume.pdf" target="_blank" rel="noopener" aria-label="Open résumé PDF in a new tab">Résumé <span aria-hidden="true">↗</span></a><a href="mailto:anshulramprasad@gmail.com">Get in touch <span aria-hidden="true">↗</span></a></nav>
+    <nav class="portfolio-links" aria-label="Reading view"><span>Prefer to read?</span><a href="./profile.html">Open the portfolio, no 3D <span aria-hidden="true">→</span></a></nav>
   </main>
   <div id="sky-labels" aria-hidden="true"></div>
   <div id="reef-labels"></div>
@@ -214,7 +221,7 @@
   </aside>
   <dialog id="landmark-dialog" class="ocean-dialog dive-explorer" aria-labelledby="landmark-title">
     <div class="arc-scan" aria-hidden="true"></div>
-    <header class="arc-header"><div class="arc-identity"><span class="arc-emblem" aria-hidden="true">◈</span><div><h2 id="landmark-title">Dive Explorer</h2><nav id="archive-crumbs" class="arc-crumbs" aria-label="You are here"></nav></div></div><div class="arc-tools"><button id="archive-copy" class="arc-tool" type="button"><span>Copy link</span></button><button id="archive-print" class="arc-tool" type="button"><span>Print</span></button><button class="dialog-close" type="button" aria-label="Close Dive Explorer">×</button></div></header>
+    <header class="arc-header"><div class="arc-identity"><span class="arc-emblem" aria-hidden="true">◈</span><div><h2 id="landmark-title">Logbook</h2><nav id="archive-crumbs" class="arc-crumbs" aria-label="You are here"></nav></div></div><div class="arc-tools"><button id="archive-copy" class="arc-tool" type="button"><span>Copy link</span></button><button id="archive-print" class="arc-tool" type="button"><span>Print</span></button><button class="dialog-close" type="button" aria-label="Close Dive Explorer">×</button></div></header>
     <div class="arc-body"><nav id="explorer-index" class="arc-index" aria-label="Records contents"></nav><div class="arc-reading holo holo--reading"><article id="archive-page" class="arc-page" tabindex="0" aria-label="Record"></article></div></div>
     <footer class="arc-footer"><label class="arc-variant">Reading style <select id="copy-variant"><option value="baseline">Baseline copy</option><option value="concise">Concise draft</option><option value="story">Story draft</option><option value="technical">Technical draft</option></select></label><div class="arc-pager"><button id="archive-prev" type="button"><span>Previous</span></button><div class="arc-progress"><span id="entry-number"></span><span id="archive-progress" class="arc-progress-track" aria-hidden="true"></span></div><button id="archive-next" type="button"><span>Next</span></button></div><button class="dialog-return" type="button"><span id="archive-return-label">Return to the reef</span> <kbd>Esc</kbd></button></footer>
     <p id="archive-live" class="arc-live" role="status" aria-live="polite"></p>
@@ -237,6 +244,7 @@
   <script type="module" src="./motion.js"></script>
   <script type="module" src="./ambient-audio.js"></script>
   <script type="module" src="./expedition-interactions.js"></script>
+  <script type="module" src="./hud-calm.js"></script>
 </body>
 </html>
 

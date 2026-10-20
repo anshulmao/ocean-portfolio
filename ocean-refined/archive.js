@@ -574,7 +574,9 @@ function setIndexOpen(open) {
 let sectionId = GLANCE, entryId = GLANCE, rendered = null, position = 0, announced = null;
 function paint(stop) {
   const list = sequence(), stops = stopsFor(stop.section), meta = SECTIONS[stop.section];
-  counter.textContent = `${pad(stop.index + 1)} / ${pad(list.length)}`;
+  // The visible count is within the section (the pager shows only this section's segments); the label keeps the whole.
+  const inSection = stops.findIndex(item => item.hash === stop.hash) + 1;
+  counter.textContent = stops.length > 1 ? `${meta.short} ${inSection} / ${stops.length}` : meta.label;
   counter.setAttribute('aria-label', `Page ${stop.index + 1} of ${list.length}`);
   for (const [button, target, word] of [[previousButton, list[stop.index - 1], 'Previous'], [nextButton, list[stop.index + 1], 'Next']]) {
     button.setAttribute('aria-disabled', String(!target));
@@ -594,7 +596,7 @@ function paint(stop) {
   toggle.children[2].textContent = `${stops.length} ${stops.length === 1 ? 'page' : 'pages'}`;
   toggle.setAttribute('aria-controls', `archive-rail-${stop.section}`);
   indexNav.dataset.single = String(stops.length < 2); setIndexOpen(false);
-  const trail = [el('li', {}, el('button', { type: 'button', 'data-section': GLANCE, text: 'Records' }))];
+  const trail = [el('li', {}, el('button', { type: 'button', 'data-section': GLANCE, text: 'Logbook' }))];
   if (stop.section !== GLANCE && stops.length > 1) trail.push(el('li', {}, el('button', { type: 'button', 'data-section': stop.section, text: meta.label })));
   trail.push(el('li', { 'aria-current': 'page', text: stop.section === GLANCE || stops.length > 1 ? stopName(stop) : meta.label }));
   // The breadcrumb is rebuilt, so a reader who was on one of its links is put on the page they asked for.
