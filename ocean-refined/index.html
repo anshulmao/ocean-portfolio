@@ -27,6 +27,7 @@
   <link rel="stylesheet" href="./portfolio-entry.css">
   <link rel="stylesheet" href="./surface.css">
   <link rel="stylesheet" href="./dive-calm.css">
+  <link rel="stylesheet" media="screen" href="./logbook.css">
   <!-- The four faces the first view is set in: requested with the stylesheets, not after the first layout. -->
   <link rel="preload" as="font" type="font/woff2" crossorigin href="./assets/fonts/outfit-400.woff2">
   <link rel="preload" as="font" type="font/woff2" crossorigin href="./assets/fonts/outfit-500.woff2">
@@ -220,7 +221,7 @@
   </aside>
   <dialog id="landmark-dialog" class="ocean-dialog dive-explorer" aria-labelledby="landmark-title">
     <div class="arc-scan" aria-hidden="true"></div>
-    <header class="arc-header"><div class="arc-identity"><span class="arc-emblem" aria-hidden="true">◈</span><div><h2 id="landmark-title">Dive Explorer</h2><nav id="archive-crumbs" class="arc-crumbs" aria-label="You are here"></nav></div></div><div class="arc-tools"><button id="archive-copy" class="arc-tool" type="button"><span>Copy link</span></button><button id="archive-print" class="arc-tool" type="button"><span>Print</span></button><button class="dialog-close" type="button" aria-label="Close Dive Explorer">×</button></div></header>
+    <header class="arc-header"><div class="arc-identity"><span class="arc-emblem" aria-hidden="true">◈</span><div><h2 id="landmark-title">Logbook</h2><nav id="archive-crumbs" class="arc-crumbs" aria-label="You are here"></nav></div></div><div class="arc-tools"><button id="archive-copy" class="arc-tool" type="button"><span>Copy link</span></button><button id="archive-print" class="arc-tool" type="button"><span>Print</span></button><button class="dialog-close" type="button" aria-label="Close Dive Explorer">×</button></div></header>
     <div class="arc-body"><nav id="explorer-index" class="arc-index" aria-label="Records contents"></nav><div class="arc-reading holo holo--reading"><article id="archive-page" class="arc-page" tabindex="0" aria-label="Record"></article></div></div>
     <footer class="arc-footer"><label class="arc-variant">Reading style <select id="copy-variant"><option value="baseline">Baseline copy</option><option value="concise">Concise draft</option><option value="story">Story draft</option><option value="technical">Technical draft</option></select></label><div class="arc-pager"><button id="archive-prev" type="button"><span>Previous</span></button><div class="arc-progress"><span id="entry-number"></span><span id="archive-progress" class="arc-progress-track" aria-hidden="true"></span></div><button id="archive-next" type="button"><span>Next</span></button></div><button class="dialog-return" type="button"><span id="archive-return-label">Return to the reef</span> <kbd>Esc</kbd></button></footer>
     <p id="archive-live" class="arc-live" role="status" aria-live="polite"></p>

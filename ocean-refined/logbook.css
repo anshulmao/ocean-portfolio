@@ -1,0 +1,154 @@
+/* The logbook (#landmark-dialog) on the shared glass tokens (design/ui-overhaul/depth.html, screen 03).
+   Loaded last. Works mostly by re-pointing archive.css's own variables (--arc-*, --sig-*, --tab,
+   --holo-*) at tokens.css, then reshapes what variables cannot reach: the G4 sheet, pill tools,
+   a rail led by real labels, rounded cards, and a pager that shows only this section's pages.
+   Accent: one hue per section, and per project inside Projects. Night switches through tokens.css.
+   Performance: only the sheet is blurred, while the scene behind runs at its 15 fps idle budget;
+   the ::backdrop stays a plain scrim, as archive.css intends. */
+
+/* 1. Accent per section and per project */
+#landmark-dialog{--lb-acc:var(--o-accent)}
+#landmark-dialog[data-section="about"]{--lb-acc:var(--o-engage)}
+#landmark-dialog[data-section="experience"]{--lb-acc:#ffc271}
+#landmark-dialog[data-section="projects"]{--lb-acc:var(--o-claw)}
+#landmark-dialog[data-section="projects"][data-entry="rae"]{--lb-acc:var(--o-rae)}
+#landmark-dialog[data-section="projects"][data-entry="reengage"]{--lb-acc:var(--o-engage)}
+#landmark-dialog[data-section="projects"][data-entry="wattmana"]{--lb-acc:var(--o-watt)}
+#landmark-dialog[data-section="projects"][data-entry="sage"]{--lb-acc:var(--o-sage)}
+#landmark-dialog[data-section="projects"][data-entry="openclaw"]{--lb-acc:var(--o-claw)}
+#landmark-dialog[data-section="projects"][data-entry="ocean-world"]{--lb-acc:var(--o-world)}
+#landmark-dialog[data-section="resume"]{--lb-acc:var(--o-world)}
+#landmark-dialog :is([data-group="glance"],[data-go^="records"]){--tab:var(--o-accent);--tab-soft:color-mix(in oklab,var(--o-accent) 16%,transparent)}
+#landmark-dialog :is([data-group="about"],[data-go^="profile"]){--tab:var(--o-engage);--tab-soft:color-mix(in oklab,var(--o-engage) 16%,transparent)}
+#landmark-dialog :is([data-group="experience"],[data-go^="log"]){--tab:#ffc271;--tab-soft:#ffc27129}
+#landmark-dialog :is([data-group="projects"],[data-go^="finds"]){--tab:var(--o-claw);--tab-soft:color-mix(in oklab,var(--o-claw) 16%,transparent)}
+#landmark-dialog :is([data-group="resume"],[data-go^="resume"]){--tab:var(--o-world);--tab-soft:color-mix(in oklab,var(--o-world) 16%,transparent)}
+#landmark-dialog [data-stop="finds/rae"]{--dot:var(--o-rae)}
+#landmark-dialog [data-stop="finds/reengage"]{--dot:var(--o-engage)}
+#landmark-dialog [data-stop="finds/wattmana"]{--dot:var(--o-watt)}
+#landmark-dialog [data-stop="finds/sage"]{--dot:var(--o-sage)}
+#landmark-dialog [data-stop="finds/openclaw"]{--dot:var(--o-claw)}
+#landmark-dialog [data-stop="finds/ocean-world"]{--dot:var(--o-world)}
+#landmark-dialog .arc-case-visual{--story-color:var(--lb-acc)}
+#landmark-dialog .arc-case-visual[data-project]{--story-color:var(--lb-acc)}
+
+/* 2. The sheet: G4 glass. archive.css's variables now resolve to glass and foam. */
+#landmark-dialog{
+  --sig:var(--lb-acc);--sig-soft:color-mix(in oklab,var(--lb-acc) 15%,transparent);--sig-line:color-mix(in oklab,var(--lb-acc) 42%,transparent);--sig-ink:#04161d;
+  --arc-text:var(--o-foam);--arc-muted:rgba(255,255,255,.68);--arc-shell:transparent;--arc-paper:transparent;--arc-solid:rgba(4,22,30,.55);
+  --arc-rule:var(--o-g-line-deep);--arc-field:rgba(255,255,255,.06);
+  --holo:var(--lb-acc);--holo-ink:var(--o-foam);--holo-strong:var(--lb-acc);--holo-dim:var(--o-g-line-deep);--holo-font:var(--o-display);--holo-mono:var(--o-mono);--holo-glow:none;--holo-text-glow:none;
+  width:min(1240px,calc(100vw - 64px));height:min(840px,calc(100dvh - 56px));
+  border:1px solid var(--o-g-line-deep);border-radius:28px;
+  background:var(--o-g4);-webkit-backdrop-filter:blur(26px) saturate(150%);backdrop-filter:blur(26px) saturate(150%);
+  box-shadow:var(--o-g-shadow-deep),0 40px 90px -30px rgba(0,0,0,.6);color:var(--o-foam);font-family:var(--o-display);
+  scrollbar-color:rgba(255,255,255,.28) #0000;
+}
+#landmark-dialog::backdrop{background:rgba(2,22,30,.38)}
+html[data-theme="night"] #landmark-dialog::backdrop{background:rgba(2,6,16,.46)}
+#landmark-dialog::before,#landmark-dialog::after,#landmark-dialog .arc-scan{display:none}
+#landmark-dialog :is(button,a,select,[tabindex]):focus-visible{outline:2px solid var(--lb-acc);outline-offset:2px}
+#landmark-dialog .holo-label{font:500 11px/1.4 var(--o-display);letter-spacing:.16em;color:var(--lb-acc)}
+
+/* 3. Header: the breadcrumb leads; tools are glass pills */
+#landmark-dialog .arc-header{padding:14px 20px 14px 28px;border-bottom:1px solid var(--o-g-line-deep)}
+#landmark-dialog .arc-emblem{display:none}
+#landmark-dialog #landmark-title{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+#landmark-dialog .arc-crumbs ol{margin:0;font:400 15px/1.3 var(--o-display);color:var(--o-foam-2);gap:4px}
+#landmark-dialog .arc-crumbs li[aria-current]{color:var(--o-foam);font-weight:500}
+#landmark-dialog .arc-crumbs button{border-radius:8px;color:inherit;text-decoration:none}
+#landmark-dialog .arc-tools{gap:8px}
+#landmark-dialog :is(.arc-tool,.dialog-close,.dialog-return,.arc-pager button){border-radius:999px;border:1px solid var(--o-g-line-deep);background:rgba(255,255,255,.07);color:var(--o-foam-2);font:400 13px/1 var(--o-display);letter-spacing:0;text-transform:none;box-shadow:none}
+#landmark-dialog :is(.arc-tool,.dialog-close,.dialog-return,.arc-pager button):hover{background:rgba(255,255,255,.13);color:var(--o-foam)}
+#landmark-dialog .arc-tool{min-height:38px;padding:0 15px}
+#landmark-dialog .dialog-close{width:38px;height:38px;font-size:20px}
+#landmark-dialog :is(.dialog-return,.arc-lightbox-close) kbd{border-radius:5px;border:1px solid var(--o-g-line-deep);background:none;font:500 10px var(--o-mono)}
+
+/* 4. Rail: real labels lead, nautical names follow quietly, selection is a hue wash */
+@media(min-width:761px){
+  #landmark-dialog .arc-body{grid-template-columns:268px minmax(0,1fr)}
+  #landmark-dialog .arc-index{padding:20px 14px 20px 16px;border-right:1px solid var(--o-g-line-deep);background:rgba(255,255,255,.025)}
+  #landmark-dialog .arc-rail-section{grid-template-columns:minmax(0,1fr);min-height:42px;padding:9px 12px}
+}
+#landmark-dialog .arc-rail-section{border:0;border-radius:12px;color:var(--o-foam);text-transform:none;letter-spacing:0}
+#landmark-dialog .arc-rail-section>:is(.hud-icon,svg),#landmark-dialog .arc-rail-no{display:none}
+#landmark-dialog .arc-rail-name{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font:400 15px/1.2 var(--o-display);letter-spacing:0;text-transform:none}
+#landmark-dialog .arc-rail-name small{display:block!important;font:400 11px/1 var(--o-mono);letter-spacing:.02em;text-transform:lowercase;color:var(--o-foam-3)}
+#landmark-dialog .arc-rail-section[aria-current]{background:rgba(255,255,255,.08);border:0}
+#landmark-dialog .arc-rail-section:hover{background:rgba(255,255,255,.06)}
+#landmark-dialog .arc-rail-entries{margin:2px 0 8px 14px;padding-left:0;border-left:1px solid var(--o-g-line-deep)}
+#landmark-dialog .arc-rail-entries button{grid-template-columns:auto minmax(0,1fr) 13px;gap:10px;min-height:32px;padding:6px 12px;border-radius:0 10px 10px 0;margin-left:-1px;border-left:2px solid transparent}
+#landmark-dialog .arc-rail-entries .holo-label{font:400 11px/1.3 var(--o-mono);letter-spacing:0;color:var(--dot,var(--o-foam-3))}
+#landmark-dialog .arc-rail-entries strong{font:400 14px/1.3 var(--o-display);color:var(--o-foam-2)}
+#landmark-dialog .arc-rail-entries button[aria-current]{background:linear-gradient(90deg,color-mix(in oklab,var(--dot,var(--tab)) 26%,transparent),transparent);border-left-color:var(--dot,var(--tab))}
+#landmark-dialog .arc-rail-entries button[aria-current] strong{color:var(--o-foam)}
+#landmark-dialog .arc-rail-entries button:hover{background:rgba(255,255,255,.05)}
+
+/* 5. The reading pane: no second box; the page sits on the sheet */
+#landmark-dialog .arc-reading{margin:0;border:0;border-radius:0;background:none;box-shadow:none}
+#landmark-dialog .arc-reading::before,#landmark-dialog .arc-reading::after{display:none}
+#landmark-dialog .arc-page{scrollbar-color:rgba(255,255,255,.26) #0000}
+#landmark-dialog .arc-pagehead h3,#landmark-dialog .arc-glance h3{font-weight:300;letter-spacing:-.04em}
+#landmark-dialog .arc-case-head h3{font-size:clamp(44px,5.4vw,76px);line-height:1}
+#landmark-dialog .arc-intro{color:var(--o-foam-2)}
+#landmark-dialog .arc-prose p,#landmark-dialog .arc-facts li{color:var(--o-foam-2)}
+#landmark-dialog .arc-block>h4{font:500 11px/1.3 var(--o-mono);letter-spacing:.14em;color:var(--o-foam-3)}
+#landmark-dialog .arc-block>h4 .arc-step{color:var(--lb-acc);border-radius:6px}
+
+/* The role reads as an at-a-glance card tinted with the page's hue */
+#landmark-dialog .arc-role{padding:14px 18px;border:1px solid var(--sig-line);border-radius:18px;background:linear-gradient(160deg,color-mix(in oklab,var(--lb-acc) 16%,transparent),transparent 70%)}
+
+/* Cards and panels: rounded glass, distinguished by hue tint and border opacity */
+#landmark-dialog :is(.arc-plate,.arc-diagram,.arc-sheet,.arc-strip,.arc-chart,.arc-proof,.arc-reel-find,.arc-diveno,.arc-media,.arc-evidence,.arc-sleeve,.arc-resume,.arc-turn,.arc-depth,.arc-tag,.arc-back,.arc-flip,.arc-contacts a,.arc-links a,.arc-chart-key--links button,.arc-action){border-radius:18px}
+#landmark-dialog :is(.arc-tag,.arc-back,.arc-flip,.arc-contacts a,.arc-chart-key--links button){border-radius:999px}
+#landmark-dialog :is(.arc-plate,.arc-sheet,.arc-strip,.arc-chart,.arc-proof,.arc-reel-find,.arc-evidence,.arc-sleeve,.arc-resume,.arc-turn){background:rgba(255,255,255,.045);border-color:var(--o-g-line-deep)}
+#landmark-dialog :is(.arc-proof,.arc-reel-find,.arc-turn,.arc-resume):hover{background:rgba(255,255,255,.08)}
+#landmark-dialog .arc-diagram{border-color:var(--sig-line);background:radial-gradient(70% 120% at 85% 0%,color-mix(in oklab,var(--lb-acc) 20%,transparent),transparent 70%),rgba(255,255,255,.035)}
+#landmark-dialog .arc-diagram-dot{background:rgba(4,20,28,.55);border-color:var(--sig-line);color:var(--lb-acc)}
+#landmark-dialog .arc-diveno{border-color:var(--sig-line);background:color-mix(in oklab,var(--lb-acc) 10%,transparent)}
+#landmark-dialog .arc-media img{border-radius:inherit}
+/* Links and actions: same selectors as archive.css so these win by order; the first link is the primary */
+#landmark-dialog :is(.arc-links a,.arc-linklike,.arc-actions>*){border-radius:999px;border-color:var(--o-g-line-deep);background:rgba(255,255,255,.06);color:var(--o-foam)}
+#landmark-dialog :is(.arc-links a,.arc-linklike,.arc-actions>*):hover{border-color:var(--sig-line);background:rgba(255,255,255,.11)}
+#landmark-dialog :is(.arc-links li:first-child a,.arc-action--primary){background:linear-gradient(120deg,color-mix(in oklab,var(--lb-acc) 34%,transparent),color-mix(in oklab,var(--lb-acc) 12%,transparent));border-color:color-mix(in oklab,var(--lb-acc) 60%,transparent);color:var(--o-foam)}
+#landmark-dialog :is(.arc-links li:first-child a,.arc-action--primary):hover{background:linear-gradient(120deg,color-mix(in oklab,var(--lb-acc) 46%,transparent),color-mix(in oklab,var(--lb-acc) 18%,transparent));border-color:var(--lb-acc)}
+
+/* 6. Pager: only this section's pages, labelled by section */
+#landmark-dialog .arc-footer{padding:12px 20px;border-top:1px solid var(--o-g-line-deep)}
+#landmark-dialog .arc-pager button{min-height:40px;padding:0 16px}
+#landmark-dialog #entry-number{white-space:nowrap;font:400 11px/1 var(--o-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--o-foam-3)}
+#landmark-dialog .arc-progress-track{gap:6px}
+#landmark-dialog .arc-progress-track i{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.15)}
+#landmark-dialog .arc-progress-track i[data-first]{margin-left:0}
+#landmark-dialog .arc-progress-track i[data-state="seen"]{background:color-mix(in oklab,var(--lb-acc) 45%,transparent);opacity:1}
+#landmark-dialog .arc-progress-track i[data-state="current"]{background:var(--lb-acc);transform:none;box-shadow:0 0 10px color-mix(in oklab,var(--lb-acc) 60%,transparent)}
+#landmark-dialog[data-section="glance"] .arc-progress-track i:not([data-group="glance"]),
+#landmark-dialog[data-section="about"] .arc-progress-track i:not([data-group="about"]),
+#landmark-dialog[data-section="experience"] .arc-progress-track i:not([data-group="experience"]),
+#landmark-dialog[data-section="projects"] .arc-progress-track i:not([data-group="projects"]),
+#landmark-dialog[data-section="resume"] .arc-progress-track i:not([data-group="resume"]){display:none}
+#landmark-dialog:is([data-section="glance"],[data-section="resume"]) .arc-progress-track{display:none}
+#landmark-dialog .dialog-return{min-height:40px;padding:0 16px}
+
+/* 7. Phones: one header row, the section tabs as a quiet strip, and a slim pager */
+@media(max-width:760px){
+  #landmark-dialog{width:100vw;height:100dvh;border-radius:0;border:0}
+  #landmark-dialog .arc-header{padding:10px 12px 10px 16px}
+  #landmark-dialog .arc-tool span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  #landmark-dialog .arc-tool{width:40px;min-width:40px;padding:0;justify-content:center}
+  #landmark-dialog .arc-index{padding:8px 10px;border-right:0;border-bottom:1px solid var(--o-g-line-deep)}
+  #landmark-dialog .arc-rail-section{min-height:40px;padding:6px 8px;border-radius:10px;justify-items:center}
+  #landmark-dialog .arc-rail-name{justify-content:center;font-size:13px}
+  #landmark-dialog .arc-rail-name small{display:none!important}
+  #landmark-dialog .arc-rail{border-color:var(--o-g-line-deep);border-radius:14px;overflow:hidden}
+  #landmark-dialog .arc-rail-entries{border-radius:16px;border-color:var(--sig-line);background:hsla(194,78%,9%,.97)}
+  html[data-theme="night"] #landmark-dialog .arc-rail-entries{background:hsla(230,60%,8%,.97)}
+  #landmark-dialog .arc-index-toggle{border-radius:14px;border-color:var(--sig-line);background:linear-gradient(90deg,color-mix(in oklab,var(--lb-acc) 18%,transparent),transparent);margin-top:6px}
+  #landmark-dialog .arc-footer{padding:8px 10px}
+  #landmark-dialog .arc-pager button{min-width:44px;padding:0}
+  #landmark-dialog .arc-progress-track i{width:auto}
+  #landmark-dialog #entry-number{font-size:10px;letter-spacing:.04em}
+  #landmark-dialog .arc-pager{gap:6px}
+  #landmark-dialog .arc-case-head h3{font-size:clamp(40px,12vw,52px)}
+}
+@media(prefers-reduced-transparency:reduce){#landmark-dialog{-webkit-backdrop-filter:none;backdrop-filter:none;background:hsla(194,78%,9%,.94)}html[data-theme="night"] #landmark-dialog{background:hsla(230,60%,7%,.95)}}
