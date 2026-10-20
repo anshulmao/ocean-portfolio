@@ -42,3 +42,17 @@
   --o-btn:rgba(111,240,220,.16);--o-btn-ink:#eafffb;--o-btn-line:rgba(111,240,220,.55);--o-btn-glow:0 0 30px rgba(111,240,220,.22);
   --o-wash:linear-gradient(90deg,rgba(6,12,30,.45),rgba(6,12,30,0) 58%);
 }
+
+/* The reading pages run no JavaScript, so they follow the visitor's system setting instead of the
+   sky. Same night set as above; keep the two blocks in step. */
+@media (prefers-color-scheme:dark){:root:not([data-theme]){
+  --o-surface-0:#0b1630;--o-surface-1:#0d1d3a;--o-surface-2:#132a4c;
+  --o-sunlit:#5ff0da;--o-sunlit-2:#a4f9ec;--o-twilight:#0b2a4a;--o-abyss-2:#071530;--o-abyss:#040b16;
+  --o-ink:#e8f3f7;--o-ink-2:#b6c9d8;--o-muted:#8fa6bb;--o-line:rgba(200,220,255,.14);--o-accent-ink:#6ff0dc;
+  --o-accent:#7ff5df;--o-watt-ink:#ffd84f;
+  --o-g1:hsla(222,60%,82%,.09);--o-g2:hsla(220,55%,72%,.12);--o-g3:hsla(228,60%,10%,.42);--o-g4:hsla(230,62%,7%,.6);
+  --o-g-line:rgba(200,220,255,.2);--o-g-line-deep:rgba(200,220,255,.15);
+  --o-g-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 18px 40px -24px rgba(0,0,0,.6);
+  --o-btn:rgba(111,240,220,.16);--o-btn-ink:#eafffb;--o-btn-line:rgba(111,240,220,.55);--o-btn-glow:0 0 30px rgba(111,240,220,.22);
+  --o-wash:linear-gradient(90deg,rgba(6,12,30,.45),rgba(6,12,30,0) 58%);
+}}
