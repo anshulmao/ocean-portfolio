@@ -373,7 +373,7 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   // Dive planner and guided tour hooks: autopilot, instant placement, dive start / surfacing, and the flashlight and scooter state.
   travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free){exploration.setGuided(value,free);},
   startDive(options){if(!diagnostic.ready||diveTarget===1||getMode()!=='surface')return false;exploration.prepareDive(options);if(options?.at)snapCamera=true;$('#dive').click();return true;},
-  surface(options){if(options?.instant)return surfaceNow();if(diveTarget!==1||exploration.state.mode!=='diver')return false;$('#dive').click();return true;},
+  surface(options){if(options?.instant)return surfaceNow();if(diveTarget!==1||exploration.state.mode!=='diver')return false;if(options?.viaReef){window.oceanTour?.stop();mapDestination=null;const started=exploration.beginAscent(reef?.userData.safeAscentRoute,true);wake();return started;}$('#dive').click();return true;},
   get nav(){return exploration.state;},get settings(){return settings;},get landmarks(){return modelScene?.landmarks||null;},get formations(){return heroFormations?.sites||[];},get life(){return livingWorld;},get creatures(){return userCreatures;},
   get flashlight(){return exploration.state.lamp;},set flashlight(value){exploration.setLamp(value);},get scooter(){return exploration.state.scooter;},
   get setPieces(){return setPieces;},get models(){return modelScene;},get reef(){return reef;},setInterfaceOpen,setSettingsMenuOpen,setComputerOpen,setSafetyStop,recapture:()=>exploration.recapture(),toggleCamera}});
@@ -636,7 +636,7 @@ function cullWorld(dt){
 }
 function paintHud(nav,submerged,depth,edge,skyState){
   const ascending=nav.mode==='transition';
-  setText(hud('#look-hint'),nav.mode==='transition'?`Ascending · ${Math.ceil(toDisplayDepth(nav.ascentDepth))} m remaining`:nav.pointerLocked?(submerged?(settings.keyboardMode==='turn'?'W/S swim · A/D turn':'WASD swim')+' · Space/Shift depth · E scooter · Q light · Esc frees mouse':'Look around · Mouse or arrow keys · Esc releases mouse'):submerged?'Click ocean to aim · '+(settings.keyboardMode==='turn'?'W/S swim · A/D turn':'WASD swim')+' · E scooter · Q light':'Click the ocean to look around · Esc releases mouse');
+  setText(hud('#look-hint'),nav.mode==='transition'?`Ascending · ${Math.ceil(toDisplayDepth(nav.ascentDepth))} m remaining`:nav.pointerLocked?(submerged?(settings.keyboardMode==='turn'?'W/S swim · A/D turn':'WASD swim')+' · Space/Shift depth · E scooter · Q light · Esc / ; frees mouse':'Look around · Mouse or arrow keys · Esc / ; releases mouse'):submerged?'Click ocean to aim · '+(settings.keyboardMode==='turn'?'W/S swim · A/D turn':'WASD swim')+' · E scooter · Q light':'Click the ocean to look around · Esc / ; releases mouse');
   setText(hud('#depth-value'),`${String(Math.round(toDisplayDepth(depth))).padStart(2,'0')} M`);
   // The marker moves by whole pixels of its track (measured once, and again after a resize): a tenth of a percent was a layout write every six centimetres of depth.
   if(!depthTrack)depthTrack=hud('#depth-marker')?.parentElement?.clientHeight||-1;
@@ -731,9 +731,9 @@ function updateWorld(dt,clockDt=dt){
     const sun=skySystem.getState(phase).sunDirection;
     surfaceFramingYaw=sun[2]<=0?0:Math.PI;
     const surfaceCamera=scratchA.set(playerPosition.x+10*Math.sin(surfaceFramingYaw),2.5,playerPosition.z+10*Math.cos(surfaceFramingYaw));
-    cameraGoal.lerp(surfaceCamera,landing);
+    cameraGoal.lerp(surfaceCamera,nav.returning?0:landing);
     const surfaceAim=scratchB.set(-Math.sin(surfaceFramingYaw),-.04,-Math.cos(surfaceFramingYaw)).add(surfaceCamera);
-    lookTarget.lerp(surfaceAim,landing);
+    lookTarget.lerp(surfaceAim,nav.returning?0:landing);
     const reveal=THREE.MathUtils.smootherstep(ascentCameraTime,0,1.6);
     cameraGoal.lerp(ascentCameraStart,1-reveal);lookTarget.lerp(ascentAimStart,1-reveal);
   }
@@ -824,7 +824,7 @@ function updateWorld(dt,clockDt=dt){
   const diverBlend=ascending?THREE.MathUtils.smoothstep(Math.max(0,-playerPosition.y),0,8):easedDive;
   diver.root.position.set(THREE.MathUtils.lerp(surfaceWorldX,playerPosition.x,diverBlend),THREE.MathUtils.lerp(surfaceY,playerPosition.y,diverBlend),THREE.MathUtils.lerp(surfaceWorldZ,playerPosition.z,diverBlend));
   // Deliberate trim change followed by small alternating fin kicks.
-  poseYaw.setFromAxisAngle(axisY,THREE.MathUtils.lerp(framingYaw-.2,Math.PI+nav.yaw,diverBlend));posePitch.setFromAxisAngle(axisX,diverBlend*(ascending?.22:Math.PI/2-settings.diverTrim-nav.pitch-(nav.pitchLead||0)));
+  poseYaw.setFromAxisAngle(axisY,THREE.MathUtils.lerp(framingYaw-.2,Math.PI+nav.yaw,diverBlend));posePitch.setFromAxisAngle(axisX,diverBlend*(ascending?(nav.returning?1.25:.22):Math.PI/2-settings.diverTrim-nav.pitch-(nav.pitchLead||0)));
   // The body banks into a turn and sways a little at rest (exploration.js: roll and lean, in radians, zero under reduced motion).
   diver.root.quaternion.copy(poseYaw).multiply(posePitch).multiply(scratchQ.setFromAxisAngle(axisY,-diverBlend*((nav.roll||0)+(nav.lean||0))));lookGlowAt(diver.root.position,diverGlow);
   if(safetyStop.blend>0){
@@ -836,7 +836,7 @@ function updateWorld(dt,clockDt=dt){
   diveLamp.position.copy(playerPosition);diveLamp.position.y+=.4;diveLamp.intensity=nav.lamp?underwater*((night>.5?70:55)+depthLight*18):0;
   diveLamp.target.position.copy(playerPosition).addScaledVector(swimDirection,45);
   diagnostic.flashlightRange=diveLamp.distance;diagnostic.flashlightIntensity=diveLamp.intensity;diagnostic.neutralBrightness=look.uLookBrightness.value;
-  diverAnimationState.dive=easedDive;diverAnimationState.moving=nav.moving;diverAnimationState.ascending=ascending;
+  diverAnimationState.dive=easedDive;diverAnimationState.moving=nav.moving;diverAnimationState.ascending=ascending&&!nav.returning;
   diverAnimationState.safetyStop=safetyStop.blend;diverAnimationState.wristOpen=computerOpen;
   diverAnimationState.kickFrequency=settings.kickFrequency;diverAnimationState.kickAmplitude=settings.kickAmplitude;
   diverAnimationState.reducedMotion=reducedMotion;diverAnimationState.paused=paused;
