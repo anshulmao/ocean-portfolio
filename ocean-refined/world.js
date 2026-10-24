@@ -429,7 +429,7 @@ function surfaceNow(){
   dive=diveTarget=0;previousMode='surface';surfaceLandingTime=ascentCameraTime=0;
   computerOpen=false;mapDestination=null;snapCamera=true;hudForce=true;
   $('#map-caption').textContent='Choose a marker to swim closer.';
-  $('#dive-label').textContent='Dive in';status.textContent='';
+  $('#dive-label').textContent='Explore';status.textContent='';
   frameSurface();setExploring(false);updateWorld(1/60);wake();return true;
 }
 $('#dive').addEventListener('click',()=>{
@@ -683,7 +683,7 @@ function updateWorld(dt,clockDt=dt){
   if(nav.mode==='transition'&&previousMode!=='transition'){ascentCameraTime=0;ascentCameraStart.copy(camera.position);camera.getWorldDirection(ascentAimStart);ascentAimStart.multiplyScalar(10).add(camera.position);}
   if(nav.mode==='transition')ascentCameraTime+=dt;
   surfaceLandingTime=Math.max(0,surfaceLandingTime-dt);
-  if(previousMode==='transition'&&nav.mode==='surface'){surfaceLandingTime=2;diveTarget=0;dive=0;frameSurface();computerOpen=false;$('#dive-label').textContent='Dive in';status.textContent='Back at the surface.';setTimeout(()=>{if(status.textContent==='Back at the surface.')status.textContent='';},1800);}
+  if(previousMode==='transition'&&nav.mode==='surface'){surfaceLandingTime=2;diveTarget=0;dive=0;frameSurface();computerOpen=false;$('#dive-label').textContent='Explore';status.textContent='Back at the surface.';setTimeout(()=>{if(status.textContent==='Back at the surface.')status.textContent='';},1800);}
   if(nav.mode==='surface'&&diveTarget===0)easedDive=0;
   previousMode=nav.mode;
   if(nav.mode==='diver'&&easedDive>.75)beginModels();
@@ -1034,7 +1034,7 @@ async function boot(){
   early(scene);if(linking.size){await programsLinked(linking);if(diagnostic.error)return;}
   markAt=performance.now();drawFrame();mark('firstDraw');
   if(diagnostic.error)return;
-  experienceMetrics.mark('surfaceReady');started=true;diagnostic.ready=true;diagnostic.readyAt=Math.round(performance.now());document.body.dataset.ready='true';$('#dive').disabled=false;$('#dive-label').textContent='Dive in';status.textContent='';preloadModels();
+  experienceMetrics.mark('surfaceReady');started=true;diagnostic.ready=true;diagnostic.readyAt=Math.round(performance.now());document.body.dataset.ready='true';$('#dive').disabled=false;$('#guided-dive').disabled=false;$('#dive-label').textContent='Explore';status.textContent='';preloadModels();
   // The interface is arriving in these first moments: the build starts just behind it (and at once if a dive is asked for).
   if(!built)setTimeout(startUnderwater,350);
   wake();

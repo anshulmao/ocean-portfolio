@@ -63,7 +63,7 @@ export const schema = [
   number('floorClearance','Seabed clearance','Reef & collision',1.7,.5,3,.1,'m'),
   number('travelArrival','Atlas arrival distance','Atlas travel',.45,.2,2,.05,'m'),
   number('travelSlowdown','Atlas slowdown distance','Atlas travel',5,.5,12,.1,'m'),
-  number('atlasCruiseSpeed','Atlas cruise speed','Atlas travel',8,2,16,.25,'m/s'),
+  number('atlasCruiseSpeed','Atlas cruise speed','Atlas travel',9.2,2,16,.25,'m/s'),
 ];
 
 // How the controls feel, as three starting points. Choosing one sets these keys; moving any of them afterwards makes the feel 'custom'.
