@@ -61,7 +61,7 @@ const logbookLink = document.createElement('button');
 logbookLink.type = 'button'; logbookLink.id = 'logbook-link'; logbookLink.className = 'logbook-link';
 logbookLink.append(icon('resume'), document.createTextNode('See the work'));
 logbookLink.addEventListener('click', () => openArchive('projects'));
-document.querySelector('.portfolio-actions')?.append(logbookLink);
+document.querySelector('.portfolio-links')?.append(logbookLink);
 
 window.oceanArchive = {
   // open('log', 'product-manager'): section ids or their hash names; the entry is optional.

@@ -16,7 +16,7 @@ const wrap = angle => Math.atan2(Math.sin(angle), Math.cos(angle));
 // T90: a critically damped follower covers 90% of a step in 3.89 / frequency seconds.
 const T90 = 3.89, VERTICAL = .8;
 const AUTO_RESPONSE = 10, AUTO_ACCEL = 3.5, AUTO_BRAKE = 3.5, COURSE_RATE = 4, FOCUS_RANGE = 5;
-const LOOK_AUTO = 4, LOOK_GUIDED = 2.4, SWEEP_AUTO = 2.2, SWEEP_GUIDED = 1.5;
+const LOOK_AUTO = 4, LOOK_GUIDED = 3.2, SWEEP_AUTO = 2.2, SWEEP_GUIDED = 1.4;
 const SOFT_RATE = 2.2, HARD_RATE = 4.5, FLOOR_GIVE = .5, LOOK_AHEAD = .5, PITCH_ZONE = 14 * RAD, CARVE_RATE = 2.2, ASCENT_RESPONSE = 3.2;
 // value[key] follows goal with rate[key] as its derivative; returns the integral of the value over the step (the distance covered, when the value is a velocity).
 function ease(value, rate, key, goal, frequency, dt) {
@@ -41,6 +41,8 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   // `base` is where the controls have put the diver; `offset` (what the scene reads) adds the idle drift on top.
   const offset=new THREE.Vector3(0,8,0),base=new THREE.Vector3(0,8,0),drift=new THREE.Vector3();
   const velocity=new THREE.Vector3(),thrust=new THREE.Vector3(),desired=new THREE.Vector3(),course=new THREE.Vector3(0,0,-1),dest=new THREE.Vector3(),focus=new THREE.Vector3();
+  const travelStart=new THREE.Vector3(),curveTarget=new THREE.Vector3(),curveFrom=new THREE.Vector3(),curveTo=new THREE.Vector3();
+  let travelSpan=0,curveProbe=0,curveClear=false;
   const delta=new THREE.Vector3(),position=new THREE.Vector3(),step=new THREE.Vector3(),before=new THREE.Vector3(),scratchA=new THREE.Vector3(),scratchB=new THREE.Vector3(),pathCheckPosition=new THREE.Vector3();
   const bounds={x:62,zMin:-105,zMax:35,yMin:-52,yMax:8};
   const initialPerspective=settings.cameraMode==='third'?'third':'first';
@@ -181,6 +183,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   function travel(point,focusPoint,speed){
     const target=coordinate(point),safeMaxY=8-settings.ascentThreshold-1;travelSpeed=speed>0?speed:settings.atlasCruiseSpeed;
     dest.set(clamp(target[0],-bounds.x,bounds.x),clamp((target[1]??-8)+8,bounds.yMin,safeMaxY),clamp(target[2]??0,bounds.zMin,bounds.zMax));
+    travelStart.copy(base);travelSpan=Math.hypot(dest.x-base.x,dest.z-base.z);curveProbe=0;curveClear=false;
     // A fresh departure builds its pace from the swim already under way and turns from the way the diver is drifting; a new waypoint mid-route keeps both.
     if(!hasDest){pace=Math.min(travelSpeed,velocity.length());coursed=false;}
     hasDest=true;docking=false;hasFocus=Boolean(focusPoint);if(hasFocus){const at=coordinate(focusPoint);focus.set(at[0],at[1],at[2]);}
@@ -301,7 +304,19 @@ export function createExploration(canvas, wake, settings=savedSettings) {
           let routeY=dest.y;
           for(let i=1;i<=16;i++){const t=i/16,x=base.x+(dest.x-base.x)*t,z=base.z+(dest.z-base.z)*t;routeY=Math.max(routeY,terrain(x,z)+settings.floorClearance+8);}
           routeY=Math.min(routeY,8-settings.ascentThreshold-1);
-          delta.set(dest.x-base.x,routeY-base.y,dest.z-base.z);const distance=delta.length();
+          curveTarget.copy(dest);
+          // A short look-ahead along a shallow arc gives long atlas legs a swim
+          // rather than a ruler-straight camera rail. Tight passages stay straight.
+          if(!calm&&travelSpan>16){
+            const dx=dest.x-travelStart.x,dz=dest.z-travelStart.z;
+            const progress=clamp(((base.x-travelStart.x)*dx+(base.z-travelStart.z)*dz)/(travelSpan*travelSpan),0,1);
+            const t=Math.min(1,progress+10/travelSpan),arc=Math.sin(Math.PI*t)*Math.min(2.2,travelSpan*.045);
+            curveTo.set(travelStart.x+dx*t-dz/travelSpan*arc,routeY-8,travelStart.z+dz*t+dx/travelSpan*arc);
+            curveProbe-=dt;
+            if(curveProbe<=0){curveProbe=.25;curveFrom.set(base.x,base.y-8,base.z);curveClear=!collisions||!settings.collisionEnabled||collisions.segmentClear(curveFrom,curveTo,settings.collisionRadius+.45);}
+            if(curveClear){curveTarget.x=curveTo.x;curveTarget.z=curveTo.z;routeY=Math.max(routeY,terrain(curveTarget.x,curveTarget.z)+settings.floorClearance+8);}
+          }
+          delta.set(curveTarget.x-base.x,routeY-base.y,curveTarget.z-base.z);const distance=delta.length();
           if(distance>.001){
             delta.multiplyScalar(1/distance);
             // The commanded course swings round to a new bearing instead of jumping to it, and is the bearing itself over the last metre.
