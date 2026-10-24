@@ -25,6 +25,8 @@ try{
  await page.evaluate(()=>{oceanControls.place([45,-12,20]);oceanControls.step(.3);oceanControls.place([45,-6,20]);oceanControls.step(.3);oceanUi.tick(11);});
  assert.equal(await page.locator('[data-stop]').isVisible(),false,'Offer expires');
  await page.keyboard.press('f');assert.equal(await page.evaluate(()=>oceanExpedition.holding),false,'Expired offer does not claim F');
+  await page.evaluate(()=>{oceanControls.place([45,-4,20]);oceanControls.step(.3);oceanControls.place([45,-5.5,20]);oceanControls.step(.3);});
+  assert.equal(await page.locator('[data-stop]').isVisible(),true,'Returning from just above the band re-arms the offer');
  for(const width of [1440,390]){
   await page.setViewportSize({width,height:width===390?844:900});
   await page.locator('#menu-toggle').click();

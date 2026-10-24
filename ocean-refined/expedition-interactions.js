@@ -174,7 +174,9 @@ onTick(dt=> {
   photoButton.disabled = state.cameraMode !== 'first' || Boolean(controls.getTransition());
   const reading = toDisplayDepth(-controls.getPlayerPosition().y);
   const inRange=underwater&&inSafetyStopRange(reading);
-  if(!underwater||reading>6||reading<2){offerUsed=false;offerLeft=0;}
+  // A small dead band avoids retriggering on idle bobbing, while a route that
+  // passes above the stop zone can offer the invitation again on its final hold.
+  if(!underwater||reading>5.2||reading<2.8){offerUsed=false;offerLeft=0;}
   if(inRange&&!offerUsed){offerUsed=true;offerLeft=10;offerSecond=-1;}
   if(!inRange)offerLeft=0;
   const offerVisible=inRange&&offerAvailable();
