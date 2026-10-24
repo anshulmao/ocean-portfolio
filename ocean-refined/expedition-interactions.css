@@ -69,3 +69,15 @@
 /* Give the staged diver and field note room, without moving the normal instruments. */
 body[data-safety-stop="true"] :is(.masthead,.hero,.reef-map) *{visibility:hidden!important;pointer-events:none!important}
 body[data-safety-stop="true"] :is(.masthead,.heading-indicator,.reef-map,.depth,.air-gauge,.scene-footer,.touch-deck,.capture-hint,.crosshair,.expedition-tools,.artifact-prompt,.ascent-status,.interact-prompt,.dive-computer-toggle,.archive-toggle,.status,.journey-toast,.zone-card,.waypoint,.journey-progress,.tour-card,.lamp-notice,#reef-labels,#sky-labels){opacity:0!important;visibility:hidden!important;pointer-events:none!important;transition:none!important}
+/* A short invitation, not a persistent tool button. The existing UI clock drives the bar. */
+.expedition-tools [data-stop]{position:relative;display:flex;align-items:center;gap:12px;min-height:66px;padding:13px 16px 17px;border:1px solid #d7e9e780;border-radius:12px;background:#123b47e8;color:#e9ffff;text-align:left;box-shadow:0 8px 28px #001c3650;animation:stop-invite-glow 2.4s ease-in-out 4}
+.expedition-tools [data-stop]>svg{width:32px;height:32px;fill:none;stroke:#a4efdd;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.expedition-tools [data-stop] strong{display:block;font-size:14px;font-weight:550}
+.expedition-tools [data-stop] small{display:block;margin-top:5px;font-size:11px;color:#b9dfe3}
+.stop-offer-time{min-width:24px;font-size:12px;font-variant-numeric:tabular-nums}
+.stop-offer-track{position:absolute;bottom:0;left:10px;right:10px;height:3px;background:#d5e9ec26;overflow:hidden}
+.stop-offer-track i{display:block;height:100%;background:#b4f1da;transform-origin:left}
+body:is([data-clear-ui="true"],[data-menu="open"],[data-dialog="open"]) .expedition-tools [data-stop]{display:none}
+@keyframes stop-invite-glow{50%{border-color:#bcf3df;box-shadow:0 8px 28px #001c3650,0 0 16px #98f6d42b}}
+@media(max-width:650px){.expedition-tools:has([data-stop]:not([hidden])){top:auto;bottom:calc(145px + env(safe-area-inset-bottom));left:50%;right:auto;transform:translateX(-50%);max-width:calc(100vw - 32px);width:300px}.expedition-tools [data-stop]{min-height:70px}}
+@media(prefers-reduced-motion:reduce){.expedition-tools [data-stop]{animation:none}}

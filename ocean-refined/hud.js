@@ -165,7 +165,7 @@ const menu = $('#settings-menu'), menuToggle = $('#menu-toggle'), surfaceButton 
 function paintMenuActions(){
   if(!surfaceButton)return;
   surfaceButton.hidden=!window.oceanDiagnostics?.submerged;
-  surfaceButton.disabled=!window.oceanDiagnostics?.ready;
+  surfaceButton.disabled=!window.oceanDiagnostics?.ready||window.oceanControls?.getMode()==='transition';
 }
 function setMenu(open, refocus = true) {
   if (!menu || menu.hidden === !open) return;
@@ -189,7 +189,7 @@ surfaceButton?.addEventListener('click',()=>{
   const controls=window.oceanControls;
   if(!controls?.surface||!window.oceanDiagnostics?.submerged)return;
   setMenu(false,false);
-  controls.surface({instant:true});
+  controls.surface({viaReef:true});
   menuToggle.focus({preventScroll:true});
 });
 addEventListener('oceanmediumchange',paintMenuActions);
