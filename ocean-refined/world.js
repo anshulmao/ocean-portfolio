@@ -30,7 +30,15 @@ import { refreshRate, drawStride, windowPace, windowHitch, workBudget, createSca
 const $=s=>document.querySelector(s), canvas=$('#world'), status=$('#status');
 const themeMedia=matchMedia('(prefers-color-scheme: dark)'), motionMedia=matchMedia('(prefers-reduced-motion: reduce)');
 let selectedNight=false;
-let reducedMotion=motionMedia.matches,paused=reducedMotion;
+// Respect the system by default, but let a visitor explicitly resume the ocean.
+let motionPreference=null;
+try{const saved=localStorage.getItem('ocean-motion');if(saved==='full'||saved==='reduced')motionPreference=saved;}catch{}
+const requestedMotion=new URLSearchParams(location.search).get('motion');
+if(requestedMotion==='full'||requestedMotion==='reduced'){
+  motionPreference=requestedMotion;
+  try{localStorage.setItem('ocean-motion',motionPreference);}catch{}
+}
+let reducedMotion=motionPreference?motionPreference==='reduced':motionMedia.matches,paused=reducedMotion;
 let renderer,scene,camera,water,waterCalm,waterRough,waterFine,waterCoarse,diver,reef,skySystem,marine,clouds,sunlight,ambient,beamGroup,motes,bubbleMesh,diveLamp;
 let viewerOrbit=null,scooterModel=null;
 let diverAnimator=null;
@@ -372,6 +380,7 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   recull(){camera.updateMatrixWorld(true);refreshView();userCreatures?.update(0,playerPosition,viewerOrbit?null:view);if(built)cullWorld(0);},
   // Dive planner and guided tour hooks: autopilot, instant placement, dive start / surfacing, and the flashlight and scooter state.
   travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free){exploration.setGuided(value,free);},
+  travelPath(points,focus,speed){return exploration.travelPath(points,focus,speed);},
   startDive(options){if(!diagnostic.ready||diveTarget===1||getMode()!=='surface')return false;exploration.prepareDive(options);if(options?.at)snapCamera=true;$('#dive').click();return true;},
   surface(options){if(options?.instant)return surfaceNow();if(diveTarget!==1||exploration.state.mode!=='diver')return false;$('#dive').click();return true;},
   get nav(){return exploration.state;},get settings(){return settings;},get landmarks(){return modelScene?.landmarks||null;},get formations(){return heroFormations?.sites||[];},get life(){return livingWorld;},get creatures(){return userCreatures;},
@@ -406,7 +415,17 @@ function frameSurface(phaseValue=phase){
 }
 function updateMotionUI(){
   diagnostic.paused=paused;
+  diagnostic.reducedMotion=reducedMotion;
+  diagnostic.motionSource=motionPreference?'visitor':'system';
+  document.body.dataset.motion=paused?'paused':'running';
+  const button=$('#motion');
+  if(button){button.setAttribute('aria-pressed',String(paused));button.textContent=paused?'Resume ocean motion':'Pause ocean motion';}
 }
+$('#motion')?.addEventListener('click',()=>{
+  paused=!paused;reducedMotion=paused;motionPreference=paused?'reduced':'full';
+  try{localStorage.setItem('ocean-motion',motionPreference);}catch{}
+  updateMotionUI();hudForce=true;wake();
+});
 function setExploring(value){
   exploring=value;exploration.state.exploring=value;document.body.dataset.exploring=String(value);
   $('#explore').setAttribute('aria-pressed',String(value));$('#explore').innerHTML=value?'Release mouse <span>↙</span>':'Look around <span>↗</span>';wake();
@@ -444,7 +463,7 @@ $('#dive').addEventListener('click',()=>{
 });
 addEventListener('keydown',event=>{if((event.code==='ShiftLeft'||event.code==='ShiftRight')&&!event.repeat&&diagnostic.ready&&getMode()==='surface'&&!interfaceOpen&&!movementPanelOpen&&!event.target.closest?.('input,textarea,select,[contenteditable="true"]')){event.preventDefault();$('#dive').click();}});
 themeMedia.addEventListener('change',e=>{let stored;try{stored=localStorage.getItem('ocean-theme');}catch{}if(!stored)setTheme(e.matches,false);});
-motionMedia.addEventListener('change',e=>{reducedMotion=e.matches;paused=reducedMotion;diagnostic.reducedMotion=reducedMotion;updateMotionUI();wake();});
+motionMedia.addEventListener('change',e=>{if(motionPreference)return;reducedMotion=e.matches;paused=reducedMotion;updateMotionUI();wake();});
 addEventListener('resize',()=>{if(renderer){resize();wake();}});
 document.addEventListener('visibilitychange',()=>{focused=!document.hidden;if(!focused){cancelAnimationFrame(raf);running=false;lastFrame=0;}else wake();});
 canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();cancelAnimationFrame(raf);running=false;diagnostic.ready=false;diagnostic.error='WebGL context lost';status.textContent='The ocean paused. Reload this page to restore the scene.';$('#dive').disabled=true;});

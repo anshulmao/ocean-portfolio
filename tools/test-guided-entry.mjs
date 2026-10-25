@@ -1,9 +1,9 @@
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
-const browser=await chromium.launch({channel:'chrome',headless:true});const errors=[];
+const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL||'chrome',headless:true});const errors=[];
 try{
- const page=await browser.newPage({viewport:{width:1440,height:900}});page.on('pageerror',e=>errors.push(e.message));
- await page.goto('http://127.0.0.1:4210/dist/',{waitUntil:'domcontentloaded'});
+ const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
+ await page.goto((process.env.OCEAN_URL||'http://127.0.0.1:4210/dist/')+'?motion=full',{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>window.oceanDiagnostics?.ready&&window.oceanTour,null,{timeout:120000});
  for(const width of [1440,390]){
   await page.setViewportSize({width,height:width===390?844:900});
@@ -21,6 +21,8 @@ try{
  await page.waitForFunction(()=>oceanDiagnostics.landmarksReady&&!oceanControls.getTransition(),null,{timeout:120000});
  await page.evaluate(()=>oceanControls.step(.3));
  assert.equal(await page.evaluate(()=>oceanDiagnostics.tour.key),'about');
+ assert.equal(await page.evaluate(()=>oceanDiagnostics.reducedMotion),false,'Visitor motion choice overrides OS reduce');
+ await page.evaluate(()=>{window.tourCuts=0;const place=oceanControls.place;oceanControls.place=(...args)=>{window.tourCuts++;return place(...args);};});
  for(const [index,key] of ['about','experience','projects'].entries()){
   for(let elapsed=0;elapsed<110;elapsed+=2){
    const status=await page.evaluate(()=>({status:oceanTour.status,paused:oceanDiagnostics.tour.paused}));
@@ -33,6 +35,7 @@ try{
   await page.evaluate(()=>oceanUi.tick(60));
   assert.equal(await page.evaluate(()=>oceanTour.status),'dwell','Reading never auto advances');
   console.log('Natural guided arrival and reading dwell: '+key);
+  assert.equal(await page.evaluate(()=>window.tourCuts),0,'Continuous guided travel never calls instant placement');
   if(index<2)await page.locator('[data-tour="next"]').click();
  }
  await page.locator('[data-tour="next"]').click();

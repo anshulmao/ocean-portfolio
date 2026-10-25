@@ -6,7 +6,7 @@ import { onFrame, setQuiet, discover, say } from './journey.js';
 // The guided dive is a scripted route, not a camera path: it hands waypoints to
 // the same autopilot the atlas uses, so the diver still collides, still routes
 // over terrain, and any input from the visitor takes the controls straight back.
-const SPEED = 7.2, VIA_RADIUS = 2.2, ARRIVE_RADIUS = 1.6;
+const SPEED = 6, ARRIVE_RADIUS = 1.6;
 // Coordinates are world metres (x, y, z); y is negative below the surface.
 // A stop with `landmark` takes its viewpoint and subject from the placed model.
 export const STOPS = [
@@ -22,7 +22,9 @@ export const STOPS = [
 ];
 const FINALE = 'Three places, one thread: making complex systems useful to people. Keep exploring, open the Portfolio button for any section, or surface when you’re ready.';
 
-const reduced = matchMedia('(prefers-reduced-motion: reduce)'), coarse = matchMedia('(pointer: coarse)');
+// The visitor's in-app choice overrides the system preference for the tour too.
+const reduced = () => window.oceanDiagnostics?.reducedMotion ?? matchMedia('(prefers-reduced-motion: reduce)').matches;
+const coarse = matchMedia('(pointer: coarse)');
 const card = document.createElement('section'), fade = document.createElement('div');
 card.className = 'tour-card holo holo--reading'; card.setAttribute('aria-label', 'Guided dive'); card.dataset.show = 'false'; card.inert = true;
 card.innerHTML = '<header><span class="holo-label tour-kicker"></span><span class="holo-value tour-count"></span></header><h2 class="tour-title"></h2><p class="tour-lines" aria-live="polite"></p><p class="tour-pace"></p><div class="tour-progress" aria-hidden="true"><i></i></div>'
@@ -50,15 +52,20 @@ function clear(a, b) {
   const world = controls()?.reef?.userData.collisions;
   return !world?.segmentClear || world.segmentClear(from.fromArray(a), to.fromArray(b), .85);
 }
-// Scripted waypoints when the way is open, a straight swim when it is not, a
-// climb over the reef as the next choice, and null when only a cut will do.
+// Authored scenic waypoints first, then an open-water bow or a checked route
+// above the reef. A blocked route asks the visitor instead of making a cut.
 function route(start, stop) {
   leg.length = 0;
   const scripted = stop.via || [];
   let open = arrived === index - 1, last = start;
   for (const point of scripted) { if (!open) break; open = clear(last, point); last = point; }
-  if (open && clear(last, goal)) { leg.push(...scripted, goal); return true; }
-  if (clear(start, goal)) { leg.push(goal); return true; }
+  if (scripted.length && open && clear(last, goal)) { leg.push(...scripted, goal); return true; }
+  if (clear(start, goal)) {
+    const dx=goal[0]-start[0],dz=goal[2]-start[2],span=Math.hypot(dx,dz),bow=Math.min(3,span*.12);
+    const mid=[(start[0]+goal[0])/2-(span?dz/span*bow:0),(start[1]+goal[1])/2,(start[2]+goal[2])/2+(span?dx/span*bow:0)];
+    if(clear(start,mid)&&clear(mid,goal))leg.push(mid);
+    leg.push(goal); return true;
+  }
   let crest = -Infinity;
   for (let i = 0; i <= 12; i++) crest = Math.max(crest, terrainHeightAt(start[0] + (goal[0] - start[0]) * i / 12, start[2] + (goal[2] - start[2]) * i / 12));
   const lane = Math.min(-5, Math.max(start[1], goal[1], crest + 14)), up = [start[0], lane, start[2]], over = [goal[0], lane, goal[2]];
@@ -85,8 +92,9 @@ function paint() {
 }
 function setBar(value) { const rounded = Math.round(value * 250) / 250; if (rounded !== barShown) { barShown = rounded; bar.style.transform = `scaleX(${rounded})`; } }
 function launch() {
-  const api = controls(), final = legIndex === leg.length - 1;
-  api.guide(true, true); api.travel(leg[legIndex], final ? look : null, SPEED);
+  const api = controls();
+  api.guide(true, true);
+  if(!api.travelPath(leg.slice(legIndex),look,SPEED)){paused=routeIssue=true;paint();}
   inputs = api.nav.inputs; best = Infinity; stall = 0; legTime = 0;
 }
 function arrive() {
@@ -99,7 +107,7 @@ function cutTo(then) { cut = then; cutTime = .24; fade.dataset.on = 'true'; }
 function go(next) {
   index = next; resolve(STOPS[index]); status = 'travel'; paused=false;routeIssue=false;detours=0;paint();
   here.fromArray(window.oceanDiagnostics.playerPosition);
-  if (reduced.matches) { cutTo(land); return; }
+  if (reduced()) { cutTo(land); return; }
   if (!route(here.toArray(), STOPS[index])) { paused=true;routeIssue=true;paint();return; }
   legIndex = 0; launch();
 }
@@ -164,11 +172,11 @@ function update(dt, api, state, diving) {
   // Pause the route itself, rather than only its caption countdown.
   if (paused) return;
   legTime += dt;
-  const target = leg[legIndex], final = legIndex === leg.length - 1;
+  const target = goal;
   const distance = here.fromArray(state.playerPosition).distanceTo(to.fromArray(target));
-  if (!final && distance < VIA_RADIUS) { legIndex++; launch(); return; }
-  if (final && distance < ARRIVE_RADIUS && (!nav.travelling || distance < .6)) { arrive(); return; }
-  if (distance < best - .25) { best = distance; stall = 0; } else stall += dt;
+  if (distance < ARRIVE_RADIUS && (!nav.travelling || distance < .6)) { arrive(); return; }
+  const remaining=nav.travelRemaining??distance;
+  if (remaining < best - .25) { best = remaining; stall = 0; } else stall += dt;
   // Try a new collision-checked approach before asking the visitor. Automatic
   // travel never silently teleports past scenery; only explicit Skip does.
   if (legTime > .4 && (stall > 3.5 || !nav.travelling)) {
@@ -203,7 +211,7 @@ function togglePause() {
   if (status !== 'travel') return;
   paused = !paused;
   if (paused && !cut) controls()?.travel(window.oceanDiagnostics.playerPosition, look);
-  if (!paused && !cut) {routeIssue=false;if(!leg.length){here.fromArray(window.oceanDiagnostics.playerPosition);if(!route(here.toArray(),STOPS[index])){paused=routeIssue=true;paint();return;}legIndex=0;}launch();}
+  if (!paused && !cut) {routeIssue=false;here.fromArray(window.oceanDiagnostics.playerPosition);if(!route(here.toArray(),{...STOPS[index],via:[]})){paused=routeIssue=true;paint();return;}legIndex=0;launch();}
   paint();
 }
 addEventListener('keydown', event => {
