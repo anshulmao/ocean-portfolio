@@ -1,13 +1,13 @@
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 import {planSurfaceReturn} from '../ocean-refined/return-route.js';
-const route=planSurfaceReturn([40,-50,-95],{floor:()=>-12,clear:()=>true});
+const route=planSurfaceReturn([40,-50,-95],{floor:()=>-60,clear:()=>true});
 assert.ok(route.length>10);assert.deepEqual(route.at(-1),[0,-5.5,-6]);
 assert.deepEqual(planSurfaceReturn([0,-20,0],{floor:()=>-10,clear:()=>false}),[]);
-const browser=await chromium.launch({channel:'chrome',headless:true});const errors=[];
+const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL||'chrome',headless:true});const errors=[];
 try{
  const page=await browser.newPage({viewport:{width:1440,height:900}});page.on('pageerror',e=>errors.push(e.message));
- await page.goto('http://127.0.0.1:4210/dist/',{waitUntil:'domcontentloaded'});
+ await page.goto((process.env.OCEAN_URL||'http://127.0.0.1:4210/dist/')+'?motion=full',{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>window.oceanDiagnostics?.ready&&window.oceanExpedition,null,{timeout:120000});
  await page.evaluate(()=>{oceanControls.startDive({capture:false});oceanControls.step(12);});
  await page.waitForFunction(()=>oceanDiagnostics.submerged&&!oceanControls.getTransition(),null,{timeout:90000});
