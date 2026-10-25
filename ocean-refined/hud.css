@@ -525,3 +525,6 @@ body:is([data-menu="open"],[data-movement-panel="open"]) :is(.hero,.archive-togg
 .hero{transition:opacity .6s,transform .6s,visibility .6s}
 body[data-menu="open"] .hero *{pointer-events:none}
 @media(max-width:600px){body:is([data-menu="open"],[data-movement-panel="open"]) .heading-indicator{opacity:0}}
+/* A distinct, always reachable return action, even with General collapsed. */
+#settings-surface-now{flex-shrink:0;align-self:stretch;margin:10px 14px 0;padding:12px 14px;min-height:44px;justify-content:center;color:#fff3da;background:#725137;border:1px solid #e6b77a8c;box-shadow:0 3px 16px #051a2522}
+#settings-surface-now:hover{background:#896141}

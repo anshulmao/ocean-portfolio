@@ -41,11 +41,13 @@ try{
     assert.equal(await page.locator('#settings-surface-now').isVisible(),true);
     const location=await page.locator('#settings-surface-now').boundingBox();
     const header=await page.locator('#settings-sky-title').boundingBox();
-    assert.ok(location.y>header.y&&location.y<header.y+100,'Surface action is directly below General');
+    assert.ok(location.y<header.y,'Surface action stays above General');
     await page.locator('.settings-body').evaluate(node=>node.scrollTop=0);
     await page.screenshot({path:path.join(process.env.TEMP,`ocean-sidebar-underwater-${width}.png`),animations:'disabled'});
-    // Capture the same click turn: no ascent timeout or artificial time advance.
+    // Start visibly from the current location, then follow the reef home.
     await page.locator('#settings-surface-now').click();
+    assert.equal(await page.evaluate(()=>oceanControls.getMode()),'transition');
+    await page.evaluate(()=>oceanControls.step(85));
     const state=await page.evaluate(()=>({mode:oceanControls.getMode(),transition:oceanControls.getTransition(),submerged:oceanDiagnostics.submerged,depth:oceanDiagnostics.displayDepth,
       menu:document.querySelector('#settings-menu').hidden,focus:document.activeElement.id,diver:oceanControls.viewer.layers().diver.visible,velocity:oceanControls.nav.velocity.length(),positionY:oceanControls.getCamera().position.y}));
     assert.equal(state.mode,'surface');assert.equal(state.transition,false);assert.equal(state.submerged,false);assert.ok(state.depth<.1);
@@ -53,6 +55,6 @@ try{
     await page.locator('#menu-toggle').click();assert.equal(await page.locator('#settings-surface-now').isVisible(),false);await page.locator('.settings-close').click();
     if(width===1440){await page.evaluate(()=>{oceanControls.startDive({capture:false});oceanControls.step(12);});await page.waitForFunction(()=>oceanDiagnostics.submerged&&!oceanControls.getTransition(),null,{timeout:60000});}
   }
-  report.checks.push('Desktop/phone: quick return from deep reef is immediate, closes settings, restores above-water hero, stops movement and hides the action on surface.');
+  report.checks.push('Desktop/phone: guided return closes settings, swims home, restores the surface hero and hides the action on surface.');
   assert.deepEqual(report.errors,[]);report.passed=true;
 }finally{console.log(JSON.stringify(report,null,2));await browser.close();}

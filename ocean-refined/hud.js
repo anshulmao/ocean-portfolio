@@ -66,6 +66,7 @@ function setMapView(full) {
 expand?.addEventListener('click', () => setMapView(!mapFull));
 map?.addEventListener('keydown', event => {
   if (event.key !== 'Escape' || !mapFull) return;
+  event.preventDefault();
   setMapView(false); expand.focus({preventScroll:true});
 });
 // Choosing a destination hands the view back to the dive.
@@ -159,13 +160,13 @@ function aim() {
 }
 onTick(aim, 4);
 
-// 4. Settings menu: a disclosure under the menu button. Escape, the close
-// button, a click elsewhere or capturing the mouse closes it.
+// 4. Escape releases the mouse first; with the mouse released it opens Settings.
+// In Settings, Escape closes a nested controls folder, then the menu itself.
 const menu = $('#settings-menu'), menuToggle = $('#menu-toggle'), surfaceButton = $('#settings-surface-now');
 function paintMenuActions(){
   if(!surfaceButton)return;
   surfaceButton.hidden=!window.oceanDiagnostics?.submerged;
-  surfaceButton.disabled=!window.oceanDiagnostics?.ready;
+  surfaceButton.disabled=!window.oceanDiagnostics?.ready||window.oceanControls?.getMode()==='transition';
 }
 function setMenu(open, refocus = true) {
   if (!menu || menu.hidden === !open) return;
@@ -189,21 +190,32 @@ surfaceButton?.addEventListener('click',()=>{
   const controls=window.oceanControls;
   if(!controls?.surface||!window.oceanDiagnostics?.submerged)return;
   setMenu(false,false);
-  controls.surface({instant:true});
+  controls.surface({viaReef:true});
   menuToggle.focus({preventScroll:true});
 });
 addEventListener('oceanmediumchange',paintMenuActions);
 document.addEventListener('keydown', event => {
-  if (!menu || menu.hidden || document.querySelector('dialog[open]')) return;
+  if (!menu || event.defaultPrevented || document.querySelector('dialog[open]')) return;
   if (event.key === 'Escape') {
+    if(event.repeat||event.ctrlKey||event.altKey||event.metaKey)return;
+    if(menu.hidden){
+      const nav=window.oceanControls?.nav;
+      // Leave the first Escape to navigation. This document listener runs before
+      // navigation's window listener releases capture, including drag-to-look.
+      if(!nav||document.pointerLockElement||nav.exploring)return;
+      // Existing Escape actions have priority over opening another panel.
+      if(nav.returnPhase==='offer'||nav.returnPhase==='stop'||document.body.dataset.clearUi==='true'||document.querySelector('.dive-summary[data-show="true"]')||event.target.closest?.('input,textarea,select,[contenteditable="true"]'))return;
+      event.preventDefault();event.stopImmediatePropagation();setMenu(true);return;
+    }
     const movement = $('#movement-panel');
     if (movement?.open) {
       movement.open = false;
       $('#movement-toggle')?.focus({preventScroll:true});
       event.preventDefault(); event.stopImmediatePropagation();
-    } else setMenu(false);
+    } else {event.preventDefault();event.stopImmediatePropagation();setMenu(false);}
     return;
   }
+  if(menu.hidden)return;
   if (event.key !== 'Tab') return;
   const focusable = [...menu.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),summary,[href],[tabindex]:not([tabindex="-1"])')]
     .filter(element => {

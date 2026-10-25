@@ -2,6 +2,9 @@ import * as THREE from './vendor/three.module.min.js';
 import { settings as savedSettings } from './movement-settings.js';
 import { createTouchControls } from './touch-controls.js';
 import { createGamepad } from './gamepad.js';
+import { planSurfaceReturn } from './return-route.js';
+import { toDisplayDepth } from './depth-metrics.js';
+import {routeTarget,smoothRoute,distance as routeDistance} from './cinematic-route.js';
 
 // The swimming model. Everything that moves is eased by a critically damped follower that is exact over a step of
 // any length, so the same input gives the same swim at 30, 60 or 120 updates a second:
@@ -16,7 +19,7 @@ const wrap = angle => Math.atan2(Math.sin(angle), Math.cos(angle));
 // T90: a critically damped follower covers 90% of a step in 3.89 / frequency seconds.
 const T90 = 3.89, VERTICAL = .8;
 const AUTO_RESPONSE = 10, AUTO_ACCEL = 3.5, AUTO_BRAKE = 3.5, COURSE_RATE = 4, FOCUS_RANGE = 5;
-const LOOK_AUTO = 4, LOOK_GUIDED = 2.4, SWEEP_AUTO = 2.2, SWEEP_GUIDED = 1.5;
+const LOOK_AUTO = 4, LOOK_GUIDED = 3.2, SWEEP_AUTO = 2.2, SWEEP_GUIDED = 1.4;
 const SOFT_RATE = 2.2, HARD_RATE = 4.5, FLOOR_GIVE = .5, LOOK_AHEAD = .5, PITCH_ZONE = 14 * RAD, CARVE_RATE = 2.2, ASCENT_RESPONSE = 3.2;
 // value[key] follows goal with rate[key] as its derivative; returns the integral of the value over the step (the distance covered, when the value is a velocity).
 function ease(value, rate, key, goal, frequency, dt) {
@@ -41,6 +44,9 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   // `base` is where the controls have put the diver; `offset` (what the scene reads) adds the idle drift on top.
   const offset=new THREE.Vector3(0,8,0),base=new THREE.Vector3(0,8,0),drift=new THREE.Vector3();
   const velocity=new THREE.Vector3(),thrust=new THREE.Vector3(),desired=new THREE.Vector3(),course=new THREE.Vector3(0,0,-1),dest=new THREE.Vector3(),focus=new THREE.Vector3();
+  const travelStart=new THREE.Vector3(),curveTarget=new THREE.Vector3(),curveFrom=new THREE.Vector3(),curveTo=new THREE.Vector3();
+  let travelSpan=0,curveProbe=0,curveClear=false;
+  let travelRoute=[],travelIndex=0;const travelRemaining=[],routePosition=[0,0,0];
   const delta=new THREE.Vector3(),position=new THREE.Vector3(),step=new THREE.Vector3(),before=new THREE.Vector3(),scratchA=new THREE.Vector3(),scratchB=new THREE.Vector3(),pathCheckPosition=new THREE.Vector3();
   const bounds={x:62,zMin:-105,zMax:35,yMin:-52,yMax:8};
   const initialPerspective=settings.cameraMode==='third'?'third':'first';
@@ -73,7 +79,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   function press(code,fromPad=false){if(ascent||(!lastSubmerged&&!surfaceLocked)||(surfaceLocked&&!code.startsWith('Arrow')))return;keys.add(code);if(fromPad)padKeys.add(code);if(code!=='KeyE'||(fromPad&&!hasDest))takeControl();if(code.startsWith('Arrow'))lookIdle=0;wake();}
   function release(code){keys.delete(code);padKeys.delete(code);wake();}
   // Any deliberate input hands the dive back to the visitor at once. Nothing is reset: the swim and the turn under way ease into whatever is asked next.
-  function takeControl(){hasDest=hasFocus=docking=false;state.inputs++;guided=freeControl=false;state.guided=false;slack=0;}
+  function takeControl(){hasDest=hasFocus=docking=false;travelRoute=[];state.inputs++;guided=freeControl=false;state.guided=false;slack=0;}
   function setGuided(value,free=false){guided=Boolean(value);freeControl=guided&&Boolean(free);state.guided=guided;slack=0;wake();}
   function setLamp(value){const on=Boolean(value);if(on===state.lamp)return on;state.lamp=on;lampButton?.setAttribute('aria-pressed',String(on));window.dispatchEvent(new CustomEvent('oceanlamp',{detail:on}));wake();return on;}
   // Lets go of every held input. The swim itself is left to glide out.
@@ -93,7 +99,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   function toggleFreeCam(value){return togglePerspective(value);}
   function getPlayerPosition(target=new THREE.Vector3()){return target.set(offset.x,offset.y-8,offset.z);}
   listen(window,'keydown',e=>{
-    if(e.code==='Escape'){requireRecapture();return;}
+    if(e.code==='Escape'||(e.code==='Semicolon'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.target.closest?.('input,textarea,select,[contenteditable="true"]'))){if(e.code==='Semicolon')e.preventDefault();requireRecapture();return;}
     if(e.target.closest?.('input,textarea,select,button,[contenteditable="true"]'))return;
     if(e.code==='KeyV'&&!suspended&&!e.repeat&&lastSubmerged){e.preventDefault();togglePerspective();return;}
     if(e.code==='KeyQ'&&!suspended&&!e.repeat&&lastSubmerged&&!e.ctrlKey&&!e.metaKey){e.preventDefault();setLamp(!state.lamp);return;}
@@ -102,6 +108,12 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   });
   listen(window,'keyup',e=>{if(!padKeys.has(e.code))keys.delete(e.code);wake();});
   listen(window,'blur',requireRecapture);
+  function holdSafetyStop(active){
+    if(!ascent?.returnViaReef)return;
+    ascent.offerWait=0;state.safetyOfferRemaining=0;
+    state.returnPhase=active?'stop':'ascent';wake();
+  }
+  function skipSafetyStop(){if(ascent?.returnViaReef&&state.returnPhase==='offer')holdSafetyStop(false);}
   listen(document,'visibilitychange',()=>{if(document.hidden)requireRecapture();});
   // Aim input in pixels. It is only summed here; update() turns the sum into a change of view, so nothing depends on how many events a frame delivers.
   function aim(dx,dy,gain=settings.mouseSensitivity){if(suspended||captureRequired||!state.exploring||ascent)return;if(guided){slack+=Math.abs(dx)+Math.abs(dy);if(slack<90)return;}takeControl();pend.yaw-=dx*gain;pend.pitch-=dy*gain*(settings.invertMouse?-1:1);lookIdle=0;wake();}
@@ -178,17 +190,38 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     wake();
   }
   function prepareDive(options){pendingDive=options||null;}
+  const travelClear=(a,b)=>!collisions||!settings.collisionEnabled||collisions.segmentClear(scratchA.fromArray(a),scratchB.fromArray(b),Math.max(settings.collisionRadius+.25,.85));
+  function useTravelRoute(points){
+    travelRoute=points;travelIndex=0;travelRemaining.length=points.length;
+    for(let i=points.length-1;i>=0;i--)travelRemaining[i]=i===points.length-1?0:travelRemaining[i+1]+routeDistance(points[i],points[i+1]);
+  }
   function travel(point,focusPoint,speed){
     const target=coordinate(point),safeMaxY=8-settings.ascentThreshold-1;travelSpeed=speed>0?speed:settings.atlasCruiseSpeed;
     dest.set(clamp(target[0],-bounds.x,bounds.x),clamp((target[1]??-8)+8,bounds.yMin,safeMaxY),clamp(target[2]??0,bounds.zMin,bounds.zMax));
+    travelStart.copy(base);travelSpan=Math.hypot(dest.x-base.x,dest.z-base.z);curveProbe=0;curveClear=false;
     // A fresh departure builds its pace from the swim already under way and turns from the way the diver is drifting; a new waypoint mid-route keeps both.
     if(!hasDest){pace=Math.min(travelSpeed,velocity.length());coursed=false;}
     hasDest=true;docking=false;hasFocus=Boolean(focusPoint);if(hasFocus){const at=coordinate(focusPoint);focus.set(at[0],at[1],at[2]);}
     blockedTime=0;state.travelBlocked=false;state.exploring=true;wake();
+    const start=[base.x,base.y-8,base.z],end=[dest.x,dest.y-8,dest.z];
+    const dx=end[0]-start[0],dz=end[2]-start[2],span=Math.hypot(dx,dz),arc=span>12?Math.min(3,span*.06):0;
+    const mid=[(start[0]+end[0])/2-(span?dz/span*arc:0),(start[1]+end[1])/2,(start[2]+end[2])/2+(span?dx/span*arc:0)];
+    mid[1]=Math.max(mid[1],terrain(mid[0],mid[2])+settings.floorClearance);
+    useTravelRoute(smoothRoute([start,mid,end],{clear:travelClear}));
   }
-  function beginAscent(routeProvider){
+  function travelPath(points,focusPoint,speed){
+    if(!points?.length)return false;
+    const start=[base.x,base.y-8,base.z],route=smoothRoute([start,...points],{clear:travelClear});
+    if(!route.length)return false;
+    travel(points.at(-1),focusPoint,speed);useTravelRoute(route);return true;
+  }
+  function beginAscent(routeProvider,returnViaReef=false){
     if(ascent||state.mode==='surface')return false;clear();state.mode='transition';releasePointer();position.set(base.x,base.y-8,base.z);let route=[];try{route=routeProvider?.(position.clone())||[];}catch{}
-    ascent={route:route.map(p=>p.isVector3?p.clone():new THREE.Vector3(...p)),initialDepth:Math.max(0,-position.y),elapsed:0,waypoint:0,exitSearchAt:0,blockedFor:0};
+    if(returnViaReef)route=planSurfaceReturn(position.toArray(),{floor:terrain,exits:route,clear:(a,b)=>!collisions||collisions.segmentClear(scratchA.fromArray(a),scratchB.fromArray(b),Math.max(settings.collisionRadius+.25,settings.collisionLength/2+settings.collisionPadding+.15))});
+    if(returnViaReef&&!route.length){state.mode='diver';state.ascentBlocked=true;wake();return false;}
+    state.returnRoute=returnViaReef?route.map(p=>p.isVector3?p.toArray():[...p]):null;
+    state.returnPhase=returnViaReef?'travel':null;state.safetyOfferRemaining=0;
+    ascent={route:route.map(p=>p.isVector3?p.clone():new THREE.Vector3(...p)),returnViaReef,routeProvider,offerWait:returnViaReef?10:0,initialDepth:Math.max(0,-position.y),elapsed:0,waypoint:0,exitSearchAt:0,blockedFor:0};
     hasDest=hasFocus=docking=false;spin.yaw=spin.pitch=spinPush.yaw=spinPush.pitch=lag.yaw=lag.pitch=0;pathCheckAt=0;pathIsClear=true;pathCheckPosition.copy(position);wake();return true;
   }
   function startDive(){syncPerspectiveSetting();ascent=null;surfaceLocked=false;base.y=0;halt();look.yaw=defaultYaw;look.pitch=-.18;state.yaw=look.yaw;state.pitch=look.pitch;state.mode='diver';captureRequired=true;state.exploring=false;setGuided(false);boost=spool=0;floorStale=true;
@@ -220,8 +253,26 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   function findAscentExit(current){if(!collisions)return null;const candidates=[];for(let r=3;r<=15;r+=3)for(let a=0;a<Math.PI*2;a+=Math.PI/4)candidates.push(new THREE.Vector3(current.x+Math.cos(a)*r,current.y,current.z+Math.sin(a)*r));candidates.sort((a,b)=>Math.hypot(a.x-current.x,a.z-current.z)-Math.hypot(b.x-current.x,b.z-current.z));for(const candidate of candidates){let p=current.clone(),ok=true;for(let i=0;i<Math.ceil(Math.max(0,-current.y)/1.25);i++){const next=new THREE.Vector3(candidate.x,Math.min(0,p.y+1.25),candidate.z),result=probeMove(p,next.clone().sub(p));if(result.blocked||result.position.distanceTo(next)>.2){ok=false;break;}p=result.position;}if(ok)return candidate;}return null;}
   // The ascent keeps the swim it started from and eases into the climb: a route to open water first if the reef gave one, then straight up, slowing near the surface.
   function updateAscent(dt){
-    ascent.elapsed+=dt;position.set(base.x,base.y-8,base.z);desired.set(0,0,0);const routed=ascent.waypoint<ascent.route.length;
-    if(routed){const point=ascent.route[ascent.waypoint];delta.copy(point).sub(position);const gap=delta.length();if(gap<.55)ascent.waypoint++;else desired.copy(delta).multiplyScalar(Math.min(settings.ascentSpeed,gap*2.5+.4)/gap);}
+    ascent.elapsed+=dt;position.set(base.x,base.y-8,base.z);desired.set(0,0,0);
+    const segmentClear=(a,b)=>!collisions||collisions.segmentClear(scratchA.fromArray(a),scratchB.fromArray(b),Math.max(settings.collisionRadius+.25,settings.collisionLength/2+settings.collisionPadding+.15));
+    if(ascent.returnViaReef&&ascent.waypoint<ascent.route.length){
+      ascent.waypoint=routeTarget(state.returnRoute,ascent.waypoint,position.toArray(),2.8,segmentClear);
+    }
+    const routed=ascent.waypoint<ascent.route.length;
+    state.returning=routed&&ascent.returnViaReef;
+    if(routed){
+      const point=ascent.route[ascent.waypoint];delta.copy(point).sub(position);const gap=delta.length(),final=ascent.waypoint===ascent.route.length-1;
+      if(gap<(final?.25:1)&&(!final||velocity.length()<.5)){
+        ascent.waypoint++;
+        if(final&&ascent.returnViaReef){state.returnPhase='offer';state.safetyOfferRemaining=ascent.offerWait;}
+      }
+      else if(gap>.001){const cruise=ascent.returnViaReef?Math.min(10,settings.atlasCruiseSpeed*1.2):settings.ascentSpeed;desired.copy(delta).multiplyScalar(Math.min(cruise,gap*(final?1.2:2.5)+(final?0:.4))/gap);}
+    }
+    else if(ascent.offerWait>0&&toDisplayDepth(-position.y)>=3&&toDisplayDepth(-position.y)<=5){
+      state.returnPhase='offer';ascent.offerWait=Math.max(0,ascent.offerWait-dt);state.safetyOfferRemaining=ascent.offerWait;
+      if(!ascent.offerWait)state.returnPhase='ascent';
+      const hold=ascent.route.at(-1);desired.copy(hold).sub(position).multiplyScalar(1.5);
+    }
     else if(position.y<0){
       if(ascent.elapsed-pathCheckAt>.5||Math.hypot(position.x-pathCheckPosition.x,position.z-pathCheckPosition.z)>.35){pathIsClear=verticalPathClear(position);pathCheckAt=ascent.elapsed;pathCheckPosition.copy(position);}
       if(!pathIsClear){if(ascent.elapsed-ascent.exitSearchAt>.6){ascent.exitSearchAt=ascent.elapsed;const exit=findAscentExit(position);if(exit){ascent.route=[new THREE.Vector3(exit.x,position.y,exit.z)];ascent.waypoint=0;}}}
@@ -232,10 +283,27 @@ export function createExploration(canvas, wake, settings=savedSettings) {
       }
     }
     step.set(ease(velocity,thrust,'x',desired.x,ASCENT_RESPONSE,dt),ease(velocity,thrust,'y',desired.y,ASCENT_RESPONSE,dt),ease(velocity,thrust,'z',desired.z,ASCENT_RESPONSE,dt));
+    // Keep the moving body below the waterline while it rounds the upper reef.
+    // Upward momentum at a high waypoint must not finish the ascent mid-route.
+    if(routed&&position.y+step.y> -1.8){step.y=-1.8-position.y;velocity.y=Math.min(0,velocity.y);thrust.y=0;}
     if(position.y+step.y>0)step.y=-position.y;
-    if(moveBody(0)){if(routed)ascent.route.length=0;else{state.ascentBlocked=true;ascent.blockedFor=.8;}}
+    if(moveBody(0)){
+      if(routed){
+        // Glancing contact can slide along a wall; it must not discard the trip home.
+        ascent.blockedFor=velocity.length()<.3?ascent.blockedFor+dt:0;
+        if(ascent.blockedFor>2){
+          if(ascent.returnViaReef){
+            const replanned=planSurfaceReturn(position.toArray(),{floor:terrain,clear:segmentClear,exits:ascent.routeProvider?.(position.clone())||[]});
+            if(replanned.length){state.returnRoute=replanned;ascent.route=replanned.map(p=>new THREE.Vector3(...p));ascent.waypoint=0;state.ascentBlocked=false;}
+            else state.ascentBlocked=true;
+          }else{const exit=findAscentExit(position);if(exit)ascent.route.splice(ascent.waypoint,0,new THREE.Vector3(exit.x,position.y,exit.z));}
+          ascent.blockedFor=0;
+        }
+      }else{state.ascentBlocked=true;ascent.blockedFor=.8;}
+    }else if(routed)ascent.blockedFor=0;
+    if(state.returning&&Math.hypot(velocity.x,velocity.z)>.2)look.yaw+=wrap(Math.atan2(-velocity.x,-velocity.z)-look.yaw)*(1-Math.exp(-dt*3));
     base.set(position.x,position.y+8,position.z);state.ascentDepth=Math.max(0,-position.y);state.ascentProgress=ascent.initialDepth?1-state.ascentDepth/ascent.initialDepth:1;
-    if(position.y>=-.025){base.y=8;ascent=null;surfaceLocked=true;look.yaw=defaultYaw;look.pitch=0;state.ascentProgress=1;state.mode='surface';state.exploring=false;captureRequired=true;clear();halt();}
+    if(position.y>=-.025){base.y=8;ascent=null;state.returning=false;state.returnPhase=null;state.safetyOfferRemaining=0;surfaceLocked=true;look.yaw=defaultYaw;look.pitch=0;state.ascentProgress=1;state.mode='surface';state.exploring=false;captureRequired=true;clear();halt();}
   }
   // Mouse and touch aim for this step. Raw, it is applied whole. Smoothed, the input is taken as spread evenly over the step and what has not been shown yet is carried in `lag`: the exact answer of a first-order follower to a steady movement, at any frame rate.
   function settleAim(key,dt,raw){
@@ -299,9 +367,27 @@ export function createExploration(canvas, wake, settings=savedSettings) {
         }else{
           // The route clears the highest ground on the straight line to the point.
           let routeY=dest.y;
+          if(travelRoute.length){
+            routePosition[0]=base.x;routePosition[1]=base.y-8;routePosition[2]=base.z;
+            travelIndex=routeTarget(travelRoute,travelIndex,routePosition,Math.min(4,2+velocity.length()*.3),travelClear);
+            const target=travelRoute[travelIndex];curveTarget.set(target[0],target[1]+8,target[2]);routeY=target[1]+8;
+          }else{
           for(let i=1;i<=16;i++){const t=i/16,x=base.x+(dest.x-base.x)*t,z=base.z+(dest.z-base.z)*t;routeY=Math.max(routeY,terrain(x,z)+settings.floorClearance+8);}
           routeY=Math.min(routeY,8-settings.ascentThreshold-1);
-          delta.set(dest.x-base.x,routeY-base.y,dest.z-base.z);const distance=delta.length();
+          curveTarget.copy(dest);
+          // A short look-ahead along a shallow arc gives long atlas legs a swim
+          // rather than a ruler-straight camera rail. Tight passages stay straight.
+          if(!calm&&travelSpan>16){
+            const dx=dest.x-travelStart.x,dz=dest.z-travelStart.z;
+            const progress=clamp(((base.x-travelStart.x)*dx+(base.z-travelStart.z)*dz)/(travelSpan*travelSpan),0,1);
+            const t=Math.min(1,progress+10/travelSpan),arc=Math.sin(Math.PI*t)*Math.min(2.2,travelSpan*.045);
+            curveTo.set(travelStart.x+dx*t-dz/travelSpan*arc,routeY-8,travelStart.z+dz*t+dx/travelSpan*arc);
+            curveProbe-=dt;
+            if(curveProbe<=0){curveProbe=.25;curveFrom.set(base.x,base.y-8,base.z);curveClear=!collisions||!settings.collisionEnabled||collisions.segmentClear(curveFrom,curveTo,settings.collisionRadius+.45);}
+            if(curveClear){curveTarget.x=curveTo.x;curveTarget.z=curveTo.z;routeY=Math.max(routeY,terrain(curveTarget.x,curveTarget.z)+settings.floorClearance+8);}
+          }
+          }
+          delta.set(curveTarget.x-base.x,routeY-base.y,curveTarget.z-base.z);const distance=delta.length();
           if(distance>.001){
             delta.multiplyScalar(1/distance);
             // The commanded course swings round to a new bearing instead of jumping to it, and is the bearing itself over the last metre.
@@ -310,7 +396,9 @@ export function createExploration(canvas, wake, settings=savedSettings) {
             // The pace builds at a set acceleration, eases through a turn, and brakes at a set deceleration into a proportional last stretch.
             // A waypoint without a subject is one to pass through: it only slows the swim if the caller never sends the next one.
             pace=Math.min(cruise,pace+AUTO_ACCEL*dt);
-            const allowed=Math.min(pace*(.55+.45*Math.max(0,course.dot(delta))),hasFocus?Math.min(rate*distance,Math.sqrt(2*AUTO_BRAKE*distance)+.2):rate*distance*2);
+            const remaining=travelRoute.length?distance+travelRemaining[travelIndex]:distance;
+            state.travelRemaining=remaining;
+            const allowed=Math.min(pace*(.55+.45*Math.max(0,course.dot(delta))),hasFocus?Math.min(rate*remaining,Math.sqrt(2*AUTO_BRAKE*remaining)+.2):rate*remaining*2);
             desired.copy(course).multiplyScalar(allowed*(1+(settings.scooterBoost-1)*boost));
           }else desired.set(0,0,0);
           // Look where the swim is going, a little down or up the slope of it.
@@ -427,5 +515,5 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   }
   // QA hook: scripted aim (pixels) and a scripted thumb-stick, for checks where no pointer can be captured.
   window.oceanInput={aim:(dx,dy)=>aim(dx,dy),axis(x=0,y=0){stick.x=clamp(x,-1,1);stick.y=clamp(y,-1,1);stick.active=Boolean(x||y);if(stick.active&&state.mode==='diver'&&!suspended){captureRequired=false;state.exploring=true;}wake();},pad,stick,get gamepad(){return gamepad.connected;}};
-  return {state,update,reset,returnToSurface,startDive,prepareDive,travel,place,setGuided,setLamp,frameSky,setTerrain,setCollisions,suspend,setInterfaceOpen,beginAscent,togglePerspective,toggleFreeCam,setFreeCam:value=>toggleFreeCam(value),recapture,getPlayerPosition,getCameraPose:()=>({perspective:state.perspective}),bounds,destroy(){cleanup.forEach(fn=>fn());}};
+  return {state,update,reset,returnToSurface,startDive,prepareDive,travel,travelPath,place,setGuided,setLamp,frameSky,setTerrain,setCollisions,suspend,setInterfaceOpen,beginAscent,holdSafetyStop,skipSafetyStop,togglePerspective,toggleFreeCam,setFreeCam:value=>toggleFreeCam(value),recapture,getPlayerPosition,getCameraPose:()=>({perspective:state.perspective}),bounds,destroy(){cleanup.forEach(fn=>fn());}};
 }

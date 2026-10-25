@@ -13,12 +13,15 @@ ratingStylesheet.rel = 'stylesheet'; ratingStylesheet.href = new URL('./safety-r
 document.head.append(ratingStylesheet);
 const dock = document.createElement('aside'); dock.className = 'expedition-tools'; dock.hidden = true;
 dock.setAttribute('aria-label', 'Expedition tools');
-dock.innerHTML = '<button type="button" data-stop hidden>Safety stop · 3–5 m <kbd>F2</kbd></button><button type="button" data-photo hidden>Photo <kbd>H</kbd></button><button type="button" data-inventory hidden>Finds <span data-score>0</span></button>';
+dock.innerHTML = '<button type="button" data-stop hidden><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2v9m-4-4 4 4 4-4M7 16h18M16 30v-9m-4 4 4-4 4 4"/></svg><span><strong>Safety stop available</strong><small>Hold at 3–5 m · Press <kbd>F</kbd></small></span><output class="stop-offer-time">10s</output><span class="stop-offer-track" aria-hidden="true"><i></i></span></button><button type="button" data-photo hidden>Photo <kbd>H</kbd></button><button type="button" data-inventory hidden>Finds <span data-score>0</span></button>';
 const notice = document.createElement('div'); notice.className = 'expedition-notice'; notice.setAttribute('role', 'status'); notice.setAttribute('aria-live', 'polite');
 const prompt = document.createElement('div'); prompt.className = 'artifact-prompt'; prompt.hidden = true;
 const dialog = document.createElement('dialog'); dialog.className = 'expedition-dialog'; dialog.setAttribute('aria-labelledby', 'expedition-title');
 document.body.append(dock, notice, prompt, dialog);
 const score = dock.querySelector('[data-score]'), photoButton = dock.querySelector('[data-photo]'), stopButton = dock.querySelector('[data-stop]');
+const offerFill = stopButton.querySelector('i'), offerTime = stopButton.querySelector('output');
+let offerLeft=0, offerUsed=false, offerSecond=-1,returnOffer=false;
+function offerAvailable() { return offerLeft>0&&!dialog.open&&!ui.dialog&&!ui.panel&&!window.oceanControls?.nav?.suspended&&(window.oceanControls?.nav.returnPhase==='offer'||(!window.oceanDiagnostics?.nearbyLandmark&&!nearest)); }
 const point = new THREE.Vector3(), matrix = new THREE.Matrix4(), quaternion = new THREE.Quaternion(), scale = new THREE.Vector3(1,1,1);
 const normal = new THREE.Vector3(), artifactPoint = new THREE.Vector3();
 const finds = [
@@ -51,11 +54,11 @@ function renderStopClock() {
 }
 function updateStopClock(dt) {
   if (active !== 'stop' || !dialog.open) return;
-  if (completionLeft > 0) { completionLeft -= dt; if (completionLeft <= 0) completion.hidden = true; }
+  if (completionLeft > 0) { completionLeft -= dt; if (completionLeft <= 0) {completion.hidden = true;if(window.oceanControls?.nav.returnPhase==='stop'){dialog.close();return;}} }
   if (stopClock.advance(dt)) {
     countdown.dataset.complete = 'true'; completion.hidden = false; completionLeft = 2.6;
-    dialog.querySelector('.stop-hold').textContent = 'Stop complete. Finish your note or keep exploring.';
-    dialog.querySelector('[data-skip]').textContent = 'Keep exploring';
+    dialog.querySelector('.stop-hold').textContent = window.oceanControls?.nav.returnPhase==='stop'?'Stop complete. Continuing to the surface…':'Stop complete. Finish your note or keep exploring.';
+    dialog.querySelector('[data-skip]').textContent = window.oceanControls?.nav.returnPhase==='stop'?'Continue surfacing':'Keep exploring';
     window.dispatchEvent(new CustomEvent('oceansafetystopcomplete'));
   }
   renderStopClock();
@@ -102,7 +105,9 @@ function openStop() {
     <label class="feedback-check"><input name="consent" type="checkbox">Include my contact details so I can share them with Anshul.</label>
     <p class="feedback-privacy">This demo downloads your note as JSON. Nothing is sent to Anshul or saved to a server. Contact details are included only if you opt in.</p>
     </section><p class="feedback-error" role="alert" hidden></p><div class="feedback-actions"><button type="button" data-skip>Skip & keep exploring</button><button type="submit" class="expedition-primary" hidden>Save field note ↓</button></div></form>`, 'stop')) return;
+  if(controls.nav.returnPhase==='stop')dialog.querySelector('[data-skip]').textContent='Skip stop & surface · Esc';
   const form = dialog.querySelector('form');
+  offerLeft=0;offerUsed=true;stopButton.hidden=true;
   startStopClock();
   form.addEventListener('change', event => {
     if (event.target.name !== 'rating') return;
@@ -169,7 +174,23 @@ onTick(dt=> {
   if (underwater !== lastSubmerged) { lastSubmerged = underwater; dock.hidden = !underwater; }
   photoButton.disabled = state.cameraMode !== 'first' || Boolean(controls.getTransition());
   const reading = toDisplayDepth(-controls.getPlayerPosition().y);
-  stopButton.hidden = !underwater || !inSafetyStopRange(reading) || dialog.open || Boolean(ui.dialog || ui.panel);
+  const returning=controls.nav.returnPhase;
+  if(returnOffer!==(returning==='offer')){returnOffer=returning==='offer';stopButton.querySelector('small').innerHTML=returnOffer?'Hold at 3–5 m · <kbd>F</kbd> to stop · <kbd>Esc</kbd> to surface':'Hold at 3–5 m · Press <kbd>F</kbd>';}
+  const inRange=underwater&&inSafetyStopRange(reading)&&(!returning||returning==='offer');
+  // A small dead band avoids retriggering on idle bobbing, while a route that
+  // passes above the stop zone can offer the invitation again on its final hold.
+  if(!underwater||reading>5.2||reading<2.8){offerUsed=false;offerLeft=0;}
+  if(returning==='offer'){offerUsed=true;offerLeft=controls.nav.safetyOfferRemaining;}
+  else if(inRange&&!offerUsed){offerUsed=true;offerLeft=10;offerSecond=-1;}
+  if(!inRange)offerLeft=0;
+  const offerVisible=inRange&&offerAvailable();
+  stopButton.hidden=!offerVisible;
+  if(offerVisible){
+    if(returning!=='offer')offerLeft=Math.max(0,offerLeft-dt);
+    offerFill.style.transform=`scaleX(${offerLeft/10})`;
+    const second=Math.ceil(offerLeft);if(second!==offerSecond){offerSecond=second;offerTime.textContent=`${second}s`;}
+    if(!offerLeft)stopButton.hidden=true;
+  }
   if (mesh) mesh.visible = underwater;
   const count = finds.reduce((total,item)=>total+Number(item.collected),0);
   if (count !== lastScore) { lastScore = count; score.textContent = String(count); }
@@ -194,9 +215,11 @@ dock.querySelector('[data-stop]').addEventListener('click',openStop);
 dock.querySelector('[data-photo]').addEventListener('click',takePhoto);
 dock.querySelector('[data-inventory]').addEventListener('click',openInventory);
 addEventListener('keydown',event=> {
-  if (event.repeat || event.target.closest?.('input,textarea,select,[contenteditable="true"]') || (event.code !== 'F2' && event.target.closest?.('button'))) return;
-  if (event.code === 'F2') { event.preventDefault(); event.stopImmediatePropagation(); openStop(); }
+  if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.target.closest?.('input,textarea,select,[contenteditable="true"]')) return;
+  if(event.code==='Escape'&&window.oceanControls?.nav.returnPhase==='offer'&&!dialog.open&&!ui.dialog){event.preventDefault();event.stopImmediatePropagation();window.oceanControls.skipSafetyStop();offerLeft=0;stopButton.hidden=true;return;}
+  if (event.code === 'KeyF' && offerAvailable() && inSafetyStopRange(toDisplayDepth(-window.oceanControls.getPlayerPosition().y))) { event.preventDefault(); event.stopImmediatePropagation(); openStop(); }
+  else if(event.target.closest?.('button'))return;
   else if (event.code === 'KeyH' && !dialog.open && !ui.dialog) { event.preventDefault(); takePhoto(); }
   else if (event.code === 'KeyF' && nearest && !dialog.open && !ui.dialog && !window.oceanDiagnostics?.nearbyLandmark) { event.preventDefault(); event.stopImmediatePropagation(); collect(); }
 }, {capture:true});
-window.oceanExpedition = {openStop,openInventory,takePhoto,collect,get safetyStop(){return {remaining:stopClock.remaining,completed:stopClock.completed,active:stopClock.active};},get inventory(){return finds.filter(item=>item.collected).map(({id,name})=>({id,name}));},get locations(){return finds.map(({id,name,x,y,z})=>({id,name,x,y,z}));},get score(){return finds.filter(item=>item.collected).length*100;},get photos(){return photos;},get holding(){return active === 'stop';}};
+window.oceanExpedition = {openStop,openInventory,takePhoto,collect,get offerRemaining(){return offerLeft;},get safetyStop(){return {remaining:stopClock.remaining,completed:stopClock.completed,active:stopClock.active};},get inventory(){return finds.filter(item=>item.collected).map(({id,name})=>({id,name}));},get locations(){return finds.map(({id,name,x,y,z})=>({id,name,x,y,z}));},get score(){return finds.filter(item=>item.collected).length*100;},get photos(){return photos;},get holding(){return active === 'stop';}};

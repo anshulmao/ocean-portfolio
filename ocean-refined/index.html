@@ -73,7 +73,7 @@
   <link rel="modulepreload" href="./instruments.js">
 </head>
 <body>
-  <canvas id="world" tabindex="0" aria-label="Explore the ocean. Click the ocean to capture the mouse and look around; Escape releases it. W and S swim, A and D strafe or turn according to the selected control mode, Space ascends, Shift descends, hold E while swimming for a scooter boost, Q toggles the flashlight, V switches first and third person, U clears or restores the interface and F interacts. The arrow keys also look around. On a touch screen a thumb-stick swims and a drag on the water looks; a gamepad works too."></canvas>
+  <canvas id="world" tabindex="0" aria-label="Explore the ocean. Click the ocean to capture the mouse and look around; Escape or semicolon releases it. W and S swim, A and D strafe or turn according to the selected control mode, Space ascends, Shift descends, hold E while swimming for a scooter boost, Q toggles the flashlight, V switches first and third person, U clears or restores the interface and F interacts. The arrow keys also look around. On a touch screen a thumb-stick swims and a drag on the water looks; a gamepad works too."></canvas>
   <div class="scene-shade" aria-hidden="true"></div>
   <div class="underwater-tint" aria-hidden="true"></div>
   <div class="mask-frame" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
@@ -88,11 +88,11 @@
   </header>
   <aside id="settings-menu" class="settings-menu holo holo--reading" aria-label="Settings" hidden>
     <header class="settings-head"><span class="holo-label">Settings</span><button type="button" class="settings-close" aria-label="Close settings menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>
+    <button id="settings-surface-now" class="settings-surface" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-5 5 5-5 5 5M4 3h16"/></svg>Return to the surface</button>
     <div class="settings-body">
     <details id="settings-general" class="settings-group settings-folder" open>
       <summary id="settings-sky-title" class="holo-label">General</summary>
       <div class="settings-group-body" id="settings-general-content">
-      <button id="settings-surface-now" class="settings-surface" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-5 5 5-5 5 5M4 3h16"/></svg>Surface now</button>
       <section id="brightness-settings" class="settings-subgroup" aria-labelledby="settings-brightness-title"><h3 id="settings-brightness-title" class="holo-label">Lighting</h3><div id="general-brightness"></div></section>
       <section id="time-settings" class="settings-subgroup" aria-labelledby="settings-time-title">
       <div class="settings-inline-control"><h3 id="settings-time-title" class="holo-label">Time of day</h3><button id="time-cycle" class="time-cycle" type="button" aria-label="Time of day: day. Switch to dusk."><svg class="sky-glyph" viewBox="0 0 24 24" aria-hidden="true"><g class="sky-day"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></g><g class="sky-low"><path d="M2 16h20M6.5 16a5.5 5.5 0 0 1 11 0M12 5v2.5M4.6 8.6l1.8 1.8M19.4 8.6l-1.8 1.8"/><path class="sky-up" d="m9.5 21 2.5-2 2.5 2"/><path class="sky-down" d="m9.5 19 2.5 2 2.5-2"/></g><g class="sky-night"><path d="M19.5 14.6A7.6 7.6 0 0 1 9.4 4.5a7.6 7.6 0 1 0 10.1 10.1Z"/><path d="M17.5 4v2.4M16.3 5.2h2.4"/></g></svg><i class="lock-pip" aria-hidden="true"></i></button></div>
@@ -125,6 +125,7 @@
       <summary id="settings-view-title" class="holo-label">View</summary>
       <div class="settings-group-body">
       <div class="settings-actions">
+      <button id="motion" class="motion-control" type="button" aria-pressed="false">Pause ocean motion</button>
       <button id="camera-toggle" class="camera-toggle" type="button" aria-pressed="false" hidden>Third-person view <kbd>V</kbd></button>
       <button id="clear-ui-settings" class="motion-control" type="button" aria-pressed="false">Clear screen <kbd>U</kbd></button>
       <button id="photo-settings" class="motion-control" type="button">Take a photo <kbd>H</kbd></button>
@@ -138,7 +139,7 @@
     <details class="settings-group settings-folder" aria-labelledby="settings-keys-title">
       <summary id="settings-keys-title" class="holo-label">Keyboard &amp; touch</summary>
       <div class="settings-group-body">
-      <dl class="key-reference"><div><dt><kbd>W</kbd><kbd>S</kbd></dt><dd>Forward / back</dd></div><div><dt><kbd>A</kbd><kbd>D</kbd></dt><dd id="key-ad-description">Strafe</dd></div><div><dt><kbd>Space</kbd></dt><dd>Rise</dd></div><div><dt><kbd>Shift</kbd></dt><dd>Sink</dd></div><div><dt><kbd>E</kbd></dt><dd>Scooter boost while swimming</dd></div><div><dt><kbd>Q</kbd></dt><dd>Flashlight</dd></div><div><dt><kbd>F</kbd></dt><dd>Interact</dd></div><div><dt><kbd>C</kbd></dt><dd>Dive computer</dd></div><div><dt><kbd>V</kbd></dt><dd>Camera</dd></div><div><dt><kbd>U</kbd></dt><dd>Clear / restore screen</dd></div><div><dt><kbd>H</kbd></dt><dd>Take a photo</dd></div><div><dt><kbd>F2</kbd></dt><dd>Safety stop from 3–5 m</dd></div><div><dt><kbd>Esc</kbd></dt><dd>Release mouse</dd></div><div><dt>Touch</dt><dd>Thumb-stick swims · drag to look</dd></div><div><dt>Gamepad</dt><dd>Sticks swim and look · triggers rise / sink</dd></div></dl>
+      <dl class="key-reference"><div><dt><kbd>W</kbd><kbd>S</kbd></dt><dd>Forward / back</dd></div><div><dt><kbd>A</kbd><kbd>D</kbd></dt><dd id="key-ad-description">Strafe</dd></div><div><dt><kbd>Space</kbd></dt><dd>Rise</dd></div><div><dt><kbd>Shift</kbd></dt><dd>Sink</dd></div><div><dt><kbd>E</kbd></dt><dd>Scooter boost while swimming</dd></div><div><dt><kbd>Q</kbd></dt><dd>Flashlight</dd></div><div><dt><kbd>F</kbd></dt><dd>Interact</dd></div><div><dt><kbd>C</kbd></dt><dd>Dive computer</dd></div><div><dt><kbd>V</kbd></dt><dd>Camera</dd></div><div><dt><kbd>U</kbd></dt><dd>Clear / restore screen</dd></div><div><dt><kbd>H</kbd></dt><dd>Take a photo</dd></div><div><dt><kbd>F</kbd></dt><dd>Safety stop during the 10-second prompt at 3–5 m</dd></div><div><dt><kbd>Esc</kbd><kbd>;</kbd></dt><dd>Release mouse · Esc again opens Settings</dd></div><div><dt>Touch</dt><dd>Thumb-stick swims · drag to look</dd></div><div><dt>Gamepad</dt><dd>Sticks swim and look · triggers rise / sink</dd></div></dl>
       </div>
     </details>
     </div>
