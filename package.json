@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "node tools/sync-services.mjs",
+    "test:services": "node --test tools/services.test.mjs",
+    "test:services:browser": "node tools/sync-services.mjs && node tools/test-services-browser.mjs",
     "test:hud": "node ocean-refined/newqa/dive-hud.mjs",
     "test:schools": "node ocean-refined/newqa/distributed-ecology.mjs",
     "test:navigation": "node ocean-refined/newqa/navigation-refined.mjs",
@@ -23,5 +26,8 @@
   },
   "devDependencies": {
     "playwright": "1.62.1"
+  },
+  "dependencies": {
+    "posthog-js": "1.438.21"
   }
 }

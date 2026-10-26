@@ -20,7 +20,7 @@ Requirements: Node.js 22+ and Python 3.10+.
 
 Run `npm run build`. It creates `dist/` with the exact launch structure: ocean at `/`, lightweight portfolio at `/profile.html`, resume, privacy page and sitemap. It excludes editing studios, tests, captures, copy variants and unused model backups. `dist/` is generated and deliberately not committed.
 
-The build uses only Node’s built-in modules and this repository. Vercel can build it with the included `vercel.json`: framework Other, build `npm run build`, output `dist`.
+The build uses Node’s built-in modules and copies the pinned PostHog browser SDK from npm. Vercel can build it with the included `vercel.json`: framework Other, build `npm run build`, output `dist`.
 
 For direct upload, authenticate with Vercel and link to the existing `anshul-portfolio` project in `anshulmaos-projects`. Run `npm run build`, `npm run prepare:deploy`, then `vercel deploy --prebuilt --prod --scope team_QxXq7z7TZDEkoke6wCrExIrB`. Inspect the linked project before deploying. Do not commit `.env*` or `.vercel/`.
 
@@ -30,6 +30,6 @@ For direct upload, authenticate with Vercel and link to the existing `anshul-por
 
 The live launch passed Chrome desktop/mobile viewport checks, all 24 creature species and eight landmark/coral models, map, portfolio panels, resume download and prepared coral cache. Physical-device performance remains unmeasured. Browser tests use Playwright: install development dependencies and Chromium (`npm install`, `npx playwright install chromium`), then use the test scripts in package.json. Older tests may describe historical UI; consult the latest tests and refinement notes under `ocean-refined/`.
 
-Depth readings are calibrated to 0–40 m; geometry and movement distances retain the original world scale. Safety-stop feedback and optional contact details are local to the visitor’s browser and are not sent to a server. Photos are local downloads. No analytics are bundled.
+Depth readings are calibrated to 0–40 m; geometry and movement distances retain the original world scale. Safety-stop feedback is sent privately to Supabase, with contact details included only on explicit opt-in. Photos download locally and can be separately shared from Settings. Optional PostHog analytics is prepared for both ocean and reading pages; its project token and API host still need to be configured. See [backend setup](release/BACKEND_SETUP.md) for deployment state, limits, privacy choices and verification.
 
 Original user-supplied Sets assets and older attributed landmark/ray models are both present. This repository does not relicense third-party assets; see their included credits and manifests. Some source-review notes describe earlier versions; the production build and current runtime code determine what is shipped.

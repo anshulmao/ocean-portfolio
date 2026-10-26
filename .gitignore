@@ -1,4 +1,5 @@
 node_modules/
+ocean-refined/vendor/posthog.js
 ocean-refined/qa/captures/*
 !ocean-refined/qa/captures/.gitkeep
 .DS_Store

@@ -265,3 +265,5 @@ main{display:block}
 }
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}.reading-card-link:hover,.reading-button:hover,.reading-chip:hover{translate:none}}
 @media print{html,body,.reading-section,.reading-footer{background:#fff!important;color:#000!important}.reading-nav,.reading-gauge,.reading-porthole,.reading-skip{display:none}.glass,.glass-deep,.reading-card-link,.reading-facts{background:none!important;box-shadow:none!important;-webkit-backdrop-filter:none;backdrop-filter:none}}
+/* Optional analytics shares the footer's link styling. Content needs no script. */
+.analytics-toggle{font:inherit;color:inherit;border:0;background:none;padding:0;text-decoration:underline;cursor:pointer}.analytics-toggle:disabled{cursor:default;opacity:.7}
