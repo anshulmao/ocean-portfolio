@@ -6,7 +6,7 @@ import { onFrame, setQuiet, discover, say } from './journey.js';
 // The guided dive is a scripted route, not a camera path: it hands waypoints to
 // the same autopilot the atlas uses, so the diver still collides, still routes
 // over terrain, and any input from the visitor takes the controls straight back.
-const SPEED = 5.6, VIA_RADIUS = 3.2, ARRIVE_RADIUS = 1.6;
+const SPEED = 6, ARRIVE_RADIUS = 1.6;
 // Coordinates are world metres (x, y, z); y is negative below the surface.
 // A stop with `landmark` takes its viewpoint and subject from the placed model.
 export const STOPS = [
@@ -22,7 +22,9 @@ export const STOPS = [
 ];
 const FINALE = 'Three places, one thread: making complex systems useful to people. Keep exploring, open the Portfolio button for any section, or surface when you’re ready.';
 
-const reduced = matchMedia('(prefers-reduced-motion: reduce)'), coarse = matchMedia('(pointer: coarse)');
+// The visitor's in-app choice overrides the system preference for the tour too.
+const reduced = () => window.oceanDiagnostics?.reducedMotion ?? matchMedia('(prefers-reduced-motion: reduce)').matches;
+const coarse = matchMedia('(pointer: coarse)');
 const card = document.createElement('section'), fade = document.createElement('div');
 card.className = 'tour-card holo holo--reading'; card.setAttribute('aria-label', 'Guided dive'); card.dataset.show = 'false'; card.inert = true;
 card.innerHTML = '<header><span class="holo-label tour-kicker"></span><span class="holo-value tour-count"></span></header><h2 class="tour-title"></h2><p class="tour-lines" aria-live="polite"></p><p class="tour-pace"></p><div class="tour-progress" aria-hidden="true"><i></i></div>'
@@ -34,13 +36,14 @@ const part = name => card.querySelector(name), bar = part('.tour-progress i');
 // status: off · starting (waiting for the dive) · travel · dwell · free (visitor has the controls) · done
 let status = 'off', index = 0, arrived = -1, legIndex = 0, legTime = 0, paused = false, inputs = 0;
 let best = Infinity, stall = 0, waited = 0, cut = null, cutTime = 0, barShown = -1;
+let detours=0,routeIssue=false;
 const leg = [], goal = [0, 0, 0], look = [0, 0, 0], from = new THREE.Vector3(), to = new THREE.Vector3(), here = new THREE.Vector3();
 const controls = () => window.oceanControls;
 
 function resolve(stop, target = goal, subject = look) {
   if (!stop.landmark) { target.splice(0, 3, ...stop.point); subject.splice(0, 3, ...stop.focus); return true; }
   const placed = controls()?.landmarks?.find(item => item.id === stop.landmark);
-  if (placed && window.oceanDiagnostics?.modelLoading === false) { target.splice(0, 3, ...placed.interactionPosition); subject.splice(0, 3, ...placed.position); return true; }
+  if (placed && window.oceanDiagnostics?.landmarksReady) { target.splice(0, 3, ...placed.interactionPosition); subject.splice(0, 3, ...placed.position); return true; }
   // Before the models settle, a viewpoint beside the charted position stands in.
   const [x, , z] = LANDMARKS.find(item => item.id === stop.landmark).position, floor = terrainHeightAt(x, z);
   target.splice(0, 3, x + 6, floor + 5, z); subject.splice(0, 3, x, floor + 1.5, z); return false;
@@ -49,15 +52,20 @@ function clear(a, b) {
   const world = controls()?.reef?.userData.collisions;
   return !world?.segmentClear || world.segmentClear(from.fromArray(a), to.fromArray(b), .85);
 }
-// Scripted waypoints when the way is open, a straight swim when it is not, a
-// climb over the reef as the next choice, and null when only a cut will do.
+// Authored scenic waypoints first, then an open-water bow or a checked route
+// above the reef. A blocked route asks the visitor instead of making a cut.
 function route(start, stop) {
   leg.length = 0;
   const scripted = stop.via || [];
   let open = arrived === index - 1, last = start;
   for (const point of scripted) { if (!open) break; open = clear(last, point); last = point; }
-  if (open && clear(last, goal)) { leg.push(...scripted, goal); return true; }
-  if (clear(start, goal)) { leg.push(goal); return true; }
+  if (scripted.length && open && clear(last, goal)) { leg.push(...scripted, goal); return true; }
+  if (clear(start, goal)) {
+    const dx=goal[0]-start[0],dz=goal[2]-start[2],span=Math.hypot(dx,dz),bow=Math.min(3,span*.12);
+    const mid=[(start[0]+goal[0])/2-(span?dz/span*bow:0),(start[1]+goal[1])/2,(start[2]+goal[2])/2+(span?dx/span*bow:0)];
+    if(clear(start,mid)&&clear(mid,goal))leg.push(mid);
+    leg.push(goal); return true;
+  }
   let crest = -Infinity;
   for (let i = 0; i <= 12; i++) crest = Math.max(crest, terrainHeightAt(start[0] + (goal[0] - start[0]) * i / 12, start[2] + (goal[2] - start[2]) * i / 12));
   const lane = Math.min(-5, Math.max(start[1], goal[1], crest + 14)), up = [start[0], lane, start[2]], over = [goal[0], lane, goal[2]];
@@ -77,15 +85,16 @@ function paint() {
   part('[data-tour="pause"]').firstChild.textContent = paused ? 'Resume ' : 'Pause ';
   part('[data-tour="pause"]').setAttribute('aria-pressed', String(paused));
   part('[data-tour="next"]').firstChild.textContent = status === 'travel' ? 'Skip travel ' : index === STOPS.length - 1 ? 'Finish route ' : 'Continue ';
-  part('.tour-pace').textContent = status === 'dwell' ? 'Take your time. Continue when you’re ready.' : status === 'travel' ? (paused ? 'Travel paused. Resume when you’re ready.' : 'You can skip this swim or take the controls at any time.') : '';
+  part('.tour-pace').textContent = status === 'dwell' ? 'Take your time. Continue when you’re ready.' : status === 'travel' ? (routeIssue ? 'An outcrop is in the way. Skip this swim, resume, or explore freely.' : paused ? 'Travel paused. Resume when you’re ready.' : 'You can skip this swim or take the controls at any time.') : '';
   setQuiet(touring || status === 'starting');
   setBar(status === 'done' ? 1 : (index + (status === 'dwell' ? 1 : 0)) / STOPS.length);
   if (window.oceanDiagnostics) window.oceanDiagnostics.tour = { status, stop: index, key: stop.key, arrived, paused };
 }
 function setBar(value) { const rounded = Math.round(value * 250) / 250; if (rounded !== barShown) { barShown = rounded; bar.style.transform = `scaleX(${rounded})`; } }
 function launch() {
-  const api = controls(), final = legIndex === leg.length - 1;
-  api.guide(true, true); api.travel(leg[legIndex], final ? look : null, SPEED);
+  const api = controls();
+  api.guide(true, true);
+  if(!api.travelPath(leg.slice(legIndex),look,SPEED)){paused=routeIssue=true;paint();}
   inputs = api.nav.inputs; best = Infinity; stall = 0; legTime = 0;
 }
 function arrive() {
@@ -96,9 +105,10 @@ function arrive() {
 // A cut: fade the water over, move the diver, fade back. Reduced motion always travels this way.
 function cutTo(then) { cut = then; cutTime = .24; fade.dataset.on = 'true'; }
 function go(next) {
-  index = next; resolve(STOPS[index]); status = 'travel'; paint();
+  index = next; resolve(STOPS[index]); status = 'travel'; paused=false;routeIssue=false;detours=0;paint();
   here.fromArray(window.oceanDiagnostics.playerPosition);
-  if (reduced.matches || !route(here.toArray(), STOPS[index])) { cutTo(land); return; }
+  if (reduced()) { cutTo(land); return; }
+  if (!route(here.toArray(), STOPS[index])) { paused=true;routeIssue=true;paint();return; }
   legIndex = 0; launch();
 }
 function land() { const api = controls(); api.guide(true, true); api.place(goal, look); arrive(); }
@@ -146,7 +156,7 @@ function update(dt, api, state, diving) {
   const mode = api.getMode();
   if (status === 'starting') {
     waited += dt;
-    if (diving) { status = 'free'; arrived = -1; rejoin(); }
+    if (diving&&state.landmarksReady&&!api.getTransition()) { arrived = -1;go(0); }
     else if (mode === 'surface' && waited > 8) stop();
     return;
   }
@@ -162,13 +172,17 @@ function update(dt, api, state, diving) {
   // Pause the route itself, rather than only its caption countdown.
   if (paused) return;
   legTime += dt;
-  const target = leg[legIndex], final = legIndex === leg.length - 1;
+  const target = goal;
   const distance = here.fromArray(state.playerPosition).distanceTo(to.fromArray(target));
-  if (!final && distance < VIA_RADIUS) { legIndex++; launch(); return; }
-  if (final && distance < ARRIVE_RADIUS && (!nav.travelling || distance < .6)) { arrive(); return; }
-  if (distance < best - .25) { best = distance; stall = 0; } else stall += dt;
-  // Coral in the way that the autopilot cannot slide past: cut to the stop.
-  if (legTime > .4 && (stall > 3.5 || !nav.travelling)) cutTo(land);
+  if (distance < ARRIVE_RADIUS && (!nav.travelling || distance < .6)) { arrive(); return; }
+  const remaining=nav.travelRemaining??distance;
+  if (remaining < best - .25) { best = remaining; stall = 0; } else stall += dt;
+  // Try a new collision-checked approach before asking the visitor. Automatic
+  // travel never silently teleports past scenery; only explicit Skip does.
+  if (legTime > .4 && (stall > 3.5 || !nav.travelling)) {
+    if(detours++<2&&route(here.toArray(),{...STOPS[index],via:[]})){legIndex=0;launch();}
+    else{paused=true;routeIssue=true;api.travel(state.playerPosition);paint();}
+  }
 }
 onFrame(update);
 
@@ -197,7 +211,7 @@ function togglePause() {
   if (status !== 'travel') return;
   paused = !paused;
   if (paused && !cut) controls()?.travel(window.oceanDiagnostics.playerPosition, look);
-  if (!paused && !cut) launch();
+  if (!paused && !cut) {routeIssue=false;here.fromArray(window.oceanDiagnostics.playerPosition);if(!route(here.toArray(),{...STOPS[index],via:[]})){paused=routeIssue=true;paint();return;}legIndex=0;launch();}
   paint();
 }
 addEventListener('keydown', event => {
