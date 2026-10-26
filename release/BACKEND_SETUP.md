@@ -43,10 +43,12 @@ Free-tier inactivity pausing still applies; no keepalive automation is installed
 
 ## PostHog
 
-Set `posthogToken` and `posthogHost` in `ocean-refined/services-config.js` from the
-project's browser installation snippet. These are public browser settings, not a
-personal API key. Until set, analytics remains inactive and its toggle is disabled.
-The connected PostHog plugin did not expose callable tools in the setup session.
+The connected PostHog account belongs to `anshulramprasad@gmail.com`. Its only
+organization is `ARP Enterprise`, with one non-demo `Default project` (ID `688555`).
+The project's public browser token and US ingestion host are configured in
+`ocean-refined/services-config.js`; they are not a personal API key. The PostHog
+plugin supplied these settings in the follow-up session without sharing source
+code with PostHog AI. No event had been ingested before this integration.
 
 Analytics is off until enabled in ocean Settings, the reading-page footer or the
 privacy page. Turning it off stops capture; Do Not Track and Global Privacy Control
@@ -83,6 +85,19 @@ and a real JPEG upload with blocked public download. The synthetic feedback was
 deleted. A 2.4 KB synthetic photo remains archived for reference:
 `521c27c6-c160-448f-9c8a-4bb762bd26de.jpg` in the private `reef-photos` bucket.
 
-The backend has been deployed and verified. The frontend changes are not deployed
-to production yet. PostHog ingestion into the user's project still needs the
-browser token/host and a real event check after deployment.
+The frontend is deployed to production at
+`https://anshul-portfolio-rho.vercel.app/` from PR #6's branch commit
+`bc1ab22ff2b1085b87e770a7e6a2d79a6cac9867` (Vercel deployment
+`dpl_4bPWypG97xEBWQA81kZXjojYavUT`). The PR remains a draft and `main` still
+points to the older release; a later `main` deployment can replace this build.
+The deployed configuration and privacy page return HTTP 200. The existing Supabase
+project is `ACTIVE_HEALTHY` and `portfolio-intake` is active.
+
+The production browser's reading page initially showed analytics off. Enabling it
+changed the control to on and PostHog project `688555` received a `$pageview` at
+`2026-10-26T08:03:51.250Z`, with `$pathname=/profile.html` and
+`experience=reading`. The ocean page loaded and its Settings showed analytics on.
+No real visitor data or feedback text was submitted for this check. The local
+execution sandbox blocks outbound PostHog traffic, so local tests intercept the
+SDK endpoint; the production event above is the live ingestion proof.
+
