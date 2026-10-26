@@ -1,0 +1,6 @@
+project_id = "ocean-portfolio"
+
+[functions.portfolio-intake]
+# The handler checks the application's publishable API key itself.
+verify_jwt = false
+entrypoint = "./functions/portfolio-intake/index.ts"

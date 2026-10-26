@@ -3,8 +3,10 @@ import * as THREE from './vendor/three.module.min.js';
 import { onTick, ui } from './ui-ticker.js';
 import { safetyRatingMarkup } from './safety-rating.js';
 import { createSafetyStopClock, SAFETY_STOP_SECONDS, inSafetyStopRange } from './safety-stop-clock.js';
+import {sendFeedback, sendPhoto} from './submissions.js';
+import {track} from './analytics.js';
 
-// This module deliberately has no network adapter. Visitors own the optional exported JSON.
+// Visitor submissions are explicit; photos still download locally unless separately shared.
 const stylesheet = document.createElement('link');
 stylesheet.rel = 'stylesheet'; stylesheet.href = new URL('./expedition-interactions.css', import.meta.url).href;
 document.head.append(stylesheet);
@@ -64,10 +66,6 @@ function updateStopClock(dt) {
   renderStopClock();
 }
 function say(message) { notice.textContent = message; noticeLeft = 3; }
-function download(blob, filename) {
-  const url = URL.createObjectURL(blob), link = document.createElement('a');
-  link.href = url; link.download = filename; link.click(); setTimeout(()=>URL.revokeObjectURL(url), 10000);
-}
 function begin(title, contents, mode) {
   if (ui.dialog || ui.panel || dialog.open) return false;
   previousFocus = document.activeElement; active = mode;
@@ -103,8 +101,9 @@ function openStop() {
     <label>Anything to share? <small>optional</small><textarea name="feedback" maxlength="2000" rows="3" placeholder="A favourite moment, an idea, or something to improve…"></textarea></label>
     <div class="feedback-contact"><label>Name <small>optional</small><input name="name" autocomplete="name" maxlength="100"></label><label>Email <small>optional</small><input name="email" type="email" autocomplete="email" maxlength="254"></label></div>
     <label class="feedback-check"><input name="consent" type="checkbox">Include my contact details so I can share them with Anshul.</label>
-    <p class="feedback-privacy">This demo downloads your note as JSON. Nothing is sent to Anshul or saved to a server. Contact details are included only if you opt in.</p>
-    </section><p class="feedback-error" role="alert" hidden></p><div class="feedback-actions"><button type="button" data-skip>Skip & keep exploring</button><button type="submit" class="expedition-primary" hidden>Save field note ↓</button></div></form>`, 'stop')) return;
+    <p class="feedback-privacy">Sending saves your note privately for Anshul. Contact details are included only if you opt in. <a href="./privacy.html" target="_blank" rel="noopener">Privacy</a></p>
+    </section><p class="feedback-error" role="alert" hidden></p><div class="feedback-actions"><button type="button" data-skip>Skip & keep exploring</button><button type="submit" class="expedition-primary" hidden>Send field note</button></div></form>`, 'stop')) return;
+  track('feedback_started');
   if(controls.nav.returnPhase==='stop')dialog.querySelector('[data-skip]').textContent='Skip stop & surface · Esc';
   const form = dialog.querySelector('form');
   offerLeft=0;offerUsed=true;stopButton.hidden=true;
@@ -118,17 +117,30 @@ function openStop() {
     dialog.querySelectorAll('.star-options label').forEach((label,index)=>label.classList.toggle('rated',index < rating));
   });
   dialog.querySelector('[data-skip]').addEventListener('click',()=>dialog.close());
-  dialog.querySelector('form').addEventListener('submit', event=> {
+  let submissionId = crypto.randomUUID(), lastPayload = '';
+  dialog.querySelector('form').addEventListener('submit', async event=> {
     event.preventDefault(); const form = event.currentTarget;
-    if (!form.reportValidity()) return;
+    if (form.dataset.sending === 'true' || !form.reportValidity()) return;
     const data = new FormData(form), consent = data.get('consent') === 'on';
     const error = dialog.querySelector('.feedback-error');
-    // Optional contact is omitted unless explicitly opted in, never accidentally exported.
+    // Optional contact is omitted unless explicitly opted in.
     error.hidden = true;
-    const record = {version:1,createdAt:new Date().toISOString(),rating:Number(data.get('rating')),feedback:String(data.get('feedback')).trim(),depthMeters:Number(heldDepth.toFixed(1)),contact:consent?{name:String(data.get('name')).trim(),email:String(data.get('email')).trim(),consent:true}:null};
-    download(new Blob([JSON.stringify(record,null,2)],{type:'application/json'}),`reef-field-note-${new Date().toISOString().slice(0,10)}.json`);
-    say('Your field note was exported to your device. Nothing was sent.');
-    dialog.close();
+    const payload = {rating:Number(data.get('rating')),feedback:String(data.get('feedback')).trim(),depthMeters:Number(heldDepth.toFixed(1)),contact:consent?{name:String(data.get('name')).trim(),email:String(data.get('email')).trim(),consent:true}:null};
+    const fingerprint=JSON.stringify(payload);
+    if(lastPayload && lastPayload!==fingerprint)submissionId=crypto.randomUUID();
+    lastPayload=fingerprint;const record={id:submissionId,...payload};
+    const submit=form.querySelector('[type=submit]');
+    const fields=[...form.querySelectorAll('input,textarea')];
+    form.dataset.sending='true';submit.disabled=true;submit.textContent='Sending…';fields.forEach(field=>field.disabled=true);
+    try {
+      await sendFeedback(record);
+      track('feedback_saved',{rating:record.rating});say('Your field note was sent to Anshul. Thank you.');
+      if(form.isConnected)dialog.close();
+    } catch (failure) {
+      if(form.isConnected){error.textContent=failure.message;error.hidden=false;}
+    } finally {
+      delete form.dataset.sending;submit.disabled=false;submit.textContent='Send field note';fields.forEach(field=>field.disabled=false);
+    }
   });
 }
 function openInventory() {
@@ -138,8 +150,27 @@ function openInventory() {
 function collect() {
   if (!nearest || !mesh || dialog.open || ui.dialog || ui.panel) return false;
   nearest.collected = true; matrix.makeScale(0,0,0); mesh.setMatrixAt(nearest.id,matrix); mesh.instanceMatrix.needsUpdate = true;
+  track('artifact_collected',{artifact_id:nearest.id});
   say(`${nearest.name} collected · +100 discovery points`); nearest = null; prompt.hidden = true; return true;
 }
+let sharedPhoto = null;
+const sharePhotoButton=document.createElement('button');sharePhotoButton.type='button';sharePhotoButton.className='motion-control';sharePhotoButton.textContent='Share last reef photo';sharePhotoButton.hidden=true;
+document.querySelector('#photo-settings')?.after(sharePhotoButton);
+sharePhotoButton.addEventListener('click',()=> {
+  if(!sharedPhoto || dialog.open)return;
+  window.oceanHud?.setMenu(false,false);
+  const photo=sharedPhoto;
+  if(!begin('Share your reef photo', '<p>Send this reef photo privately to Anshul? It will not appear in a public gallery.</p><div data-photo-preview></div><p class="feedback-error" role="alert" hidden></p><div class="feedback-actions"><button type="button" data-cancel>Keep it on my device</button><button type="button" class="expedition-primary" data-share>Share with Anshul</button></div>', 'photo'))return;
+  const preview=document.createElement('img'), objectURL=URL.createObjectURL(photo);preview.src=objectURL;preview.alt='Your reef photo';preview.style.cssText='width:100%;height:auto;border-radius:12px';dialog.querySelector('[data-photo-preview]').append(preview);
+  dialog.addEventListener('close',()=>URL.revokeObjectURL(objectURL),{once:true});
+  dialog.querySelector('[data-cancel]').addEventListener('click',()=>dialog.close());
+  const button=dialog.querySelector('[data-share]'),error=dialog.querySelector('.feedback-error');
+  button.addEventListener('click',async()=> {
+    button.disabled=true;button.textContent='Sharing…';error.hidden=true;
+    try {await sendPhoto(photo);track('reef_photo_shared');say('Your reef photo was shared privately with Anshul.');if(button.isConnected)dialog.close();}
+    catch(failure){if(button.isConnected){error.textContent=failure.message;error.hidden=false;button.disabled=false;button.textContent='Share with Anshul';}}
+  });
+});
 function takePhoto() {
   const controls = window.oceanControls, state = window.oceanDiagnostics;
   if (!state?.submerged || state.cameraMode !== 'first' || controls?.getTransition() || ui.dialog || ui.panel) { say('Photos are available in first-person underwater. Press V to change view.'); return; }
@@ -148,7 +179,10 @@ function takePhoto() {
     // Read once in the same task as the draw; no preserveDrawingBuffer or per-frame GPU readback.
     const canvas = controls.getRenderer().domElement, data = canvas.toDataURL('image/png');
     const link = document.createElement('a'); link.download = `reef-photo-${new Date().toISOString().replace(/[:.]/g,'-')}.png`; link.href = data; link.click();
-    photos++; say('Reef photo downloaded · the world only, without the HUD.');
+    photos++;track('reef_photo_downloaded');say('Reef photo downloaded. You can share it with Anshul from Settings.');
+    const preview=document.createElement('canvas');const ratio=Math.min(1,1280/canvas.width,720/canvas.height);preview.width=Math.max(1,Math.round(canvas.width*ratio));preview.height=Math.max(1,Math.round(canvas.height*ratio));
+    preview.getContext('2d').drawImage(canvas,0,0,preview.width,preview.height);
+    preview.toBlob(blob=> {if(blob && blob.size<=1048576){sharedPhoto=blob;sharePhotoButton.hidden=false;}},'image/jpeg',.8);
   } catch { say('This browser could not export a photo. Please try again after the scene finishes loading.'); }
 }
 function buildArtifacts(controls) {

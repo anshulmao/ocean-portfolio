@@ -7,6 +7,7 @@
 import { PORTFOLIO_CONTENT, PORTFOLIO_MEDIA, COPY_VARIANTS } from './portfolio-content.js';
 import { icon } from './ui-icons.js';
 import { openLightbox, closeLightbox, lightboxOpen } from './archive-lightbox.js';
+import {track} from './analytics.js';
 
 const panel = document.querySelector('#landmark-dialog');
 const page = panel.querySelector('#archive-page');
@@ -617,6 +618,10 @@ export function show(id = sectionId, entry = null, options = {}) {
   if (!railBuilt) buildRail();
   closeLightbox();
   const stop = findStop(id, entry), key = `${stop.hash}:${variant.value}`, moved = stop.index - position;
+  if(key !== rendered) {
+    track('portfolio_section_opened',{section:stop.section,project_id:stop.section==='projects'?stop.id:undefined});
+    if(stop.section==='projects' && stop.id !== 'all')track('project_opened',{project_id:stop.id,experience:'ocean'});
+  }
   const anchor = options.anchor || (id === 'about' && String(entry).toLowerCase() === 'contact' ? '#arc-contact' : null);
   sectionId = stop.section; entryId = stop.id; position = stop.index;
   if (key !== rendered || options.force) {
