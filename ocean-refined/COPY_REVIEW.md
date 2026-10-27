@@ -1,8 +1,8 @@
 # Ocean portfolio copy review
 
-## Existing baseline
+## Current portfolio copy
 
-`PORTFOLIO_CONTENT` adapts existing copy from `../index.html` into ocean panel data. Existing copy is the baseline; inclusion here does not establish new user approval or confirm public deployment. Some headings combine existing career chapters, and facts shorten existing phrases for scanning.
+`PORTFOLIO_CONTENT` provides the copy for the ocean portfolio panels. The portfolio copy was revised for clearer technical descriptions, shorter sentences, active voice, and consistent terms, with guidance from the Simplified Technical English skill. The skill excludes marketing text from strict ASD-STE100 use, so this is an editorial application of its clarity principles, not a claim of full STE compliance. This content change does not confirm public deployment. Some headings combine career chapters, and facts shorten the descriptions for scanning.
 
 - About: hero, operating principles, capabilities, contact, and footer.
 - Experience: three chapters covering Product Manager, Product Content Manager, and consulting foundations. The last chapter combines Consultant Analyst and Advisory Maverick while retaining both titles and dates.
@@ -14,9 +14,9 @@ The export excludes client identities, client artifacts, adoption figures, platf
 
 Links reuse existing website destinations. GitHub profile links are labeled as profiles, not project repositories. No Sage demo or repository destination is invented. The Rae destination is an existing public-story link; its availability was not checked in this content-only task.
 
-## Proposed variants — awaiting user approval
+## Introduction variants
 
-`COPY_VARIANTS` contains **new drafts**, separate from the existing baseline. Each style proposes one short introduction per section; it does not rewrite entry claims.
+`COPY_VARIANTS` contains three short introductions for each section. Each style describes the same experience with a different emphasis; it does not add new career or project claims.
 
 | Style | Intended emphasis |
 | --- | --- |
