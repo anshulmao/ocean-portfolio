@@ -18,6 +18,7 @@ import { createSeabirds } from './seabirds.js';
 import { createWeather } from './weather.js';
 import { createSkySystem } from './sky-system.js';
 import { createExploration } from './exploration.js';
+import { createAscentComposition } from './ascent-composition.js';
 import { settings } from './movement-settings.js';
 import { createMovementPanel } from './movement-panel.js';
 import { look, stylize, stylizeTree, stylizeImported, lookGlowAt } from './ocean-look.js';
@@ -38,7 +39,9 @@ if(requestedMotion==='full'||requestedMotion==='reduced'){
   motionPreference=requestedMotion;
   try{localStorage.setItem('ocean-motion',motionPreference);}catch{}
 }
-let reducedMotion=motionPreference?motionPreference==='reduced':motionMedia.matches,paused=reducedMotion;
+// A fresh visit starts with the ocean moving. The in-page control can pause it,
+// and an explicit saved/query preference still wins; OS changes are honored below.
+let reducedMotion=motionPreference?motionPreference==='reduced':false,paused=reducedMotion;
 let renderer,scene,camera,water,waterCalm,waterRough,waterFine,waterCoarse,diver,reef,skySystem,marine,clouds,sunlight,ambient,beamGroup,motes,bubbleMesh,diveLamp;
 let viewerOrbit=null,scooterModel=null;
 let diverAnimator=null;
@@ -63,6 +66,7 @@ let nextBubble=0,bubbleCursor=0,bubbleClock=-1,exploring=false,mapDestination=nu
 let mapCollapsed=mobile;
 let previousMode='surface',surfaceX=0,surfaceZ=0,surfaceFramingYaw=0,expeditionUI=null;
 let ascentCameraTime=0,surfaceLandingTime=0;const ascentCameraStart=new THREE.Vector3(),ascentAimStart=new THREE.Vector3();
+const ascentComposition=createAscentComposition(),diverPoseGoal=new THREE.Quaternion();
 const aimObject=new THREE.Object3D(),aimQuaternion=new THREE.Quaternion();
 let wristComputer=null,computerOpen=false,interfaceOpen=false,movementPanelOpen=false,settingsMenuOpen=false;
 const safetyStop={active:false,blend:0,yaw:0,computerWas:false};
@@ -382,6 +386,7 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   // Dive planner and guided tour hooks: autopilot, instant placement, dive start / surfacing, and the flashlight and scooter state.
   travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free){exploration.setGuided(value,free);},
   travelPath(points,focus,speed){return exploration.travelPath(points,focus,speed);},
+  cancelTravel(options){return exploration.cancelTravel(options);},
   startDive(options){if(!diagnostic.ready||diveTarget===1||getMode()!=='surface')return false;exploration.prepareDive(options);if(options?.at)snapCamera=true;$('#dive').click();return true;},
   surface(options){if(options?.instant)return surfaceNow();if(diveTarget!==1||exploration.state.mode!=='diver')return false;window.oceanTour?.stop();mapDestination=null;const started=exploration.beginAscent(reef?.userData.safeAscentRoute,true);wake();return started;},
   skipSafetyStop(){exploration.skipSafetyStop();},
@@ -701,7 +706,7 @@ function updateWorld(dt,clockDt=dt){
   uniforms.uTime.value=elapsed;uniforms.uNight.value=night;uniforms.uDive.value=underwater;
   const nav=exploration.update(dt,easedDive>.95,reducedMotion,reef?.userData.safeAscentRoute);
   safetyStop.blend=reducedMotion?Number(safetyStop.active):THREE.MathUtils.lerp(safetyStop.blend,Number(safetyStop.active),1-Math.exp(-dt*6));if(safetyStop.blend<.001)safetyStop.blend=0;
-  if(nav.mode==='transition'&&previousMode!=='transition'){ascentCameraTime=0;ascentCameraStart.copy(camera.position);camera.getWorldDirection(ascentAimStart);ascentAimStart.multiplyScalar(10).add(camera.position);}
+  if(nav.mode==='transition'&&previousMode!=='transition'){ascentCameraTime=0;ascentCameraStart.copy(camera.position).sub(playerPosition);camera.getWorldDirection(ascentAimStart);ascentAimStart.multiplyScalar(10).add(camera.position).sub(playerPosition);}
   if(nav.mode==='transition')ascentCameraTime+=dt;
   surfaceLandingTime=Math.max(0,surfaceLandingTime-dt);
   if(previousMode==='transition'&&nav.mode==='surface'){surfaceLandingTime=2;diveTarget=0;dive=0;frameSurface();computerOpen=false;$('#dive-label').textContent='Dive in';status.textContent='Back at the surface.';setTimeout(()=>{if(status.textContent==='Back at the surface.')status.textContent='';},1800);}
@@ -712,6 +717,7 @@ function updateWorld(dt,clockDt=dt){
   if(nav.exploring!==exploring)setExploring(nav.exploring);
   const bob=paused?0:Math.sin(elapsed*settings.bobFrequency)*settings.bobAmplitude;
   playerPosition.set(nav.offset.x,-8+nav.offset.y,nav.offset.z);
+  const ascentLanding=ascentComposition.update(nav,Math.max(0,-playerPosition.y));
   if(nav.mode==='transition')underwater=THREE.MathUtils.smoothstep(Math.max(0,-playerPosition.y),0,8);
   uniforms.uDive.value=underwater;
   swimDirection.set(-Math.sin(nav.yaw)*Math.cos(nav.pitch),Math.sin(nav.pitch),-Math.cos(nav.yaw)*Math.cos(nav.pitch));
@@ -748,15 +754,16 @@ function updateWorld(dt,clockDt=dt){
   }
   if(ascending){
     lookTarget.copy(playerPosition).add(scratchA.set(0,.7,0));
-    const landing=1-THREE.MathUtils.smoothstep(Math.max(0,-playerPosition.y),0,8);
+    const landing=ascentLanding;
     const sun=skySystem.getState(phase).sunDirection;
     surfaceFramingYaw=sun[2]<=0?0:Math.PI;
     const surfaceCamera=scratchA.set(playerPosition.x+10*Math.sin(surfaceFramingYaw),2.5,playerPosition.z+10*Math.cos(surfaceFramingYaw));
-    cameraGoal.lerp(surfaceCamera,nav.returning?0:landing);
+    cameraGoal.lerp(surfaceCamera,landing);
     const surfaceAim=scratchB.set(-Math.sin(surfaceFramingYaw),-.04,-Math.cos(surfaceFramingYaw)).add(surfaceCamera);
-    lookTarget.lerp(surfaceAim,nav.returning?0:landing);
+    lookTarget.lerp(surfaceAim,landing);
     const reveal=THREE.MathUtils.smootherstep(ascentCameraTime,0,1.6);
-    cameraGoal.lerp(ascentCameraStart,1-reveal);lookTarget.lerp(ascentAimStart,1-reveal);
+    // Carry the starting view with the swimmer while revealing the ascent view.
+    cameraGoal.lerp(scratchA.copy(ascentCameraStart).add(playerPosition),1-reveal);lookTarget.lerp(scratchB.copy(ascentAimStart).add(playerPosition),1-reveal);
   }
   if(safetyStop.blend>0){
     const yaw=safetyStop.yaw,side=mobile?8:7,forward=mobile?1.2:2.2;
@@ -778,7 +785,7 @@ function updateWorld(dt,clockDt=dt){
     const follow=settledView?THREE.MathUtils.lerp(settings.cameraResponse*(firstPerson?3:2),8,Math.min(1,cameraShift*1.6)):4.5,decay=Math.exp(-follow*dt);
     scratchA.copy(camera.position);
     // Half of the diver's own movement carries the camera along, so a steady swim stretches the gap a little instead of dragging it.
-    if(settledView)camera.position.addScaledVector(scratchB.copy(playerPosition).sub(cameraAnchor),.5);
+    if(settledView||ascending)camera.position.addScaledVector(scratchB.copy(playerPosition).sub(cameraAnchor),.5);
     scratchB.copy(camera.position).sub(cameraGoal);scratchC.copy(cameraVelocity).addScaledVector(scratchB,follow);
     camera.position.copy(cameraGoal).add(scratchB.addScaledVector(scratchC,dt).multiplyScalar(decay));
     cameraVelocity.addScaledVector(scratchC,-follow*dt).multiplyScalar(decay);
@@ -842,22 +849,24 @@ function updateWorld(dt,clockDt=dt){
   relative.set(surfaceX,0,-7.2).applyAxisAngle(axisY,framingYaw);
   const surfaceWorldX=playerPosition.x+10*Math.sin(framingYaw)+relative.x,surfaceWorldZ=playerPosition.z+10*Math.cos(framingYaw)+relative.z;
   const surfaceY=waveHeight(surfaceWorldX,surfaceWorldZ,elapsed)-.06;
-  const diverBlend=ascending?THREE.MathUtils.smoothstep(Math.max(0,-playerPosition.y),0,8):easedDive;
+  const diverBlend=ascending?1-ascentLanding:easedDive;
   diver.root.position.set(THREE.MathUtils.lerp(surfaceWorldX,playerPosition.x,diverBlend),THREE.MathUtils.lerp(surfaceY,playerPosition.y,diverBlend),THREE.MathUtils.lerp(surfaceWorldZ,playerPosition.z,diverBlend));
   // Deliberate trim change followed by small alternating fin kicks.
-  poseYaw.setFromAxisAngle(axisY,THREE.MathUtils.lerp(framingYaw-.2,Math.PI+nav.yaw,diverBlend));posePitch.setFromAxisAngle(axisX,diverBlend*(ascending?(nav.returning?1.25:.22):Math.PI/2-settings.diverTrim-nav.pitch-(nav.pitchLead||0)));
+  const swimPitch=Math.PI/2-settings.diverTrim-nav.pitch-(nav.pitchLead||0);
+  poseYaw.setFromAxisAngle(axisY,THREE.MathUtils.lerp(framingYaw-.2,Math.PI+nav.yaw,diverBlend));posePitch.setFromAxisAngle(axisX,diverBlend*(ascending?THREE.MathUtils.lerp(swimPitch,.22,nav.ascentLaunch||0):swimPitch));
   // The body banks into a turn and sways a little at rest (exploration.js: roll and lean, in radians, zero under reduced motion).
-  diver.root.quaternion.copy(poseYaw).multiply(posePitch).multiply(scratchQ.setFromAxisAngle(axisY,-diverBlend*((nav.roll||0)+(nav.lean||0))));lookGlowAt(diver.root.position,diverGlow);
+  diverPoseGoal.copy(poseYaw).multiply(posePitch).multiply(scratchQ.setFromAxisAngle(axisY,-diverBlend*((nav.roll||0)+(nav.lean||0))));lookGlowAt(diver.root.position,diverGlow);
   if(safetyStop.blend>0){
     const hold=safetyStop.blend;
     poseYaw.setFromAxisAngle(axisY,Math.PI+safetyStop.yaw);posePitch.setFromAxisAngle(axisX,.1);
-    scratchQ.copy(poseYaw).multiply(posePitch);diver.root.quaternion.slerp(scratchQ,hold);
+    scratchQ.copy(poseYaw).multiply(posePitch);diverPoseGoal.slerp(scratchQ,hold);
     diver.root.position.y+=reducedMotion?0:Math.sin(elapsed*1.35)*.07*hold;
   }
+  diver.root.quaternion.slerp(diverPoseGoal,!reducedMotion&&(ascending||surfaceLandingTime>0)?1-Math.exp(-dt*5):1);
   diveLamp.position.copy(playerPosition);diveLamp.position.y+=.4;diveLamp.intensity=nav.lamp?underwater*((night>.5?70:55)+depthLight*18):0;
   diveLamp.target.position.copy(playerPosition).addScaledVector(swimDirection,45);
   diagnostic.flashlightRange=diveLamp.distance;diagnostic.flashlightIntensity=diveLamp.intensity;diagnostic.neutralBrightness=look.uLookBrightness.value;
-  diverAnimationState.dive=easedDive;diverAnimationState.moving=nav.moving;diverAnimationState.ascending=ascending&&!nav.returning;
+  diverAnimationState.dive=easedDive;diverAnimationState.moving=nav.moving;diverAnimationState.ascending=ascending?(nav.ascentLaunch||0):0;
   diverAnimationState.safetyStop=safetyStop.blend;diverAnimationState.wristOpen=computerOpen;
   diverAnimationState.kickFrequency=settings.kickFrequency;diverAnimationState.kickAmplitude=settings.kickAmplitude;
   diverAnimationState.reducedMotion=reducedMotion;diverAnimationState.paused=paused;
