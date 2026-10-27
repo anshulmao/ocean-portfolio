@@ -252,6 +252,7 @@ addEventListener('keydown',event=> {
   if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.target.closest?.('input,textarea,select,[contenteditable="true"]')) return;
   if(event.code==='Escape'&&window.oceanControls?.nav.returnPhase==='offer'&&!dialog.open&&!ui.dialog){event.preventDefault();event.stopImmediatePropagation();window.oceanControls.skipSafetyStop();offerLeft=0;stopButton.hidden=true;return;}
   if (event.code === 'KeyF' && offerAvailable() && inSafetyStopRange(toDisplayDepth(-window.oceanControls.getPlayerPosition().y))) { event.preventDefault(); event.stopImmediatePropagation(); openStop(); }
+  else if(event.code==='KeyF'&&!dialog.open&&!ui.dialog&&window.oceanLandmarks?.interactNearby()){event.preventDefault();event.stopImmediatePropagation();}
   else if(event.target.closest?.('button'))return;
   else if (event.code === 'KeyH' && !dialog.open && !ui.dialog) { event.preventDefault(); takePhoto(); }
   else if (event.code === 'KeyF' && nearest && !dialog.open && !ui.dialog && !window.oceanDiagnostics?.nearbyLandmark) { event.preventDefault(); event.stopImmediatePropagation(); collect(); }

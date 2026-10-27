@@ -54,6 +54,10 @@ function interact() {
   opened = eligible;
   openArchive(opened.id,true);
 }
+// The expedition key handler runs in capture phase so it can prioritize a
+// nearby portfolio site over an artifact. Keeping the same eligibility check
+// here avoids depending on which key listener runs first.
+window.oceanLandmarks = { interactNearby() { if (!eligible) return false; interact(); return panel.open; } };
 
 // A quiet way in for visitors who would rather read than dive. Appended to the
 // hero so it never depends on which buttons its siblings are.
@@ -123,7 +127,7 @@ for (const dialog of [panel, credits]) {
 panel.querySelector('.dialog-return').addEventListener('click', () => close(panel));
 prompt.addEventListener('click', interact);
 addEventListener('keydown', event => {
-  if (event.code !== 'KeyF' || event.repeat || event.target.closest?.('input,textarea,select,button,[contenteditable="true"]')) return;
+  if (event.code !== 'KeyF' || event.repeat || event.target.closest?.('input,textarea,select,[contenteditable="true"]')) return;
   if (eligible) { event.preventDefault(); interact(); }
 });
 
