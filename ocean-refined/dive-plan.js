@@ -72,7 +72,7 @@ const depthOf = site => Math.round(toDisplayDepth(-(site.kind === 'primary' ? (c
 // What "Start dive here" really takes. From the surface the dive begins on the water above the site, so the trip is the
 // dive in (8 m, DIVE_IN seconds) and then the autopilot's descent to the viewpoint; underwater it is the swim from where
 // the diver is. The path is traced the way the autopilot steers, lifting its line over the seabed, at the pace it swims.
-const CRUISE = 7.8, point = [0, 0, 0];
+const CRUISE = 6.5, point = [0, 0, 0];
 function routeLength(from, to) {
   const clearance = (controls()?.settings?.floorClearance ?? 1.7);
   let length = 0; point.splice(0, 3, ...from);
@@ -105,7 +105,7 @@ const metres = value => value < 20 ? Math.max(1, Math.round(value)) : Math.round
 
 // Optional routes live in a native disclosure. The primary choices remain
 // exploring the world or reading the work; every existing route hook survives.
-const entry = node('div', 'dive-entry', '<button type="button" id="plan-dive" class="holo-chip" aria-haspopup="dialog">Choose a destination <span aria-hidden="true">→</span></button><p class="route-note">Three stories. Read at your own pace, or swim off whenever you like.</p>');
+const entry = node('div', 'dive-entry', '<button type="button" id="guided-dive" class="holo-chip">Show me around <span aria-hidden="true">→</span></button><button type="button" id="plan-dive" class="holo-chip" aria-haspopup="dialog">Choose a destination <span aria-hidden="true">→</span></button><p class="route-note">Three stories. Read at your own pace, or swim off whenever you like.</p>');
 $('#dive-options')?.prepend(entry);
 
 // The site map: a signboard on two posts carrying the reef chart.
