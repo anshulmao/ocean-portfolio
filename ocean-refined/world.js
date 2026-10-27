@@ -39,7 +39,9 @@ if(requestedMotion==='full'||requestedMotion==='reduced'){
   motionPreference=requestedMotion;
   try{localStorage.setItem('ocean-motion',motionPreference);}catch{}
 }
-let reducedMotion=motionPreference?motionPreference==='reduced':motionMedia.matches,paused=reducedMotion;
+// A fresh visit starts with the ocean moving. The in-page control can pause it,
+// and an explicit saved/query preference still wins; OS changes are honored below.
+let reducedMotion=motionPreference?motionPreference==='reduced':false,paused=reducedMotion;
 let renderer,scene,camera,water,waterCalm,waterRough,waterFine,waterCoarse,diver,reef,skySystem,marine,clouds,sunlight,ambient,beamGroup,motes,bubbleMesh,diveLamp;
 let viewerOrbit=null,scooterModel=null;
 let diverAnimator=null;
