@@ -55,6 +55,6 @@ export const movementDefaults = Object.freeze({
   "floorClearance": 1.7,
   "travelArrival": 0.45,
   "travelSlowdown": 5,
-  "atlasCruiseSpeed": 9.2,
+  "atlasCruiseSpeed": 8,
   "preset": "responsive"
 });

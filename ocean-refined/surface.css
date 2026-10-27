@@ -102,17 +102,3 @@ html body:not([data-submerged="true"]) .view-controls:is(:hover,:focus-within){o
   html body :is(.portfolio-actions .dive-button,.portfolio-actions .logbook-link,.surface-nav,.settings-toggle,.portfolio-options,.portfolio-links){animation:none}
   html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.logbook-link):hover{translate:none}
 }
-/* Two equally visible routes into the reef; exploration carries the solid fill. */
-html body:not([data-submerged="true"]) .portfolio-actions .guided-entry{display:inline-flex;align-items:center;justify-content:center;gap:12px;min-height:56px;padding:0 22px;border:1px solid currentColor;border-radius:30px;background:transparent;color:var(--o-ink);font:500 16px/1.2 var(--o-display);cursor:pointer;transition:translate 180ms var(--ease),background-color 160ms var(--ease)}
-.guided-entry svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5}
-.guided-entry:disabled{opacity:.5;cursor:wait}
-.guided-entry:focus-visible{outline:2px solid currentColor;outline-offset:4px}
-html body:not([data-submerged="true"]) .guided-entry:not(:disabled):hover{background:#d5edf11a;translate:0 -2px}
-body:is([data-submerged="true"],[data-exploring="true"]) .guided-entry{display:none!important}
-html body .portfolio-links .logbook-link{display:inline-flex;min-height:40px;padding:0;border:0;border-radius:0;background:none;box-shadow:none;color:var(--o-ink-2);font:400 14px/1.4 var(--o-display);text-decoration:underline;text-underline-offset:4px;letter-spacing:0}
-@media(max-width:600px){html body:not([data-submerged="true"]) .portfolio-actions .guided-entry{min-height:54px;justify-content:space-between;font-size:17px}}
-@media(prefers-reduced-motion:reduce){html body:not([data-submerged="true"]) .guided-entry{transition:none;translate:none!important}}
-/* Reading shortcuts form a small, legible row below the main choices. */
-html body .portfolio-links{flex-wrap:wrap;gap:8px 14px;align-items:center}
-html body .portfolio-links>:is(a,button,span){white-space:nowrap}
-@media(max-width:600px){html body .portfolio-links>span{flex-basis:100%}html body .portfolio-links>a,html body .portfolio-links .logbook-link{font-size:13px}}
