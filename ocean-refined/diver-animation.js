@@ -11,7 +11,8 @@ export function sampleDiverPose(time, state = {}, out = {}) {
   const dive = clamp(state.dive ?? 1), stop = clamp(state.safetyStop ?? 0);
   const check = Math.max(stop, clamp(state.wristOpen ?? 0));
   const quiet = Boolean(state.reducedMotion), moving = clamp(state.moving ?? 0);
-  const activity = quiet ? 0 : moving * dive * (1 - stop) * (state.ascending ? .32 : 1);
+  const ascent = clamp(Number(state.ascending ?? 0));
+  const activity = quiet ? 0 : moving * dive * (1 - stop) * lerp(1, .32, ascent);
   const frequency = clamp(state.kickFrequency ?? 3.2, 1, 6);
   const amplitude = clamp(state.kickAmplitude ?? .29, .08, .48);
   const breath = quiet ? 0 : Math.sin(time * TAU / 4.8);
@@ -19,7 +20,7 @@ export function sampleDiverPose(time, state = {}, out = {}) {
   out.bob = quiet ? 0 : Math.sin(time * 1.32) * lerp(.025, .013, dive) + Math.sin(time * .63) * .006;
   out.sway = quiet ? 0 : Math.sin(time * .86) * .009 * (1 - activity * .65);
   // A diver in horizontal trim extends the neck to see ahead of the mask.
-  out.headX = lerp(lerp(.012, state.ascending ? -.12 : -.52, dive) + breath * .008, .18, check);
+  out.headX = lerp(lerp(.012, lerp(-.52, -.12, ascent), dive) + breath * .008, .18, check);
   out.headY = quiet ? 0 : Math.sin(time * .39) * .018 * (1 - check);
   out.chestDepth = 1 + breath * .006;
   out.check = check;
