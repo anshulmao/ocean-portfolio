@@ -19,6 +19,25 @@ import { createMorayDenMotion, updateMorayDenMotion } from './moray-resident.js'
 // Every model is a GLB from assets/models/user-sets/sets/creature-set (rig, clips, painted skin). Lighter shapes for
 // the far and the many come from creature-species.js, whose texture layout matches the files.
 const BASE = './assets/models/user-sets/sets/creature-set/';
+// The published build (tools/build.mjs) sets this and puts a gzipped copy beside every model: 8.8 MB of rigs and
+// clips, mostly floats, travel as 3.2. A static host sends a .glb as it is, so the browser inflates it here
+// (DecompressionStream, native). Any failure, or a browser without it, falls back to the plain file.
+const GZIPPED = false;
+async function loadModel(url) {
+  if (GZIPPED && typeof DecompressionStream === 'function') {
+    try {
+      const response = await fetch(url + '.gz');
+      if (response.ok) {
+        // A host that labels .gz files Content-Encoding: gzip has the browser inflate it already: only gzip's own magic
+        // number is inflated here.
+        let bytes = await response.arrayBuffer(); const head = new Uint8Array(bytes, 0, 2);
+        if (head[0] === 0x1f && head[1] === 0x8b) bytes = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+        return await new GLTFLoader().parseAsync(bytes, new URL('./', new URL(url, location.href)).href);
+      }
+    } catch {}
+  }
+  return new GLTFLoader().loadAsync(url);
+}
 const TAU = Math.PI * 2, { clamp, smoothstep } = THREE.MathUtils;
 const turnTo = (from, to) => Math.atan2(Math.sin(to - from), Math.cos(to - from));
 const ease = (dt, rate) => 1 - Math.exp(-dt * rate);
@@ -529,7 +548,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     diagnostics.species = manifest.creatures.length;
     let cursor = 0;
     const worker = async () => { while (cursor < manifest.creatures.length) { const spec = manifest.creatures[cursor++]; try {
-      const gltf = await new GLTFLoader().loadAsync(BASE + spec.file); floatSkinIndices(gltf.scene); gltfs.set(spec.id, gltf); facts.set(spec.id, spec);
+      const gltf = await loadModel(BASE + spec.file); floatSkinIndices(gltf.scene); gltfs.set(spec.id, gltf); facts.set(spec.id, spec);
       diagnostics.loaded++; diagnostics.loadedSpecies++; await turn();
     } catch (error) { diagnostics.failed++; diagnostics.errors.push(spec.id + ': ' + error.message); } } };
     await Promise.all([worker(), worker()]);

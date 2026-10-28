@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
+import {gunzipSync} from 'node:zlib';
 import {checkPortfolioPages} from './check-portfolio-pages.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const run=file=>{const result=spawnSync(process.execPath,[path.join(root,file)],{cwd:root,encoding:'utf8'});assert.equal(result.status,0,result.stderr);};
@@ -17,7 +18,7 @@ await fs.writeFile(path.join(root,'.vercel/output/static/retired-test-model.glb'
 await assert.rejects(fs.access(path.join(root,'.vercel/output/static/retired-test-model.glb')));
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
 for(const variant of ['full','economy']){const meta=JSON.parse(await fs.readFile(path.join(root,`dist/assets/models/prepared-corals/${variant}.json`)));for(const source of meta.sources)assert.equal(digest(await fs.readFile(path.join(root,'dist',source.file))),source.sha256);}
-const code=await fs.readFile(path.join(root,'dist/user-creatures.js'),'utf8');const version=code.match(/user-sets\/(v-[a-f0-9]{16})\/sets/)[1];const packs=path.join(root,'dist/assets/models/user-sets',version,'sets/creature-set');const manifest=JSON.parse(await fs.readFile(path.join(packs,'manifest.json')));assert.equal(manifest.creatures.length,27);for(const item of manifest.creatures)await fs.access(path.join(packs,item.file));
+const code=await fs.readFile(path.join(root,'dist/user-creatures.js'),'utf8');const version=code.match(/user-sets\/(v-[a-f0-9]{16})\/sets/)[1];const packs=path.join(root,'dist/assets/models/user-sets',version,'sets/creature-set');const manifest=JSON.parse(await fs.readFile(path.join(packs,'manifest.json')));assert.equal(manifest.creatures.length,27);for(const item of manifest.creatures){await fs.access(path.join(packs,item.file));assert.deepEqual(gunzipSync(await fs.readFile(path.join(packs,item.file+'.gz'))),await fs.readFile(path.join(packs,item.file)),`${item.file}.gz does not inflate to the model`);}assert.match(code,/GZIPPED=!0|GZIPPED = true/,'user-creatures.js does not read the gzipped models');
 // The published page links one bundled stylesheet (print apart) that holds every sheet of the source page, in order, and
 // preloads every module its entry scripts import statically.
 const page=await fs.readFile(path.join(root,'dist/index.html'),'utf8'),source=await fs.readFile(path.join(root,'ocean-refined/index.html'),'utf8');
@@ -25,7 +26,7 @@ const linked=[...page.matchAll(/<link rel="stylesheet" href="\.\/([^"]+)">/g)].m
 const bundle=await fs.readFile(path.join(root,'dist',linked[0]),'utf8'),uncomment=css=>css.replace(/("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*')|\/\*[\s\S]*?\*\//g,(match,string)=>string||'').replace(/\s+/g,' ').trim();
 let cursor=0;const flat=uncomment(bundle);for(const [,media,href] of source.matchAll(/<link rel="stylesheet"(?: media="(\w+)")? href="\.\/([^"]+\.css)">/g)){if(media==='print'){assert.match(page,new RegExp(`media="print" href="\\./${href}"`));continue;}const at=flat.indexOf(uncomment(await fs.readFile(path.join(root,'ocean-refined',href),'utf8')),cursor);assert.ok(at>=cursor,`${href} missing from the bundle or out of order`);cursor=at;}
 const preloaded=new Set([...page.matchAll(/rel="modulepreload" href="\.\/([^"]+)"/g)].map(m=>m[1]));for(const module of ['reef.js','frame-pacing.js','living-world.js','vendor/three.core.min.js'])assert.ok(preloaded.has(module),`${module} is not preloaded`);
-console.log('Build checks passed: stale files removed, retired assets excluded, 27 species and coral cache inputs valid, one bundled stylesheet, modules preloaded');
+console.log('Build checks passed: stale files removed, retired assets excluded, 27 species (gzipped copies exact) and coral cache inputs valid, one bundled stylesheet, modules preloaded');
 
 await assert.rejects(fs.access(path.join(root,'dist/assets/models/user-sets/sets')));
 const {PORTFOLIO_CONTENT}=await import('../ocean-refined/portfolio-content.js');

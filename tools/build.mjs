@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
+import {gzipSync} from 'node:zlib';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {renderPortfolio} from './render-portfolio.mjs';
 import {copyAnalyticsSDK} from './sync-services.mjs';
@@ -41,6 +42,11 @@ await hashPack(packRoot);for(const file of ['creature-kit.js','creature-species.
 const packVersion='v-'+packHash.digest('hex').slice(0,16),packParent=path.join(out,'assets/models/user-sets',packVersion);
 await fs.mkdir(packParent,{recursive:true});await fs.rename(packRoot,path.join(packParent,'sets'));
 for(const file of ['user-creatures.js','user-corals.js']){const target=path.join(out,file);await fs.writeFile(target,(await fs.readFile(target,'utf8')).replaceAll('assets/models/user-sets/sets/',`assets/models/user-sets/${packVersion}/sets/`));}
+// The creature set is 8.8 MB of rigs, clips and floats that a static host sends as they are (it compresses text, not
+// model/gltf-binary): a gzipped copy goes beside each model (3.2 MB in all) and user-creatures.js inflates it in the
+// browser, falling back to the plain file. Written after the pack is hashed, so the version is the models' own.
+{const creatures=path.join(packParent,'sets/creature-set');for(const name of await fs.readdir(creatures))if(name.endsWith('.glb'))await fs.writeFile(path.join(creatures,name+'.gz'),gzipSync(await fs.readFile(path.join(creatures,name)),{level:9}));
+ const target=path.join(out,'user-creatures.js'),code=await fs.readFile(target,'utf8');if(!code.includes('const GZIPPED = false;'))throw Error('user-creatures.js: GZIPPED switch not found');await fs.writeFile(target,code.replace('const GZIPPED = false;','const GZIPPED = true;'));}
 
 for(const f of ['full.json','economy.json','full-webp.glb','economy-webp.glb'])await copy('assets/models/prepared-corals/'+f);
 // Public hosts assign their own ETags and dates. Hash headers preserve cheap,
