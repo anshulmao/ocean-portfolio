@@ -337,6 +337,7 @@ function preloadModels(){
   setTimeout(()=>{diagnostic.prewarm='loading';startup.prewarmAt=Math.round(performance.now());start();},450);
 }
 
+let diveAskedNow=null;const diveAsked=new Promise(resolve=>{diveAskedNow=resolve;});
 function beginModels(){
   // The models stand on the reef: asked for sooner, they start the moment it is built.
   if(!built){modelsWanted=true;return;}
@@ -352,7 +353,10 @@ function beginModels(){
   // Existing generated schools/coral are already part of the reef; optional packs enrich them afterward.
   // Failure still settles this promise, so missing landmark assets cannot prevent wildlife from loading.
   diagnostic.optionalModels='waiting-for-landmarks';
-  landmarksLoad.then(()=>nextTask()).then(()=>{
+  // In economy detail (phones, small machines) they also wait for a dive to be asked for: a visit that only reads the
+  // portfolio at the surface is spared their 9 MB and the seconds of parsing and baking, and a dive gets them a few
+  // seconds into its descent, as the enrichment they are (nothing waits on them).
+  landmarksLoad.then(()=>{if(quality!=='economy'||diveTarget===1||viewerOrbit)return;diagnostic.optionalModels='waiting-for-dive';return diveAsked;}).then(()=>nextTask()).then(()=>{
     if(diagnostic.error||optionalModelsStarted)return;optionalModelsStarted=true;
     diagnostic.optionalModels='loading';startup.optionalModelsAt=Math.round(performance.now());
   // The creature set (user-creatures.js): residents on the reef, schools by the coral, and big animals that come and go.
@@ -464,7 +468,7 @@ $('#dive').addEventListener('click',()=>{
   $('#dive-label').textContent=wasDiving?'Ascending to the surface…':'Back to the surface';
   status.textContent=wasDiving?'Returning to the surface.':'Diving beneath the surface.';
   setTimeout(()=>{if(diagnostic.ready)status.textContent='';},1600);
-  if(!wasDiving){exploration.startDive();beginModels();setExploring(true);hurry=Math.max(hurry,1);}
+  if(!wasDiving){exploration.startDive();beginModels();diveAskedNow();setExploring(true);hurry=Math.max(hurry,1);}
   else if(exploration.state.mode!=='surface'){window.oceanTour?.stop();exploration.beginAscent(reef?.userData.safeAscentRoute,true);}
   if(reducedMotion){dive=diveTarget;status.textContent='';}canvas.focus({preventScroll:true});wake();
 });
