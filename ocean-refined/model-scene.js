@@ -56,6 +56,10 @@ function report(onStatus, id, status, extra = {}) {
 export function createModelScene({ reef, terrainHeightAt, collisions, economy = false, onStatus, preparedCorals = true } = {}) {
   const root = new THREE.Group();
   root.name = 'Uploaded ocean landmarks';
+  // The landmarks are downloaded before the first dive goes under. In economy detail they come with their textures at
+  // half size (tools/webp-landmarks.py --economy: the GPU's first mipmap level, lossless): 3.6 MB instead of 7, and a
+  // quarter of the decoding, uploads and GPU memory, on screens that seldom show a texel of the full size.
+  const landmarkFile = file => economy ? file.replace(/\.glb$/, '-economy.glb') : file;
   const loader = new GLTFLoader();
   const landmarkGroups = new Map();
   const chests = new Map();
@@ -328,7 +332,7 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
 
   function loadOne(key, file, place) {
     return new Promise(resolve => {
-      loader.load(new URL(file, ASSET).href, async gltf => {
+      loader.load(new URL(landmarkFile(file), ASSET).href, async gltf => {
         if (disposed) { resolve(null); return; }
         try {
           await nextTask(); floatSkinIndices(gltf.scene); await nextTask(); await place(gltf);
