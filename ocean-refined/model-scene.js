@@ -2,7 +2,7 @@ import * as THREE from './vendor/three.module.min.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
 import { clone as cloneSkinned } from './vendor/SkeletonUtils.js';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
-import { simplify, breathe, turn as nextTask, floatSkinIndices } from './assets.js';
+import { simplify, breathe, turn as nextTask, floatSkinIndices, modelBytes } from './assets.js';
 
 const ASSET = new URL('./assets/models/', import.meta.url);
 const MODEL_FILES = {
@@ -56,6 +56,10 @@ function report(onStatus, id, status, extra = {}) {
 export function createModelScene({ reef, terrainHeightAt, collisions, economy = false, onStatus, preparedCorals = true } = {}) {
   const root = new THREE.Group();
   root.name = 'Uploaded ocean landmarks';
+  // The landmarks are downloaded before the first dive goes under. In economy detail they come with their textures at
+  // half size (tools/webp-landmarks.py --economy: the GPU's first mipmap level, lossless): 3.6 MB instead of 7, and a
+  // quarter of the decoding, uploads and GPU memory, on screens that seldom show a texel of the full size.
+  const landmarkFile = file => economy ? file.replace(/\.glb$/, '-economy.glb') : file;
   const loader = new GLTFLoader();
   const landmarkGroups = new Map();
   const chests = new Map();
@@ -327,8 +331,10 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
   }
 
   function loadOne(key, file, place) {
-    return new Promise(resolve => {
-      loader.load(new URL(file, ASSET).href, async gltf => {
+    // The published build's gzipped copy where there is one (modelBytes, assets.js); a copy that does not parse falls back to the plain file.
+    const href = new URL(landmarkFile(file), ASSET).href;
+    return modelBytes(href).then(bytes => new Promise(resolve => {
+      const done = async gltf => {
         if (disposed) { resolve(null); return; }
         try {
           await nextTask(); floatSkinIndices(gltf.scene); await nextTask(); await place(gltf);
@@ -339,12 +345,14 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
           report(onStatus, key, 'fallback', { message: String(error?.message || error), loaded, total: 8 });
         }
         resolve(gltf);
-      }, undefined, error => {
+      }, missing = error => {
         failed++;
         report(onStatus, key, 'fallback', { message: String(error?.message || error), loaded, total: 8 });
         resolve(null);
-      });
-    });
+      };
+      if (bytes) loader.parse(bytes, ASSET.href, done, () => loader.load(href, done, undefined, missing));
+      else loader.load(href, done, undefined, missing);
+    }));
   }
 
   async function loadCoral(file, index) {
@@ -442,9 +450,14 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
           if (!head.ok || (!sizeMatches && !tagMatches) || !modified || modified !== asset.lastModified) throw Error(`Coral asset validator changed or unavailable: ${asset.file}`);
         })
       ]);
-      const bytesResponse = await fetch(new URL(metadata.glb.file, CORAL_CACHE));
-      if (!bytesResponse.ok) throw Error('Prepared coral geometry unavailable');
-      const bytes = await bytesResponse.arrayBuffer();
+      // Gzipped where the build put a copy (modelBytes, assets.js); checked below byte for byte either way.
+      const bytesURL = new URL(metadata.glb.file, CORAL_CACHE).href;
+      let bytes = await modelBytes(bytesURL);
+      if (!bytes || bytes.byteLength !== metadata.glb.bytes) {
+        const bytesResponse = await fetch(bytesURL);
+        if (!bytesResponse.ok) throw Error('Prepared coral geometry unavailable');
+        bytes = await bytesResponse.arrayBuffer();
+      }
       if (bytes.byteLength !== metadata.glb.bytes || await sha256(bytes) !== metadata.glb.sha256) throw Error('Prepared coral geometry checksum mismatch');
       const gltf = await loader.parseAsync(bytes, CORAL_CACHE.href);
       const imported = new Map(); gltf.scene.traverse(node => { if (node.isMesh) imported.set(node.name, node); });

@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
+import {gzipSync} from 'node:zlib';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {renderPortfolio} from './render-portfolio.mjs';
 import {copyAnalyticsSDK} from './sync-services.mjs';
@@ -29,7 +30,7 @@ if(broken.length)throw Error('Scripts failed to parse:\n'+broken.map(([rel,run])
 // Runtime-injected stylesheets.
 for(const name of ['ambient-audio.css','expedition-interactions.css','controls.css','waterline-splash.css','safety-rating.css'])await copy(name);
 await copy('favicon.svg');await tree('assets/fonts');await tree('assets/portfolio',f=>!f.endsWith('.md'));await tree('assets/prepared/charts',f=>!f.endsWith('.png'));
-const active=['anchor.glb','sunken_ship_low_poly.glb','treasure_chest.glb','coral_waterverbruik_gezond.glb','coral_landbouw_gezond.glb','coral_anker_kleur.glb','coral_uitstoot_gezond.glb','coral_visnet_gezond_fish.glb','manifest.json','CREDITS.md'];
+const active=['anchor.glb','sunken_ship_low_poly.glb','treasure_chest.glb','anchor-economy.glb','sunken_ship_low_poly-economy.glb','treasure_chest-economy.glb','coral_waterverbruik_gezond.glb','coral_landbouw_gezond.glb','coral_anker_kleur.glb','coral_uitstoot_gezond.glb','coral_visnet_gezond_fish.glb','manifest.json','CREDITS.md'];
 for(const f of active)await copy('assets/models/'+f);
 await tree('assets/models/user-sets/sets/creature-set',f=>/\.(?:glb|json|md)$/i.test(f));await tree('assets/models/user-sets/sets/coral-set',f=>/\.(?:glb|json|md)$/i.test(f));
 
@@ -41,20 +42,74 @@ await hashPack(packRoot);for(const file of ['creature-kit.js','creature-species.
 const packVersion='v-'+packHash.digest('hex').slice(0,16),packParent=path.join(out,'assets/models/user-sets',packVersion);
 await fs.mkdir(packParent,{recursive:true});await fs.rename(packRoot,path.join(packParent,'sets'));
 for(const file of ['user-creatures.js','user-corals.js']){const target=path.join(out,file);await fs.writeFile(target,(await fs.readFile(target,'utf8')).replaceAll('assets/models/user-sets/sets/',`assets/models/user-sets/${packVersion}/sets/`));}
-
 for(const f of ['full.json','economy.json','full-webp.glb','economy-webp.glb'])await copy('assets/models/prepared-corals/'+f);
+// A static host compresses text but sends model/gltf-binary as it is. Every model the page loads gets a gzipped copy
+// beside it (the creature set 8.8 -> 3.2 MB; the landmarks and the prepared corals, which a dive waits for, about 2 MB
+// less) and assets.js is switched to fetch the copy and inflate it in the browser, falling back to the plain file.
+// The creature copies are written after the pack is hashed, so its version is the models' own. (The coral source
+// models are only HEAD-checked unless the cache misses: they stay plain.)
+{const gzip=async file=>fs.writeFile(file+'.gz',gzipSync(await fs.readFile(file),{level:9})),creatures=path.join(packParent,'sets/creature-set');
+ for(const name of await fs.readdir(creatures))if(name.endsWith('.glb'))await gzip(path.join(creatures,name));
+ for(const name of active.filter(name=>name.endsWith('.glb')&&!name.startsWith('coral_')))await gzip(path.join(out,'assets/models',name));
+ for(const name of ['full-webp.glb','economy-webp.glb'])await gzip(path.join(out,'assets/models/prepared-corals',name));
+ const target=path.join(out,'assets.js'),code=await fs.readFile(target,'utf8');if(!code.includes('const GZIPPED = false;'))throw Error('assets.js: GZIPPED switch not found');await fs.writeFile(target,code.replace('const GZIPPED = false;','const GZIPPED = true;'));}
 // Public hosts assign their own ETags and dates. Hash headers preserve cheap,
 // exact source validation without forcing a 24 MB fallback download.
 const modelPath=path.join(out,'model-scene.js');let model=await fs.readFile(modelPath,'utf8');
 model=model.replace('if (!head.ok || (!sizeMatches && !tagMatches) || !modified || modified !== asset.lastModified)',"if (!head.ok || (head.headers.get('x-asset-sha256') !== asset.sha256 && ((!sizeMatches && !tagMatches) || !modified || modified !== asset.lastModified)))");await fs.writeFile(modelPath,model);
-const assetHeaders=[];
-for(const variant of ['full','economy']){const file=path.join(out,'assets/models/prepared-corals/'+variant+'.json'),meta=JSON.parse(await fs.readFile(file));for(const entry of meta.sources)entry.sha256=hash(await fs.readFile(path.join(out,entry.file)));for(const entry of meta.assets){if(hash(await fs.readFile(path.join(out,'assets/models',entry.file)))!==entry.sha256)throw Error('Stale prepared coral input '+entry.file);if(variant==='full')assetHeaders.push({source:'/assets/models/'+entry.file,headers:[{key:'X-Asset-SHA256',value:entry.sha256}]});}await fs.writeFile(file,JSON.stringify(meta));}
 // Keep approved baseline narratives; omit the copy-review draft alternatives.
 const contentPath=path.join(out,'portfolio-content.js');let content=await fs.readFile(contentPath,'utf8');content=content.slice(0,content.indexOf('export const COPY_VARIANTS ='))+'export const COPY_VARIANTS = {};\n';await fs.writeFile(contentPath,content);
+// The published scripts lose their comments and whitespace (esbuild: whitespace and syntax only, so every name stays
+// as written and an error in the console still reads): 431 -> 327 KB gzipped, and 40 % less for a phone to parse.
+// After the edits above and before the coral cache hashes reef.js and model-scene.js, which it checks as published.
+// esbuild is a devDependency: an install without it (npm install --omit=dev) publishes the scripts as they are.
+let esbuild=null;try{esbuild=await import('esbuild');}catch{console.warn('esbuild not installed: scripts are published unminified');}
+if(esbuild){for(const rel of written){if(!rel.endsWith('.js')||rel.endsWith('.min.js'))continue;const file=path.join(out,rel),code=await fs.readFile(file,'utf8');await fs.writeFile(file,(await esbuild.transform(code,{format:'esm',target:'es2022',minifyWhitespace:true,minifySyntax:true,legalComments:'inline',charset:'utf8'})).code);}}
+const assetHeaders=[];
+for(const variant of ['full','economy']){const file=path.join(out,'assets/models/prepared-corals/'+variant+'.json'),meta=JSON.parse(await fs.readFile(file));for(const entry of meta.sources)entry.sha256=hash(await fs.readFile(path.join(out,entry.file)));for(const entry of meta.assets){if(hash(await fs.readFile(path.join(out,'assets/models',entry.file)))!==entry.sha256)throw Error('Stale prepared coral input '+entry.file);if(variant==='full')assetHeaders.push({source:'/assets/models/'+entry.file,headers:[{key:'X-Asset-SHA256',value:entry.sha256}]});}await fs.writeFile(file,JSON.stringify(meta));}
+// The published page's head (ocean-refined/index.html keeps its separate files, which is how they are edited):
+// - The render-blocking stylesheets become one file, in the same order and without comments (a sheet for one medium is
+//   wrapped in that @media; print blocks nothing and stays apart): one request before the first paint instead of
+//   eighteen, which on a phone's network is several round trips.
+// - Every module the entry scripts import statically gets a modulepreload, so the whole graph downloads at once instead
+//   of one level of imports per round trip. The list in index.html is kept by hand and covers part of it.
+async function bundleHead(html){
+  const attribute=(tag,name)=>tag.match(new RegExp(`\\s${name}=["']([^"']*)["']`))?.[1];
+  const sheets=[];
+  html=html.replace(/([ \t]*)(<link\b[^>]*>)([ \t]*\n?)/g,(line,indent,tag)=>{
+    const href=attribute(tag,'href')||'',media=attribute(tag,'media')||'all';
+    // Only sheets beside the page: their url()s stay right in a bundle beside it.
+    if(attribute(tag,'rel')!=='stylesheet'||!/^\.\/[\w.-]+\.css$/.test(href)||!['all','screen'].includes(media))return line;
+    sheets.push({href,media});return sheets.length===1?`${indent}<!--site-css-->\n`:'';
+  });
+  if(sheets.length){
+    // Comments go; strings (data: URIs among them) are passed over untouched.
+    const strip=css=>css.replace(/("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*')|\/\*[\s\S]*?\*\//g,(match,string)=>string||'').replace(/\n[ \t]*(?=\n)/g,'').replace(/\n{2,}/g,'\n');
+    let css='';
+    for(const {href,media} of sheets){const text=strip(await fs.readFile(path.join(out,href),'utf8')).trim();css+=media==='all'?text+'\n':`@media ${media}{\n${text}\n}\n`;}
+    const name=`site-${hash(css).slice(0,12)}.css`;await fs.writeFile(path.join(out,name),css);
+    html=html.replace('<!--site-css-->',`<link rel="stylesheet" href="./${name}">`);
+  }
+  const entries=[...html.matchAll(/<script\b[^>]*>/g)].map(([tag])=>attribute(tag,'type')==='module'&&attribute(tag,'src')).filter(src=>/^\.\/[\w./-]+\.js$/.test(src||'')).map(src=>path.normalize(src));
+  // Longest chain of static imports above each module: the deepest are asked for first, since everything waits on them.
+  const depth=new Map(),imports=new Map();
+  async function walk(rel,level){
+    if(level>40||(depth.get(rel)??-1)>=level)return;depth.set(rel,level);
+    // (A match in a comment names a file that may not exist: only published files are followed.)
+    if(!imports.has(rel)){const text=await fs.readFile(path.join(out,rel),'utf8').catch(()=>null);imports.set(rel,text===null?null:[...text.matchAll(/(?:\bfrom\s*|\bimport\s*)["'](\.\.?\/[^"']+\.js)["']/g)].map(m=>path.normalize(path.join(path.dirname(rel),m[1]))));}
+    if(!imports.get(rel)){depth.delete(rel);return;}
+    for(const child of imports.get(rel))await walk(child,level+1);
+  }
+  for(const entry of entries)await walk(entry,0);
+  const listed=new Set([...html.matchAll(/<link\b[^>]*rel=["']modulepreload["'][^>]*>/g)].map(([tag])=>path.normalize(attribute(tag,'href')||'')));
+  const missing=[...depth].filter(([rel])=>!entries.includes(rel)&&!listed.has(rel)).sort((a,b)=>b[1]-a[1]).map(([rel])=>`<link rel="modulepreload" href="./${rel.replaceAll('\\','/')}">`);
+  if(missing.length)html=html.replace('</head>',`  ${missing.join('\n  ')}\n</head>`);
+  return html;
+}
 let html=await fs.readFile(path.join(out,'index.html'),'utf8');html=html.replace('<title>Refined · Anshul · Beneath the surface</title>','<title>Anshul Ramprasad · Applied AI & Product</title>').replace("Anshul's quiet corner of the ocean. An interactive 3D landing scene.",'Explore Anshul Ramprasad’s work in applied AI, product strategy and enterprise delivery through an interactive ocean portfolio.');
 html=html.replace(/<label class="arc-variant">[\s\S]*?<\/label>/,'<label hidden>Reading style <select id="copy-variant"><option value="baseline">Portfolio</option></select></label>');
 html=html.replace('</head>','<meta property="og:title" content="Anshul Ramprasad · Applied AI & Product"><meta property="og:description" content="Go a little deeper. Explore my work in applied AI and product."><meta property="og:type" content="website"><meta name="twitter:card" content="summary"><style>.launch-profile{display:none;position:fixed;left:24px;bottom:80px;z-index:12;padding:10px 15px;border-radius:24px;background:#e9f8f4e6;color:#173f49;font:14px Outfit,sans-serif;text-decoration:none}body[data-submerged="true"] .launch-profile{display:none}body[data-fallback="true"] .launch-profile{display:block}body[data-submerged="true"] .hero{visibility:hidden!important}#landmark-dialog{background:rgba(12,45,58,.96)}@media(max-width:600px){.launch-profile{bottom:112px;left:24px}}</style></head>');
-html=html.replace('</body>','<a class="launch-profile" href="./profile.html">Read without 3D ↗</a></body>').replace('Enable JavaScript to explore the 3D ocean.','<a href="./profile.html">Read the portfolio without the 3D ocean.</a>');await fs.writeFile(path.join(out,'index.html'),html);
+html=html.replace('</body>','<a class="launch-profile" href="./profile.html">Read without 3D ↗</a></body>').replace('Enable JavaScript to explore the 3D ocean.','<a href="./profile.html">Read the portfolio without the 3D ocean.</a>');html=await bundleHead(html);await fs.writeFile(path.join(out,'index.html'),html);
 const {PORTFOLIO_CONTENT,PORTFOLIO_MEDIA}=await import(pathToFileURL(path.join(source,'portfolio-content.js')));
 const siteURL='https://anshul-portfolio-rho.vercel.app';
 const reading=await renderPortfolio({out,content:PORTFOLIO_CONTENT,media:PORTFOLIO_MEDIA,siteURL});

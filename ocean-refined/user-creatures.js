@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.min.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
 import { clone } from './vendor/SkeletonUtils.js';
-import { floatSkinIndices, turn } from './assets.js';
+import { floatSkinIndices, turn, modelBytes } from './assets.js';
 import { creatureGeometry, speciesById } from './creature-species.js';
 import { ENCOUNTERS, RESIDENTS, SCHOOLS } from './user-creature-routes.js';
 import { fishNavigator } from './fish-navigation.js';
@@ -19,6 +19,12 @@ import { createMorayDenMotion, updateMorayDenMotion } from './moray-resident.js'
 // Every model is a GLB from assets/models/user-sets/sets/creature-set (rig, clips, painted skin). Lighter shapes for
 // the far and the many come from creature-species.js, whose texture layout matches the files.
 const BASE = './assets/models/user-sets/sets/creature-set/';
+// In the published build the 8.8 MB of models travel gzipped, as 3.2 (modelBytes, assets.js).
+async function loadModel(url) {
+  const bytes = await modelBytes(url);
+  if (bytes) try { return await new GLTFLoader().parseAsync(bytes, new URL('./', new URL(url, location.href)).href); } catch {}
+  return new GLTFLoader().loadAsync(url);
+}
 const TAU = Math.PI * 2, { clamp, smoothstep } = THREE.MathUtils;
 const turnTo = (from, to) => Math.atan2(Math.sin(to - from), Math.cos(to - from));
 const ease = (dt, rate) => 1 - Math.exp(-dt * rate);
@@ -529,7 +535,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     diagnostics.species = manifest.creatures.length;
     let cursor = 0;
     const worker = async () => { while (cursor < manifest.creatures.length) { const spec = manifest.creatures[cursor++]; try {
-      const gltf = await new GLTFLoader().loadAsync(BASE + spec.file); floatSkinIndices(gltf.scene); gltfs.set(spec.id, gltf); facts.set(spec.id, spec);
+      const gltf = await loadModel(BASE + spec.file); floatSkinIndices(gltf.scene); gltfs.set(spec.id, gltf); facts.set(spec.id, spec);
       diagnostics.loaded++; diagnostics.loadedSpecies++; await turn();
     } catch (error) { diagnostics.failed++; diagnostics.errors.push(spec.id + ': ' + error.message); } } };
     await Promise.all([worker(), worker()]);
