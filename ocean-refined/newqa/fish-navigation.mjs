@@ -65,4 +65,16 @@ for (let frame = 1; frame <= 600; frame++) {
 }
 // Schools may evaluate their one roaming target per update; individual fish must use the cached grid.
 assert.ok(analyticCalls - initialCalls <= life.schoolCount * 601, 'per-fish analytic terrain query');
+// Economy takes a thirtieth-of-a-second step (one per frame it draws): the same bound per second of swimming.
+const coarse = createMarineLife({ economy: true, terrainHeightAt: cliff, debug: true });
+let previous = coarse.inspect().fish;
+for (let frame = 1; frame <= 300; frame++) {
+  coarse.update(1 / 30, frame / 30, null);
+  const now = coarse.inspect().fish;
+  for (let i = 0; i < now.length; i++) {
+    assert.ok(Math.abs(now[i].position[1] - previous[i].position[1]) < .036, 'economy flock teleported vertically at reef');
+    assert.ok(now[i].position.every(Number.isFinite), 'invalid economy flock position');
+  }
+  previous = now;
+}
 console.log(JSON.stringify({ cliffs: 'pass at 30/60/120 Hz', slope: 'pass', legacyFish: life.count, simulatedSeconds: 10, cpuMs: Math.round(performance.now() - started) }));

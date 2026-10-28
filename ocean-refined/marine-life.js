@@ -229,7 +229,7 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
   const bounds = { x: [-84, 84], y: [-85, -1.6], z: [-128, 56] };
   // Beyond this distance from the diver a school cannot feel them (its
   // members stay within ~20 m of the roaming target; avoidance reaches 13 m).
-  const NEAR_SQ = 40 * 40;
+  const NEAR_SQ = 40 * 40, FINE_STEP = economy ? 1 / 30 : 1 / 60;
 
   // view: { frustum, eye, range }. Only schools in view and within the haze
   // are written, packed to the front of each mesh, so the instance count (and
@@ -284,7 +284,10 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
   function update(dt, elapsed, swimmerPosition, view = null) {
     elapsed = Number.isFinite(elapsed) ? elapsed : 0;
     const frameDelta = Math.min(Math.max(dt || 0, 0), .1);
-    const steps = frameDelta > 0 ? Math.ceil(frameDelta / (1 / 60)) : 0;
+    // Economy detail draws 30 frames a second, and a sixtieth-of-a-second step made each near school's flocking and
+    // navigation run twice a frame (six times on a slow phone at 10 fps). There a step of a thirtieth keeps one per
+    // frame drawn; the diver's swept clearance is tested on every step either way.
+    const steps = frameDelta > 0 ? Math.ceil(frameDelta / FINE_STEP - 1e-9) : 0;
     const step = steps ? frameDelta / steps : 0;
     const hasSwimmer = !!swimmerPosition?.isVector3;
     if (hasSwimmer) {
