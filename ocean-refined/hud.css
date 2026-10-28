@@ -539,3 +539,73 @@ html[data-input="touch"] .interact-prompt kbd{display:none}
 /* On a guided dive the tour's card carries the same action, so it stays the only one. */
 html[data-input="touch"] body:is([data-tour="travel"],[data-tour="dwell"]) .interact-prompt{visibility:hidden}
 html[data-input="touch"] :is(.capture-hint,.look-hint){display:none!important}
+
+/* 14. Phones: the layout contract (release/MOBILE_OVERHAUL.md; zones and layers in tokens.css). The top bar holds the
+   brand at the surface, or the depth and zone chip below it, and the menu button; the scope sits under the bar on the
+   right, compact, with the heading written on it instead of the compass tape; Portfolio, Dive computer and Clear
+   screen are rows in the menu (hud.js); projected labels drop their second line and step aside while the sheet is
+   open or an announcement is up (body[data-sheet] and body[data-announce], kept by the guided dive). Tablets and
+   desktops keep the arrangement above. */
+.map-bearing,.settings-quick{display:none}
+@media(max-width:599px),(pointer:coarse) and (max-height:499px){
+  :root{--map-size:96px}
+  .masthead{height:calc(var(--o-top) + var(--o-bar));box-sizing:border-box;padding:var(--o-top) calc(var(--o-pad) + var(--o-safe-r)) 0 calc(var(--o-pad) + var(--o-safe-l));z-index:var(--o-z-hud)}
+  body[data-submerged="true"] .masthead{padding-right:calc(var(--o-pad) + var(--o-safe-r))}
+  body[data-submerged="true"] .wordmark,.heading-indicator,.depth,:is(.archive-toggle,.dive-computer-toggle){display:none}
+  .menu-toggle{width:var(--o-tap);height:var(--o-tap)}
+  /* The chip: depth first, then the zone, in the bar's left half. */
+  body[data-submerged="true"] .scene-footer{top:var(--o-top);right:auto;bottom:auto;left:calc(var(--o-pad) + var(--o-safe-l));height:var(--o-bar);z-index:var(--o-z-hud)}
+  body[data-submerged="true"] .scene-footer .location:not(#_){display:flex;gap:8px;height:36px;padding:0 12px;box-sizing:border-box;border:1px solid var(--holo-dim);border-radius:3px;background:var(--holo-fill);box-shadow:inset 0 0 12px #5fe9ff14,var(--holo-glow);font-size:10px;letter-spacing:.12em}
+  .location-dot{order:-3}#depth-value{order:-2;font-size:14px;letter-spacing:.04em}.location .separator{order:-1}
+  /* At the surface the line has nothing to add to the brand, and the headline needs the room. */
+  body:not([data-submerged="true"]) .scene-footer .location{display:none}
+  /* The scope is one target: a tap anywhere on it opens the chart, where the markers and the legend are full size.
+     Each marker keeps a finger-sized box around its drawn dot (::after), so one can be taken on the chart. */
+  .reef-map{top:var(--o-under-bar);right:calc(var(--o-pad) + var(--o-safe-r));z-index:var(--o-z-hud)}
+  .reef-map[data-view="round"] :is(.map-range,.map-reading,.journey-progress){display:none}
+  .map-bearing{display:block;position:absolute;left:50%;bottom:6px;z-index:2;translate:-50% 0;font:500 8px/1 var(--holo-mono);letter-spacing:.08em;color:var(--holo-ink);white-space:nowrap;text-shadow:0 0 3px #021d2a,0 0 3px #021d2a;pointer-events:none}
+  .reef-map[data-view="round"] .map-expand{left:0;top:0;width:var(--map-size);height:var(--map-size);border:0;border-radius:50%;background:none;box-shadow:none}
+  .reef-map[data-view="round"] .map-expand svg{position:absolute;left:-4px;bottom:-4px;width:28px;height:28px;padding:7px;box-sizing:border-box;border:1px solid var(--holo-dim);border-radius:50%;background:#04202fd1}
+  .reef-map[data-view="round"] .map-expand::after{display:none}
+  .reef-map[data-view] .map-chart button{width:var(--o-tap);height:var(--o-tap);margin:calc(var(--o-tap)/-2) 0 0 calc(var(--o-tap)/-2);border:0;background:none;box-shadow:none}
+  .reef-map[data-view] .map-chart button:is([data-found],[data-selected]){background:none;box-shadow:none}
+  .reef-map[data-view] .map-chart button:not([data-off="true"])::after{inset:calc(var(--o-tap)/2 - 8px);z-index:-1;border:1px solid var(--holo-strong);background:#04202fe0;box-shadow:0 0 8px #5fe9ff66}
+  .reef-map[data-view] .map-chart button[data-found="true"]:not([data-off="true"])::after{box-shadow:0 0 0 2px var(--signal,#7ff0cf)}
+  .reef-map[data-view] .map-chart button[data-selected="true"]::before{inset:calc(var(--o-tap)/2 - 12px)}
+  .reef-map[data-view="round"] .map-chart button{font-size:8px;pointer-events:none}
+  .reef-map[data-view="full"]{z-index:var(--o-z-menu);width:min(288px,calc(100vw - 2*var(--o-pad)));max-height:calc(100dvh - var(--o-under-bar) - var(--o-pad) - var(--o-safe-b))}
+  .reef-map[data-view="full"] .map-chart button:not([data-off="true"])::after{inset:calc(var(--o-tap)/2 - 12px)}
+  .reef-map[data-view="full"] .map-expand{right:6px;top:4px;width:var(--o-tap);height:var(--o-tap)}
+  .map-heading{padding-right:52px}.map-heading>button{min-height:var(--o-tap)}
+  /* The menu drops from the bar and fits the view; every row in it takes a finger. */
+  html body .settings-menu:not(#_){top:var(--o-under-bar);left:calc(var(--o-pad) + var(--o-safe-l));right:calc(var(--o-pad) + var(--o-safe-r));width:auto;max-height:calc(100dvh - var(--o-under-bar) - var(--o-pad) - var(--o-safe-b));z-index:var(--o-z-menu)}
+  .settings-quick:not([hidden]){display:grid;gap:6px;flex:none;margin:10px 14px 0}
+  .settings-quick>button{display:flex;align-items:center;gap:10px;min-height:var(--o-tap);padding:8px 12px;border:1px solid var(--holo-dim);border-radius:3px;background:var(--holo-fill);color:var(--holo-ink);font:500 13px/1.2 var(--holo-font);text-align:left;text-shadow:var(--holo-text-glow);box-shadow:inset 0 0 12px #5fe9ff14}
+  .settings-quick>button[aria-pressed="true"]{border-color:var(--holo-strong);background:var(--holo-fill-on)}
+  .settings-quick>button:focus-visible{outline:2px solid var(--holo-focus);outline-offset:3px}
+  .settings-quick :is(.hud-icon,svg){width:17px;height:17px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;color:var(--holo)}
+  #clear-ui-settings{display:none}
+  .settings-close,.settings-inline-control .time-cycle{width:var(--o-tap);height:var(--o-tap)}
+  .settings-folder>summary,.movement-fields summary,.settings-surface,.holo-switch,#settings-general-content .holo-switch{min-height:var(--o-tap)}
+  :is(.weather-picker,.theme-control,.settings-actions,.movement-actions)>button{min-height:var(--o-tap)}
+  .movement-field input[type="number"],.movement-field select{min-height:var(--o-tap)}
+  :is(#time-slider,.movement-field input[type="range"]){height:var(--o-tap)}
+  body[data-menu="open"] :is(.reef-map,.interact-prompt,.artifact-prompt,.waypoint,#reef-labels,#sky-labels){visibility:hidden}
+  /* Projected labels: the lowest layer, one line each, and out of the way of the sheet and announcements. */
+  #reef-labels,#sky-labels,body .waypoint{z-index:var(--o-z-labels)}
+  #reef-labels .reef-label span{display:none}
+  body:is([data-sheet="expanded"],[data-announce="on"]) :is(#reef-labels,#sky-labels,.waypoint){visibility:hidden}
+  /* With the dive computer up, its strip and face stand in the free row under the scope; in third person the face
+     replaces the strip. */
+  body[data-computer-open="true"][data-camera="third"] .air-gauge,body[data-computer-open="true"] .waypoint{visibility:hidden}
+  .air-gauge,.dive-computer{top:calc(var(--o-under-bar) + var(--map-size) + var(--o-gap));bottom:auto}
+  .dive-computer{left:calc(var(--o-pad) + var(--o-safe-l));right:auto;z-index:var(--o-z-hud)}
+}
+/* On its side the phone has room beside the scope: the strip and the face stand under the bar on the left, and the
+   prompt keeps to the column beside the sheet. */
+@media(pointer:coarse) and (max-height:499px){
+  html body .settings-menu:not(#_){left:auto;width:min(420px,calc(100vw - 2*var(--o-pad)))}
+  .settings-quick:not([hidden]){grid-template-columns:repeat(3,1fr)}
+  .air-gauge,.dive-computer{top:var(--o-under-bar);left:calc(var(--o-pad) + var(--o-safe-l));right:auto}
+  html[data-input="touch"] .interact-prompt{max-width:calc(20vw - var(--o-pad))}
+}
