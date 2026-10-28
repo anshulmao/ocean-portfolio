@@ -68,6 +68,8 @@ let running=false,raf=0,lastFrame=0,elapsed=0,focused=!document.hidden;
 let phase=selectedNight?Math.PI:0,phaseTarget=null;
 const cycleSeconds=1200;
 const skyClockFormat=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kuala_Lumpur',hour:'2-digit',minute:'2-digit',hour12:false});
+// Formatting in a time zone is the dearest call of a HUD paint; the clock shows minutes, so it is formatted once a minute.
+let skyClockMinute=NaN,skyClockText='';const skyClock=date=>{const minute=Math.floor(date.getTime()/60000);if(minute!==skyClockMinute){skyClockMinute=minute;skyClockText=skyClockFormat.format(date);}return skyClockText;};
 let night=selectedNight?1:0,diveTarget=0,dive=0,frameCount=0,perfDuration=0,perfSamples=0;
 let mobile=innerWidth<600,quality=mobile||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<5)?'economy':'standard';
 let nextBubble=0,bubbleCursor=0,bubbleClock=-1,exploring=false,mapDestination=null;
@@ -693,7 +695,7 @@ function paintHud(nav,submerged,depth,edge,skyState){
   setAttribute(hud('.heading-indicator'),'aria-label',`Heading ${Math.round(bearing)} degrees. North is ${Math.round((360-bearing)%360)} degrees clockwise.`);
   setText(hud('#speed-value'),`${nav.speed.toFixed(1)} M/S`);
   setText(hud('#reef-zone'),nav.colliding?'CORAL NEARBY':nav.atBoundary?'EXPLORATION LIMIT':edge?'OUTER SLOPE':'REEF SHELF');
-  const skyTime=skyState.date?skyClockFormat.format(skyState.date):'';
+  const skyTime=skyState.date?skyClock(skyState.date):'';
   setText(hud('#sky-clock'),`KL ${skyTime} · ${paused?'PAUSED':'72× TIME'}`);
   setAttribute(hud('#sky-clock'),'title','Kuala Lumpur sky · current lunar phase · 20 minutes per simulated day');
   // Diagnostics nobody polls per frame follow the HUD rate.
