@@ -225,7 +225,9 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
   const swimmerPrevious = new THREE.Vector3(), swimmerVelocity = new THREE.Vector3();
   const swimmerAhead = new THREE.Vector3(), swimmerSegment = new THREE.Vector3(), closest = new THREE.Vector3();
   const tangent = new THREE.Vector3(), avoidance = new THREE.Vector3();
-  let hadSwimmer = false, frame = 0, painted = -1;
+  let hadSwimmer = false, frame = 0, painted = true;
+  // Which schools were drawn last frame: the instance colours are written again only when that changes.
+  const wasShown = new Uint8Array(schools.length);
   const bounds = { x: [-84, 84], y: [-85, -1.6], z: [-128, 56] };
   // Beyond this distance from the diver a school cannot feel them (its
   // members stay within ~20 m of the roaming target; avoidance reaches 13 m).
@@ -236,7 +238,7 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
   // the vertex work) follows what can be seen rather than the whole reef.
   function draw(elapsed, view) {
     swimTime.value = elapsed;
-    let total = 0, mask = '';
+    let total = 0, changed = painted; painted = false;
     for (const type in families) families[type].drawn = 0;
     for (let s = 0; s < schools.length; s++) {
       const home = schools[s], members = home.members;
@@ -250,10 +252,10 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
         // A half-metre fish is lost in the haze well before the range itself.
         home.shown = view.eye.distanceTo(bounds3.center) - bounds3.radius < view.range * .75 && view.frustum.intersectsSphere(bounds3);
       }
-      mask += home.shown ? '1' : '0';
+      if (wasShown[s] !== +home.shown) { wasShown[s] = +home.shown; changed = true; }
     }
     // Instance colours only move when the set of visible schools changes.
-    const repaint = mask !== painted; painted = mask;
+    const repaint = changed;
     for (let s = 0; s < schools.length; s++) {
       const home = schools[s], members = home.members;
       if (!home.shown) continue;
