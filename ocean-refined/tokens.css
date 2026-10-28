@@ -30,7 +30,23 @@
   --o-display:Outfit,system-ui,sans-serif;--o-mono:"Martian Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
   --o-weight-display:300;
   --o-r-s:10px;--o-r-m:16px;--o-r-l:24px;--o-r-pill:999px;
+  /* Layout contract for the world interface (release/MOBILE_OVERHAUL.md). Every piece of interface sits in one
+     zone and one layer; position with these instead of fresh numbers. Phones override the sizes below. */
+  --o-safe-t:env(safe-area-inset-top,0px);--o-safe-r:env(safe-area-inset-right,0px);--o-safe-b:env(safe-area-inset-bottom,0px);--o-safe-l:env(safe-area-inset-left,0px);
+  --o-pad:24px;--o-gap:12px;--o-bar:56px;--o-tap:44px;
+  --o-top:calc(var(--o-safe-t) + var(--o-pad));                 /* top edge of the top bar */
+  --o-under-bar:calc(var(--o-top) + var(--o-bar) + var(--o-gap)); /* first row below the top bar */
+  --o-controls:0px;                                              /* height of the touch controls at the bottom (phones) */
+  --o-sheet-bottom:calc(var(--o-safe-b) + var(--o-pad) + var(--o-controls));
+  --o-sheet-max:38vh;
+  /* layers, low to high: world labels < HUD < announcements < sheet < controls < menu < toasts; dialogs use the top layer */
+  --o-z-labels:5;--o-z-hud:10;--o-z-announce:20;--o-z-sheet:30;--o-z-controls:40;--o-z-menu:60;--o-z-toast:70;
 }
+/* Phones: portrait under 600px wide, or a touch screen under 500px tall (landscape). */
+@media (max-width:599px),(pointer:coarse) and (max-height:499px){:root{
+  --o-pad:12px;--o-gap:8px;--o-bar:44px;--o-controls:132px;--o-sheet-max:34vh;
+}}
+@media (pointer:coarse) and (max-height:499px){:root{--o-controls:0px;--o-sheet-max:46vh}}
 :root[data-theme="night"]{
   --o-surface-0:#0b1630;--o-surface-1:#0d1d3a;--o-surface-2:#132a4c;
   --o-sunlit:#5ff0da;--o-sunlit-2:#a4f9ec;--o-twilight:#0b2a4a;--o-abyss-2:#071530;--o-abyss:#040b16;
