@@ -81,3 +81,31 @@ files. Do not edit another workstream's elements; report what you need from them
 
 Shared files (`tokens.css`, `motion.css`, `hologram.css`, `index.html`): change only the rules or markup for your
 own elements, in small hunks, so the four branches merge cleanly.
+
+## Outcome
+
+All four workstreams are merged. `node tools/test-mobile-layout.mjs`: 30/30 states pass (phone, landscape, desktop),
+against 8/10, 8/10 and 9/10 on main. `npm run check` is green. CI runs the layout test as its own job ("Mobile layout"),
+uploading the screenshots; make it a required check once it has run steadily on GitHub's runners.
+
+| Phone state | Middle covered before → after | Ocean visible after |
+|---|---|---|
+| dive-arrival | 32% → under 12% | 85% |
+| landmark | 51% → under 12% | 82% |
+| guided-travel | 37% → under 12% | 85% |
+| guided-stop | 51% → under 12% | 71% |
+
+- A · Dive HUD: one top bar (depth + zone chip, menu), a compact map with the heading on it, Portfolio / Dive computer /
+  Clear screen in the menu on phones, one contextual "Read · …" or "Collect · …" button instead of "Press F" on
+  touch, 44 px targets, world labels kept out of other zones.
+- B · Guided dive: the tour card is a bottom sheet (one row while travelling, headline + clamped body + actions at a
+  stop); `announce.js` queues the location splash, "found" notes and short notices one at a time in the announce zone,
+  never under the sheet; the splash is a calm title card; copy is input-aware. Sets `body[data-sheet]` and
+  `body[data-announce]`.
+- C · Reading: the logbook is a full-screen sheet on phones (slim header, swipeable tabs, one flat page at 17 px,
+  previous/next bar, swipe between entries) giving the page 82% of the height; the surface keeps clear of the diver;
+  the no-JS reading pages have a slimmer nav and 44 px links.
+- D · Performance: see `release/PERFORMANCE_PASS.md` (first dive on a phone 22.4 → 11.1 MB, 102 → 85 requests to
+  ready, world update per frame −26 to −28%).
+- Integration: the scene footer is the only depth chip on phones (A and B had both built one); sideways, announcements
+  ride in the top bar's empty middle so they stay out of the 390 px-tall view's middle.
