@@ -15,7 +15,9 @@
 // of a pixel per CSS pixel: draw calls, triangles and the CPU work are unchanged, the fill is a sixteenth, and the
 // timings measure the page rather than the software rasteriser. --real-fill keeps the profile's own pixel ratio (use it
 // for screenshots and to read the pixel ratio the page picks); the result records which was used.
-// --profile adds a CPU profile of the dive's first place (CDP sampling): the functions with the most self time.
+// --profile adds a CPU profile of the fixed steps (CDP sampling): the functions with the most self time (with
+// PROBE_JS_FLAGS=--max-inlined-bytecode-size=0 a function inlined into its caller is counted as itself), and saves
+// the profile as <out>/<label>-<profile>-<run>.cpuprofile (DevTools opens it).
 //   node tools/perf-probe.mjs [--runs 3] [--only phone|desktop] [--label name] [--shots] [--real-fill] [--profile] [--out dir] [--dist dir]
 // Run `npm run build` first. Writes <out>/perf-<label>.json and prints a table. PLAYWRIGHT_CHROMIUM_PATH as for smoke.
 import http from 'node:http';
@@ -76,6 +78,8 @@ function instrument({cores, lite}) {
   performance.setResourceTimingBufferSize(5000);
   const probe = window.__probe = {longTasks: [], rafMs: 0, rafCalls: 0};
   try { new PerformanceObserver(list => { for (const entry of list.getEntries()) probe.longTasks.push([Math.round(entry.startTime), Math.round(entry.duration)]); }).observe({type: 'longtask', buffered: true}); } catch {}
+  // The dive waits for the landmarks (world.js): the wall-clock moment they settle marks what a first dive must download.
+  const watch = setInterval(() => { if (window.oceanDiagnostics?.landmarksSettled) { probe.landmarksAt = Date.now(); clearInterval(watch); } }, 50);
   const raf = window.requestAnimationFrame.bind(window);
   window.requestAnimationFrame = callback => raf(now => { const start = performance.now(); try { callback(now); } finally { probe.rafMs += performance.now() - start; probe.rafCalls++; } });
 }
@@ -90,7 +94,7 @@ const info = page => page.evaluate(() => {
 const sumLog = (from, to) => { const list = log.filter(entry => entry.at >= from && entry.at <= to); return {requests: list.length, raw: list.reduce((n, e) => n + e.raw, 0), wire: list.reduce((n, e) => n + e.wire, 0)}; };
 
 async function run(name, profile, index) {
-  const browser = await launchBrowser({args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist']});
+  const browser = await launchBrowser({args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', ...(process.env.PROBE_JS_FLAGS ? [`--js-flags=${process.env.PROBE_JS_FLAGS}`] : [])]});
   try { return await measure(name, profile, index, browser); } finally { await browser.close(); }
 }
 async function measure(name, profile, index, browser) {
@@ -109,12 +113,12 @@ async function measure(name, profile, index, browser) {
   const ready = await page.evaluate(() => ({readyAt: window.oceanDiagnostics.readyAt, error: window.oceanDiagnostics.error, startup: window.oceanDiagnostics.startup}));
   if (ready.error) throw Error(`${name}: ${ready.error}`);
   const loadReady = sumLog(t0, tReady);
-  // The surface as a visitor first sees it, settled for a moment: a clear day with the clock held.
-  await page.evaluate(() => { document.querySelector('#day')?.click(); window.oceanControls.weather.set('clear'); window.oceanControls.time.lock(true); window.oceanControls.setRenderBudget('full'); });
+  // The surface as a visitor first sees it: a clear day held clear (rain changes the cost), the clock left running as it runs for a visitor.
+  await page.evaluate(() => { document.querySelector('#day')?.click(); window.oceanControls.weather.set('clear'); window.oceanControls.weather.lock(true); window.oceanControls.setRenderBudget('full'); });
   await sleep(1500);
   const surface = await info(page);
   if (SHOTS) await page.screenshot({path: path.join(OUT, `${LABEL}-${name}-surface.png`)});
-  const heapReady = await heap(cdp);
+  const heapReady = await heap(cdp), atSurface = await page.evaluate(() => ({optionalModels: window.oceanDiagnostics.optionalModels, requests: performance.getEntriesByType('resource').length}));
   // The first dive, as the dive button asks for it.
   await page.evaluate(() => window.oceanControls.startDive());
   await page.waitForFunction(() => window.oceanExperienceMetrics.snapshot().stages.firstUsableDive !== undefined, null, {timeout: 240000, polling: 100});
@@ -124,42 +128,56 @@ async function measure(name, profile, index, browser) {
   const longUntilDive = diveStages.longTasks.filter(([start]) => start <= diveStages.stages.firstUsableDive);
   // Every model pack settled (landmarks, then creatures and corals): what the whole first visit downloads.
   await page.waitForFunction(() => { const d = window.oceanDiagnostics; return d.landmarksSettled && (d.optionalModels === 'settled' || d.prewarm === 'data-saver'); }, null, {timeout: 300000, polling: 250}).catch(() => errors.push('models never settled'));
-  const tSettled = Date.now(), loadSettled = sumLog(t0, tSettled);
+  const tSettled = Date.now(), loadSettled = sumLog(t0, tSettled), loadGate = sumLog(t0, await page.evaluate(() => window.__probe.landmarksAt || Date.now()));
   // What was fetched, largest first (a file fetched twice shows count 2).
   const files = {};for (const entry of log) if (entry.at <= tSettled) { const f = files[entry.path] ||= {count: 0, wire: 0, first: entry.at - t0}; f.count++; f.wire += entry.wire; }
   const settledAt = await page.evaluate(() => window.oceanExperienceMetrics.snapshot().stages.optionalModelsSettled ?? null);
   // The dive: two fixed places, half of it each. Frame cost is what the frame loop spent per frame it drew.
   const frames = [];
-  let dive = null, hotspots = null;
+  let dive = null, hotspots = null, fixed = null;
   const before = await cdpTimes(cdp), clockBefore = Date.now();
   for (const [i, [eye, look]] of SPOTS.entries()) {
     await page.evaluate(([eye, look]) => window.oceanControls.place(eye, look), [eye, look]);
     await sleep(1500);
-    if (PROFILE && i === 0) { await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', {interval: 250}); await cdp.send('Profiler.start'); }
     const start = await page.evaluate(() => ({ms: window.__probe.rafMs, calls: window.__probe.rafCalls, frames: window.oceanDiagnostics.frames}));
     await sleep(DIVE_SECONDS * 500 - 1500);
     const end = await page.evaluate(() => ({ms: window.__probe.rafMs, calls: window.__probe.rafCalls, frames: window.oceanDiagnostics.frames}));
     frames.push({ms: end.ms - start.ms, calls: end.calls - start.calls, drawn: end.frames - start.frames});
-    if (PROFILE && i === 0) hotspots = selfTimes((await cdp.send('Profiler.stop')).profile, end.frames - start.frames);
-    if (i === 0) { dive = await info(page); if (SHOTS) await page.screenshot({path: path.join(OUT, `${LABEL}-${name}-dive.png`)}); }
+    if (i === 0) {
+      dive = await info(page); if (SHOTS) await page.screenshot({path: path.join(OUT, `${LABEL}-${name}-dive.png`)});
+      // The frame loop's own pace here is SwiftShader's, and a slow pace hands the world long steps (up to 0.1 s), which
+      // cost more than a phone's 1/30 s ones. So the world is also stepped at a fixed 1/30 s, synchronously, as on a
+      // device that keeps 30 frames a second. The draw is left out (renderer.render does nothing meanwhile): its WebGL
+      // calls wait on SwiftShader's command buffer here, which says nothing about a phone. What is left is the world's
+      // own update per frame: simulation, animation mixers, culling, the HUD.
+      if (PROFILE) { await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', {interval: 200}); await cdp.send('Profiler.start'); }
+      fixed = await page.evaluate(() => {
+        const c = window.oceanControls, renderer = c.getRenderer(), render = renderer.render, steps = [], median = list => list.sort((a, b) => a - b)[list.length >> 1];
+        renderer.render = () => {};
+        try { for (let i = 0; i < 130; i++) { const start = performance.now(); c.step(1 / 30, 1 / 30); if (i >= 10) steps.push(performance.now() - start); } } finally { renderer.render = render; }
+        return {updateMs: +median(steps).toFixed(2), updateP90Ms: +steps.sort((a, b) => a - b)[Math.floor(steps.length * .9)].toFixed(2)};
+      });
+      if (PROFILE) { const {profile: cpu} = await cdp.send('Profiler.stop'); hotspots = selfTimes(cpu, 120); await fs.writeFile(path.join(OUT, `${LABEL}-${name}-${index}.cpuprofile`), JSON.stringify(cpu)); }
+    }
     else if (SHOTS) await page.screenshot({path: path.join(OUT, `${LABEL}-${name}-slope.png`)});
   }
   const after = await cdpTimes(cdp), seconds = (Date.now() - clockBefore) / 1000;
   const heapDive = await heap(cdp);
   const drawn = frames.reduce((n, f) => n + f.drawn, 0), rafMs = frames.reduce((n, f) => n + f.ms, 0);
-  const detail = await page.evaluate(() => { const d = window.oceanDiagnostics; return {renderScale: d.renderScale, pixelRatio: d.pixelRatio, quality: d.quality, gpuTier: d.gpuTier, antialias: d.antialias, fps: d.fps, work: {steps: d.work.steps, ms: Math.round(d.work.ms), longest: d.work.longest, longestName: d.work.longestName}, under: d.startup.under}; });
+  const detail = await page.evaluate(() => { const d = window.oceanDiagnostics; return {renderScale: d.renderScale, pixelRatio: d.pixelRatio, quality: d.quality, gpuTier: d.gpuTier, antialias: d.antialias, fps: d.fps, work: {steps: d.work.steps, ms: Math.round(d.work.ms), longest: d.work.longest, longestName: d.work.longestName}, under: d.startup.under, coralCache: window.oceanControls.models?.coralCache?.status ?? null}; });
+  detail.atSurface = atSurface;
   return {
     profile: name, run: index, errors, files: Object.fromEntries(Object.entries(files).sort((a, b) => b[1].wire - a[1].wire)),
-    load: {ready: loadReady, dive: loadDive, settled: loadSettled},
+    load: {ready: loadReady, gate: loadGate, dive: loadDive, settled: loadSettled},
     time: {readyMs: ready.readyAt, diveMs: diveStages.stages.firstUsableDive, settledMs: settledAt, longTasksToDive: longUntilDive.length, longTaskMsToDive: longUntilDive.reduce((n, [, d]) => n + d, 0), longestToDive: Math.max(0, ...longUntilDive.map(([, d]) => d))},
     memory: {heapReadyMB: +(heapReady / 1e6).toFixed(1), heapDiveMB: +(heapDive / 1e6).toFixed(1)},
     renderer: {surface, dive},
-    frame: {drawn, fps: +(drawn / (frames.length * (DIVE_SECONDS / 2 - 1.5))).toFixed(1), rafMsPerFrame: drawn ? +(rafMs / drawn).toFixed(2) : null, scriptMsPerSecond: +((after.script - before.script) / seconds).toFixed(1), taskMsPerSecond: +((after.task - before.task) / seconds).toFixed(1), styleLayoutMsPerSecond: +((after.style + after.layout - before.style - before.layout) / seconds).toFixed(1)},
+    frame: {drawn, fps: +(drawn / (frames.length * (DIVE_SECONDS / 2 - 1.5))).toFixed(1), rafMsPerFrame: drawn ? +(rafMs / drawn).toFixed(2) : null, scriptMsPerSecond: +((after.script - before.script) / seconds).toFixed(1), taskMsPerSecond: +((after.task - before.task) / seconds).toFixed(1), styleLayoutMsPerSecond: +((after.style + after.layout - before.style - before.layout) / seconds).toFixed(1), ...fixed},
     detail, startup: ready.startup, ...(hotspots ? {hotspots} : {})
   };
 }
 
-// Self time per function (ms per drawn frame), from a CDP CPU profile.
+// Self time per function (ms per fixed step), from a CDP CPU profile.
 function selfTimes(profile, drawn) {
   const byId = new Map(profile.nodes.map(node => [node.id, node])), self = new Map();
   for (let i = 0; i < profile.samples.length; i++) {
@@ -195,6 +213,7 @@ await fs.writeFile(path.join(OUT, `perf-${LABEL}.json`), JSON.stringify(results,
 const kb = n => `${(n / 1024).toFixed(0)} KB`, mb = n => `${(n / 1048576).toFixed(2)} MB`;
 const rows = [
   ['requests to ready', m => m.load.ready.requests], ['wire bytes to ready', m => kb(m.load.ready.wire)], ['raw bytes to ready', m => kb(m.load.ready.raw)],
+  ['requests until dive may go under', m => m.load.gate.requests], ['wire bytes until dive may go under', m => mb(m.load.gate.wire)],
   ['requests to first dive', m => m.load.dive.requests], ['wire bytes to first dive', m => mb(m.load.dive.wire)],
   ['requests to settled', m => m.load.settled.requests], ['wire bytes to settled', m => mb(m.load.settled.wire)],
   ['ready (ms)', m => m.time.readyMs], ['first usable dive (ms)', m => m.time.diveMs], ['models settled (ms)', m => m.time.settledMs],
@@ -203,6 +222,7 @@ const rows = [
   ['surface calls / tris', m => `${m.renderer.surface.calls} / ${Math.round(m.renderer.surface.triangles / 1000)}k`],
   ['dive calls / tris', m => `${m.renderer.dive.calls} / ${Math.round(m.renderer.dive.triangles / 1000)}k`],
   ['programs / textures / geometries', m => `${m.renderer.dive.programs} / ${m.renderer.dive.textures} / ${m.renderer.dive.geometries}`],
+  ['world update ms (1/30 s step)', m => m.frame.updateMs], ['world update p90 ms', m => m.frame.updateP90Ms],
   ['frame-loop ms per drawn frame', m => m.frame.rafMsPerFrame], ['script ms per s (dive)', m => m.frame.scriptMsPerSecond], ['main-thread task ms per s', m => m.frame.taskMsPerSecond],
   ['drawn fps (SwiftShader)', m => m.frame.fps], ['pixel ratio × scale', m => `${m.renderer.dive.pixelRatio} (${m.renderer.dive.renderScale})`]
 ];
