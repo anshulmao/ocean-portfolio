@@ -38,12 +38,12 @@ body[data-submerged="true"]:not([data-computer-open="true"]) :is(.depth,.air-gau
 body[data-submerged="true"]:not([data-computer-open="true"]) .scene-footer .location{display:none}
 body[data-submerged="true"]:not([data-computer-open="true"]) .reef-map :is(.map-reading,.journey-progress,.chart-key){display:none}
 
-/* Phones, upright or sideways (the layout contract's phone query, tokens.css): the touch controls own the bottom
-   corners and the sheet the bottom middle, so depth becomes the one-line depth and zone chip on the left of the top
-   bar (where the brand sits at the surface), and the waypoint and the landmark prompt alone point the way */
+/* Phones, upright or sideways (the layout contract's phone query, tokens.css): the top bar's depth and zone chip is
+   the scene footer (hud.css), so the calm depth card would only repeat it; the touch controls own the bottom corners
+   and the sheet the bottom middle, so the waypoint and the landmark prompt alone point the way */
 @media (max-width:599px),(pointer:coarse) and (max-height:499px){
   .calm-depth{left:calc(var(--o-pad) + var(--o-safe-l));right:auto;top:var(--o-top);bottom:auto;box-sizing:border-box;min-width:0;min-height:var(--o-bar);max-width:calc(100vw - 2*var(--o-pad) - 2*var(--o-bar));padding:0 12px;white-space:nowrap}
-  body[data-submerged="true"]:not([data-computer-open="true"]) .calm-depth{display:flex;align-items:center;gap:9px}
+  body[data-submerged="true"]:not([data-computer-open="true"]) .calm-depth{display:none}
   .calm-depth-number{font-size:17px}
   .calm-depth-number small{font-size:11px;margin-left:2px}
   .calm-depth-zone{margin:0!important;font-size:11px}

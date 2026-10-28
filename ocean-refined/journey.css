@@ -10,7 +10,14 @@
    compact map (two bars tall) beside it; on a phone held sideways straight under the top bar, above the middle. */
 :root{--announce-top:max(132px,15vh)}
 @media (max-width:599px),(pointer:coarse) and (max-height:499px){:root{--announce-top:calc(var(--o-under-bar) + 2*var(--o-bar) + 2*var(--o-gap))}}
-@media (pointer:coarse) and (max-height:499px){:root{--announce-top:var(--o-under-bar)}}
+/* Sideways the top bar's middle is empty (depth chip left, menu right), and anything lower lands in the middle of a
+   390px-tall view, so announcements ride in the bar itself, set smaller. */
+@media (pointer:coarse) and (max-height:499px){
+  :root{--announce-top:var(--o-top)}
+  .zone-card{gap:4px;padding:6px 32px 8px}
+  .zone-card strong{font-size:24px}
+  .journey-toast{max-width:400px}
+}
 :is(.zone-card,.journey-toast){position:fixed;left:50%;top:var(--announce-top);z-index:var(--o-z-announce);transform:translateX(-50%);pointer-events:none;opacity:0;translate:0 10px}
 :is(.zone-card,.journey-toast)[data-show="true"]{opacity:1;translate:0 0;transition:opacity var(--journey-slow) var(--journey-in),translate var(--journey-slow) var(--journey-in)}
 :is(.zone-card,.journey-toast)[data-show="false"]{translate:0 -6px;transition:opacity 300ms var(--journey-out),translate 300ms var(--journey-out)}
