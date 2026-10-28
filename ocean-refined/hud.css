@@ -528,3 +528,14 @@ body[data-menu="open"] .hero *{pointer-events:none}
 /* A distinct, always reachable return action, even with General collapsed. */
 #settings-surface-now{flex-shrink:0;align-self:stretch;margin:10px 14px 0;padding:12px 14px;min-height:44px;justify-content:center;color:#fff3da;background:#725137;border:1px solid #e6b77a8c;box-shadow:0 3px 16px #051a2522}
 #settings-surface-now:hover{background:#896141}
+
+/* 13. Touch: the prompt is the action. A finger has no F key, so on touch (<html data-input="touch">, kept by
+   touch-controls.js) the prompt is one button in the controls zone, resting on the deck's keys (controls.css keeps
+   --keys-top), and says what it opens: "Read · Experience" (landmark-interactions.js writes the words for the input
+   in use). The artifact prompt takes the same place (expedition-interactions.css); the two never show together.
+   The pointer hints have nothing to say to a finger. */
+html[data-input="touch"] .interact-prompt{position:fixed;left:auto;right:max(12px,var(--o-safe-r));bottom:calc(var(--keys-top) + var(--o-gap));z-index:var(--o-z-controls);min-height:var(--o-tap);max-width:calc(100vw - var(--o-pad) - min(176px,40vw + 12px));padding:8px 16px;transform:none;border-color:var(--holo-mint);font-size:14px;white-space:normal;text-align:left}
+html[data-input="touch"] .interact-prompt kbd{display:none}
+/* On a guided dive the tour's card carries the same action, so it stays the only one. */
+html[data-input="touch"] body:is([data-tour="travel"],[data-tour="dwell"]) .interact-prompt{visibility:hidden}
+html[data-input="touch"] :is(.capture-hint,.look-hint){display:none!important}

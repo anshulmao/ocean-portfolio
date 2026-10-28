@@ -17,7 +17,9 @@ const dock = document.createElement('aside'); dock.className = 'expedition-tools
 dock.setAttribute('aria-label', 'Expedition tools');
 dock.innerHTML = '<button type="button" data-stop hidden><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2v9m-4-4 4 4 4-4M7 16h18M16 30v-9m-4 4 4-4 4 4"/></svg><span><strong>Safety stop available</strong><small>Hold at 3–5 m · Press <kbd>F</kbd></small></span><output class="stop-offer-time">10s</output><span class="stop-offer-track" aria-hidden="true"><i></i></span></button><button type="button" data-photo hidden>Photo <kbd>H</kbd></button><button type="button" data-inventory hidden>Finds <span data-score>0</span></button>';
 const notice = document.createElement('div'); notice.className = 'expedition-notice'; notice.setAttribute('role', 'status'); notice.setAttribute('aria-live', 'polite');
-const prompt = document.createElement('div'); prompt.className = 'artifact-prompt'; prompt.hidden = true;
+// The artifact prompt is a button: on touch it is the only way to collect (there is no F key), and with a mouse a click does the same as F.
+const prompt = document.createElement('button'); prompt.type = 'button'; prompt.className = 'artifact-prompt'; prompt.hidden = true;
+const touchInput = () => document.documentElement.dataset.input === 'touch';
 const dialog = document.createElement('dialog'); dialog.className = 'expedition-dialog'; dialog.setAttribute('aria-labelledby', 'expedition-title');
 document.body.append(dock, notice, prompt, dialog);
 const score = dock.querySelector('[data-score]'), photoButton = dock.querySelector('[data-photo]'), stopButton = dock.querySelector('[data-stop]');
@@ -145,7 +147,7 @@ function openStop() {
 }
 function openInventory() {
   const collected = finds.filter(item=>item.collected);
-  begin('Your reef finds', `<p>${collected.length} of ${finds.length} artifacts · ${collected.length*100} discovery points</p><p>These are imaginary finds. Enjoy collecting without disturbing the real reef.</p><ul class="artifact-list">${collected.length?collected.map(item=>`<li><span>◈</span>${item.name}<small>+100</small></li>`).join(''):'<li>No finds yet. Look for small gold tokens near the seabed; press F when in reach.</li>'}</ul><p class="feedback-privacy">Inventory lasts for this page session. It does not change your dive or portfolio access.</p>`, 'inventory');
+  begin('Your reef finds', `<p>${collected.length} of ${finds.length} artifacts · ${collected.length*100} discovery points</p><p>These are imaginary finds. Enjoy collecting without disturbing the real reef.</p><ul class="artifact-list">${collected.length?collected.map(item=>`<li><span>◈</span>${item.name}<small>+100</small></li>`).join(''):`<li>No finds yet. Look for small gold tokens near the seabed; ${touchInput()?'tap Collect':'press F'} when in reach.</li>`}</ul><p class="feedback-privacy">Inventory lasts for this page session. It does not change your dive or portfolio access.</p>`, 'inventory');
 }
 function collect() {
   if (!nearest || !mesh || dialog.open || ui.dialog || ui.panel) return false;
@@ -209,7 +211,9 @@ onTick(dt=> {
   photoButton.disabled = state.cameraMode !== 'first' || Boolean(controls.getTransition());
   const reading = toDisplayDepth(-controls.getPlayerPosition().y);
   const returning=controls.nav.returnPhase;
-  if(returnOffer!==(returning==='offer')){returnOffer=returning==='offer';stopButton.querySelector('small').innerHTML=returnOffer?'Hold at 3–5 m · <kbd>F</kbd> to stop · <kbd>Esc</kbd> to surface':'Hold at 3–5 m · Press <kbd>F</kbd>';}
+  // The offer's hint follows the input in use: the button itself is the action on touch.
+  const offerKey=`${returning==='offer'}|${touchInput()}`;
+  if(returnOffer!==offerKey){returnOffer=offerKey;stopButton.querySelector('small').innerHTML=touchInput()?(returning==='offer'?'Hold at 3–5 m · tap to stop':'Hold at 3–5 m · tap to begin'):returning==='offer'?'Hold at 3–5 m · <kbd>F</kbd> to stop · <kbd>Esc</kbd> to surface':'Hold at 3–5 m · Press <kbd>F</kbd>';}
   const inRange=underwater&&inSafetyStopRange(reading)&&(!returning||returning==='offer');
   // A small dead band avoids retriggering on idle bobbing, while a route that
   // passes above the stop zone can offer the invitation again on its final hold.
@@ -242,10 +246,11 @@ onTick(dt=> {
       best = distance; nearest = item;
     }
   }
-  const text = nearest ? `F · Collect ${nearest.name}` : '';
+  const text = nearest ? touchInput() ? `Collect · ${nearest.name}` : `F · Collect ${nearest.name}` : '';
   if (text !== lastPrompt) { lastPrompt = text; prompt.textContent = text; prompt.hidden = !text; }
 }, 10);
 dock.querySelector('[data-stop]').addEventListener('click',openStop);
+prompt.addEventListener('click',collect);
 dock.querySelector('[data-photo]').addEventListener('click',takePhoto);
 dock.querySelector('[data-inventory]').addEventListener('click',openInventory);
 addEventListener('keydown',event=> {

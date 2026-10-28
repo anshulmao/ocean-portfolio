@@ -3,7 +3,7 @@
 .quiet-ui-toggle{left:var(--pad);top:250px;display:flex;align-items:center;gap:8px}
 .quiet-ui-toggle svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5}
 .quiet-ui-toggle kbd{font-size:10px;opacity:.65}
-.quiet-ui-restore,.quiet-ui-computer{bottom:max(22px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:40}
+.quiet-ui-restore,.quiet-ui-computer{bottom:max(22px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:var(--o-z-controls)}
 .quiet-ui-computer{bottom:calc(max(22px,env(safe-area-inset-bottom)) + 52px)}
 :is(.quiet-ui-toggle,.quiet-ui-restore,.quiet-ui-computer):focus-visible{outline:2px solid var(--holo-focus);outline-offset:3px}
 :is(.quiet-ui-toggle,.quiet-ui-restore,.quiet-ui-computer)[hidden]{display:none!important}
@@ -16,8 +16,11 @@ body[data-clear-ui="true"] #dive-computer:not([hidden]){visibility:visible}
 body[data-menu="open"] .quiet-ui-toggle,body[data-safety-stop="true"] .quiet-ui-toggle,body:has(dialog[open]) .quiet-ui-toggle{visibility:hidden;pointer-events:none}
 .lamp-notice{position:fixed;left:var(--pad);bottom:82px;z-index:7;max-width:220px;padding:7px 11px;background:var(--holo-fill);border-left:2px solid var(--holo-mint);color:var(--holo-ink);font:500 12px/1.4 var(--holo-font);opacity:0;transform:translateY(5px);pointer-events:none;transition:opacity 180ms ease,transform 180ms ease}
 .lamp-notice[data-show="true"]{opacity:1;transform:none}
-/* Five touch actions retain the original grid. Rise/sink stay in the same column. */
-.touch-actions [data-lamp]{grid-column:2}.touch-actions [data-swim="Space"]{grid-column:3}.touch-actions [data-action="interact"]{grid-column:1}
 @media(max-width:600px){.quiet-ui-toggle{top:calc(var(--hud-top) + 216px);left:calc(var(--pad) + 174px);min-height:40px;padding:8px}.quiet-ui-toggle span,.quiet-ui-toggle kbd{display:none}.quiet-ui-toggle svg{width:20px;height:20px}.lamp-notice{left:auto;right:var(--pad);top:238px;bottom:auto;max-width:155px;font-size:11px}}
 @media(max-height:550px) and (min-width:601px){.quiet-ui-toggle{top:220px}.lamp-notice{bottom:30px;left:220px}}
 @media(prefers-reduced-motion:reduce){.lamp-notice{transition:none;transform:none}}
+/* Phones: the restore pair stands in the controls zone, where the hidden keys were. */
+@media(max-width:599px),(pointer:coarse) and (max-height:499px){
+  .quiet-ui-restore{bottom:var(--keys-bottom)}
+  .quiet-ui-computer{bottom:calc(var(--keys-bottom) + var(--o-tap) + var(--o-gap))}
+}
