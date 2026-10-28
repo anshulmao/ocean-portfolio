@@ -294,6 +294,20 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   // --- Residents ------------------------------------------------------------------------------------------------
   const spotted = [], dens = [];
   let sentinel = null, grazers = null;
+  // Dens: out from the formation's middle, through its rock, to the first open ground beyond it: the den mouth, with
+  // the body back in the rock. A heading that never crosses rock, or only reaches open ground far out (a gap in a ring
+  // of columns, say), would leave the eel lying on bare sand, so headings nearest the authored one are tried first.
+  const openGround = (x, z) => !solid(x, z);
+  function denMouth(f, preferred) {
+    for (const turn of [0, .3, -.3, .6, -.6, .9, -.9, 1.2, -1.2, 1.6, -1.6, 2.1, -2.1, 2.6, -2.6, Math.PI]) {
+      const angle = preferred + turn, dx = Math.sin(angle), dz = Math.cos(angle);
+      let edge = .5, rock = false;
+      for (; edge < f.radius * 1.4; edge += .5) { if (!openGround(f.x + dx * edge, f.z + dz * edge)) rock = true; else if (rock) break; }
+      const x = f.x + dx * edge, z = f.z + dz * edge;
+      if (rock && edge < f.radius * 1.4 && Math.abs(x) < 56 && z > -100 && z < 30) return { angle, dx, dz, edge };
+    }
+    return null;
+  }
   function buildResidents() {
     const b = RESIDENTS.bumpheads;
     if (gltfs.has(b.species)) {
@@ -312,19 +326,18 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     const n = RESIDENTS.sleeper;
     if (gltfs.has(n.species)) { const a = actor(n.species, { clip: 'rest' }); if (a) { const [x, z] = sand(...n.near, 3.5); a.pos.set(x, floor(x, z) + .45, z); a.yaw = rr(0, TAU); a.started = true; a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(0, a.yaw, 0, 'YXZ'); } }
     const g = RESIDENTS.sentinel, wreck = landmark(g.landmark) || { x: 18, y: -23, z: -39 };
-    if (gltfs.has(g.species)) { const a = actor(g.species, { clip: 'hover' }); if (a) { sentinel = { actor: a, home: new THREE.Vector3(wreck.x + g.offset[0], wreck.y + g.offset[1], wreck.z + g.offset[2]), drift: rr(0, TAU), dart: 0, away: new THREE.Vector3() }; a.pos.copy(sentinel.home); a.started = true; a.ease = 1.2; } }
+    if (gltfs.has(g.species)) { const a = actor(g.species, { clip: 'swim' }); if (a) { sentinel = { actor: a, home: new THREE.Vector3(wreck.x + g.offset[0], wreck.y + g.offset[1], wreck.z + g.offset[2]), drift: rr(0, TAU), dart: 0, calm: 0, away: new THREE.Vector3(), phase: rr(0, TAU), turn: Math.random() < .5 ? 1 : -1, hover: 0, cruise: rr(8, 14) }; a.pos.copy(sentinel.home); a.pos.x += Math.cos(sentinel.phase) * g.patrol[0]; a.pos.z += Math.sin(sentinel.phase) * g.patrol[1]; a.started = true; a.ease = 1.2; } }
     // Dens: at the foot of a formation, looking out from it, the rest of the body inside the rock.
     const all = formations();
     for (const d of RESIDENTS.dens) {
       if (economy && d.lean) continue;
       const f = all.find(item => item.name === d.formation); if (!f || !gltfs.has(d.species)) continue;
+      const den = denMouth(f, d.angle); if (!den) continue;
       const a = actor(d.species, { clip: 'breathe' }); if (!a) continue;
-      // Out from the formation's middle until the ground is open: the den mouth. Half the body stays in the rock.
-      const dx = Math.sin(d.angle), dz = Math.cos(d.angle); let edge = f.radius * .4;
-      while (edge < f.radius * 2.5 && (solid(f.x + dx * edge, f.z + dz * edge) || cover(f.x + dx * edge, f.z + dz * edge) > floor(f.x + dx * edge, f.z + dz * edge) + .8)) edge += .5;
+      const { angle, dx, dz, edge } = den;
       const x = f.x + dx * (edge - a.L * .08), z = f.z + dz * (edge - a.L * .08);
-      a.pos.set(x, floor(f.x + dx * edge, f.z + dz * edge) + a.L * .06, z); a.yaw = d.angle; a.pitch = .12; a.started = true; a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(-a.pitch, a.yaw, 0, 'YXZ');
-      const motion = d.species === 'giant-moray' ? createMorayDenMotion({ mouth: { x: f.x + dx * edge, y: a.pos.y, z: f.z + dz * edge }, yaw: d.angle, length: a.L, scale: a.scale }) : null;
+      a.pos.set(x, floor(f.x + dx * edge, f.z + dz * edge) + a.L * .06, z); a.yaw = angle; a.pitch = .12; a.started = true; a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(-a.pitch, a.yaw, 0, 'YXZ');
+      const motion = d.species === 'giant-moray' ? createMorayDenMotion({ mouth: { x: f.x + dx * edge, y: a.pos.y, z: f.z + dz * edge }, yaw: angle, length: a.L, scale: a.scale }) : null;
       const pose = {};
       if (motion) {
         updateMorayDenMotion(motion, 0, null, pose);
@@ -355,17 +368,22 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(0, a.yaw, 0, 'YXZ');
     }
     if (sentinel) {
-      const s = sentinel, a = s.actor; let yaw = 2.2 + Math.sin(clock * .11 + s.drift) * .5;
-      C.copy(s.home); C.x += Math.sin(clock * .13 + s.drift) * .9; C.y += Math.sin(clock * .21) * .4;
-      if (player) {
-        const d = a.pos.distanceTo(player);
-        if (s.dart <= 0 && d < 6) { s.dart = 1; s.away.copy(a.pos).sub(player).setY(0).normalize().multiplyScalar(16).add(a.pos); s.away.y = s.home.y + 2; play(a, 'strike', .15, true, 'swim'); }
-        else if (s.dart <= 0 && d < 24) yaw = Math.atan2(player.x - a.pos.x, player.z - a.pos.z);   // it turns to keep the diver in view
-      }
+      // A slow oval off the wreck, broken by spells of hanging still the way barracuda hold station. A diver
+      // coming close stops it to watch; crowding it sends it off in a burst before it comes back to its beat.
+      const s = sentinel, a = s.actor, [rx, rz] = RESIDENTS.sentinel.patrol, d = player ? a.pos.distanceTo(player) : Infinity;
+      s.calm = Math.max(0, s.calm - dt);
+      if (s.dart <= 0 && s.hover <= 0 && d < 14) { s.hover = 4; play(a, 'hover', 1.2); }
+      if (s.hover > 0) { s.hover -= dt; if (s.hover <= 0 && d < 14) s.hover = .5; else if (s.hover <= 0) { s.cruise = rr(14, 22); play(a, 'swim', 1.2); } }
+      else if (s.dart <= 0) { s.phase += s.turn * dt * RESIDENTS.sentinel.speed / ((rx + rz) / 2); s.cruise -= dt; if (s.cruise <= 0) { s.hover = rr(5, 9); play(a, 'hover', 1.2); } }
+      const cx = Math.cos(s.phase), sz = Math.sin(s.phase);
+      C.set(s.home.x + cx * rx, s.home.y + Math.sin(clock * .21 + s.drift) * .5, s.home.z + sz * rz); C.y = Math.max(C.y, cover(C.x, C.z) + 2.5);
+      let yaw = s.hover > 0 ? (d < 24 ? Math.atan2(player.x - a.pos.x, player.z - a.pos.z) : a.yaw) : Math.atan2(-sz * rx * s.turn, cx * rz * s.turn);
+      if (s.dart <= 0 && s.calm <= 0 && d < 6) { s.dart = 1; s.hover = 0; s.away.copy(a.pos).sub(player).setY(0).normalize().multiplyScalar(16).add(a.pos); s.away.y = s.home.y + 2; play(a, 'strike', .15, true, 'fast'); }
       if (s.dart > 0) {
         s.dart -= dt / 6; const out = s.dart > .75;
-        if (out) { C.copy(s.away); yaw = Math.atan2(s.away.x - a.pos.x, s.away.z - a.pos.z); a.ease = 3; } else { yaw = Math.atan2(s.home.x - a.pos.x, s.home.z - a.pos.z); a.ease = .8; }
-        if (s.dart <= 0) { play(a, 'hover', 1.2); a.ease = 1.2; }
+        if (out) { C.copy(s.away); a.ease = 3; } else a.ease = .8;
+        yaw = Math.atan2(C.x - a.pos.x, C.z - a.pos.z);
+        if (s.dart <= 0) { s.calm = 6; s.cruise = rr(14, 22); play(a, 'swim', 1.2); a.ease = 1.2; }
       }
       place(a, C, yaw, 0, 0, dt);
     }

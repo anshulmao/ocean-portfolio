@@ -41,12 +41,13 @@ export const RESIDENTS = {
   // Bluespotted rays lie on open sand and scoot away when crowded.
   bluespots: { species: 'bluespotted-ray', spots: [[8, 6], [-16, 2], [26, -14]], lean: 2 },
   sleeper: { species: 'nurse-shark', near: [-21, -24] },
-  // The barracuda that hangs off the wreck, turns to watch a diver, and bolts if crowded.
-  sentinel: { species: 'great-barracuda', landmark: 'experience', offset: [9, 7, 4] },
+  // The barracuda that patrols a slow oval off the wreck (patrol: x and z radii, m; speed m/s), pauses to hang
+  // and watch a diver, and bolts if crowded.
+  sentinel: { species: 'great-barracuda', landmark: 'experience', offset: [9, 7, 4], patrol: [7, 4.5], speed: .8 },
   // Morays and a ribbon eel look out from the foot of the tall formations, mouths working; too close and they strike.
   dens: [
-    { species: 'giant-moray', formation: 'Pillar coral cathedral', angle: 2.4 },
-    { species: 'giant-moray', formation: 'Brain coral dome', angle: -.6, lean: true },
+    // The cathedral's columns are too thin to hold a den: a moray there ended up on open sand by the reef's edge.
+    { species: 'giant-moray', formation: 'Brain coral dome', angle: 1.5 },
     { species: 'ribbon-eel', formation: 'Table coral tower', angle: 3.6 }
   ]
 };
