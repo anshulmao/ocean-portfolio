@@ -24,9 +24,11 @@ The build uses Node’s built-in modules and copies the pinned PostHog browser S
 
 For direct upload, authenticate with Vercel and link to the existing `anshul-portfolio` project in `anshulmaos-projects`. Run `npm run build`, `npm run prepare:deploy`, then `vercel deploy --prebuilt --prod --scope team_QxXq7z7TZDEkoke6wCrExIrB`. Inspect the linked project before deploying. Do not commit `.env*` or `.vercel/`.
 
-`release/live-site.json` records the production deployment and previous deployment for rollback. Git push alone does not establish that Vercel has deployed a new revision; verify hosting separately.
+After deploying, run `npm run smoke -- https://anshul-portfolio-rho.vercel.app/` and update `release/live-site.json` only once it passes; if it fails, roll back to the previous deployment recorded there. `release/live-site.json` records the production deployment and previous deployment for rollback. Git push alone does not establish that Vercel has deployed a new revision; verify hosting separately.
 
 ## Checks and limitations
+
+Every pull request runs `.github/workflows/ci.yml`: the build (which fails if any shipped script does not parse), `test:build`, `test:services`, `test:unit` and `smoke`, a browser check that each page loads without a script error and that the surface links, deep links and reading pages all open. Run the same set locally with `npm run check`. Browser scripts use Playwright's Chromium (`npx playwright install chromium`); set `PLAYWRIGHT_CHROMIUM_PATH` or `PLAYWRIGHT_CHANNEL=chrome` to use another browser.
 
 The live launch passed Chrome desktop/mobile viewport checks, all 24 creature species and eight landmark/coral models, map, portfolio panels, resume download and prepared coral cache. Physical-device performance remains unmeasured. Browser tests use Playwright: install development dependencies and Chromium (`npm install`, `npx playwright install chromium`), then use the test scripts in package.json. Older tests may describe historical UI; consult the latest tests and refinement notes under `ocean-refined/`.
 
