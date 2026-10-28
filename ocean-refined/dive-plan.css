@@ -22,7 +22,8 @@ body[data-submerged="true"] .dive-entry{opacity:0;visibility:hidden;pointer-even
 /* The planner is a full-screen dialog; the dimmed water behind it is a flat tint. */
 dialog.dive-plan{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:clamp(14px,3vh,30px) clamp(14px,4vw,56px);border:0;background:none;color:var(--holo-ink);font-family:var(--holo-font);overflow:auto}
 dialog.dive-plan:not([open]){display:none}
-dialog.dive-plan::backdrop{background:#031e2bd6}
+/* Dense enough that the surface headline behind does not read through the board. */
+dialog.dive-plan::backdrop{background:#031e2bf0}
 .plan-wrap{display:grid;gap:16px;align-content:center;width:min(980px,100%);min-height:100%;margin:0 auto}
 .plan-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
 .plan-head p,.plan-info p,.plan-overview p{margin:0}
@@ -130,6 +131,8 @@ body:has(dialog[open]) :is(.dive-summary-toggle,aside.dive-summary){visibility:h
   .dive-summary-toggle{top:calc(var(--hud-top,24px) + 64px);min-height:44px}
   body[data-summary="true"]:not([data-submerged="true"]) .view-controls{visibility:hidden}
 }
+/* A phone held sideways: the site art shrinks so the start button stays close to the fold. */
+@media(pointer:coarse) and (max-height:499px){.plan-art{height:40px;padding-bottom:6px}.plan-info{gap:8px;padding:12px 14px 14px}.plan-wrap{gap:10px}}
 /* Finger-sized targets on phones and touch screens: the drawing of a marker stays the same, its button grows. */
 @media(max-width:600px),(pointer:coarse){
   :is(.dive-entry,.plan-info,.plan-overview,.plan-head,.dive-summary,.dive-prompt) .holo-chip{min-height:44px}
