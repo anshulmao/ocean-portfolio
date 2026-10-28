@@ -38,15 +38,19 @@ const PROFILES = {
 };
 
 // Runs in the page. Everything visible that is text or a control is a "leaf"; leaves belong to the nearest fixed
-// (or sticky) ancestor, their "component". Overlaps are only counted between different components: two parts of one
+// (or sticky) ancestor, their "component"; an absolute element placed against the page itself (no positioned ancestor:
+// the page never scrolls, so the HUD's absolute instruments are as fixed as the rest) is a component too. Overlaps are
+// only counted between different components: two parts of one
 // card may sit close, but the tour card may not sit on the depth chip. Anything behind an open modal dialog is inert
 // and skipped, so a reading sheet is measured on its own.
 function measure({phone, dive}) {
   const W = innerWidth, H = innerHeight, modal = document.querySelector(':modal');
   const opacity = el => { let o = 1; for (let n = el; n && n.nodeType === 1; n = n.parentElement) { const s = getComputedStyle(n); if (s.display === 'none' || s.visibility === 'hidden' || s.contentVisibility === 'hidden') return 0; o *= +s.opacity; } return o; };
   const name = el => el.id ? `#${el.id}` : `${el.tagName.toLowerCase()}${typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : ''}`;
-  const component = el => { for (let n = el; n && n !== document.body; n = n.parentElement) { if (n.tagName === 'DIALOG' && n.open) return n; const p = getComputedStyle(n).position; if (p === 'fixed' || p === 'sticky') return n; } return document.body; };
+  const component = el => { for (let n = el; n && n !== document.body; n = n.parentElement) { if (n.tagName === 'DIALOG' && n.open) return n; const p = getComputedStyle(n).position; if (p === 'fixed' || p === 'sticky' || (p === 'absolute' && n.offsetParent === document.body)) return n; } return document.body; };
   const ownText = el => [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+  // What of a box is on screen: cut by every ancestor that clips its overflow (a scrolling panel, a round lens).
+  const seen = (el, r) => { let left = r.left, top = r.top, right = r.right, bottom = r.bottom; for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) { const s = getComputedStyle(n); if (s.overflowX === 'visible' && s.overflowY === 'visible') continue; const b = n.getBoundingClientRect(); left = Math.max(left, b.left); top = Math.max(top, b.top); right = Math.min(right, b.right); bottom = Math.min(bottom, b.bottom); } return {left, top, right, bottom, width: right - left, height: bottom - top}; };
   const CONTROL = 'button,a[href],[role=button],summary,input,select,textarea';
   const leaves = [];
   for (const el of document.body.querySelectorAll('*')) {
@@ -58,11 +62,13 @@ function measure({phone, dive}) {
     if (!control && !ownText(el) && !el.matches('svg,canvas,img')) continue;
     if (!control && el.closest(CONTROL)) continue;                       // a control's label is part of the control
     if (el.matches('svg') && el.closest(CONTROL)) continue;
-    const r = el.getBoundingClientRect();
+    const box = el.getBoundingClientRect(), r = seen(el, box);
     if (r.width < 2 || r.height < 2 || r.right <= 0 || r.bottom <= 0 || r.left >= W || r.top >= H) continue;
     if (opacity(el) < .15) continue;
+    if (el.checkVisibility && !el.checkVisibility()) continue;           // not rendered, e.g. inside a closed <details>
     const c = component(el);
-    leaves.push({el, r, control, c, name: name(el), text: (el.innerText || el.getAttribute('aria-label') || '').trim().replace(/\s+/g, ' ').slice(0, 40)});
+    // r is the part on screen (overlaps); box is the whole control (its size, even when a panel has scrolled half of it away).
+    leaves.push({el, r, box, control, c, name: name(el), text: (el.innerText || el.getAttribute('aria-label') || '').trim().replace(/\s+/g, ' ').slice(0, 40)});
   }
   const overlaps = [];
   for (let i = 0; i < leaves.length; i++) for (let j = i + 1; j < leaves.length; j++) {
@@ -73,7 +79,7 @@ function measure({phone, dive}) {
     const share = w * h / Math.min(a.r.width * a.r.height, b.r.width * b.r.height);
     if (share > .1) overlaps.push(`${name(a.c)} "${a.text || a.name}" over ${name(b.c)} "${b.text || b.name}" (${Math.round(share * 100)}%)`);
   }
-  const targets = phone ? leaves.filter(l => l.control && !l.el.closest('p,li,dd') && (l.r.width < 40 || l.r.height < 40)).map(l => `${l.name} "${l.text}" ${Math.round(l.r.width)}x${Math.round(l.r.height)}`) : [];
+  const targets = phone ? leaves.filter(l => l.control && !l.el.closest('p,li,dd') && (l.box.width < 40 || l.box.height < 40)).map(l => `${l.name} "${l.text}" ${Math.round(l.box.width)}x${Math.round(l.box.height)}`) : [];
   const scroll = [];
   if (document.scrollingElement.scrollWidth > W + 1) scroll.push(`page is ${document.scrollingElement.scrollWidth}px wide`);
   if (modal) for (const el of modal.querySelectorAll('*')) { const s = getComputedStyle(el); if (/(auto|scroll)/.test(s.overflowX) && el.scrollWidth > el.clientWidth + 1 && !el.matches('[role=tablist],[data-scroll-x]')) scroll.push(`${name(el)} scrolls sideways`); }
@@ -121,7 +127,9 @@ async function run(profileName) {
   if (phone) await page.evaluate(() => { document.documentElement.dataset.input = 'touch'; });
   await page.waitForTimeout(2500);
   await state('surface');
-  await step('surface-options', async () => { await page.locator('#portfolio-options summary').click({timeout: 5000}); await state('surface-options'); await page.locator('#portfolio-options summary').click(); });
+  // On a phone the summary is tapped: a click is a mouse event, and the page would rightly switch back to mouse input.
+  const press = locator => phone ? locator.tap({timeout: 5000}) : locator.click({timeout: 5000});
+  await step('surface-options', async () => { await press(page.locator('#portfolio-options summary')); await state('surface-options'); await press(page.locator('#portfolio-options summary')); });
   await step('reading-glance', async () => { await page.evaluate(() => oceanArchive.open('glance')); await state('reading-glance'); });
   await step('reading-project', async () => { await page.evaluate(() => oceanArchive.open('projects', 'rae')); await state('reading-project'); await page.evaluate(() => oceanArchive.close()); });
   await step('dive', async () => {

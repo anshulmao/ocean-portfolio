@@ -80,6 +80,11 @@ addEventListener('oceanmediumchange', () => setMapView(false));
 const direction = new THREE.Vector3();
 let lastOffset = null, pixel = 1 / (devicePixelRatio || 1), viewBearing = 0;
 addEventListener('resize', () => { pixel = 1 / (devicePixelRatio || 1); lastOffset = null; });
+// Phones hide the tape (hud.css) and read the heading off the scope instead. It is written only while the phone layout
+// is in force (the query of the tokens in tokens.css) and only when the whole degree changes.
+const phone = matchMedia('(max-width:599px),(pointer:coarse) and (max-height:499px)'), bearingMark = $('#map-bearing'), POINTS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+let lastDegrees = null;
+phone.addEventListener('change', () => { lastDegrees = null; });
 function sync() {
   const camera = window.oceanControls?.getCamera?.(), state = window.oceanDiagnostics;
   if (!camera || !tape) return;
@@ -90,6 +95,8 @@ function sync() {
   // The strip rests on whole device pixels: its marks stay sharp, and a turn too small to show writes nothing.
   const offset = Math.round((bearing - TAPE_START) * PX_PER_DEGREE / pixel) * pixel;
   if (offset !== lastOffset) { lastOffset = offset; tape.style.transform = `translate3d(${-offset.toFixed(2)}px,0,0)`; }
+  const degrees = Math.round(bearing) % 360;
+  if (bearingMark && phone.matches && degrees !== lastDegrees) { lastDegrees = degrees; bearingMark.textContent = `${POINTS[Math.round(degrees / 45) % 8]} ${String(degrees).padStart(3, '0')}°`; }
   if (mapFull || !chart || map.hidden) return;
   // The chart draws east up, so turning it by (90° - bearing) puts the view direction at the top.
   // With reduced motion the chart still follows the diver but keeps its orientation, and the arrow turns instead.
@@ -162,8 +169,11 @@ onTick(aim, 4);
 
 // 4. Escape releases the mouse first; with the mouse released it opens Settings.
 // In Settings, Escape closes a nested controls folder, then the menu itself.
-const menu = $('#settings-menu'), menuToggle = $('#menu-toggle'), surfaceButton = $('#settings-surface-now');
+const menu = $('#settings-menu'), menuToggle = $('#menu-toggle'), surfaceButton = $('#settings-surface-now'), quick = $('#settings-quick');
 function paintMenuActions(){
+  // On phones the dive's own buttons (Portfolio, Dive computer, Clear screen) are rows here (hud.css shows the rows
+  // only there). Each row presses the button it stands for, so the instruments keep one code path.
+  if(quick){quick.hidden=!window.oceanDiagnostics?.submerged;quick.querySelector('[data-quick="dive-computer-toggle"]')?.setAttribute('aria-pressed',$('#dive-computer-toggle')?.getAttribute('aria-expanded')==='true'?'true':'false');}
   if(!surfaceButton)return;
   surfaceButton.hidden=!window.oceanDiagnostics?.submerged;
   surfaceButton.disabled=!window.oceanDiagnostics?.ready||window.oceanControls?.getMode()==='transition';
@@ -185,6 +195,14 @@ function setMenu(open, refocus = true) {
   } else if (refocus && hadFocus) menuToggle.focus({preventScroll:true});
 }
 menuToggle?.addEventListener('click', () => setMenu(menu.hidden));
+quick?.querySelector('[data-quick="archive-toggle"]')?.prepend(icon('resume'));
+quick?.querySelector('[data-quick="dive-computer-toggle"]')?.prepend(icon('computer'));
+quick?.addEventListener('click', event => {
+  const row = event.target.closest('[data-quick]'), target = row && document.getElementById(row.dataset.quick);
+  if (!target) return;
+  // Close first and leave focus on the menu button: whatever opens next (the records, the computer) returns it there.
+  setMenu(false, false); menuToggle.focus({preventScroll:true}); target.click();
+});
 menu?.querySelector('.settings-close').addEventListener('click', () => setMenu(false));
 surfaceButton?.addEventListener('click',()=>{
   const controls=window.oceanControls;

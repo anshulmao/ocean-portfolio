@@ -93,6 +93,11 @@ const view={frustum:new THREE.Frustum(),eye:new THREE.Vector3(),range:Infinity},
 // Adaptive resolution steps and their controller (see frame-pacing.js), and counters for the frame-rate windows.
 const RENDER_SCALES=[1,.85,.72,.6],scaler=createScaleController({floor:RENDER_SCALES.length-1,economy:quality==='economy',scales:RENDER_SCALES});
 let tickCount=0,displayHz=60,viewWidth=innerWidth,viewHeight=innerHeight;
+// Projected labels keep out of the HUD's bands: 110 px at the top and bottom, and on a phone (the layout tokens' query)
+// the top bar with the scope under it, and the controls zone with the collapsed sheet above it (hud.css 14).
+const phoneLayout=matchMedia('(max-width:599px),(pointer:coarse) and (max-height:499px)');let labelTop=110,labelBottom=110;
+function measureLabelBands(){const phone=phoneLayout.matches;labelTop=phone?180:110;labelBottom=phone?(innerWidth>innerHeight?80:210):110;}
+measureLabelBands();
 // Frame pacing: the display's refresh interval is read from the callbacks themselves, and a frame is drawn every stride-th one.
 const frameGaps=new Float32Array(24),gapOrder=new Float32Array(24),drawGaps=new Float32Array(160),drawOrder=new Float32Array(160);
 let gapCursor=0,stride=1,sinceDraw=0,drawCount=0,lastDraw=0,gpuTier='unknown',started=false;
@@ -479,7 +484,7 @@ canvas.addEventListener('webglcontextrestored',()=>location.reload());
 function resize(){
   const wasMobile=mobile;mobile=innerWidth<600;
   if(wasMobile!==mobile)mapCollapsed=mobile;paintAtlas();
-  viewWidth=innerWidth;viewHeight=innerHeight;depthTrack=0;const scaleStep=scaler.state.step=Math.min(scaler.state.step,quality==='economy'?2:RENDER_SCALES.length-1);
+  viewWidth=innerWidth;viewHeight=innerHeight;depthTrack=0;measureLabelBands();const scaleStep=scaler.state.step=Math.min(scaler.state.step,quality==='economy'?2:RENDER_SCALES.length-1);
   const ratio=fullRatio()*RENDER_SCALES[scaleStep];
   renderer.setPixelRatio(ratio);renderer.setSize(innerWidth,innerHeight,false);uniforms.uRatio.value=ratio;sizePost();
   camera.aspect=innerWidth/innerHeight;camera.fov=settings.cameraFov+(mobile?7:0);camera.updateProjectionMatrix();
@@ -640,7 +645,7 @@ function labelVisible(worldPosition,item,alpha,padding=35){
   if(shown){
     projected.copy(worldPosition).project(camera);
     const x=(projected.x*.5+.5)*viewWidth,y=(-projected.y*.5+.5)*viewHeight;
-    shown=projected.z<1&&x>padding&&x<viewWidth-padding&&y>110&&y<viewHeight-110;
+    shown=projected.z<1&&x>padding&&x<viewWidth-padding&&y>labelTop&&y<viewHeight-labelBottom;
     // Moved by transform alone, so a label that tracks the camera costs the page no layout.
     if(shown)item.label.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px)${item.shift}`;
   }
