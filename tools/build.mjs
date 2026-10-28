@@ -47,10 +47,16 @@ for(const f of ['full.json','economy.json','full-webp.glb','economy-webp.glb'])a
 // exact source validation without forcing a 24 MB fallback download.
 const modelPath=path.join(out,'model-scene.js');let model=await fs.readFile(modelPath,'utf8');
 model=model.replace('if (!head.ok || (!sizeMatches && !tagMatches) || !modified || modified !== asset.lastModified)',"if (!head.ok || (head.headers.get('x-asset-sha256') !== asset.sha256 && ((!sizeMatches && !tagMatches) || !modified || modified !== asset.lastModified)))");await fs.writeFile(modelPath,model);
-const assetHeaders=[];
-for(const variant of ['full','economy']){const file=path.join(out,'assets/models/prepared-corals/'+variant+'.json'),meta=JSON.parse(await fs.readFile(file));for(const entry of meta.sources)entry.sha256=hash(await fs.readFile(path.join(out,entry.file)));for(const entry of meta.assets){if(hash(await fs.readFile(path.join(out,'assets/models',entry.file)))!==entry.sha256)throw Error('Stale prepared coral input '+entry.file);if(variant==='full')assetHeaders.push({source:'/assets/models/'+entry.file,headers:[{key:'X-Asset-SHA256',value:entry.sha256}]});}await fs.writeFile(file,JSON.stringify(meta));}
 // Keep approved baseline narratives; omit the copy-review draft alternatives.
 const contentPath=path.join(out,'portfolio-content.js');let content=await fs.readFile(contentPath,'utf8');content=content.slice(0,content.indexOf('export const COPY_VARIANTS ='))+'export const COPY_VARIANTS = {};\n';await fs.writeFile(contentPath,content);
+// The published scripts lose their comments and whitespace (esbuild: whitespace and syntax only, so every name stays
+// as written and an error in the console still reads): 431 -> 327 KB gzipped, and 40 % less for a phone to parse.
+// After the edits above and before the coral cache hashes reef.js and model-scene.js, which it checks as published.
+// esbuild is a devDependency: an install without it (npm install --omit=dev) publishes the scripts as they are.
+let esbuild=null;try{esbuild=await import('esbuild');}catch{console.warn('esbuild not installed: scripts are published unminified');}
+if(esbuild){for(const rel of written){if(!rel.endsWith('.js')||rel.endsWith('.min.js'))continue;const file=path.join(out,rel),code=await fs.readFile(file,'utf8');await fs.writeFile(file,(await esbuild.transform(code,{format:'esm',target:'es2022',minifyWhitespace:true,minifySyntax:true,legalComments:'inline',charset:'utf8'})).code);}}
+const assetHeaders=[];
+for(const variant of ['full','economy']){const file=path.join(out,'assets/models/prepared-corals/'+variant+'.json'),meta=JSON.parse(await fs.readFile(file));for(const entry of meta.sources)entry.sha256=hash(await fs.readFile(path.join(out,entry.file)));for(const entry of meta.assets){if(hash(await fs.readFile(path.join(out,'assets/models',entry.file)))!==entry.sha256)throw Error('Stale prepared coral input '+entry.file);if(variant==='full')assetHeaders.push({source:'/assets/models/'+entry.file,headers:[{key:'X-Asset-SHA256',value:entry.sha256}]});}await fs.writeFile(file,JSON.stringify(meta));}
 // The published page's head (ocean-refined/index.html keeps its separate files, which is how they are edited):
 // - The render-blocking stylesheets become one file, in the same order and without comments (a sheet for one medium is
 //   wrapped in that @media; print blocks nothing and stays apart): one request before the first paint instead of

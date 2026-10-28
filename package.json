@@ -29,6 +29,7 @@
     "test:layout": "node tools/test-mobile-layout.mjs"
   },
   "devDependencies": {
+    "esbuild": "0.25.10",
     "playwright": "1.62.1"
   },
   "dependencies": {
