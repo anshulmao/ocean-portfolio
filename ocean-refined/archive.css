@@ -57,6 +57,10 @@
 #landmark-dialog .arc-tool .hud-icon{width:16px;height:16px}
 #landmark-dialog .arc-tool:hover{background:#8ff4ff24}
 #landmark-dialog .arc-tool[data-done="true"]{border-color:var(--holo-mint);color:var(--holo-mint)}
+/* Copy link and Print sit in the title bar on wide screens; on the reading sheet (section 15) the same group is a
+   menu behind the "more" button, so only the page's own controls take the header. */
+#landmark-dialog .arc-more{display:contents}
+#landmark-dialog .arc-more-toggle{display:none}
 #landmark-dialog .dialog-close{position:static;flex:none;width:38px;height:38px;border:1px solid var(--holo-dim);border-radius:2px;background:var(--arc-field);color:var(--holo-ink);font-size:23px;line-height:1;cursor:pointer}
 
 /* 3. Section rail: every page of the records, always in view */
@@ -363,43 +367,12 @@ body:is([data-submerged="true"],[data-exploring="true"]) .logbook-link{display:n
   #landmark-dialog .arc-id{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "card" "prose"}
   #landmark-dialog .arc-cert{max-width:430px;margin-top:22px}
   #landmark-dialog .arc-export{grid-template-columns:minmax(0,236px) minmax(0,1fr);gap:26px}
-  #landmark-dialog .arc-reel{grid-template-columns:repeat(5,minmax(124px,1fr));overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}
+  /* The reel becomes a carousel (marked data-scroll-x): one row that snaps card by card, the next card peeking. */
+  #landmark-dialog .arc-reel{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(150px,27%);overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;padding-bottom:8px;scrollbar-width:thin}
+  #landmark-dialog .arc-reel>li{scroll-snap-align:start}
 }
-/* 13. Small screens: one column; the rail becomes a section strip and a page menu */
+/* 13. Small screens: the page content goes to one column (the reading sheet that holds it is section 15) */
 @media(max-width:760px){
-  #landmark-dialog{width:calc(100vw - 16px);height:calc(100dvh - 16px)}
-  #landmark-dialog .arc-header{gap:8px;padding:8px 8px 8px 10px}
-  #landmark-dialog .arc-identity{gap:10px}
-  #landmark-dialog .arc-emblem{width:32px;height:32px}
-  #landmark-dialog #landmark-title{font-size:12px;letter-spacing:.18em;white-space:nowrap}
-  #landmark-dialog .arc-crumbs li:not([aria-current]){display:none}
-  #landmark-dialog .arc-crumbs li[aria-current]::before{content:none}
-  #landmark-dialog .arc-tools{gap:6px}
-  #landmark-dialog .arc-tool{width:44px;min-height:44px;padding:0}
-  #landmark-dialog .arc-tool span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-  #landmark-dialog .arc-tool .hud-icon{width:18px;height:18px}
-  #landmark-dialog .dialog-close{width:44px;height:44px}
-  #landmark-dialog .arc-body{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
-  #landmark-dialog .arc-index{position:relative;display:grid;gap:6px;overflow:visible;padding:8px 8px 0;border-right:0}
-  #landmark-dialog .arc-rail{grid-template-columns:repeat(5,minmax(0,1fr));gap:0;border:1px solid var(--arc-rule)}
-  #landmark-dialog .arc-rail>li{display:contents}
-  #landmark-dialog .arc-rail-section{grid-template-columns:minmax(0,1fr);justify-items:center;gap:5px;min-height:50px;padding:6px 2px;border-left:0;border-bottom:2px solid #0000;text-align:center}
-  #landmark-dialog .arc-rail-section[aria-current]{border-bottom-color:var(--tab)}
-  #landmark-dialog .arc-rail-name{font-size:11px;letter-spacing:.06em}
-  #landmark-dialog .arc-rail-name small,#landmark-dialog .arc-rail-no,#landmark-dialog .arc-tab-long{display:none}
-  #landmark-dialog .arc-tab-short{display:inline}
-  #landmark-dialog .arc-index-toggle{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 12px;border:1px solid var(--sig-line);border-radius:0;background:var(--sig-soft);color:var(--holo-ink);font:500 15px/1.2 var(--holo-font);text-align:left;cursor:pointer}
-  #landmark-dialog .arc-index[data-single="true"] .arc-index-toggle{display:none}
-  #landmark-dialog .arc-index-toggle>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #landmark-dialog .arc-count{font:400 11px/1 var(--holo-mono);letter-spacing:.04em;text-transform:uppercase;color:var(--arc-muted)}
-  #landmark-dialog .arc-count::after{content:" ▾"}
-  #landmark-dialog .arc-index[data-open="true"] .arc-count::after{content:" ▴"}
-  #landmark-dialog .arc-rail-entries{display:none;position:absolute;z-index:6;left:8px;right:8px;top:100%;max-height:46dvh;overflow:auto;margin:6px 0 0;padding:4px;border:1px solid var(--sig-line);background:var(--arc-solid)}
-  #landmark-dialog .arc-index[data-open="true"] li[data-current="true"]>.arc-rail-entries{display:grid}
-  #landmark-dialog .arc-rail-entries button{grid-template-columns:22px minmax(0,1fr) 14px;min-height:44px;padding:8px 10px}
-  #landmark-dialog .arc-rail-entries strong{font-size:15px}
-  #landmark-dialog .arc-reading{margin:8px}
-  #landmark-dialog .arc-page{padding:20px 16px 26px}
   #landmark-dialog .arc-page h3{font-size:26px}
   #landmark-dialog .arc-glance h3{font-size:30px}
   #landmark-dialog .arc-intro{font-size:17px}
@@ -410,7 +383,6 @@ body:is([data-submerged="true"],[data-exploring="true"]) .logbook-link{display:n
   #landmark-dialog .arc-turn--next{grid-column:1}
   #landmark-dialog .arc-rule-list li{grid-template-columns:auto minmax(0,1fr);column-gap:14px}
   #landmark-dialog .arc-rule-no{grid-row:span 2;font-size:34px}
-  #landmark-dialog .arc-reel{grid-template-columns:repeat(5,128px);margin-right:-16px;padding-right:16px}
   #landmark-dialog .arc-cert-body{grid-template-columns:84px minmax(0,1fr)}
   #landmark-dialog .arc-cert-id{padding:12px 14px}
   #landmark-dialog .arc-cert-name{font-size:26px}
@@ -436,19 +408,6 @@ body:is([data-submerged="true"],[data-exploring="true"]) .logbook-link{display:n
   #landmark-dialog .arc-tag>div{min-width:110px;padding:10px 12px}
   #landmark-dialog .arc-noimage--full{height:190px}
   #landmark-dialog .arc-sleeve{max-width:250px}
-  #landmark-dialog .arc-back{min-height:44px}
-  #landmark-dialog .arc-footer{grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:8px}
-  #landmark-dialog .arc-pager{grid-column:1;grid-row:1;gap:8px}
-  #landmark-dialog .arc-pager button{min-width:44px;min-height:44px;justify-content:center;padding:0 9px}
-  #landmark-dialog .arc-pager button span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-  #landmark-dialog .arc-progress{flex:1;min-width:0;justify-items:stretch;text-align:center}
-  #landmark-dialog .arc-progress-track{gap:2px}
-  #landmark-dialog .arc-progress-track i{flex:1 1 0;width:auto;min-width:2px}
-  #landmark-dialog .arc-progress-track i[data-first]{margin-left:3px}
-  #landmark-dialog .dialog-return{grid-column:2;grid-row:1;min-height:44px;padding:0 12px;font-size:11px;letter-spacing:.06em}
-  #landmark-dialog .dialog-return kbd{display:none}
-  #landmark-dialog .arc-variant{grid-column:1/-1;grid-row:2;justify-content:flex-end}
-  #landmark-dialog .arc-variant select{min-height:40px}
   #landmark-dialog .arc-lightbox img{--room:220px}
   .logbook-link{font-size:10px;margin-top:4px;min-height:44px}
 }
@@ -556,3 +515,113 @@ body:is([data-submerged="true"],[data-exploring="true"]) .logbook-link{display:n
   #landmark-dialog .arc-diagram--compact strong{font-size:12px}
 }
 @media(prefers-reduced-motion:reduce){#landmark-dialog .arc-depth summary .hud-icon{transition:none}}
+
+/* 15. Phones (and touch screens in landscape): the records become a full-screen reading sheet. One slim header
+   says where you are (section over entry; tap it for the section's pages), with "more" (copy link, print) and
+   close beside it. Below it the sections are one row of tabs that scrolls sideways; then the page, on one flat
+   surface with no frame around it; then a compact bar to turn pages. The dialog is the only box. In landscape
+   the tabs join the header row and controls are 40px, so the page keeps three quarters of the height. */
+@media(max-width:760px),(pointer:coarse) and (max-height:499px){
+  html #landmark-dialog.ocean-dialog{--arc-ctl:var(--o-tap);--arc-head:calc(var(--arc-ctl) + 8px);--arc-side:calc(var(--o-pad) + 6px);
+    inset:0;width:100vw;height:100dvh;margin:0;border:0;border-radius:0;box-shadow:none;background:var(--arc-solid)}
+  #landmark-dialog::before,#landmark-dialog::after{content:none}
+  #landmark-dialog[open]{grid-template-columns:minmax(0,1fr) auto auto;grid-template-rows:auto auto minmax(0,1fr) auto;
+    grid-template-areas:"head more close" "tabs tabs tabs" "page page page" "foot foot foot"}
+  #landmark-dialog :is(.arc-header,.arc-tools,.arc-body,.arc-index){display:contents}
+  #landmark-dialog .arc-identity{display:none}
+  /* Header: where you are. The section's name over the entry's title; the chevron opens the section's pages. */
+  #landmark-dialog :is(.arc-index-toggle,.arc-more-toggle,.dialog-close){margin:calc(var(--o-safe-t) + 4px) 0 4px;min-height:var(--arc-ctl)}
+  #landmark-dialog .arc-index-toggle{grid-area:head;display:grid;grid-template-columns:minmax(0,max-content) auto;justify-content:start;align-content:center;align-items:center;column-gap:12px;row-gap:3px;min-width:0;margin-left:calc(var(--o-safe-l) + 6px);padding:0 10px;border:0;border-radius:2px;background:none;color:var(--holo-ink);text-align:left;cursor:pointer}
+  #landmark-dialog .arc-index-toggle>.holo-label{grid-row:1;font-size:10.5px;letter-spacing:.14em;color:var(--sig)}
+  #landmark-dialog .arc-index-toggle>span:nth-child(2){grid-row:2;overflow:hidden;font:500 16px/1.2 var(--holo-font);text-overflow:ellipsis;white-space:nowrap}
+  #landmark-dialog .arc-index-toggle .arc-count{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  #landmark-dialog .arc-index-toggle::after{content:"";grid-column:2;grid-row:1/span 2;width:8px;height:8px;margin:0 4px 4px 0;border:solid var(--sig);border-width:0 1.5px 1.5px 0;rotate:45deg;transition:rotate var(--journey-quick) var(--journey-ease)}
+  #landmark-dialog .arc-index[data-open="true"] .arc-index-toggle::after{rotate:225deg;margin:4px 4px 0 0}
+  #landmark-dialog .arc-index-toggle:disabled{cursor:default}
+  #landmark-dialog .arc-index-toggle:disabled::after{content:none}
+  #landmark-dialog .arc-index-toggle:not(:disabled):hover{background:var(--arc-field)}
+  #landmark-dialog :is(.arc-more-toggle,.dialog-close){display:grid;place-items:center;width:var(--arc-ctl);height:auto;padding:0;border:0;border-radius:2px;background:none;color:var(--holo-ink);cursor:pointer}
+  #landmark-dialog .arc-more-toggle{grid-area:more}
+  #landmark-dialog .arc-more-toggle .hud-icon{width:22px;height:22px;stroke-width:3}
+  #landmark-dialog .dialog-close{grid-area:close;margin-right:calc(var(--o-safe-r) + 6px);font-size:28px}
+  #landmark-dialog :is(.arc-more-toggle,.dialog-close):hover{background:var(--arc-field)}
+  /* The section tabs: one row, the current one underlined in its colour and kept in view (archive.js). The edge
+     shadows show only while there is more row to scroll to. */
+  #landmark-dialog .arc-rail{grid-area:tabs;display:flex;gap:0;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scrollbar-width:none;padding:0 calc(var(--o-safe-r) + 6px) 0 calc(var(--o-safe-l) + 6px);border-block:1px solid var(--arc-rule);
+    background:linear-gradient(90deg,var(--arc-solid) 40%,#0000) 0 0/28px 100% no-repeat local,linear-gradient(270deg,var(--arc-solid) 40%,#0000) 100% 0/28px 100% no-repeat local,radial-gradient(farthest-side at 0 50%,#8ff4ff38,#0000) 0 0/14px 100% no-repeat scroll,radial-gradient(farthest-side at 100% 50%,#8ff4ff38,#0000) 100% 0/14px 100% no-repeat scroll}
+  #landmark-dialog .arc-rail::-webkit-scrollbar{display:none}
+  #landmark-dialog .arc-rail>li{flex:none;scroll-snap-align:center}
+  #landmark-dialog .arc-rail .arc-rail-section{display:flex;align-items:center;justify-content:center;width:auto;min-height:var(--arc-ctl);padding:2px 14px 0;border:0;border-bottom:2px solid #0000;color:var(--arc-muted)}
+  #landmark-dialog .arc-rail .arc-rail-section>.hud-icon,#landmark-dialog .arc-rail .arc-rail-name :is(small,.arc-tab-long),#landmark-dialog .arc-rail .arc-rail-no{display:none}
+  #landmark-dialog .arc-rail .arc-rail-name{display:block;font:500 13px/1 var(--holo-font);letter-spacing:.1em;white-space:nowrap}
+  #landmark-dialog .arc-rail .arc-tab-short{display:inline}
+  #landmark-dialog .arc-rail .arc-rail-section[aria-current]{border-bottom-color:var(--tab);background:var(--tab-soft);color:var(--tab)}
+  /* The section's pages drop from the header, over the tabs and the page. */
+  #landmark-dialog .arc-rail-entries{display:none;position:absolute;z-index:6;left:calc(var(--o-safe-l) + 6px);right:calc(var(--o-safe-r) + 6px);top:calc(var(--o-safe-t) + var(--arc-head));max-height:calc(100dvh - var(--o-safe-t) - var(--arc-head) - 72px);overflow:auto;margin:0;padding:4px;border:1px solid var(--sig-line);background:var(--arc-solid);box-shadow:0 18px 40px #000a}
+  #landmark-dialog .arc-index[data-open="true"] li[data-current="true"]>.arc-rail-entries{display:grid}
+  #landmark-dialog .arc-rail-entries button{grid-template-columns:24px minmax(0,1fr) 14px;align-items:center;min-height:var(--arc-ctl);padding:6px 10px}
+  #landmark-dialog .arc-rail-entries strong{font-size:16px}
+  /* "More": copy link and print (and the draft reading style, where it ships) in a small menu under the header. */
+  #landmark-dialog .arc-more:not(:popover-open){display:none}
+  #landmark-dialog .arc-more:popover-open{position:fixed;inset:calc(var(--o-safe-t) + var(--arc-head)) calc(var(--o-safe-r) + 6px) auto auto;display:grid;gap:4px;width:min(260px,calc(100vw - 12px));margin:0;padding:6px;border:1px solid var(--holo-dim);border-radius:3px;background:var(--arc-solid);color:var(--holo-ink);box-shadow:0 18px 40px #000a}
+  #landmark-dialog .arc-more .arc-tool{justify-content:flex-start;gap:12px;width:100%;min-height:var(--arc-ctl);padding:0 12px;border:0;background:none;font-size:13px}
+  #landmark-dialog .arc-more .arc-tool:hover{background:var(--arc-field)}
+  #landmark-dialog .arc-more .arc-variant{display:grid;gap:6px;padding:8px 12px 6px;border-top:1px solid var(--arc-rule)}
+  #landmark-dialog .arc-more .arc-variant select{min-height:var(--arc-ctl)}
+  /* The page: one flat surface, comfortable type, room at the sides for rounded and notched screens. */
+  #landmark-dialog .arc-reading{grid-area:page;margin:0;border:0;border-radius:0;background:none;box-shadow:none}
+  #landmark-dialog .arc-reading::before,#landmark-dialog .arc-reading::after{content:none}
+  #landmark-dialog .arc-page{padding:22px calc(var(--o-safe-r) + var(--arc-side)) 36px calc(var(--o-safe-l) + var(--arc-side))}
+  #landmark-dialog .arc-page>*{max-width:68ch}
+  #landmark-dialog :is(.arc-prose p,.arc-story .arc-block p,.arc-facts li,.arc-principles p){font-size:17px;line-height:1.6}
+  #landmark-dialog .arc-intro{font-size:18px;line-height:1.5}
+  #landmark-dialog .arc-back{min-height:var(--arc-ctl);margin:-8px 0 8px -8px;padding:0 12px 0 6px;font-size:12.5px}
+  #landmark-dialog :is(.arc-links a,.arc-linklike,.arc-actions>*,.arc-flip,.arc-cert-more){min-height:var(--arc-ctl)}
+  /* Boxes inside the page lose their frames: facts, the dive profile and the glance plate sit on the sheet
+     itself between hairlines. Cards that open something keep theirs, so they still read as buttons. */
+  #landmark-dialog :is(.arc-strip,.arc-plate){border:0;background:none}
+  #landmark-dialog :is(.arc-strip,.arc-plate)>div{margin:0;padding:12px 12px 12px 0;border:0;border-top:1px solid var(--arc-rule)}
+  #landmark-dialog .arc-strip dt small{display:none}
+  #landmark-dialog .arc-strip dd{margin-top:6px}
+  #landmark-dialog .arc-chart{padding:16px 0 0;border:0;border-top:1px solid var(--arc-rule);background:none}
+  #landmark-dialog .arc-chart--career{border-top:0;padding-top:0}
+  #landmark-dialog .arc-sheet{padding-left:0;border-left:0}
+  #landmark-dialog .arc-sheet::before{content:none}
+  #landmark-dialog .arc-reel{grid-auto-columns:minmax(200px,64%);margin-right:calc(0px - var(--o-safe-r) - var(--arc-side));padding-right:calc(var(--o-safe-r) + var(--arc-side));scroll-padding-inline:0 var(--arc-side);scrollbar-width:none}
+  #landmark-dialog .arc-reel::-webkit-scrollbar{display:none}
+  /* Bottom bar: previous, where you are in the section, next. Closing lives in the header. */
+  #landmark-dialog .arc-footer{grid-area:foot;display:block;padding:4px calc(var(--o-safe-r) + 6px) calc(var(--o-safe-b) + 4px) calc(var(--o-safe-l) + 6px);border-top:1px solid var(--arc-rule)}
+  #landmark-dialog :is(.arc-footer .arc-variant,.dialog-return){display:none}
+  #landmark-dialog .arc-pager{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px}
+  #landmark-dialog .arc-pager button{justify-content:center;gap:8px;min-width:calc(var(--arc-ctl) + 12px);min-height:var(--arc-ctl);padding:0 12px;border:0;background:none}
+  #landmark-dialog .arc-pager button[aria-disabled="true"]{opacity:.3}
+  #landmark-dialog .arc-pager button span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  #landmark-dialog .arc-pager .hud-icon{width:22px;height:22px}
+  #landmark-dialog .arc-progress{min-width:0;align-content:center;justify-items:stretch;gap:6px;text-align:center}
+  #landmark-dialog #entry-number{overflow:hidden;font-size:11px;letter-spacing:.08em;text-overflow:ellipsis;color:var(--arc-muted)}
+  #landmark-dialog .arc-progress-track{justify-content:center;gap:3px}
+  #landmark-dialog .arc-progress-track i{flex:0 1 22px;width:auto;min-width:4px}
+  #landmark-dialog .arc-lightbox{padding:calc(var(--o-safe-t) + 8px) calc(var(--o-safe-r) + 8px) calc(var(--o-safe-b) + 8px) calc(var(--o-safe-l) + 8px)}
+}
+/* The model credits dialog: a finger-sized close button, clear of rounded corners. */
+@media(max-width:760px),(pointer:coarse) and (max-height:499px){
+  .credits-dialog{max-height:calc(100dvh - var(--o-safe-t) - var(--o-safe-b) - 24px)}
+  .credits-dialog .dialog-close{top:8px;right:8px;width:var(--o-tap);height:var(--o-tap)}
+}
+@supports not selector(:popover-open){@media(max-width:760px),(pointer:coarse) and (max-height:499px){#landmark-dialog :is(.arc-more,.arc-more-toggle){display:none}}}
+@media(pointer:coarse) and (max-height:499px){
+  html #landmark-dialog.ocean-dialog{--arc-ctl:calc(var(--o-tap) - 4px);--arc-head:calc(var(--arc-ctl) + 4px);--arc-side:calc(var(--o-pad) + 16px)}
+  #landmark-dialog[open]{grid-template-columns:minmax(0,1fr) auto auto auto;grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"head tabs more close" "page page page page" "foot foot foot foot"}
+  #landmark-dialog :is(.arc-index-toggle,.arc-more-toggle,.dialog-close){margin-block:calc(var(--o-safe-t) + 2px) 2px}
+  #landmark-dialog .arc-rail{max-width:58vw;margin-top:var(--o-safe-t);padding:0;border:0}
+  #landmark-dialog .arc-reading{border-top:1px solid var(--arc-rule)}
+  #landmark-dialog .arc-footer{padding-block:2px calc(var(--o-safe-b) + 2px)}
+  #landmark-dialog .arc-pager{max-width:560px;margin:0 auto}
+  #landmark-dialog .arc-reel{grid-auto-columns:minmax(200px,34%)}
+}
+/* The sheet rises a little into place instead of scaling open like the desktop console. */
+@media(prefers-reduced-motion:no-preference) and (max-width:760px),(prefers-reduced-motion:no-preference) and (pointer:coarse) and (max-height:499px){
+  #landmark-dialog:not([open]){scale:1;translate:0 3%}
+  @starting-style{#landmark-dialog[open]{scale:1;translate:0 4%}}
+}
+@media(prefers-reduced-motion:reduce){#landmark-dialog .arc-index-toggle::after{transition:none}}

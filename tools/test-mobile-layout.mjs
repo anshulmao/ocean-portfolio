@@ -53,6 +53,7 @@ function measure({phone, dive}) {
     if (el.id === 'world' || el.closest('script,style,template,noscript')) continue;
     if (modal && !modal.contains(el)) continue;
     if (!modal && el.closest('dialog:not([open])')) continue;
+    if (el.closest('details:not([open]) > :not(summary)')) continue;     // folded away: laid out for queries, never drawn
     const control = el.matches(CONTROL);
     if (!control && !ownText(el) && !el.matches('svg,canvas,img')) continue;
     if (!control && el.closest(CONTROL)) continue;                       // a control's label is part of the control
