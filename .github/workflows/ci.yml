@@ -1,0 +1,51 @@
+# Runs on every pull request and on main. Both jobs should be required checks on main
+# (Settings → Branches → branch protection), so a broken build cannot be merged.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Build and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # The build refuses to ship a script that does not parse.
+      - run: npm run build
+      - run: npm run test:build
+      - run: npm run test:services
+      - run: npm run test:unit
+      # The build regenerates vercel.json; a difference means a build change was not committed.
+      - name: Build leaves the repository unchanged
+        run: git status --porcelain && test -z "$(git status --porcelain)"
+
+  smoke:
+    name: Browser smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npm run smoke

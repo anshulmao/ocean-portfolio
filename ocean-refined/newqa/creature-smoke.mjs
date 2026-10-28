@@ -1,7 +1,7 @@
 // Node check of the creature set: every species builds at each level of detail, its skin weights sum to one, nothing
 // is NaN, and every clip plays. Prints sizes, triangle counts, bones and clips.  node creature-smoke.mjs <ocean-refined dir>
-import { pathToFileURL } from 'node:url';
-const dir = process.argv[2];
+import { fileURLToPath, pathToFileURL } from 'node:url';
+const dir = process.argv[2] || fileURLToPath(new URL('..', import.meta.url));
 const THREE = await import(pathToFileURL(dir + '/vendor/three.module.min.js').href);
 const { SPECIES, creature } = await import(pathToFileURL(dir + '/creature-species.js').href);
 let failed = 0;
