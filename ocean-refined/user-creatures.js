@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.min.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
 import { clone } from './vendor/SkeletonUtils.js';
-import { floatSkinIndices, turn } from './assets.js';
+import { floatSkinIndices, turn, modelBytes } from './assets.js';
 import { creatureGeometry, speciesById } from './creature-species.js';
 import { ENCOUNTERS, RESIDENTS, SCHOOLS } from './user-creature-routes.js';
 import { fishNavigator } from './fish-navigation.js';
@@ -19,23 +19,10 @@ import { createMorayDenMotion, updateMorayDenMotion } from './moray-resident.js'
 // Every model is a GLB from assets/models/user-sets/sets/creature-set (rig, clips, painted skin). Lighter shapes for
 // the far and the many come from creature-species.js, whose texture layout matches the files.
 const BASE = './assets/models/user-sets/sets/creature-set/';
-// The published build (tools/build.mjs) sets this and puts a gzipped copy beside every model: 8.8 MB of rigs and
-// clips, mostly floats, travel as 3.2. A static host sends a .glb as it is, so the browser inflates it here
-// (DecompressionStream, native). Any failure, or a browser without it, falls back to the plain file.
-const GZIPPED = false;
+// In the published build the 8.8 MB of models travel gzipped, as 3.2 (modelBytes, assets.js).
 async function loadModel(url) {
-  if (GZIPPED && typeof DecompressionStream === 'function') {
-    try {
-      const response = await fetch(url + '.gz');
-      if (response.ok) {
-        // A host that labels .gz files Content-Encoding: gzip has the browser inflate it already: only gzip's own magic
-        // number is inflated here.
-        let bytes = await response.arrayBuffer(); const head = new Uint8Array(bytes, 0, 2);
-        if (head[0] === 0x1f && head[1] === 0x8b) bytes = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
-        return await new GLTFLoader().parseAsync(bytes, new URL('./', new URL(url, location.href)).href);
-      }
-    } catch {}
-  }
+  const bytes = await modelBytes(url);
+  if (bytes) try { return await new GLTFLoader().parseAsync(bytes, new URL('./', new URL(url, location.href)).href); } catch {}
   return new GLTFLoader().loadAsync(url);
 }
 const TAU = Math.PI * 2, { clamp, smoothstep } = THREE.MathUtils;

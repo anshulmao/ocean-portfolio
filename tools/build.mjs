@@ -42,13 +42,17 @@ await hashPack(packRoot);for(const file of ['creature-kit.js','creature-species.
 const packVersion='v-'+packHash.digest('hex').slice(0,16),packParent=path.join(out,'assets/models/user-sets',packVersion);
 await fs.mkdir(packParent,{recursive:true});await fs.rename(packRoot,path.join(packParent,'sets'));
 for(const file of ['user-creatures.js','user-corals.js']){const target=path.join(out,file);await fs.writeFile(target,(await fs.readFile(target,'utf8')).replaceAll('assets/models/user-sets/sets/',`assets/models/user-sets/${packVersion}/sets/`));}
-// The creature set is 8.8 MB of rigs, clips and floats that a static host sends as they are (it compresses text, not
-// model/gltf-binary): a gzipped copy goes beside each model (3.2 MB in all) and user-creatures.js inflates it in the
-// browser, falling back to the plain file. Written after the pack is hashed, so the version is the models' own.
-{const creatures=path.join(packParent,'sets/creature-set');for(const name of await fs.readdir(creatures))if(name.endsWith('.glb'))await fs.writeFile(path.join(creatures,name+'.gz'),gzipSync(await fs.readFile(path.join(creatures,name)),{level:9}));
- const target=path.join(out,'user-creatures.js'),code=await fs.readFile(target,'utf8');if(!code.includes('const GZIPPED = false;'))throw Error('user-creatures.js: GZIPPED switch not found');await fs.writeFile(target,code.replace('const GZIPPED = false;','const GZIPPED = true;'));}
-
 for(const f of ['full.json','economy.json','full-webp.glb','economy-webp.glb'])await copy('assets/models/prepared-corals/'+f);
+// A static host compresses text but sends model/gltf-binary as it is. Every model the page loads gets a gzipped copy
+// beside it (the creature set 8.8 -> 3.2 MB; the landmarks and the prepared corals, which a dive waits for, about 2 MB
+// less) and assets.js is switched to fetch the copy and inflate it in the browser, falling back to the plain file.
+// The creature copies are written after the pack is hashed, so its version is the models' own. (The coral source
+// models are only HEAD-checked unless the cache misses: they stay plain.)
+{const gzip=async file=>fs.writeFile(file+'.gz',gzipSync(await fs.readFile(file),{level:9})),creatures=path.join(packParent,'sets/creature-set');
+ for(const name of await fs.readdir(creatures))if(name.endsWith('.glb'))await gzip(path.join(creatures,name));
+ for(const name of active.filter(name=>name.endsWith('.glb')&&!name.startsWith('coral_')))await gzip(path.join(out,'assets/models',name));
+ for(const name of ['full-webp.glb','economy-webp.glb'])await gzip(path.join(out,'assets/models/prepared-corals',name));
+ const target=path.join(out,'assets.js'),code=await fs.readFile(target,'utf8');if(!code.includes('const GZIPPED = false;'))throw Error('assets.js: GZIPPED switch not found');await fs.writeFile(target,code.replace('const GZIPPED = false;','const GZIPPED = true;'));}
 // Public hosts assign their own ETags and dates. Hash headers preserve cheap,
 // exact source validation without forcing a 24 MB fallback download.
 const modelPath=path.join(out,'model-scene.js');let model=await fs.readFile(modelPath,'utf8');
