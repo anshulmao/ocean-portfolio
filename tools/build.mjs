@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
+import {spawnSync} from 'node:child_process';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {renderPortfolio} from './render-portfolio.mjs';
 import {copyAnalyticsSDK} from './sync-services.mjs';
@@ -20,6 +21,11 @@ while(pending.length){const rel=pending.pop();if(seen.has(rel))continue;seen.add
  const refs=rel.endsWith('.html')?[...text.matchAll(/(?:src|href)=["'](\.\/[^"']+\.(?:js|css))["']/g)].map(m=>m[1]):rel.endsWith('.js')?[...text.matchAll(/(?:from\s*|import\s*\(\s*|import\s*)["'](\.\.?\/[^"']+\.js)["']/g)].map(m=>m[1]):[];
  for(const ref of refs)pending.push(path.normalize(path.join(path.dirname(rel),ref)));
 }
+// A module that fails to parse silently takes every module importing it down in the
+// browser (a duplicate `track` in archive.js once disabled all portfolio access), so
+// the build refuses to ship any reachable script that does not parse.
+const broken=[...seen].filter(rel=>rel.endsWith('.js')).map(rel=>[rel,spawnSync(process.execPath,['--check',path.join(source,rel)],{encoding:'utf8'})]).filter(([,run])=>run.status!==0);
+if(broken.length)throw Error('Scripts failed to parse:\n'+broken.map(([rel,run])=>`${rel}\n${run.stderr.trim()}`).join('\n\n'));
 // Runtime-injected stylesheets.
 for(const name of ['ambient-audio.css','expedition-interactions.css','controls.css','waterline-splash.css','safety-rating.css'])await copy(name);
 await copy('favicon.svg');await tree('assets/fonts');await tree('assets/portfolio',f=>!f.endsWith('.md'));await tree('assets/prepared/charts',f=>!f.endsWith('.png'));
