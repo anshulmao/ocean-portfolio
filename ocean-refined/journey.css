@@ -1,32 +1,45 @@
 /* Journey layer: discovery, wayfinding and depth chapters.
    Motion identity (calm / premium): one signature ease, three durations,
    entrances rise and settle, exits leave about 40% faster.
-   The --journey-* tokens are declared once, in motion.css, for the whole interface. */
+   The --journey-* tokens are declared once, in motion.css, for the whole interface.
+   Placement follows the layout contract (release/MOBILE_OVERHAUL.md, tokens.css): passing messages live in the
+   Announce zone, the guided dive in the Sheet zone, each on its own layer. */
 
-/* Notes are written on a slate (the recipe is in hologram.css): the toast is a small one passed across, with
-   the kicker as its heading and one plain line under it. It keeps the projected palette at the daylight surface. */
-.journey-toast{position:fixed;left:50%;top:124px;z-index:7;display:flex;align-items:center;gap:12px;max-width:min(86vw,440px);padding:10px 20px 11px 24px;--holo-ink:#eefdff;--holo-dim:#8ff4ff66;--holo-strong:#c9fbff;text-shadow:0 0 9px #5fe9ff70;font:400 14px/1.4 Outfit,system-ui,sans-serif;letter-spacing:.01em;opacity:0;transform:translate(-50%,14px);pointer-events:none}
+/* The Announce zone: upper third, centred, never a target. announce.js shows one message at a time here: the depth
+   chapter's title card or a note. On a desktop it sits under the heading tape; on a phone under the top bar and the
+   compact map (two bars tall) beside it; on a phone held sideways straight under the top bar, above the middle. */
+:root{--announce-top:max(132px,15vh)}
+@media (max-width:599px),(pointer:coarse) and (max-height:499px){:root{--announce-top:calc(var(--o-under-bar) + 2*var(--o-bar) + 2*var(--o-gap))}}
+@media (pointer:coarse) and (max-height:499px){:root{--announce-top:var(--o-under-bar)}}
+:is(.zone-card,.journey-toast){position:fixed;left:50%;top:var(--announce-top);z-index:var(--o-z-announce);transform:translateX(-50%);pointer-events:none;opacity:0;translate:0 10px}
+:is(.zone-card,.journey-toast)[data-show="true"]{opacity:1;translate:0 0;transition:opacity var(--journey-slow) var(--journey-in),translate var(--journey-slow) var(--journey-in)}
+:is(.zone-card,.journey-toast)[data-show="false"]{translate:0 -6px;transition:opacity 300ms var(--journey-out),translate 300ms var(--journey-out)}
+body:is([data-clear-ui="true"],[data-safety-stop="true"]) :is(.zone-card,.journey-toast){visibility:hidden}
+
+/* A depth chapter is a title card laid on the water, not a panel: the depth band and the place in the instruments'
+   mono, the chapter's name in the light display face, and a pencil rule that draws itself out from the middle. A pool
+   of shade, fading to nothing at its edge, keeps the words legible over bright sand and dark water alike. */
+.zone-card{display:grid;justify-items:center;gap:7px;padding:16px 44px 18px;text-align:center;color:#f2fbff;white-space:nowrap;background:radial-gradient(closest-side,#03202c8c,#03202c47 62%,#03202c00);text-shadow:0 0 2px #021d2ad9,0 1px 14px #062c3acc}
+.zone-card small{font:500 10px/1.3 var(--holo-mono);letter-spacing:.2em;text-transform:uppercase;color:var(--holo-strong)}
+.zone-card strong{font:var(--o-weight-display) clamp(28px,2.9vw,38px)/1.05 var(--o-display);letter-spacing:.015em}
+.zone-card b{display:block;width:132px;height:1px;margin-top:3px;background:linear-gradient(90deg,#edfaff00,#edfaffd9 30% 70%,#edfaff00);scale:0 1}
+.zone-card[data-show="true"] b{scale:1 1;transition:scale 900ms var(--journey-ease) 200ms}
+
+/* Notes are written on a slate (the recipe is in hologram.css): a small one passed across, with the kicker as its
+   heading, a name when there is one, and one plain line. It keeps the projected palette at the daylight surface. */
+.journey-toast{display:flex;align-items:center;gap:12px;width:max-content;max-width:min(calc(100vw - 2*var(--o-pad)),440px);box-sizing:border-box;padding:10px 20px 11px 24px;--holo-ink:#eefdff;--holo-dim:#8ff4ff66;--holo-strong:#c9fbff;text-shadow:0 0 9px #5fe9ff70;font:400 14px/1.4 var(--holo-font);letter-spacing:.01em}
 .journey-toast i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--signal,#7ff0cf);box-shadow:0 0 0 0 var(--signal,#7ff0cf)}
 .journey-toast small{display:block;margin-bottom:2px;font:500 10px/1.3 var(--holo-mono);letter-spacing:.12em;color:var(--holo-strong);text-transform:uppercase}
-.journey-toast[data-show="true"]{opacity:1;transform:translate(-50%,0);transition:opacity var(--journey-standard) var(--journey-in),transform var(--journey-standard) var(--journey-in)}
+.journey-toast strong{display:block;font:500 17px/1.25 var(--holo-font);letter-spacing:.01em}
+.journey-toast strong:empty{display:none}
+.journey-toast strong:not(:empty)+span{display:block;opacity:.86;font-size:13px}
 .journey-toast[data-show="true"] i{animation:journey-ping 1.4s var(--journey-ease) 120ms 2}
-.journey-toast[data-show="false"]{transition:opacity 240ms var(--journey-out),transform 240ms var(--journey-out);transform:translate(-50%,-8px)}
 @keyframes journey-ping{0%{box-shadow:0 0 0 0 var(--signal,#7ff0cf)}100%{box-shadow:0 0 0 12px transparent}}
-
-/* Depth chapters read like a marker on the descent line: the zone's name in the slate hand, a pencil rule that
-   draws itself, and the depth band in the instruments' mono. No panel: the words sit on the water. */
-.zone-card{position:fixed;left:50%;top:27%;z-index:6;text-align:center;color:#f2fbff;font-family:Outfit,system-ui,sans-serif;opacity:0;transform:translate(-50%,10px);pointer-events:none;text-shadow:0 0 3px #021d2ab8,0 1px 18px #062c3acc}
-.zone-card strong{display:block;font-size:clamp(24px,2.9vw,34px);font-weight:500;line-height:1.1;letter-spacing:.005em;rotate:-1.2deg}
-.zone-card span{display:block;margin-top:11px;font:500 11px/1.3 var(--holo-mono);letter-spacing:.14em;opacity:.9;text-transform:uppercase}
-.zone-card b{display:block;width:150px;height:1px;margin:12px auto 0;background:#edfaffb0;transform:scaleX(0)}
-.zone-card[data-show="true"]{opacity:1;transform:translate(-50%,0);transition:opacity var(--journey-slow) var(--journey-in),transform var(--journey-slow) var(--journey-in)}
-.zone-card[data-show="true"] b{transform:scaleX(1);transition:transform 900ms var(--journey-ease) 160ms}
-.zone-card[data-show="false"]{transition:opacity 380ms var(--journey-out),transform 380ms var(--journey-out);transform:translate(-50%,-8px)}
 
 .waypoint{position:fixed;left:0;top:0;z-index:4;display:flex;align-items:center;gap:8px;padding:5px 11px 5px 7px;border:1px solid var(--holo-dim);border-radius:9px 9px 9px 3px;background:#06283a99;box-shadow:var(--holo-glow);color:#eefdff;text-shadow:0 0 9px #5fe9ff70;font:500 10px/1 Outfit,system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity var(--journey-standard) var(--journey-ease);will-change:transform}
 .waypoint[data-show="true"]{opacity:.94}
-/* A toast is the louder message: the chip steps back while one is up, so they never stack. */
-.journey-toast[data-show="true"]~.waypoint[data-show="true"]{opacity:0}
+/* A message is the louder voice: the chip steps back while one is up, so they never stack. */
+body[data-announce="on"] .waypoint[data-show="true"]{opacity:0}
 .waypoint i{width:9px;height:9px;background:var(--signal,#7ff0cf);transform:rotate(45deg)}
 /* The marker breathes only while the chip is on screen. */
 .waypoint[data-show="true"] i{animation:journey-breathe 2.6s ease-in-out infinite}
@@ -46,46 +59,111 @@
 .map-chart button[data-found="true"]{box-shadow:0 0 0 2px var(--signal,#7ff0cf)}
 .journey-progress{display:block;margin-top:6px;font:500 9px/1 Outfit,system-ui,sans-serif;letter-spacing:.16em;color:#edfaffb8;text-transform:uppercase}
 
-/* Guided dive: the caption card and the fade used for cuts between stops.
-   The card is projected light like the rest of the hologram interface. */
-/* It sits in the lower right corner, above the dive console and clear of the interaction prompt in the middle of
-   the view; while the full computer face is up it stands above that. */
-section.tour-card{position:fixed;right:var(--pad,24px);bottom:150px;z-index:8;width:min(calc(100vw - 32px),440px);padding:14px 18px 14px 22px;opacity:0;translate:0 14px;visibility:hidden;transition:opacity 250ms var(--journey-out),translate 250ms var(--journey-out),visibility 0s 250ms}
+/* Guided dive: a sheet on the slate recipe (hologram.css), and the fade used for cuts between stops.
+   Collapsed it is one row: the stop, the count, one action and the toggle. Expanded (data-sheet, guided-dive.js) it
+   adds the headline, the caption and every action. Its fill is nearly opaque: nothing behind it reads through the
+   words. On a desktop it keeps the lower right corner, above the dive console and clear of the prompt in the middle;
+   while the full computer face is up it stands above that. */
+section.tour-card.holo{--holo-tint-solid:#05222ff2}
+section.tour-card{position:fixed;right:var(--pad,24px);bottom:150px;z-index:var(--o-z-sheet);display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head actions";align-items:center;column-gap:12px;box-sizing:border-box;width:min(calc(100vw - 2*var(--o-pad)),440px);max-height:calc(100dvh - 2*var(--o-pad));padding:6px 12px 6px 22px;opacity:0;translate:0 14px;visibility:hidden;transition:opacity 250ms var(--journey-out),translate 250ms var(--journey-out),visibility 0s 250ms}
 section.tour-card[data-show="true"]{opacity:1;translate:0 0;visibility:visible;transition:opacity var(--journey-standard) var(--journey-in),translate var(--journey-standard) var(--journey-in)}
+section.tour-card[data-sheet="expanded"]{grid-template-areas:"head head" "title title" "body body" "pace pace" "actions actions";padding:6px 18px 14px 22px}
 body[data-computer-open="true"][data-camera="third"] section.tour-card{bottom:292px}
-.tour-card header{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.tour-card .tour-kicker{color:var(--signal,var(--holo-strong))}
-.tour-card .tour-count{font-size:12px}
-.tour-title{width:fit-content;margin:10px 0 9px;font-size:22px;line-height:1.15}
-.tour-lines{margin:0;min-height:44px;font-size:14.5px;line-height:22px}
+body:is([data-clear-ui="true"],[data-safety-stop="true"]) section.tour-card{visibility:hidden;pointer-events:none}
+/* The row: kicker, count and a chevron, all one button that folds the sheet open or shut. */
+.tour-head{grid-area:head;display:flex;align-items:center;gap:10px;min-width:0;min-height:40px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.tour-head:focus-visible{outline:2px solid var(--holo-focus);outline-offset:2px}
+.tour-card .tour-kicker{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;color:var(--signal,var(--holo-strong))}
+.tour-card .tour-count{flex:none;font-size:12px}
+.tour-chevron{flex:none;width:7px;height:7px;margin:0 4px 3px 2px;border:solid var(--holo-strong);border-width:1.5px 0 0 1.5px;rotate:45deg;transition:rotate var(--journey-quick) var(--journey-ease),margin var(--journey-quick) var(--journey-ease)}
+.tour-card[data-sheet="expanded"] .tour-chevron{rotate:225deg;margin-top:-3px;margin-bottom:0}
+.tour-card[data-sheet="collapsed"] :is(.tour-title,.tour-body,.tour-pace){display:none}
+.tour-title{grid-area:title;width:fit-content;margin:4px 0 9px;font-size:22px;line-height:1.15;text-wrap:balance}
+.tour-body{grid-area:body;position:relative}
+.tour-lines{margin:0;font-size:14.5px;line-height:22px}
 .tour-card[data-state="travel"] .tour-lines{opacity:.72}
-.tour-pace{margin:10px 0 0;font-size:11px;line-height:1.5;opacity:.72}
+.tour-more{display:none}
+.tour-pace{grid-area:pace;margin:10px 0 0;font-size:11px;line-height:1.5;opacity:.72}
 .tour-pace:empty{display:none}
-.tour-card[data-state="dwell"] .tour-progress i{will-change:auto}
-@media(max-height:650px){section.tour-card{max-height:calc(100dvh - 210px);overflow-y:auto;overscroll-behavior:contain}}
-.tour-progress{height:1px;margin:11px 0 11px;background:var(--holo-faint)}
-/* The bar grows many times a second while a stop is narrated: on its own layer that is a compositor move, not a repaint of the card. */
+/* Progress runs along the top edge, so it costs the sheet no height. The bar grows many times a second while a stop
+   is narrated: on its own layer that is a compositor move, not a repaint of the card. */
+.tour-progress{position:absolute;left:22px;right:16px;top:0;height:1px;background:var(--holo-faint)}
 .tour-progress i{display:block;height:100%;background:var(--signal,var(--holo));box-shadow:0 0 6px var(--signal,var(--holo));transform:scaleX(0);transform-origin:left;will-change:transform}
-.tour-card footer{display:flex;flex-wrap:wrap;gap:8px}
+.tour-card[data-state="dwell"] .tour-progress i{will-change:auto}
+/* The tour's buttons, on the shared hologram chip recipe (dive-plan.css .holo-chip). */
+.tour-card footer{grid-area:actions;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+.tour-card[data-sheet="expanded"] footer{justify-content:flex-start;margin-top:12px}
+.tour-card footer button{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:0 13px;border:1px solid var(--holo-dim);border-radius:3px;background:var(--holo-fill);color:var(--holo-ink);font:500 11px/1 var(--holo-font);letter-spacing:.12em;text-transform:uppercase;text-shadow:var(--holo-text-glow);white-space:nowrap;cursor:pointer;transition:translate var(--motion-press) var(--journey-ease)}
+.tour-card footer button:hover{border-color:var(--holo-strong);background:var(--holo-fill-hover)}
+.tour-card footer button:active{translate:0 1px}
+.tour-card :is(footer button,.tour-more):focus-visible{outline:2px solid var(--holo-focus);outline-offset:2px}
+.tour-card footer kbd{padding:2px 5px;border:1px solid var(--holo-dim);border-radius:2px;font:500 9px/1 var(--holo-mono);letter-spacing:0}
 .tour-card footer button[hidden]{display:none}
 .tour-card footer [data-tour="exit"]{margin-left:auto;border-color:#0000;background:none}
 .tour-card footer :is([data-tour="rejoin"],[data-tour="surface"],[data-tour="read"]){border-color:var(--signal,var(--holo))}
-.tour-fade{position:fixed;inset:0;z-index:5;pointer-events:none;background:#04303f;opacity:0;transition:opacity var(--journey-standard) var(--journey-ease)}
+.tour-card[data-sheet="collapsed"] footer button{border-color:var(--signal,var(--holo))}
+.tour-fade{position:fixed;inset:0;z-index:var(--o-z-labels);pointer-events:none;background:#04303f;opacity:0;transition:opacity var(--journey-standard) var(--journey-ease)}
 .tour-fade[data-on="true"]{opacity:1;transition:opacity 200ms var(--journey-out)}
 /* The tour narrates each landmark itself, so the generic prompt to click in stays out of its way. */
 body:is([data-tour="travel"],[data-tour="dwell"]) .waypoint{opacity:0}
+/* Key caps mean nothing without a keyboard. */
+html[data-input="touch"] .tour-card footer kbd{display:none}
+@media (pointer:coarse){html:not([data-input]) .tour-card footer kbd{display:none}}
 
-/* On a phone the toast sits in a clear band: underwater between the instrument buttons and the depth scale, off the
-   touch pad, and at the surface between the entry buttons and the look arrows. The tour's buttons are finger-sized,
-   and the depth scale, which the card would cover, steps out while the card is up. */
-@media (max-width:600px){.journey-toast{top:auto;bottom:140px;font-size:13px}body[data-submerged="true"] .journey-toast{top:284px;bottom:auto}.tour-card footer button{min-height:40px}body[data-tour]:not([data-tour="off"],[data-tour="starting"]) .depth{opacity:0}.zone-card{top:55%;width:92vw}.zone-card strong{font-size:22px}.zone-card span{font-size:10px;letter-spacing:.1em}section.tour-card,body[data-computer-open="true"][data-camera="third"] section.tour-card{right:16px;bottom:166px;left:16px;width:auto;padding:11px 13px 11px 20px}.tour-title{margin:8px 0 7px;font-size:19px}.tour-lines{font-size:13.5px;min-height:0}.tour-card footer{gap:6px}}
-/* The touch pad stays reachable under the card, and key caps mean nothing without a keyboard. */
-@media (pointer:coarse){.tour-card footer kbd{display:none}}
+/* Phones: the Sheet zone. Full width at the bottom, above the touch controls, never taller than the contract allows.
+   Every target is finger-sized. The caption is the short one, clamped to its lines; More reads on inside the sheet. */
+@media (max-width:599px),(pointer:coarse) and (max-height:499px){
+  .journey-toast{padding:9px 16px 10px 22px;font-size:13px}
+  .journey-toast strong{font-size:15px}
+  .zone-card{gap:5px;padding:12px 32px 14px}
+  .zone-card small{font-size:9px;letter-spacing:.16em}
+  .zone-card strong{font-size:24px}
+  .zone-card b{width:104px}
+  section.tour-card,body[data-computer-open="true"][data-camera="third"] section.tour-card{left:var(--o-pad);right:var(--o-pad);bottom:var(--o-sheet-bottom);width:auto;max-height:var(--o-sheet-max);padding:0 8px 0 18px;column-gap:8px}
+  section.tour-card[data-sheet="expanded"]{padding:0 14px 10px 18px}
+  .tour-head{min-height:var(--o-tap)}
+  .tour-title{margin:0 0 6px;font-size:16px;line-height:20px;letter-spacing:0}
+  .tour-lines{font-size:13px;line-height:18px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden}
+  .tour-pace{display:none}
+  .tour-card footer{gap:6px}
+  /* Room for three actions on one row: the key caps go, the keys still work. */
+  .tour-card footer kbd{display:none}
+  .tour-card[data-sheet="expanded"] footer{margin-top:10px}
+  .tour-card footer button{min-height:var(--o-tap);padding:0 12px}
+  /* More: a finger-sized target over the end of the last line, its word on a fade of the sheet's own fill. */
+  .tour-more:not([hidden]){position:absolute;right:-6px;bottom:0;display:flex;align-items:flex-end;justify-content:flex-end;min-width:var(--o-tap);min-height:var(--o-tap);padding:0 6px 0;border:0;background:none;color:var(--signal,var(--holo-strong));font:500 11px/18px var(--holo-font);letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+  .tour-more span{padding-left:28px;background:linear-gradient(90deg,#05222f00,#05222f 24px)}
+  /* Reading on: the caption unclamps and the sheet scrolls within its height; Less sits at the end of the words. */
+  section.tour-card[data-more="true"]{overflow-y:auto;overscroll-behavior:contain}
+  .tour-card[data-more="true"] .tour-lines{display:block}
+  .tour-card[data-more="true"] .tour-more:not([hidden]){position:static;margin-left:auto}
+  .tour-card[data-more="true"] .tour-more span{padding:0;background:none}
+  /* The sheet carries the landmark's action while it is up (Read it), so the scene's own prompt stands down. */
+  body[data-sheet] #interact-prompt{visibility:hidden}
+}
+@media (max-width:599px){
+  /* Folded, the row's one action is the size of the row, so the row stays one finger tall. */
+  .tour-card[data-sheet="collapsed"] footer button{min-height:var(--o-tap)}
+}
+/* A phone held sideways: a bottom-centre panel no wider than 60vw. Open, the actions join the stop's row and the
+   caption keeps to two lines, so the panel stays below the middle of the view. */
+@media (pointer:coarse) and (max-height:499px){
+  section.tour-card,body[data-computer-open="true"][data-camera="third"] section.tour-card{left:0;right:0;width:min(60vw,560px);margin-inline:auto}
+  section.tour-card[data-sheet="expanded"]{grid-template-areas:"head actions" "title title" "body body";padding:0 10px 9px 18px}
+  .tour-head{min-height:40px}
+  .tour-card footer button,.tour-card[data-sheet="collapsed"] footer button{min-height:40px;padding:0 11px;letter-spacing:.1em}
+  .tour-card[data-sheet="expanded"] footer{flex-wrap:nowrap;justify-content:flex-end;margin-top:0}
+  .tour-card[data-sheet="expanded"] footer [data-tour="exit"]{margin-left:0}
+  .tour-title{margin:1px 0 4px}
+  .tour-lines{-webkit-line-clamp:2;line-clamp:2;font-size:12.5px;line-height:17px}
+  .tour-more:not([hidden]){min-height:40px;min-width:40px}
+}
 @media (prefers-reduced-motion:reduce){
   section.tour-card,section.tour-card[data-show="true"]{translate:0 0;transition:opacity var(--journey-quick) linear,visibility 0s}
+  .tour-chevron{transition:none}
   .tour-fade,.tour-fade[data-on="true"]{transition:opacity var(--journey-quick) linear}
-  .journey-toast,.journey-toast[data-show],.zone-card,.zone-card[data-show]{transition:opacity var(--journey-quick) linear;transform:translate(-50%,0)}
-  .zone-card b{transform:scaleX(1);transition:none}
+  :is(.zone-card,.journey-toast),:is(.zone-card,.journey-toast)[data-show]{translate:0 0;transition:opacity var(--journey-quick) linear}
+  .zone-card b,.zone-card[data-show="true"] b{scale:1 1;transition:none}
   .waypoint[data-show] i,.journey-toast[data-show="true"] i{animation:none}
   .surface-wash[data-play="true"]{animation:none}
 }

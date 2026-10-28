@@ -2,6 +2,7 @@ import { toDisplayDepth, DISPLAY_MAX_DEPTH } from './depth-metrics.js';
 import * as THREE from './vendor/three.module.min.js';
 import { LANDMARKS } from './reef.js';
 import { onTick, tick as tickInterface, ui } from './ui-ticker.js';
+import { announce, clearAnnouncements } from './announce.js';
 
 // The journey layer turns free swimming into a light quest: three lights to
 // find, a pointer to the next one, and a title card for each depth chapter.
@@ -12,22 +13,19 @@ const SITES = {
   projects: { name: 'The Treasure', signal: '#c9a2ff' }
 };
 const ZONES = [
-  { until: 16, title: 'Sunlit shallows', note: 'Coral gardens · 0 to 11 m' },
-  { until: 34, title: 'The reef slope', note: 'Terraces and grottos · 11 to 23 m' },
-  { until: Infinity, title: 'The deep ledge', note: 'Quiet water · below 23 m' }
+  { until: 16, title: 'Sunlit shallows', place: 'Coral gardens', range: '0 – 11 m' },
+  { until: 34, title: 'The reef slope', place: 'Terraces and grottos', range: '11 – 23 m' },
+  { until: Infinity, title: 'The deep ledge', place: 'Quiet water', range: 'Below 23 m' }
 ];
 const element = (tag, className, html = '') => { const node = document.createElement(tag); node.className = className; node.innerHTML = html; document.body.append(node); return node; };
-const toast = element('div', 'journey-toast', '<i></i><div><small></small><span></span></div>');
-const zoneCard = element('div', 'zone-card', '<strong></strong><b></b><span></span>');
 const waypoint = element('div', 'waypoint', '<i></i><span></span><b></b>');
 const wash = element('div', 'surface-wash');
-toast.setAttribute('role', 'status'); toast.setAttribute('aria-live', 'polite');
-for (const node of [zoneCard, waypoint, wash]) node.setAttribute('aria-hidden', 'true');
+for (const node of [waypoint, wash]) node.setAttribute('aria-hidden', 'true');
 
 let found = new Set();
 try { found = new Set(JSON.parse(sessionStorage.getItem('ocean-found') || '[]').filter(id => id in SITES)); } catch {}
-let toastTimer = 0, zoneTimer = 0, zone = -1, zoneSince = 0, greeted = false, submergedAt = 0, synced = false;
-const queue = [], point = new THREE.Vector3(), projected = new THREE.Vector3(), forward = new THREE.Vector3(), offset = new THREE.Vector3();
+let zone = -1, zoneSince = 0, greeted = false, submergedAt = 0, synced = false;
+const point = new THREE.Vector3(), projected = new THREE.Vector3(), forward = new THREE.Vector3(), offset = new THREE.Vector3();
 const SITE_IDS = Object.keys(SITES), CHARTED = Object.fromEntries(LANDMARKS.map(item => [item.id, item.position]));
 // The waypoint chip as it is on screen. Each part is written only when it changes; the label lives in two text nodes,
 // so a new distance swaps a few glyphs rather than the chip's children.
@@ -48,19 +46,17 @@ export const onFrame = fn => { hooks.push(fn); };
 export const foundCount = () => found.size;
 // While the tour narrates, its caption card stands in for toasts and the waypoint.
 export function setQuiet(value) { quiet = Boolean(value); }
+// What a prompt tells the visitor to do depends on what they hold: a key on a keyboard, the Read action on a touch screen.
+export const touchInput = () => document.documentElement.dataset.input === 'touch' || (!document.documentElement.dataset.input && matchMedia('(pointer: coarse)').matches);
+export const readHint = () => touchInput() ? 'Tap Read to open it.' : 'Press F to read it.';
+// The chapter the diver is in, for the depth chip (hud-calm.js); the title card itself may be skipped by the queue.
+export const currentZone = () => ZONES[Math.max(0, zone)];
 
-export function say(kicker, text, signal = '#7ff0cf', hold = 3600) {
-  if (document.body.dataset.clearUi === 'true') return;
-  if (toast.dataset.show === 'true') { queue.push([kicker, text, signal, hold]); return; }
-  toast.style.setProperty('--signal', signal);
-  toast.querySelector('small').textContent = kicker; toast.querySelector('span').textContent = text;
-  toast.dataset.show = 'true'; clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { toast.dataset.show = 'false'; setTimeout(() => { const next = queue.shift(); if (next) say(...next); }, 320); }, hold);
-}
+// Every short message goes through the one queue (announce.js). The hold is the queue's: it follows the length of the words.
+export function say(kicker, text, signal = '#7ff0cf') { announce({ kicker, text, signal }); }
 function showZone(index) {
-  zoneCard.querySelector('strong').textContent = ZONES[index].title; zoneCard.querySelector('span').textContent = ZONES[index].note;
-  zoneCard.dataset.show = 'false'; void zoneCard.offsetWidth; zoneCard.dataset.show = 'true';
-  clearTimeout(zoneTimer); zoneTimer = setTimeout(() => { zoneCard.dataset.show = 'false'; }, 3200);
+  const { title, place, range } = ZONES[index];
+  announce({ kind: 'zone', key: 'zone', kicker: `${range} · ${place}`, title, signal: '#c9fbff', stale: 3 });
 }
 function paintProgress() {
   LANDMARKS.forEach((landmark, index) => {
@@ -83,8 +79,8 @@ export function discover(id, silent = quiet) {
   found.add(id); try { sessionStorage.setItem('ocean-found', JSON.stringify([...found])); } catch {}
   paintProgress();
   if (silent) return;
-  say(`Found · ${found.size} of 3`, `${SITES[id].name}. Press F to read it.`, SITES[id].signal, 4200);
-  if (found.size === 3) say('Dive complete', 'All three lights found. Your dive log is in the records.', '#ff9d8a', 5200);
+  announce({ kicker: `Found · ${found.size} of 3`, title: SITES[id].name, text: readHint(), signal: SITES[id].signal, stale: 12 });
+  if (found.size === 3) announce({ kicker: 'Dive complete', text: 'All three lights found. Your dive log is in the records.', signal: '#ff9d8a', stale: 15 });
 }
 function target(id) {
   const placed = window.oceanControls?.models?.landmarks;
@@ -159,7 +155,7 @@ addEventListener('oceanlamp', event => {
 });
 addEventListener('oceanclearuichange', event => {
   if (!event.detail) return;
-  clearTimeout(toastTimer); queue.length = 0; toast.dataset.show = 'false';
+  clearAnnouncements();
   lampNotice.dataset.show = 'false';
 });
 
@@ -172,7 +168,7 @@ function tick(dt) {
   if (state.playerPosition) player.fromArray(state.playerPosition);
   // The dive log behind the summary card: time under water and the deepest point reached.
   if (diving) { if (!dive.active) { dive.active = true; dive.time = 0; dive.maxDepth = 0; } dive.time += dt; dive.maxDepth = Math.max(dive.maxDepth, toDisplayDepth(-player.y)); }
-  else if (dive.active && mode === 'surface') { dive.active = false; clearTimeout(toastTimer); queue.length = 0; toast.dataset.show = 'false'; window.dispatchEvent(new CustomEvent('oceandiveend', { detail: { time: dive.time, maxDepth: dive.maxDepth, found: found.size } })); }
+  else if (dive.active && mode === 'surface') { dive.active = false; clearAnnouncements(); window.dispatchEvent(new CustomEvent('oceandiveend', { detail: { time: dive.time, maxDepth: dive.maxDepth, found: found.size } })); }
   for (let i = 0; i < hooks.length; i++) hooks[i](dt, controls, state, diving, player);
   if (!diving) { showWaypoint(false); if (!state.submerged) { zone = -1; submergedAt = 0; } return; }
   if (!submergedAt) submergedAt = now;

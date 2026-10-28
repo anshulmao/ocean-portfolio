@@ -4,12 +4,12 @@
    motion.css: entrances rise and settle, exits leave about 40% faster, and only
    opacity and the translate / scale properties are animated. */
 
-/* Shared hologram button. The guided tour's caption card uses it too. */
-:is(.holo-chip,.tour-card footer button){appearance:none;display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid var(--holo-dim);border-radius:3px;background:var(--holo-fill,var(--holo-tint));color:var(--holo-ink);font:500 11px/1 var(--holo-font);letter-spacing:.12em;text-transform:uppercase;text-shadow:var(--holo-text-glow);white-space:nowrap;cursor:pointer;transition:translate var(--motion-press,120ms) var(--journey-ease)}
-:is(.holo-chip,.tour-card footer button):hover{border-color:var(--holo-strong);background:var(--holo-fill-hover,#8ff4ff26)}
-:is(.holo-chip,.tour-card footer button):active{translate:0 1px}
-:is(.holo-chip,.tour-card footer button,.plan-mark,.summary-close):focus-visible{outline:2px solid var(--holo-focus,var(--holo-strong));outline-offset:2px}
-:is(.holo-chip,.tour-card footer button) kbd{padding:2px 5px;border:1px solid var(--holo-dim);border-radius:2px;font:500 9px/1 var(--holo-mono);letter-spacing:0}
+/* Shared hologram button. The guided tour sheet dresses its own buttons the same way (journey.css). */
+.holo-chip{appearance:none;display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid var(--holo-dim);border-radius:3px;background:var(--holo-fill,var(--holo-tint));color:var(--holo-ink);font:500 11px/1 var(--holo-font);letter-spacing:.12em;text-transform:uppercase;text-shadow:var(--holo-text-glow);white-space:nowrap;cursor:pointer;transition:translate var(--motion-press,120ms) var(--journey-ease)}
+.holo-chip:hover{border-color:var(--holo-strong);background:var(--holo-fill-hover,#8ff4ff26)}
+.holo-chip:active{translate:0 1px}
+:is(.holo-chip,.plan-mark,.summary-close):focus-visible{outline:2px solid var(--holo-focus,var(--holo-strong));outline-offset:2px}
+.holo-chip kbd{padding:2px 5px;border:1px solid var(--holo-dim);border-radius:2px;font:500 9px/1 var(--holo-mono);letter-spacing:0}
 .holo-chip--go{border-color:var(--signal,var(--holo));background:color-mix(in srgb,var(--signal,var(--holo)) 18%,transparent)}
 .holo-chip--go:hover{background:color-mix(in srgb,var(--signal,var(--holo)) 30%,transparent)}
 
