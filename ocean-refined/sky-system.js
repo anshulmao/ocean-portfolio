@@ -1801,24 +1801,40 @@ export function createSkySystem(uniforms, rng) {
   // Begin just before sunrise on the current local date, keeping the real sky.
   const openingPhase=presets.dawn-12*60*1000/DAY_MS*TAU;
   const rotationMatrix=new THREE.Matrix4(),sunDirection=new THREE.Vector3(),moonDirection=new THREE.Vector3(),moonLight=new THREE.Vector3();
-  let cachedPhase=NaN,cachedState,turnedFor=null;
+  let cachedPhase=NaN,cachedState;
   const atPhase=phase=>new Date(reference.getTime()+phase/TAU*DAY_MS);
-  function skyState(phase) {
-    if(phase===cachedPhase)return cachedState;
-    const date=atPhase(phase),time=Astronomy.MakeTime(date);
+  // The ephemeris (the Sun and the Moon to the arcsecond, the Moon's phase, the sky's turn) cost a fraction of a
+  // millisecond, and the clock moves the phase every frame: on a phone that was a millisecond of each frame for a sky
+  // that turns a quarter of a degree a simulated minute. It is worked out exactly once a simulated minute (0.83 s of the
+  // 20-minute day) and the frames in between take the straight blend of the two minutes around them: directions
+  // renormalised, the sky's turn slerped. Off the arc by about a millionth of a radian; exact on each minute.
+  const KEY=TAU/1440,keys=new Map(),turnA=new THREE.Quaternion(),turnB=new THREE.Quaternion();let turnT=0,turnedFor=null;
+  function keyframe(index) {
+    let key=keys.get(index);if(key)return key;
+    const time=Astronomy.MakeTime(atPhase(index*KEY));
     const sun=Astronomy.Equator(Astronomy.Body.Sun,time,observer,true,true);
     const moon=Astronomy.Equator(Astronomy.Body.Moon,time,observer,true,true);
     const horizontal=Astronomy.Rotation_EQD_HOR(time,observer);
-    horizontalWorld(Astronomy.RotateVector(horizontal,sun.vec),sunDirection);
-    horizontalWorld(Astronomy.RotateVector(horizontal,moon.vec),moonDirection);
     const light=new Astronomy.Vector(sun.vec.x-moon.vec.x,sun.vec.y-moon.vec.y,sun.vec.z-moon.vec.z,time);
-    horizontalWorld(Astronomy.RotateVector(horizontal,light),moonLight);
+    key={sun:horizontalWorld(Astronomy.RotateVector(horizontal,sun.vec)),moon:horizontalWorld(Astronomy.RotateVector(horizontal,moon.vec)),light:horizontalWorld(Astronomy.RotateVector(horizontal,light)),
+      fraction:Astronomy.Illumination(Astronomy.Body.Moon,time).phase_fraction,moonPhase:Astronomy.MoonPhase(time),sunRA:sun.ra,sunDec:sun.dec,moonRA:moon.ra,moonDec:moon.dec,
+      turn:new THREE.Quaternion().setFromRotationMatrix(catalogWorldRotation(Astronomy.Rotation_EQJ_HOR(time,observer),rotationMatrix))};
+    // Two minutes are in use at a time; a few more cover a scrub back and forth and the dawn/dusk look-ahead.
+    if(keys.size>=8)keys.delete(keys.keys().next().value);
+    keys.set(index,key);return key;
+  }
+  const lerp=THREE.MathUtils.lerp,around=(a,b,t,period)=>{const d=((b-a)%period+period*1.5)%period-period/2;return ((a+d*t)%period+period)%period;};
+  function skyState(phase) {
+    if(phase===cachedPhase)return cachedState;
+    const at=phase/KEY,index=Math.floor(at),t=at-index,a=keyframe(index),b=keyframe(index+1);
+    const date=atPhase(phase),time=Astronomy.MakeTime(date);
+    sunDirection.lerpVectors(a.sun,b.sun,t).normalize();moonDirection.lerpVectors(a.moon,b.moon,t).normalize();moonLight.lerpVectors(a.light,b.light,t).normalize();
+    turnA.copy(a.turn);turnB.copy(b.turn);turnT=t;
     const altitude=THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(sunDirection.y,-1,1)));
-    const illumination=Astronomy.Illumination(Astronomy.Body.Moon,time);
     cachedState={date,time,sunDirection:sunDirection.toArray(),night:1-THREE.MathUtils.smoothstep(altitude,-6,4),sunAltitude:altitude,
       moonAltitude:THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(moonDirection.y,-1,1))),
-      moonIllumination:illumination.phase_fraction,moonPhaseAngle:Astronomy.MoonPhase(time),
-      sunRA:sun.ra,sunDec:sun.dec,moonRA:moon.ra,moonDec:moon.dec,
+      moonIllumination:lerp(a.fraction,b.fraction,t),moonPhaseAngle:around(a.moonPhase,b.moonPhase,t,360),
+      sunRA:around(a.sunRA,b.sunRA,t,24),sunDec:lerp(a.sunDec,b.sunDec,t),moonRA:around(a.moonRA,b.moonRA,t,24),moonDec:lerp(a.moonDec,b.moonDec,t),
       simulatedUTC:date.toISOString(),
       observer:OBSERVER,acceleration:72};
     cachedPhase=phase;return cachedState;
@@ -1873,7 +1889,7 @@ export function createSkySystem(uniforms, rng) {
     uniforms.uSun.value.copy(sunDirection);uniforms.uMoon.value.copy(moonDirection);uniforms.uMoonLight.value.copy(moonLight);
     uniforms.uMoonFraction.value=state.moonIllumination;
     // The star sphere only turns when the clock has moved.
-    if(state!==turnedFor){turnedFor=state;catalogWorldRotation(Astronomy.Rotation_EQJ_HOR(state.time,observer),rotationMatrix);horizon.quaternion.setFromRotationMatrix(rotationMatrix);}
+    if(state!==turnedFor){turnedFor=state;horizon.quaternion.slerpQuaternions(turnA,turnB,turnT);}
     uniforms.uMilkyWay.value.copy(galacticPole).applyQuaternion(horizon.quaternion);
     uniforms.uTime.value=elapsed;uniforms.uNight.value=night;uniforms.uDive.value=underwater;
     const dome=underwater<=0?domes.above:underwater>=.999?domes.below:domes.between;if(shell.material!==dome)shell.material=dome;
