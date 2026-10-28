@@ -1,9 +1,10 @@
 import { onTick } from './ui-ticker.js';
 import { DISPLAY_MAX_DEPTH } from './depth-metrics.js';
+import { currentZone, touchInput } from './journey.js';
 
 // The calm dive HUD (design/ui-overhaul/depth.html, screen 02): one depth card bottom left and one
 // "ahead" card bottom right, as hologram panels. It owns no instrument logic. It mirrors readings that
-// dive-hud.js (console), journey.js (zone card, waypoint chip) and landmark-interactions.js
+// dive-hud.js (console), journey.js (depth chapter, waypoint chip) and landmark-interactions.js
 // (interact prompt) already keep current, five times a second, and writes a node only when its
 // text would change. C (Instruments) shows the full console and depth scale instead; dive-calm.css
 // decides which set is visible from body[data-computer-open].
@@ -26,7 +27,7 @@ aheadCard.setAttribute('aria-live', 'polite');
 
 const source = {
   depth: $('#console-depth'), air: $('#air-value'), ndl: $('#console-ndl'), ndlLabel: $('#console-ndl-label'), ndlValue: $('#console-ndl-value'),
-  zone: () => $('.zone-card strong'), zoneNote: () => $('.zone-card span'), waypoint: () => $('.waypoint'), prompt: $('#interact-prompt')
+  waypoint: () => $('.waypoint'), prompt: $('#interact-prompt')
 };
 const out = {
   depth: depthCard.querySelector('.calm-depth-number span'), zone: depthCard.querySelector('.calm-depth-zone span'), place: depthCard.querySelector('.calm-depth-zone b'),
@@ -47,9 +48,10 @@ function paint() {
   const metres = Number.parseFloat(depth) || 0, fill = Math.max(0, Math.min(1, metres / DISPLAY_MAX_DEPTH));
   const width = `${Math.round(fill * 1000) / 10}%`;
   if (out.gauge.style.width !== width) out.gauge.style.width = width;
-  write(out.zone, source.zone()?.textContent || 'Sunlit shallows');
-  const note = source.zoneNote()?.textContent || '';
-  write(out.place, note ? ` · ${note.split('·')[0].trim()}` : '');
+  // The chapter comes from the journey layer itself: its title card is queued and may never have been drawn.
+  const zone = currentZone();
+  write(out.zone, zone.title);
+  write(out.place, ` · ${zone.place}`);
   // Air and the no-stop state. A stop or a low limit turns the line into an alert; colour never carries it alone.
   const mode = source.ndl?.dataset.mode || 'ndl', air = valueOf(source.air);
   const limit = `${source.ndlLabel?.textContent || 'NDL'} ${valueOf(source.ndlValue)}${source.ndlValue?.querySelector('small')?.textContent ? ' min' : ''}`.trim();
@@ -73,7 +75,7 @@ function paint() {
   write(out.kicker, near ? 'Here' : `Ahead · ${waypoint.querySelector('b')?.textContent || ''}`);
   write(out.title, lastSite);
   write(out.note, SITES[lastSite] || '');
-  write(out.action, near ? 'Press F to open the log' : 'Follow the light');
+  write(out.action, near ? (touchInput() ? 'Tap Read to open the log' : 'Press F to open the log') : 'Follow the light');
   set(aheadCard, 'near', String(near));
   if (lastSignal && aheadCard.style.getPropertyValue('--signal') !== lastSignal) aheadCard.style.setProperty('--signal', lastSignal);
 }
