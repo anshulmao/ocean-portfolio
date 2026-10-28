@@ -28,6 +28,14 @@ import { livingWorldSteps } from './living-world.js';
 import { waveHeight, waterVertex, waterFragment, beamVertex, beamFragment, smoothVertex, smoothFragment } from './shaders.js';
 import { refreshRate, drawStride, windowPace, windowHitch, workBudget, createScaleController } from './frame-pacing.js';
 
+// Matrix4.toArray writes a matrix into whatever array it is handed. three hands it every kind there is (plain arrays,
+// Float32Arrays, Float64Arrays), so its sixteen stores are megamorphic and run on V8's slow generic path: 650 ns a
+// matrix where 25 would do. It is behind every InstancedMesh.setMatrixAt (every school fish, bubble, jellyfish and
+// turtle part, each frame) and every bone of every skinned animal in Skeleton.update: the costliest single function of
+// a dive's frame. Writes into a Float32Array, which is what all of those are, now go through a loop that only ever sees
+// one; the values written are the same.
+const intoFloats=(array,offset,e)=>{for(let i=0;i<16;i++)array[offset+i]=e[i];return array;},matrixToArray=THREE.Matrix4.prototype.toArray;
+THREE.Matrix4.prototype.toArray=function(array=[],offset=0){return array instanceof Float32Array?intoFloats(array,offset,this.elements):matrixToArray.call(this,array,offset);};
 const $=s=>document.querySelector(s), canvas=$('#world'), status=$('#status');
 const themeMedia=matchMedia('(prefers-color-scheme: dark)'), motionMedia=matchMedia('(prefers-reduced-motion: reduce)');
 let selectedNight=false;
