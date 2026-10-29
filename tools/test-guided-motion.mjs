@@ -11,8 +11,11 @@ import { CollisionWorld } from '../ocean-refined/collisions.js';
 // Only replace the journey UI scheduler; the tour and swimming integrator below
 // are the production modules. Every assertion samples the actual player body.
 const journey = 'data:text/javascript,' + encodeURIComponent('export const onFrame=fn=>globalThis.tourFrame=fn; export const setQuiet=()=>{}; export const discover=()=>{}; export const say=()=>{}; export const splash=(...a)=>(globalThis.splashes??=[]).push(a);');
+// Analytics is replaced by a recorder, and checked against the privacy allowlist the real module applies.
+const analytics = 'data:text/javascript,' + encodeURIComponent('export const track=(event,properties)=>(globalThis.tracked??=[]).push([event,properties]);');
 registerHooks({ resolve(specifier, context, next) {
   if (specifier === './journey.js' && context.parentURL?.endsWith('/guided-dive.js')) return { url: journey, shortCircuit: true };
+  if (specifier === './analytics.js' && context.parentURL?.endsWith('/guided-dive.js')) return { url: analytics, shortCircuit: true };
   return next(specifier, context);
 } });
 class Element {
@@ -33,6 +36,7 @@ Object.assign(globalThis, { document, window, matchMedia: query => ({ matches: q
   addEventListener: window.addEventListener.bind(window), removeEventListener: window.removeEventListener.bind(window) });
 const { startTour, tourStatus, STOPS, STEPS, tourPlan, holdOf } = await import('../ocean-refined/guided-dive.js');
 const { BEAT } = await import('../ocean-refined/guided-script.js');
+const { eventProperties } = await import('../ocean-refined/analytics-privacy.js');
 
 function environment(hz, { reducedMotion = false, unavailable = false, collision = null, residents = {}, surface = false } = {}) {
   const settings = { ...defaults, pointerLock: false, idleMotion: 0 };
@@ -359,6 +363,33 @@ for (const hz of [30, 60, 120]) {
   window.oceanTour.stop(); env.nav.destroy();
   console.log(`PASS: eased pan, ${(moving / 120).toFixed(1)} s for a quarter turn, fastest at ${Math.round(peakAt * 100)}%.`);
 }
+// Reduced motion: every leg is a fade, the camera never pans by itself, and the tour still runs start to finish on
+// Continue alone, whale shark and all. The analytics funnel records each step and how the tour ended, in fields the
+// privacy allowlist keeps.
+{
+  globalThis.tracked = [];
+  const env = environment(60, { reducedMotion: true });
+  let looked = 0; const lookAt = window.oceanControls.lookAt; window.oceanControls.lookAt = (...args) => { looked++; return lookAt(...args); };
+  startTour(); env.tick(.5);
+  // A moment at the deep beat for the whale shark, which the stand-in creature set only lets come after two seconds.
+  for (let i = 0; i < 200 && tourStatus() !== 'done'; i++) {
+    env.tick(.5); if (env.state.tour?.key === 'deep' && tourStatus() === 'look') env.tick(3);
+    if (tourStatus() !== 'done') window.oceanTour.next();
+  }
+  assert.equal(tourStatus(), 'done', 'the whole tour on Continue alone');
+  assert.equal(env.placed, STEPS.length - 1, 'every leg is a fade');
+  assert.equal(looked, 0, 'no pans of its own');
+  assert.ok(env.calls.some(call => call[0] === 'encounter'), 'the whale shark still comes');
+  key('KeyW'); env.tick(.2); keyup('KeyW');
+  const steps = tracked.filter(([event]) => event === 'tour_step').map(([, p]) => p.index);
+  assert.deepEqual(steps, STEPS.map((step, i) => i), 'a tour_step for every step, in order');
+  assert.deepEqual(tracked[0], ['tour_started', { from: 'underwater' }]);
+  assert.deepEqual(tracked.at(-1), ['tour_ended', { step: 'overview', index: STEPS.length - 1, how: 'swam_off' }]);
+  for (const [event, properties] of tracked) assert.deepEqual(eventProperties(event, properties), properties, `${event} passes the privacy allowlist whole`);
+  env.nav.destroy();
+  console.log(`PASS: reduced motion runs the tour on fades with no pans; ${tracked.length} analytics events, all allowed.`);
+}
+
 // The look-there marker: on screen it rings the animal; behind or off to the side it points the short way round.
 {
   const { pointAt } = await import('../ocean-refined/look-indicator.js');

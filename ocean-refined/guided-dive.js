@@ -4,6 +4,7 @@ import { onFrame, setQuiet, discover, say, splash } from './journey.js';
 import { planGuidedRoute } from './guided-route.js';
 import { STEPS, SPEED, BEAT, WELCOME, holdOf } from './guided-script.js';
 import { pointAt } from './look-indicator.js';
+import { track } from './analytics.js';
 
 // The guided dive runs the steps in guided-script.js. Each leg is a scripted route, not a camera path: it hands
 // waypoints to the same autopilot the atlas uses, so the diver still collides and still routes over terrain. The
@@ -12,6 +13,8 @@ import { pointAt } from './look-indicator.js';
 export { STEPS, holdOf };
 // The portfolio sites among the steps: the tour's three stories.
 export const STOPS = STEPS.filter(step => step.kind === 'stop');
+// Analytics (only with consent; analytics-privacy.js declares what is kept): which step, by its key and number.
+const note = (event, extra = {}) => track(event, { step: STEPS[index].key, index, ...extra });
 const ARRIVE_RADIUS = 1.6, PAN_BEAT = 3, INTRO_BEAT = 4.5, HOLD_SIGNAL = '#8ff4ff';
 // The opening from the surface (SPEC step 0): a held beat while the surface copy fades, the camera eases in on the diver
 // (world.js frameDiver), and the dive starts in first person. Underwater, the title card shows before the welcome sheet.
@@ -262,7 +265,7 @@ function arrive() {
   const step = STEPS[index]; arrived = index; waited = 0; inputs = controls().nav.inputs; paused = false;
   status = step.kind === 'stop' ? 'dwell' : step.kind === 'look' ? 'look' : 'done';
   if (step.landmark) discover(step.landmark, true);
-  startPan(); paint();
+  note('tour_step'); startPan(); paint();
 }
 // A cut: fade the water over, move the diver, fade back. Reduced motion always travels this way.
 function cutTo(then) { controls()?.cancelTravel(); cut = then; cutTime = .24; fade.dataset.on = 'true'; }
@@ -279,20 +282,22 @@ function advance() { if (index < STEPS.length - 1) go(index + 1); }
 // The welcome is read where the dive levels out: nothing to swim to, only a look around.
 function begin() {
   const api = controls(); index = 0; arrived = 0; status = 'intro'; paused = false; inputs = api.nav.inputs;
-  endPrelude(); splash('Guided dive', 'Welcome to the reef'); reveal = REVEAL;
+  endPrelude(); splash('Guided dive', 'Welcome to the reef'); reveal = REVEAL; note('tour_step');
   api.guide(true, true, true); startPan(); paint();
 }
 function endPrelude() { prelude = -1; delete document.body.dataset.prelude; controls()?.frameDiver?.(false); }
-function handOver() { status = 'free'; paused = false; cut = null; fade.dataset.on = 'false'; controls()?.guide(false); paint(); }
+function handOver() { note('tour_taken_over'); status = 'free'; paused = false; cut = null; fade.dataset.on = 'false'; controls()?.guide(false); paint(); }
 function rejoin() {
   if (status !== 'free') return;
   here.fromArray(window.oceanDiagnostics.playerPosition);
   let nearest = Math.max(1, arrived + 1), distance = Infinity; const point = [0, 0, 0], subject = [0, 0, 0];
   for (let i = nearest; i < STEPS.length; i++) { resolve(STEPS[i], point, subject); const d = here.distanceTo(to.fromArray(point)); if (d < distance) { distance = d; nearest = i; } }
-  go(Math.min(nearest, STEPS.length - 1));
+  note('tour_rejoined'); go(Math.min(nearest, STEPS.length - 1));
 }
-function stop(message) {
+// how: why it ended, for the funnel (exit, explore, surface, swam_off, surfaced, failed, or stopped from elsewhere).
+function stop(message, how = 'stopped') {
   if (status === 'off') return;
+  note('tour_ended', { how });
   const api = controls(); status = 'off'; paused = false; cut = null; fade.dataset.on = 'false'; reveal = 0; endPrelude(); pointAt(null); marked = null;
   // Let go of the view too, so it does not stay on the last subject the tour showed.
   if (api) { api.guide(false); api.cancelTravel(); api.lookAt?.(null); }
@@ -305,6 +310,7 @@ export function startTour() {
   if (api.getMode() !== 'surface' && api.getMode() !== 'diver') return false;
   // From the surface the opening plays first; under water the tour starts where the diver is.
   if (api.getMode() === 'surface') { prelude = 0; document.body.dataset.prelude = 'on'; }
+  track('tour_started', { from: prelude === 0 ? 'surface' : 'underwater' });
   status = 'starting'; index = 0; arrived = -1; waited = 0; paused = false; framed.clear(); used.clear(); seen = null; pointed.clear(); paint();
   return true;
 }
@@ -331,24 +337,24 @@ function update(dt, api, state, diving) {
     if (prelude >= 0) {
       const before = prelude; prelude += dt;
       if (before < PRELUDE_HOLD && prelude >= PRELUDE_HOLD) api.frameDiver?.(true);
-      if (prelude >= PRELUDE_DIVE) { prelude = -1; waited = 0; if (!api.startDive({ capture: false, perspective: 'first' })) stop('The ocean is still getting ready. Try again in a moment.'); }
+      if (prelude >= PRELUDE_DIVE) { prelude = -1; waited = 0; if (!api.startDive({ capture: false, perspective: 'first' })) stop('The ocean is still getting ready. Try again in a moment.', 'failed'); }
       return;
     }
     // Navigation started during the entry animation is overwritten by startDive.
     // Landmarks also move while models load: wait for their final viewpoints.
     if (diving && !api.getTransition() && (state.landmarksReady || state.landmarksSettled)) begin();
-    else if (mode === 'surface' && waited > 8) stop();
+    else if (mode === 'surface' && waited > 8) stop(null, 'failed');
     return;
   }
   // Surfacing, by Space or the button, ends the tour without ceremony.
-  if (!diving) { if (mode !== 'diver') stop(); return; }
+  if (!diving) { if (mode !== 'diver') stop(null, 'surfaced'); return; }
   notice(api);
   // Reading the archive or changing settings holds the tour where it is.
   if (api.nav.suspended || status === 'free') { pointAt(null); return; }
   lookThere(dt, api, state);
   const nav = api.nav;
   // Swimming off from the overview simply ends the tour; anywhere else it puts the tour on hold.
-  if (nav.inputs !== inputs) { if (status === 'done') stop(); else handOver(); return; }
+  if (nav.inputs !== inputs) { if (status === 'done') stop(null, 'swam_off'); else handOver(); return; }
   if (cut) { cutTime -= dt; if (cutTime <= 0) { const then = cut; cut = null; then(); fade.dataset.on = 'false'; } return; }
   if (reveal > 0) { reveal -= dt; if (reveal <= 0) paint(); }
   if (status !== 'travel') { pan(dt); return; }
@@ -374,9 +380,9 @@ card.addEventListener('click', event => {
   else if (action === 'next') next();
   else if (action === 'read') read();
   else if (action === 'rejoin') rejoin();
-  else if (action === 'surface') { stop(); controls()?.surface(); }
-  else if (action === 'explore') stop('The reef is yours. The lights still mark the three sites.');
-  else if (action === 'exit') stop('Tour ended. The reef is yours.');
+  else if (action === 'surface') { stop(null, 'surface'); controls()?.surface(); }
+  else if (action === 'explore') stop('The reef is yours. The lights still mark the three sites.', 'explore');
+  else if (action === 'exit') stop('Tour ended. The reef is yours.', 'exit');
   else if (action === 'toggle') { open = card.dataset.sheet !== 'expanded'; more = false; paint(); }
   else if (action === 'more') { more = !more; paint(); }
   // The sheet's own toggles keep the focus where it is, for a keyboard; the actions hand it back to the scene.

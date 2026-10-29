@@ -233,3 +233,18 @@ A hint the visitor has already used is skipped.
       sharks) and names it, with "above", "below" or "nearby".
     - Off screen, it's an arrow pinned to the screen edge, pointing the short way round.
     - Once the animal has been in view for 2.4 s the marker lets it go. A later pass can be pointed out again.
+- **Phase 6: the finish (done).**
+  - **Ending:** the overview offers Keep exploring or Surface. Surface ends the tour and runs the existing ascent,
+    with its safety-stop offer (held off only while the tour leads). Swimming off from the overview simply ends it.
+  - **Reduced motion:**
+    - Every leg is a fade, and the camera never pans by itself.
+    - The opening's camera move is instant.
+    - The marker doesn't animate.
+    - The whole tour still runs on Continue alone, whale shark included. A test covers this.
+  - **Analytics** (only with consent; `analytics-privacy.js` declares the fields):
+    - `tour_started` {from}
+    - `tour_step` {step, index}
+    - `tour_taken_over` and `tour_rejoined` {step, index}
+    - `tour_ended` {step, index, how}, where how is exit, explore, surface, swam_off, surfaced, failed or stopped.
+    - Together these give a step-by-step funnel of where visitors leave.
+  - **Layout:** the CI layout test now also measures the overview sheet on phone, landscape and desktop.
