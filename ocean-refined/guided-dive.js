@@ -417,8 +417,10 @@ function read() {
   const prompt = document.querySelector('#interact-prompt'), step = STEPS[index];
   if (prompt && !prompt.hidden) prompt.click(); else window.oceanArchive?.open?.(step.opens ?? step.landmark);
 }
-// The tour's own animals (user-creatures.js: the nurse shark, the whale shark) are in once the optional set has settled.
-const assetsIn = state => state.optionalModels === undefined || state.optionalModels === 'settled' || state.userCreatures?.ready === true;
+// The tour's own animals (user-creatures.js: the nurse shark, the whale shark) are in, and drawn, once the optional sets
+// have settled: oceanDiagnostics.enriched says so (the loading work), as optionalModels did before it. userCreatures.ready
+// alone is too early: the set is loaded, but not yet prepared for drawing.
+const assetsIn = state => state.enriched === true || state.optionalModels === undefined || state.optionalModels === 'settled';
 function next() {
   if (cut) return;
   // Start waits (ASSETS_WAIT at most) for the animals the tour shows, so none of them comes in late.
