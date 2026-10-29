@@ -278,7 +278,7 @@ function warmSoon(){
   if(warming||!warmQueue.length)return;warming=true;
   later('first draws',function*(){
     while(warmQueue.length){if(uniforms.uDive.value>0){warmQueue.length=0;break;}yield GPU;if(warmQueue.length&&uniforms.uDive.value===0)warmStep();}
-    warming=false;
+    warming=false;if(warmListed)startup.warmedAt??=Math.round(performance.now());
   }).catch(error=>{warming=false;console.warn('First draws stopped:',error);});
 }
 function warmStep(){
@@ -488,7 +488,7 @@ $('#dive').addEventListener('click',()=>{
   $('#dive-label').textContent=wasDiving?'Ascending to the surface…':'Back to the surface';
   status.textContent=wasDiving?'Returning to the surface.':'Diving beneath the surface.';
   setTimeout(()=>{if(diagnostic.ready)status.textContent='';},1600);
-  if(!wasDiving){exploration.startDive();beginModels();diveAskedNow();setExploring(true);hurry=Math.max(hurry,1);}
+  if(!wasDiving){startup.diveAskedAt??=Math.round(performance.now());exploration.startDive();beginModels();diveAskedNow();setExploring(true);hurry=Math.max(hurry,1);}
   else if(exploration.state.mode!=='surface'){window.oceanTour?.stop();exploration.beginAscent(reef?.userData.safeAscentRoute,true);}
   if(reducedMotion){dive=diveTarget;status.textContent='';}canvas.focus({preventScroll:true});wake();
 });
@@ -724,8 +724,8 @@ function updateWorld(dt,clockDt=dt){
   // A dive asked for before the world under the water is ready waits in the first tenth of the transition, the camera
   // still above the surface, while the rest is built with most of every frame's time (see afterFrame); the status line
   // says so if that takes more than a moment. The first draws get up to two and a half seconds of it as well.
-  if(diveTarget===1&&(!underReady||!diagnostic.landmarksSettled||warmQueue.length&&diveHeldFor>0&&diveHeldFor<2.5)){if(!buildSteps)startUnderwater();modelsWanted=true;if(built)beginModels();dive=Math.min(dive,DIVE_HOLD);diveHeldFor+=Math.max(dt,1e-4);hurry=2;if(diveHeldFor>.7&&(!underReady||!diagnostic.landmarksSettled)&&!holdNoted){holdNoted=true;status.textContent=HOLD_NOTE;}}
-  else if(diveHeldFor){diveHeldFor=0;hurry=1;if(holdNoted){holdNoted=false;if(status.textContent===HOLD_NOTE)status.textContent='';}if(reducedMotion&&diveTarget===1)dive=diveTarget;}
+  if(diveTarget===1&&(!underReady||!diagnostic.landmarksSettled||warmQueue.length&&diveHeldFor>0&&diveHeldFor<2.5)){if(!diveHeldFor)startup.heldFrom=Math.round(performance.now());if(!buildSteps)startUnderwater();modelsWanted=true;if(built)beginModels();dive=Math.min(dive,DIVE_HOLD);diveHeldFor+=Math.max(dt,1e-4);hurry=2;if(diveHeldFor>.7&&(!underReady||!diagnostic.landmarksSettled)&&!holdNoted){holdNoted=true;status.textContent=HOLD_NOTE;}}
+  else if(diveHeldFor){diveHeldFor=0;hurry=1;startup.heldMs=Math.round(performance.now())-startup.heldFrom;if(holdNoted){holdNoted=false;if(status.textContent===HOLD_NOTE)status.textContent='';}if(reducedMotion&&diveTarget===1)dive=diveTarget;}
   let easedDive=THREE.MathUtils.smoothstep(dive,0,1);let underwater=THREE.MathUtils.smoothstep(easedDive,.13,.27);
   uniforms.uTime.value=elapsed;uniforms.uNight.value=night;uniforms.uDive.value=underwater;
   const nav=exploration.update(dt,easedDive>.95,reducedMotion,reef?.userData.safeAscentRoute);
