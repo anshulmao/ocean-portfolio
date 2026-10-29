@@ -34,7 +34,9 @@ blacktip 5.2 m, dolphin 7.3 m, orca bull 13.3 m, whale shark 17 m, right whale 2
   - butterflyfish pairs, moorish idols, powder blue tangs and emperor angelfish working close to the coral;
   - a garden eel colony that draws into the sand;
   - a fusilier ribbon along the reef edge, a wheel of young barracuda, trevally hunting the bait ball, and flying fish under the surface.
-- The boid schools of `marine-life.js` are unchanged.
+- The reef-wide schools of `marine-life.js` (flocking over 49 habitats) are drawn as four of these species: fusiliers,
+  powder blue tangs, sergeant majors and anthias (`school-fish.js`, one instanced draw a species, the stroke driven by each
+  fish's own speed and turn).
 
 ## Cost
 
