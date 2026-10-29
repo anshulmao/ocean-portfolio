@@ -9,7 +9,16 @@ node.className = 'look-there'; node.dataset.show = 'false'; node.setAttribute('a
 node.innerHTML = '<i></i><span></span>';
 document.body.append(node);
 const label = node.querySelector('span'), at = new THREE.Vector3(), local = new THREE.Vector3();
-let shownLabel = '', shown = false;
+let shownLabel = '', shown = false, band = null;
+// The marker keeps to the band between the compass at the top and the guide's card and controls at the bottom, so its
+// name never sits on the HUD. Measured once a size, since the HUD only moves when the window does.
+addEventListener('resize', () => { band = null; });
+function safeBand() {
+  if (band) return band;
+  const compass = document.querySelector('.heading-indicator')?.getBoundingClientRect();
+  const top = Math.max(56, compass?.height ? compass.bottom + 18 : 0, innerHeight * .1);
+  return band = [top, Math.max(top + 40, innerHeight - Math.max(120, innerHeight * .22))];
+}
 
 // Points at `subject` ([x, y, z]) with `text`, or hides with null. Returns whether the subject is on screen.
 export function pointAt(camera, subject, text = '') {
@@ -22,7 +31,7 @@ export function pointAt(camera, subject, text = '') {
   let x = behind ? -at.x : at.x, y = behind ? -at.y : at.y;
   const onScreen = !behind && Math.abs(x) < EDGE_X && Math.abs(y) < EDGE_Y;
   if (!onScreen) { const reach = Math.max(Math.abs(x) / EDGE_X, Math.abs(y) / EDGE_Y, 1e-6); x /= reach; y /= reach; }
-  const left = (x * .5 + .5) * innerWidth, top = (-y * .5 + .5) * innerHeight;
+  const [high, low] = safeBand(), left = (x * .5 + .5) * innerWidth, top = Math.min(low, Math.max(high, (-y * .5 + .5) * innerHeight));
   node.style.transform = `translate(${left.toFixed(1)}px, ${top.toFixed(1)}px)`;
   node.style.setProperty('--turn', `${(Math.atan2(-y, x) * 180 / Math.PI + 45).toFixed(1)}deg`);
   node.dataset.edge = String(!onScreen); node.dataset.side = x > .3 ? 'left' : 'right';

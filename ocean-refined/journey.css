@@ -93,7 +93,14 @@ body:is([data-clear-ui="true"],[data-safety-stop="true"]) section.tour-card{visi
 .tour-pace{grid-area:pace;margin:10px 0 0;font-size:11px;line-height:1.5;opacity:.72}
 /* The welcome's control to try, one at a time, and a beat's one tip (guided-dive.js CONTROLS). */
 .tour-teach{margin:10px 0 0;font-size:13px;line-height:1.45;color:var(--signal,var(--holo-strong))}
-.tour-teach[hidden]{display:none}
+/* The welcome's controls, one chip each: the next to try lit, each ticked once tried (guided-dive.js PRIMER). */
+.tour-keys{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0;padding:0;list-style:none}
+.tour-keys li{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 5px;border:1px solid var(--holo-faint);border-radius:999px;font-size:11.5px;line-height:1.2;opacity:.72;transition:border-color var(--journey-quick) var(--journey-ease),opacity var(--journey-quick) var(--journey-ease)}
+.tour-keys kbd{padding:2px 5px;border:1px solid var(--holo-dim);border-radius:2px;font:500 9px/1 var(--holo-mono);letter-spacing:0}
+.tour-keys li[data-next="true"]{border-color:var(--signal,var(--holo-strong));opacity:1}
+.tour-keys li[data-done="true"]{border-color:var(--signal,var(--holo));opacity:1}
+.tour-keys li[data-done="true"]::after{content:"✓";margin-left:2px;color:var(--signal,var(--holo))}
+:is(.tour-keys,.tour-teach)[hidden]{display:none}
 /* Look there (look-indicator.js): a ring on an animal worth turning for, or an arrow at the screen's edge pointing the
    way to turn. Moved with a transform each frame; never takes a pointer. */
 .look-there{position:fixed;left:0;top:0;z-index:var(--o-z-sheet);pointer-events:none;opacity:0;visibility:hidden;transition:opacity .45s var(--journey-ease),visibility 0s .45s;will-change:transform}
@@ -162,9 +169,13 @@ html[data-input="touch"] .tour-card footer kbd{display:none}
   .tour-card[data-more="true"] .tour-more span{padding:0;background:none}
   /* A beat's tip takes the caption's third line, so a sheet with one is no taller than one without. */
   .tour-card[data-tip="true"]:not([data-more="true"]) .tour-lines{-webkit-line-clamp:2;line-clamp:2}
-  /* The welcome's control to try is the point of it here: its caption keeps to one line beside it. */
-  .tour-card[data-state="intro"][data-tip="true"]:not([data-more="true"]) .tour-lines{-webkit-line-clamp:1;line-clamp:1}
+  /* The welcome's controls are the point of it here: the chips and the one to try take the caption's place, and More
+     brings the title and caption back (the title card and the sheet's own head have just said welcome). */
+  .tour-card[data-state="intro"][data-tip="true"]:not([data-more="true"]) :is(.tour-title,.tour-lines){display:none}
   .tour-teach{margin-top:6px;font-size:12.5px;line-height:17px}
+  .tour-keys{flex-wrap:nowrap;gap:4px;margin-top:6px;overflow-x:auto;scrollbar-width:none}
+  .tour-keys li{flex:none;padding:2px 8px 2px 4px;font-size:11px}
+  .tour-keys li:not(:has(kbd)){padding-left:8px}
   /* The sheet carries the landmark's action while it is up (Read it), so the scene's own prompt stands down. */
   body[data-sheet] #interact-prompt{visibility:hidden}
 }

@@ -32,7 +32,8 @@ export const STEPS = [
     line: 'This is my portfolio, as a reef. Look anywhere as we go. There’s a lot of life down here.',
     short: 'This is my portfolio, as a reef. Look anywhere as we go.',
     pan: [[-12, -9, -15], [26, -14, -10], [0, -26, -55], [-12, -9, -15]] },
-  { key: 'about', kind: 'stop', landmark: 'about', opens: 'glance', place: `About · The Anchor · ${depth(-9)}`, signal: '#7ff0cf',
+  // The scooter is taught on the tour's first swim, where holding E speeds the guide up.
+  { key: 'about', kind: 'stop', landmark: 'about', opens: 'glance', teach: 'scooter', place: `About · The Anchor · ${depth(-9)}`, signal: '#7ff0cf',
     title: 'This anchor is me', line: 'Open it for my portfolio at a glance: who I am and where everything lives.' },
   { key: 'nurse', kind: 'look', resident: 'sleeper', at: [-9, -7, -22], place: 'Behind the anchor',
     title: 'A nurse shark, asleep', line: 'Nurse sharks rest on the sand by day. Let it be.',
@@ -51,16 +52,16 @@ export const STEPS = [
   { key: 'wreck-life', kind: 'look', at: [22, -18, -48], place: 'Around the wreck',
     title: 'Life on the wreck', line: 'A barracuda keeps watch here, and fish shelter in the hull.',
     pan: [[18, -24, -39], [27, -19, -35]] },
-  // Down the gully from the wreck and through the limestone arch (reef.js: the arch at 20, -72), then out over the lantern garden.
-  // Over the cliff edge first (a straight drop skims it), then about 3 m off the gully floor, under the roof (clear to -48 m),
+  // Down the gully from the wreck and through the limestone arch (reef.js: the arch at 20, -72), on over the lantern
+  // garden and out past it, then a look back at the arch, the garden's glow and the reef above: one swim, one stop.
+  // Over the cliff edge first (a straight drop skims it), then about 3 m off the gully floor under the roof (clear to -48 m),
   // so the route holds for seabed clearances up to 2.2 m.
-  { key: 'arch', kind: 'look', at: [20, -51.6, -79], via: [[23, -24, -52.5], [24.5, -35, -56], [25, -40.5, -58.5], [21, -43.5, -60], [20, -46.4, -62.6], [20, -49, -66], [20, -51, -70]],
-    place: `The arch · ${depth(-52)}`, title: 'Through the arch', line: 'A limestone arch over the drop-off. Look back the way you came.',
-    pan: [[20, -49, -71], [20, -38, -58]], beat: 5 },
-  { key: 'lantern', kind: 'look', at: [15, -52, -82], place: `The lantern garden · ${depth(-52)}`,
-    title: 'The lantern garden', line: 'Sea pens, tube anemones and glowing bulbs light up the deep shelf.',
-    pan: [[8, -55, -86], [2, -54, -91]] },
-  { key: 'bait-ball', kind: 'look', at: [40, -27, -75], via: [[48, -27.8, -67]], teach: 'scooter', place: `The bait ball · ${depth(-28)}`,
+  { key: 'arch', kind: 'look', at: [1, -50, -93],
+    via: [[23, -24, -52.5], [24.5, -35, -56], [25, -40.5, -58.5], [21, -43.5, -60], [20, -46.4, -62.6], [20, -49, -66], [20, -51, -70], [20, -51.6, -79], [12, -51, -87]],
+    place: `Through the arch · ${depth(-50)}`, title: 'Through the arch',
+    line: 'Out through the arch and over the lantern garden. Look back at the reef.',
+    pan: [[8, -55, -86], [20, -48, -72], [16, -24, -45]], beat: 5 },
+  { key: 'bait-ball', kind: 'look', at: [40, -27, -75], via: [[48, -27.8, -67]], place: `The bait ball · ${depth(-28)}`,
     title: 'Through the bait ball', line: 'Thousands of fry turning as one. They open a tunnel around you.',
     pan: [[48, -27.8, -67], [50, -38, -72]] },
   // Down beside the soft coral spire, which the bait ball turns over, facing back up the reef to the wreck and the light.

@@ -263,3 +263,26 @@ A hint the visitor has already used is skipped.
   - **Water clarity.** A new setting, Settings → General → Lighting → Water clarity (70–180%). The owner's profile
     defaults to 125%. It stretches the underwater haze (`ocean-look.js` `uLookClarity`) and the cull distance with
     it, so clearer water also draws further: more of the reef at once, which costs more on slower devices.
+- **Review round 3:**
+  - **One stop through the arch.** The arch and the lantern garden are one beat now. The swim goes through the arch
+    and out past the lanterns without stopping, then looks back up at the reef and leads on. The bait ball and the
+    look-up beside the spire still follow before Projects. There are 12 swims, about 408 m, 143 s swimming plus 108 s
+    looking. At both quality levels in the app, the planned route stays under the arch's roof.
+  - **The controls as chips again.** The welcome shows four key chips: C (dive computer), W A S D (swim), Space/Shift
+    (up and down) and V (view).
+    - The next one to try is lit, and each is ticked once done.
+    - Swimming and rising or sinking are noticed by the diver moving under the visitor's own control.
+    - **Within 5 m of where the welcome began, the visitor can swim about and stays on the tour.** Leaving that area
+      puts the tour on hold, and Rejoin brings it back.
+    - The scooter isn't in the welcome. Its tip ("Hold E for the scooter: the guide speeds up too") shows on the first
+      swim.
+  - **Start waits for the tour's animals.** If the creature set (the nurse shark, the whale shark) is still loading,
+    Start says "Getting the reef ready…" and leads on as soon as it is in, after 20 s at most. Loading earlier, on the
+    Show me around / Dive in click, is the loading PR's half (stacked on this branch).
+  - **Big animals on every dive** (`big-life.js`), on the tour or not:
+    - The look-there marker points out any whale shark, whale, orcas, dolphins or reef sharks that come near.
+    - If none of the whale shark, whale, orcas or dolphins has come by 30 s into a dive, one of them is called in.
+    - The marker keeps below the compass and above the bottom controls.
+  - **Whales cross the reef's face.** With no scripted course, the whale and the whale shark now swim parallel to the
+    reef along a line in deep water (z ≤ −55 for the whale and −50 for the whale shark, the `across` setting in
+    `user-creature-routes.js`), not toward it. The tour's look-up keeps its own scripted course.

@@ -6,13 +6,15 @@
 // leaves the same way, then is gone until a later moment of the dive. Two slots run independently: the giants (one
 // at a time, rarely) and the smaller pelagics (one at a time, more often).
 //   pass: the closest the line of travel comes to the diver; depth: the band it swims in; speed: metres a second.
+//   across: swims parallel to the reef, across its face, on a line at this z or deeper (over the deep shelf).
+//   Visitors also cost nothing until seen; big-life.js makes sure every dive meets at least one of the great ones.
 export const ENCOUNTERS = {
   giant: {
     first: [35, 70], cooldown: [80, 170],
     kinds: [
       // The whale keeps its distance: a shape crossing the blue at the edge of sight.
-      { id: 'whale', pass: [56, 76], depth: [-16, -10], clearance: 5, speed: 2.4, bulge: .12, cast: [{ species: 'right-whale' }] },
-      { id: 'whale-shark', pass: [16, 26], depth: [-13, -7], clearance: 3.5, speed: 1.5, bulge: .2, cast: [{ species: 'whale-shark' }], riders: [3, 2] },
+      { id: 'whale', pass: [56, 76], depth: [-16, -10], clearance: 5, speed: 2.4, bulge: .12, across: -55, cast: [{ species: 'right-whale' }] },
+      { id: 'whale-shark', pass: [16, 26], depth: [-13, -7], clearance: 3.5, speed: 1.5, bulge: .2, across: -50, cast: [{ species: 'whale-shark' }], riders: [3, 2] },
       // An orca family keeps together: the bull out in front, a cow behind and her calf tucked at her flank.
       { id: 'orcas', pass: [20, 34], depth: [-15, -9], clearance: 3.5, speed: 3.2, bulge: .25, cast: [
         { species: 'orca', side: 3, back: 0 }, { species: 'orca-cow', side: -5, back: 10 }, { species: 'orca-cow', side: -10, back: 12, scale: .55, name: 'orca calf' }] }
