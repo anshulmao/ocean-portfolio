@@ -25,14 +25,14 @@ const PRELUDE_HOLD = 1, PRELUDE_DIVE = 2.4, REVEAL = 3.2;
 // all if it has been tried. Use is read from what changed (the lamp, the view, the scooter, the computer, a photo, the
 // records), so a key, a touch button and a gamepad all count. Each `try` (the welcome) and `tip` (a beat) is [keyboard, touch].
 const CONTROLS = {
-  computer: { key: 'C', name: 'Dive computer', touch: 'Computer', try: ['Press C to open your dive computer.', 'Tap the computer button to open your dive computer.'],
+  computer: { key: 'C', name: 'Dive computer', touch: 'Computer', try: ['Press C to open your dive computer.', 'Tap the computer button.'],
     tip: ['Press C to check your depth on your dive computer.', 'Tap Dive computer to check your depth.'] },
   interact: { key: 'F', name: 'Open a site', touch: 'Read it' },
-  scooter: { key: 'E', name: 'Scooter', touch: 'Scooter (hold)', try: ['Hold E to spin up your scooter.', 'Hold the scooter button to spin it up.'],
+  scooter: { key: 'E', name: 'Scooter', touch: 'Scooter (hold)', try: ['Hold E to spin up your scooter.', 'Hold the scooter button.'],
     tip: ['Hold E for the scooter: the guide speeds up too.', 'Hold the scooter button: the guide speeds up too.'] },
-  lamp: { key: 'Q', name: 'Flashlight', touch: 'Lamp', try: ['Press Q to switch your flashlight.', 'Tap the lamp button to switch your light.'],
+  lamp: { key: 'Q', name: 'Flashlight', touch: 'Lamp', try: ['Press Q to switch your flashlight.', 'Tap the lamp button.'],
     tip: ['It’s darker by the wreck. Press Q for your lamp.', 'It’s darker by the wreck. Tap the lamp button.'] },
-  view: { key: 'V', name: 'Third person view', touch: 'View', try: ['Press V to see yourself in third person.', 'Tap the view button to see yourself.'],
+  view: { key: 'V', name: 'Third person view', touch: 'View', try: ['Press V to see yourself in third person.', 'Tap the view button.'],
     tip: ['Press V to see yourself against the reef.', 'Tap the view button to see yourself against the reef.'] },
   photo: { key: 'H', name: 'Photo', touch: 'Photo',
     tip: ['Press H to take a photo.', 'Tap Photo to take a picture.'] },
