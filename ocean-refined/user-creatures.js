@@ -239,11 +239,15 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
         const distance = Math.hypot(dx, dy, dz), room = (m.navLength + other.navLength) * .35;
         if (distance > .01 && distance < room) { const push = Math.min(2, (room - distance) * 1.5) / distance; want.x += dx * push; want.z += dz * push; }
       }
-      // A diver in the way: steer off and quicken, turning harder the closer it is (fish passed within half a metre).
+      // A diver in the way: steer off and quicken, turning harder the closer it is (fish passed within half a metre)
       let flee = 0;
       if (player) {
         const dx = m.nav.x - player.x, dz = m.nav.z - player.z, distance = Math.hypot(dx, dz), room = 3 + (m.actor?.L || 1) * .4;
-        if (Math.abs(m.nav.y - player.y) < room && distance < room && distance > .01) { flee = 1 - distance / room; want.x += dx / distance * (room - distance) * 4; want.z += dz / distance * (room - distance) * 4; }
+        if (Math.abs(m.nav.y - player.y) < room && distance < room && distance > .01) {
+          flee = 1 - distance / room; want.x += dx / distance * (room - distance) * 4; want.z += dz / distance * (room - distance) * 4;
+          // and over or under the diver, whichever side it is already on (a fast fusilier could not turn wide enough).
+          want.y = m.nav.y + (m.nav.y >= player.y ? 1 : -1) * (room - distance) * 1.5;
+        }
       }
       m.navOptions.speed = g.speed * (g.pace ?? 1) * (1 + Math.max(flee * 1.5, behind * .7)); m.navOptions.turnRate = 1.3 + flee * 2.5; if (flee > .25) m.nav.next = 0;
       navigation.step(m.nav, want, dt, m.navOptions);
@@ -611,12 +615,13 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
           mill(m, g.heading, t); const x = MILL.x, z = MILL.z, yaw = MILL.yaw, speed = MILL.speed;
           mill(m, g.heading, t + .1); const rate = turnTo(yaw, MILL.yaw) / .1;
           const climb = .15 * m.w2 * Math.cos(t * m.w2 + m.p2);
-          // Over the coral, never in it: not into a formation's rock when the cloud sinks, nor under a table's plates.
+          // Over the coral, never in it: not into a formation's rock when the cloud sinks, nor under a table's plates
+          // (the map's nearest cell, and the sand right under the fish, which on a slope can lie above that cell).
           const fx = g.centre.x + m.hx * tight + x, fz = g.centre.z + m.hz * tight + z;
           // As the cloud draws in and sinks the fish face the way they are actually going, not only round their loop.
           const moved = m.at === frame - 1 && dt > 0 ? Math.hypot(fx - m.lx, fz - m.lz) / dt : 0, facing = moved > .05 ? Math.atan2(fx - m.lx, fz - m.lz) : yaw;
           m.lx = fx; m.lz = fz; m.at = frame;
-          write(k, fx, Math.max(g.centre.y - drop + m.hy * tight + .15 * Math.sin(t * m.w2 + m.p2), ground(fx, fz) + .35), fz,
+          write(k, fx, Math.max(g.centre.y - drop + m.hy * tight + .15 * Math.sin(t * m.w2 + m.p2), ground(fx, fz) + .35, floor(fx, fz) + .35), fz,
             facing, clamp(Math.atan2(climb, speed), -.3, .3), clamp(-rate * .07, -.16, .16), m.scale, m.beat);
         }
       } else if (g.kind === 'burrows') {
