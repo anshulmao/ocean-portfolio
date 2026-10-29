@@ -16,6 +16,24 @@ const ARRIVE_RADIUS = 1.6, PAN_BEAT = 3, INTRO_BEAT = 4.5, HOLD_SIGNAL = '#8ff4f
 // (world.js frameDiver), and the dive starts in first person. Underwater, the title card shows before the welcome sheet.
 // REVEAL outlasts the title card (announce.js holds a short one about 2.5 s, then fades), so the two never overlap.
 const PRELUDE_HOLD = 1, PRELUDE_DIVE = 2.4, REVEAL = 3.2;
+// The controls the tour teaches (SPEC: teaching schedule). The welcome lists PRIMER and ticks each one the visitor tries;
+// a later beat names its `teach` control once, and not at all if it has been tried. Use is read from what changed (the
+// lamp, the view, the scooter, the computer, a photo, the records), so a key, a touch button and a gamepad all count.
+// Each tip is [keyboard, touch].
+const CONTROLS = {
+  computer: { key: 'C', name: 'Dive computer', touch: 'Dive computer button',
+    tip: ['Press C to check your depth on your dive computer.', 'Tap Dive computer to check your depth.'] },
+  interact: { key: 'F', name: 'Open a site', touch: 'Read it, at a site' },
+  scooter: { key: 'E', name: 'Scooter (hold)', touch: 'Scooter button (hold)',
+    tip: ['Hold E for the scooter: the guide speeds up too.', 'Hold the scooter button: the guide speeds up too.'] },
+  lamp: { key: 'Q', name: 'Flashlight', touch: 'Lamp button',
+    tip: ['It’s darker by the wreck. Press Q for your lamp.', 'It’s darker by the wreck. Tap the lamp button.'] },
+  view: { key: 'V', name: 'First / third person', touch: 'View button',
+    tip: ['Press V to see yourself against the reef.', 'Tap the view button to see yourself against the reef.'] },
+  photo: { key: 'H', name: 'Photo', touch: 'Photo button',
+    tip: ['Press H to take a photo.', 'Tap Photo to take a picture.'] },
+};
+const PRIMER = ['computer', 'interact', 'scooter', 'lamp', 'view'];
 const motionMedia = matchMedia('(prefers-reduced-motion: reduce)'), coarse = matchMedia('(pointer: coarse)');
 // The phone layout of the layout contract (tokens.css): there the card is a bottom sheet and the copy is the short one.
 const compact = matchMedia('(max-width:599px),(pointer:coarse) and (max-height:499px)');
@@ -31,7 +49,7 @@ const card = document.createElement('section'), fade = document.createElement('d
 card.className = 'tour-card holo holo--reading'; card.setAttribute('aria-label', 'Guided dive'); card.dataset.show = 'false'; card.dataset.sheet = 'collapsed'; card.inert = true;
 card.innerHTML = '<div class="tour-progress" aria-hidden="true"><i></i></div>'
   + '<button type="button" class="tour-head" data-tour="toggle" aria-expanded="false"><span class="holo-label tour-kicker"></span><span class="holo-value tour-count"></span><i class="tour-chevron" aria-hidden="true"></i></button>'
-  + '<h2 class="tour-title"></h2><div class="tour-body"><p class="tour-lines" aria-live="polite"></p><button type="button" class="tour-more" data-tour="more" aria-expanded="false"><span>More</span></button></div><p class="tour-pace"></p>'
+  + '<h2 class="tour-title"></h2><div class="tour-body"><p class="tour-lines" aria-live="polite"></p><button type="button" class="tour-more" data-tour="more" aria-expanded="false"><span>More</span></button><ul class="tour-keys" aria-label="Controls to try" hidden></ul><p class="tour-teach" hidden></p></div><p class="tour-pace"></p>'
   + '<footer><button type="button" data-tour="pause">Pause <kbd>P</kbd></button><button type="button" data-tour="read">Read it <kbd>F</kbd></button><button type="button" data-tour="next">Next <kbd>N</kbd></button><button type="button" data-tour="rejoin">Rejoin <kbd>G</kbd></button><button type="button" data-tour="surface">Surface</button><button type="button" data-tour="explore">Keep exploring</button><button type="button" data-tour="exit">Exit tour</button></footer>';
 fade.className = 'tour-fade'; fade.setAttribute('aria-hidden', 'true');
 document.body.append(fade, card);
@@ -43,7 +61,9 @@ let open = null, more = false, shownFor = '';
 // itself) · dwell (a portfolio site; waits for Continue) · free (visitor has the controls) · done (the overview)
 let status = 'off', index = 0, arrived = -1, legTime = 0, paused = false, inputs = 0;
 let best = Infinity, stall = 0, waited = 0, cut = null, cutTime = 0, barShown = -1;
-let detours = 0, routeIssue = false, panIndex = 0, panTime = 0, stepTime = 0, prelude = -1, reveal = 0;
+let detours = 0, routeIssue = false, panIndex = 0, panTime = 0, stepTime = 0, prelude = -1, reveal = 0, keysShown = '';
+// used: the controls tried on this tour. seen: what they last read, to notice a change.
+const used = new Set(); let seen = null;
 const leg = [], goal = [0, 0, 0], look = [0, 0, 0], pans = [], from = new THREE.Vector3(), to = new THREE.Vector3(), here = new THREE.Vector3();
 const controls = () => window.oceanControls;
 const touring = () => status === 'intro' || status === 'travel' || status === 'look' || status === 'dwell';
@@ -126,6 +146,7 @@ function paint() {
   moreButton.setAttribute('aria-expanded', String(more));
   moreButton.firstChild.textContent = more ? 'Less' : 'More';
   card.dataset.more = String(small && more);
+  const tip = paintControls(step, fingers);
   // Folded, the row offers one action: the one the moment calls for.
   const primary = status === 'dwell' ? (step.landmark ? 'read' : 'next') : status === 'free' ? 'rejoin' : status === 'done' ? 'explore' : 'next';
   const show = { pause: status === 'travel' || status === 'look', read: status === 'dwell' && Boolean(step.landmark), next: touring(), rejoin: status === 'free', surface: status === 'done', explore: status === 'done', exit: touring() || status === 'free' };
@@ -133,13 +154,50 @@ function paint() {
   part('[data-tour="pause"]').firstChild.textContent = paused ? 'Resume ' : 'Pause ';
   part('[data-tour="pause"]').setAttribute('aria-pressed', String(paused));
   part('[data-tour="next"]').firstChild.textContent = status === 'travel' ? (wide ? 'Skip travel ' : 'Skip ') : status === 'intro' ? 'Start ' : 'Continue ';
-  part('.tour-pace').textContent = status === 'intro' ? (fingers ? 'Tap Start when you’re ready.' : 'Press N when you’re ready.')
+  part('.tour-pace').textContent = status === 'intro' ? (fingers ? 'Try them as we go, and tap Start when you’re ready.' : 'Try them now if you like, and press N when you’re ready.')
     : status === 'dwell' ? `${step.landmark ? (fingers ? 'Tap Read it to open it. ' : 'Press F to open it. ') : ''}Take your time. Continue when you’re ready.`
     : status === 'look' ? (paused ? 'Paused here. Resume when you’re ready.' : '')
     : status === 'travel' ? (routeIssue ? '' : paused ? 'Travel paused. Resume when you’re ready.' : 'You can skip this swim or take the controls at any time.') : '';
   setQuiet(touring() || status === 'starting');
   setBar(status === 'done' ? 1 : (index + (arrived === index ? 1 : 0)) / STEPS.length);
-  if (window.oceanDiagnostics) window.oceanDiagnostics.tour = { status, stop: index, key: step.key, kind: step.kind, arrived, paused, routeIssue, detours };
+  if (window.oceanDiagnostics) window.oceanDiagnostics.tour = { status, stop: index, key: step.key, kind: step.kind, arrived, paused, routeIssue, detours, tip };
+}
+// Notices a control in use by what it changed. The first reading of a tour is only a baseline.
+function notice(api) {
+  const now = { lamp: api.nav.lamp, view: api.nav.perspective, computer: document.body.dataset.computerOpen === 'true',
+    photos: window.oceanExpedition?.photos ?? 0, reading: Boolean(window.oceanArchive?.isOpen) };
+  if (!seen) { seen = now; return; }
+  const before = used.size;
+  if (now.lamp !== seen.lamp) used.add('lamp');
+  if (now.view !== seen.view) used.add('view');
+  if (now.computer && !seen.computer) used.add('computer');
+  if (now.photos > seen.photos) used.add('photo');
+  if (now.reading && !seen.reading) used.add('interact');
+  if (api.nav.scooter > .1) used.add('scooter');
+  seen = now;
+  if (used.size !== before) paint();
+}
+// The welcome's checklist and a beat's one tip, worded for the input in hand.
+function paintControls(step, fingers) {
+  const list = part('.tour-keys'), tip = part('.tour-teach');
+  list.hidden = status !== 'intro';
+  const shown = list.hidden ? '' : PRIMER.map(id => `${id}:${used.has(id)}`).join() + fingers;
+  if (shown && shown !== keysShown) {
+    list.replaceChildren(...PRIMER.map(id => {
+      const control = CONTROLS[id], item = document.createElement('li');
+      item.dataset.done = String(used.has(id));
+      if (fingers) item.textContent = control.touch;
+      else { const key = document.createElement('kbd'); key.textContent = control.key; item.append(key, control.name); }
+      item.setAttribute('aria-label', `${fingers ? control.touch : `${control.key}: ${control.name}`}${used.has(id) ? ', tried' : ''}`);
+      return item;
+    }));
+  }
+  keysShown = shown;
+  // The scooter is taught on the swim into its beat, where it does something; the rest once the beat is reached.
+  const id = step.teach, here = id === 'scooter' ? status === 'travel' : status === 'look' || status === 'dwell' || status === 'done';
+  const text = here && !used.has(id) ? CONTROLS[id]?.tip?.[fingers ? 1 : 0] ?? '' : '';
+  tip.hidden = !text; tip.textContent = text;
+  return text;
 }
 function setBar(value) { const rounded = Math.round(value * 250) / 250; if (rounded !== barShown) { barShown = rounded; bar.style.transform = `scaleX(${rounded})`; } }
 
@@ -215,7 +273,7 @@ export function startTour() {
   if (api.getMode() !== 'surface' && api.getMode() !== 'diver') return false;
   // From the surface the opening plays first; under water the tour starts where the diver is.
   if (api.getMode() === 'surface') { prelude = 0; document.body.dataset.prelude = 'on'; }
-  status = 'starting'; index = 0; arrived = -1; waited = 0; paused = false; framed.clear(); paint();
+  status = 'starting'; index = 0; arrived = -1; waited = 0; paused = false; framed.clear(); used.clear(); seen = null; paint();
   return true;
 }
 export const tourStatus = () => status;
@@ -252,6 +310,7 @@ function update(dt, api, state, diving) {
   }
   // Surfacing, by Space or the button, ends the tour without ceremony.
   if (!diving) { if (mode !== 'diver') stop(); return; }
+  notice(api);
   // Reading the archive or changing settings holds the tour where it is.
   if (api.nav.suspended || status === 'free') return;
   const nav = api.nav;
@@ -320,7 +379,7 @@ addEventListener('keydown', event => {
   else if (event.code === 'KeyN' && touring()) { event.preventDefault(); next(); }
   else if (event.code === 'KeyP' && (status === 'travel' || status === 'look')) { event.preventDefault(); togglePause(); }
 });
-window.oceanTour = { start: startTour, stop, rejoin, next, plan: tourPlan, get status() { return status; }, STEPS, STOPS,
+window.oceanTour = { start: startTour, stop, rejoin, next, plan: tourPlan, get status() { return status; }, STEPS, STOPS, get tried() { return [...used]; },
   // The archive asks: At a glance carries the welcome only on the tour (SPEC D6), and a site opens the page its step names.
   get welcome() { return status === 'off' ? null : WELCOME; },
   opens(id) { const step = STEPS[index]; return status !== 'off' && step.landmark === id ? step.opens ?? null : null; } };

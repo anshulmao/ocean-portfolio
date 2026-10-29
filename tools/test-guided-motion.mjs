@@ -20,7 +20,7 @@ class Element {
   addEventListener(name, fn) { const group = this.listeners.get(name) ?? new Set(); group.add(fn); this.listeners.set(name, group); }
   removeEventListener(name, fn) { this.listeners.get(name)?.delete(fn); }
   dispatchEvent(event) { for (const fn of this.listeners.get(event.type) ?? []) fn(event); }
-  setAttribute() {} focus() {} append() {}
+  setAttribute() {} focus() {} append() {} replaceChildren() {}
   querySelector(selector) { if (!this.parts.has(selector)) this.parts.set(selector, new Element()); return this.parts.get(selector); }
   querySelectorAll() { return []; }
 }
@@ -117,6 +117,35 @@ function toTravel(env) {
 
 const key = code => window.dispatchEvent({ type: 'keydown', code, repeat: false, target: { closest: () => null }, preventDefault() {} });
 const keyup = code => window.dispatchEvent({ type: 'keyup', code, target: { closest: () => null }, preventDefault() {} });
+
+// The controls: the welcome lists them and notices each one tried, by what it changed, whatever the input; a beat's tip
+// is shown once, where the control is useful, and not at all once it has been tried.
+{
+  const env = environment(60);
+  startTour(); env.tick(.5);
+  assert.equal(tourStatus(), 'intro');
+  assert.deepEqual(window.oceanTour.tried, []);
+  env.nav.setLamp(!env.nav.state.lamp); env.tick(.1);
+  env.nav.togglePerspective(); env.tick(.1);
+  document.body.dataset.computerOpen = 'true'; env.tick(.1); delete document.body.dataset.computerOpen;
+  key('KeyE'); env.tick(.6); keyup('KeyE');
+  assert.equal(tourStatus(), 'intro', 'trying the controls never hands the dive over');
+  assert.deepEqual(window.oceanTour.tried.sort(), ['computer', 'lamp', 'scooter', 'view']);
+  // Opening a site counts as F, from wherever it was opened.
+  window.oceanArchive = { isOpen: true }; env.tick(.1); window.oceanArchive = { isOpen: false };
+  assert.ok(window.oceanTour.tried.includes('interact'));
+  // The photo tip at the table coral tower, gone once a photo is taken; the computer tip is skipped, already tried.
+  window.oceanTour.next();
+  const tower = STEPS.findIndex(step => step.key === 'tower'), deep = STEPS.findIndex(step => step.key === 'deep');
+  for (let frame = 0; frame < 60 * 400 && !(env.state.tour.stop === tower && tourStatus() === 'look'); frame++) { env.tick(); if (tourStatus() === 'dwell') window.oceanTour.next(); }
+  assert.equal(env.state.tour.tip, 'Press H to take a photo.');
+  window.oceanExpedition = { photos: 1 }; env.tick(.1);
+  assert.equal(env.state.tour.tip, '', 'a tried control is not taught again');
+  for (let frame = 0; frame < 60 * 400 && !(env.state.tour.stop === deep && tourStatus() === 'look'); frame++) { env.tick(); if (tourStatus() === 'dwell') window.oceanTour.next(); }
+  assert.equal(env.state.tour.tip, '', 'the computer was tried in the welcome');
+  window.oceanTour.stop(); env.nav.destroy(); delete window.oceanExpedition; delete window.oceanArchive;
+  console.log('PASS: the welcome notices each control tried; beat tips show once and skip what was tried.');
+}
 
 // Build the production procedural reef and its collision geometry. Only the
 // decorative canvas texture is stubbed; navigation uses the real solid reef.

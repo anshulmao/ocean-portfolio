@@ -91,6 +91,14 @@ body:is([data-clear-ui="true"],[data-safety-stop="true"]) section.tour-card{visi
 .tour-card[data-state="travel"] .tour-lines{opacity:.72}
 .tour-more{display:none}
 .tour-pace{grid-area:pace;margin:10px 0 0;font-size:11px;line-height:1.5;opacity:.72}
+/* The welcome's controls, one chip each, ticked once tried; and a beat's one tip (guided-dive.js CONTROLS). */
+.tour-keys{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0;padding:0;list-style:none}
+.tour-keys li{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 5px;border:1px solid var(--holo-faint);border-radius:999px;font-size:11.5px;line-height:1.2;transition:border-color var(--journey-quick) var(--journey-ease)}
+.tour-keys kbd{padding:2px 5px;border:1px solid var(--holo-dim);border-radius:2px;font:500 9px/1 var(--holo-mono);letter-spacing:0}
+.tour-keys li[data-done="true"]{border-color:var(--signal,var(--holo))}
+.tour-keys li[data-done="true"]::after{content:"✓";margin-left:2px;color:var(--signal,var(--holo))}
+.tour-teach{margin:10px 0 0;font-size:13px;line-height:1.45;color:var(--signal,var(--holo-strong))}
+:is(.tour-keys,.tour-teach)[hidden]{display:none}
 .tour-pace:empty{display:none}
 /* Progress runs along the top edge, so it costs the sheet no height. The bar grows many times a second while a stop
    is narrated: on its own layer that is a compositor move, not a repaint of the card. */

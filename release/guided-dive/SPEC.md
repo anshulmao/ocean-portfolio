@@ -210,3 +210,15 @@ A hint the visitor has already used is skipped.
   - Underwater, the "Guided dive · Welcome to the reef" title card shows for about 3 s before the welcome sheet, while
     the camera looks around.
   - Started under water, the tour skips the surface part.
+- **Phase 4: the controls (done).**
+  - The welcome card lists C (dive computer), F (open a site), E (scooter, hold), Q (flashlight) and V (first/third
+    person) as chips. Each chip ticks once it's tried.
+  - Use is noticed by what changed: the lamp, the view, the scooter spooling, the computer opening, the records
+    opening, a photo. Keys, touch buttons and a gamepad all count, and on touch the chips name the buttons instead.
+  - Later beats teach one control each, worded for the input in hand, and skip it if it's been tried:
+    - H (photo) at the table coral tower
+    - Q (lamp) at the wreck
+    - E (scooter) on the swim into the bait ball, where it speeds up the guide
+    - C (computer) on the deep shelf
+    - V (view) at the overview
+  - Trying a control never hands the dive over.
