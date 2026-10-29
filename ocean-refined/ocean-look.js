@@ -10,6 +10,8 @@ export const look = {
   uLookLight: { value: 1 },
   uLookDepth: { value: 0 },
   uLookBrightness: { value: 0 },
+  // Water clarity (settings: waterClarity / 100): the haze is worked out over the distance divided by it, so 1.25 sees 25% further.
+  uLookClarity: { value: 1 },
   uLookSun: { value: new THREE.Vector3(0, 1, 0) }
 };
 
@@ -101,7 +103,7 @@ export function lookGlowAt(point, target) {
 }
 
 const lookShared = glow => /* glsl */ `
-uniform float uLookTime; uniform float uLookUnder; uniform float uLookLight; uniform float uLookDepth; uniform float uLookBrightness; uniform vec3 uLookSun;
+uniform float uLookTime; uniform float uLookUnder; uniform float uLookLight; uniform float uLookDepth; uniform float uLookBrightness; uniform float uLookClarity; uniform vec3 uLookSun;
 varying vec4 vLookAbsorb; varying vec3 vLookHaze; varying vec3 vLookCausticUv;${glow === 'vertex' ? ' varying vec3 vLookGlow;' : ''}`;
 
 // Water colour changes slowly across a surface, so absorption, haze and the
@@ -120,9 +122,9 @@ lookWorldPosition = instanceMatrix * lookWorldPosition;
 #endif
 vec3 lookWorld = (modelMatrix * lookWorldPosition).xyz;
 vec3 lookRay = lookWorld - cameraPosition;
-float lookRange = length(lookRay);
-float lookScatter = 1.0 - exp(-lookRange * mix(.021, .034, uLookDepth));
-vLookAbsorb = vec4(exp(-lookRange * vec3(.038, .011, .008)) * (1.0 - lookScatter), exp(min(lookWorld.y, 0.0) * .04));
+float lookRange = length(lookRay), lookHazeRange = lookRange / max(uLookClarity, .25);
+float lookScatter = 1.0 - exp(-lookHazeRange * mix(.021, .034, uLookDepth));
+vLookAbsorb = vec4(exp(-lookHazeRange * vec3(.038, .011, .008)) * (1.0 - lookScatter), exp(min(lookWorld.y, 0.0) * .04));
 vLookHaze = oceanBackdrop(lookRay / max(lookRange, .0001), uLookSun, uLookLight, uLookDepth) * lookScatter;
 // z: how wet the point is; the underwater look fades in across the surface.
 vLookCausticUv = vec3((lookWorld.xz - uLookSun.xz * (lookWorld.y / max(uLookSun.y, .35))) * .11, uLookUnder * (1.0 - smoothstep(-.2, .6, lookWorld.y)));${glow === 'vertex' ? `

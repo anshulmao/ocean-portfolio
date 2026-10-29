@@ -18,9 +18,9 @@ import { toDisplayDepth } from './depth-metrics.js';
 //   teach    the control this beat introduces.
 //   encounter  an animal this beat calls in on its own course (user-creatures.js begin): `course` sets the line of its
 //            pass. A pan subject { visitor: id } is that animal, followed as it swims.
-// The whale shark's course (SPEC D4): east to west and back is along the deep shelf, never in over the shallows. Its line
-// lies 10 m to seaward of the diver (side 1 at angle π/2 puts it at lower z), 18 m above them, and it starts 14 m short of
-// its closest approach so it arrives during the beat.
+// The whale shark's course (SPEC D4): east to west is along the deep shelf, never in over the shallows. Its line lies 10 m
+// in front of the diver as they face back up the reef (side -1 at angle π/2 puts it at higher z, still over 50 m of
+// water), 18 m above them, and it starts 14 m short of its closest approach so it arrives during the beat.
 // Copy is a signpost, not a summary: one short line, two at most. The portfolio itself lives in the archive.
 export const SPEED = 3.6, BEAT = 6;
 // Seconds a look beat lasts before the tour moves on.
@@ -51,13 +51,23 @@ export const STEPS = [
   { key: 'wreck-life', kind: 'look', at: [22, -18, -48], place: 'Around the wreck',
     title: 'Life on the wreck', line: 'A barracuda keeps watch here, and fish shelter in the hull.',
     pan: [[18, -24, -39], [27, -19, -35]] },
+  // Down the gully from the wreck and through the limestone arch (reef.js: the arch at 20, -72), then out over the lantern garden.
+  // Over the cliff edge first (a straight drop skims it), then about 3 m off the gully floor, under the roof (clear to -48 m),
+  // so the route holds for seabed clearances up to 2.2 m.
+  { key: 'arch', kind: 'look', at: [20, -51.6, -79], via: [[23, -24, -52.5], [24.5, -35, -56], [25, -40.5, -58.5], [21, -43.5, -60], [20, -46.4, -62.6], [20, -49, -66], [20, -51, -70]],
+    place: `The arch · ${depth(-52)}`, title: 'Through the arch', line: 'A limestone arch over the drop-off. Look back the way you came.',
+    pan: [[20, -49, -71], [20, -38, -58]], beat: 5 },
+  { key: 'lantern', kind: 'look', at: [15, -52, -82], place: `The lantern garden · ${depth(-52)}`,
+    title: 'The lantern garden', line: 'Sea pens, tube anemones and glowing bulbs light up the deep shelf.',
+    pan: [[8, -55, -86], [2, -54, -91]] },
   { key: 'bait-ball', kind: 'look', at: [40, -27, -75], via: [[48, -27.8, -67]], teach: 'scooter', place: `The bait ball · ${depth(-28)}`,
     title: 'Through the bait ball', line: 'Thousands of fry turning as one. They open a tunnel around you.',
     pan: [[48, -27.8, -67], [50, -38, -72]] },
-  { key: 'deep', kind: 'look', at: [8, -46, -70], teach: 'computer', place: `The deep shelf · ${depth(-46)}`,
+  // Down beside the soft coral spire, which the bait ball turns over, facing back up the reef to the wreck and the light.
+  { key: 'deep', kind: 'look', at: [40, -46, -80], teach: 'computer', place: `Beside the spire · ${depth(-46)}`,
     title: 'Look up', line: `About ${depth(-46)} down. The reef you swam over is up there in the light, and there’s life above.`,
-    encounter: { id: 'whale-shark', course: { angle: Math.PI / 2, side: 1, pass: 10, y: -28, ahead: 14 } },
-    pan: [[10, -24, -30], { visitor: 'whale-shark' }, [-6, -20, -44]], beat: 5 },
+    encounter: { id: 'whale-shark', course: { angle: Math.PI / 2, side: -1, pass: 10, y: -28, ahead: 14 } },
+    pan: [[20, -20, -42], { visitor: 'whale-shark' }, [50, -40, -72]], beat: 5 },
   { key: 'projects', kind: 'stop', landmark: 'projects', place: `Projects · The Treasure · ${depth(-45)}`, signal: '#c9a2ff',
     title: 'The treasure', line: 'This is where you’ll find my projects.' },
   { key: 'overview', kind: 'end', at: [-44, -12, -36], via: [[-38, -34, -64], [-47, -22, -50]], speed: 2.8, teach: 'view', place: 'Above the reef', signal: '#ff9d8a',
