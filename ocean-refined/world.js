@@ -1,4 +1,5 @@
 import { createExperienceMetrics } from './experience-performance.js';
+import { markerBox } from './look-indicator.js';
 import { createWaterlineSplash } from './waterline-splash.js';
 import { toDisplayDepth, DISPLAY_MAX_DEPTH } from './depth-metrics.js';
 import {createDiveScooter} from './scooter.js';
@@ -685,14 +686,16 @@ function updateBubbles(underwater){
 }
 // A reef label stands aside for the guided dive's own interface: the clear-screen button, the tour sheet and the
 // look-there marker. Their boxes are read a few times a second, not every frame.
-const KEEP_OUT='#clear-ui-toggle:not([hidden]),section.tour-card[data-show="true"],.look-there[data-show="true"] span,.look-there[data-show="true"] i';
+// The look-there marker moves every frame, so its box comes straight from look-indicator.js rather than this cache.
+const KEEP_OUT='#clear-ui-toggle:not([hidden]),section.tour-card[data-show="true"]';
 let keepOut=[],keepOutAt=-1;
 function keptOut(x,y){
   const now=performance.now();
   if(now-keepOutAt>250){keepOutAt=now;keepOut=[];for(const el of document.querySelectorAll(KEEP_OUT)){const r=el.getBoundingClientRect();if(r.width&&r.height)keepOut.push(r);}}
   // A label is centred over its point and stands above it: about 150 px wide and 44 px tall at most.
   for(const r of keepOut)if(x+75>r.left&&x-75<r.right&&y>r.top&&y-44<r.bottom)return true;
-  return false;
+  const marker=markerBox();
+  return Boolean(marker)&&x+75>marker[0]&&x-75<marker[2]&&y>marker[1]&&y-44<marker[3];
 }
 function labelVisible(worldPosition,item,alpha,padding=35){
   let shown=alpha>0;
