@@ -7,6 +7,10 @@ weather clear, frame loop paused and the world stepped by hand, desktop 960x600 
 - `bluer-up.jpg`: the same place looking 35 degrees higher, interface hidden
 - `bluer-under.jpg`: six metres down, looking up at the underside and Snell's window
 - `bluer-phone.jpg`: the surface on a 390x844 phone at 12:30
+- `clouds-surface.jpg`, `clouds-up.jpg`, `clouds-under.jpg`: the same views, before and after varied clouds
+  (before is the blue-sky build; both with `--seed 3`)
+- `clouds-visits.jpg`: six visits (`--seed 1` to `6`) at 12:30, looking up
+- `clouds-over-time.jpg`: one visit (`--seed 4`) at 12:30, then 5 and 10 minutes later with the clock held (`--evolve 600`)
 
 Regenerate (after `npm run build`; the "before" run serves a copy of the main build):
 

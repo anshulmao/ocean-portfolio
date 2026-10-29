@@ -87,6 +87,17 @@ export function weatherUniforms(uniforms) {
   uniforms.uWind ??= { value: new THREE.Vector2(-.885, -.466) };
   uniforms.uCloudDrift ??= { value: new THREE.Vector2() };
   uniforms.uCloudOffset ??= { value: new THREE.Vector2() }; // metres, read by the cumulus field
+  // Cloud variety (see skyDetail). cloudVisit holds what each visit draws; weather.js turns it, with the drift, into
+  // the uniforms below once a frame so the dome does not. uCumulus, uCirrus: the cumulus and cirrus fields' texture
+  // coordinates from the ray's projection onto the cloud plane, as a 2x2 matrix (xy, zw: its columns); uCloudShift:
+  // their offsets (xy, zw). Shape: mip bias of the cumulus field, cirrus amount, coverage bias. Climate: offset of the
+  // coverage field.
+  uniforms.cloudVisit ??= { value: { turn: 0, offset: new THREE.Vector2(), scale: .025, streak: 0, cirrusOffset: new THREE.Vector2() } };
+  uniforms.uCumulus ??= { value: new THREE.Vector4(.06, 0, 0, .06) };
+  uniforms.uCirrus ??= { value: new THREE.Vector4(.0072, 0, .0036, .138) };
+  uniforms.uCloudShift ??= { value: new THREE.Vector4() };
+  uniforms.uCloudShape ??= { value: new THREE.Vector4(0, 1, 0, 0) };
+  uniforms.uCloudClimate ??= { value: new THREE.Vector2() };
   uniforms.uFlash ??= { value: new THREE.Vector4(0, .4, -1, 0) };
   uniforms.uDeckLow ??= { value: new THREE.Vector3(.6, .65, .68) };
   uniforms.uDeckHigh ??= { value: new THREE.Vector3(.52, .57, .62) };
@@ -152,6 +163,11 @@ uniform float uSeaTime;
 uniform vec2 uSeaFocus;
 uniform vec2 uWind;
 uniform vec2 uCloudDrift;
+uniform vec4 uCumulus;
+uniform vec4 uCirrus;
+uniform vec4 uCloudShift;
+uniform vec4 uCloudShape;
+uniform vec2 uCloudClimate;
 uniform vec4 uFlash;
 uniform vec3 uDeckLow;
 uniform vec3 uDeckHigh;
@@ -202,18 +218,32 @@ vec2 skyUv(vec3 ray) {
   return vec2(p.x+p.y,p.x-p.y)*${(.5 - .5 / SKY_MAP).toFixed(6)}+.5;
 }
 vec3 skyBase(vec3 ray) { vec3 c=textureLod(uSkyMap,skyUv(ray),0.0).rgb; return c*c*4.0; }
+// The baked colour, and in w the cloud climate baked with it.
+vec4 skyBaked(vec3 ray) { vec4 c=textureLod(uSkyMap,skyUv(ray),0.0); return vec4(c.rgb*c.rgb*4.0,c.a); }
 vec3 skySun(vec3 color,vec3 ray) {
   return mix(color,vec3(3.8,2.5,1.05),smoothstep(.99966,.99978,dot(ray,uSun))*(1.0-uNight)*(1.0-smoothstep(.12,.62,uWeather.w)));
 }
-vec3 skyDetail(vec3 color,vec3 ray) {
+// Where cumulus gathers on the sky just now, 0 (a few scattered puffs) to 1 (a bank): a broad field with its own slow
+// drift (uCloudClimate) and a coverage that wanders over the visit (uCloudShape.z). It only varies over tens of degrees,
+// so it is worked out in the bake and carried in the baked map's alpha: the dome reads it with the sky colour, free.
+float cloudClimate(vec3 ray) {
+  vec2 c=ray.xz/max(ray.y,.06)*.0192+uCloudClimate;
+  float n=textureLod(uNoiseMap,c,0.0).a*.7+textureLod(uNoiseMap,c*2.3+vec2(.37,.61),0.0).r*.3;
+  return smoothstep(.45,.70,n+uCloudShape.z);
+}
+// climate: cloudClimate() for this ray, from the baked map.
+vec3 skyDetail(vec3 color,vec3 ray,float climate) {
   float over=uWeather.w,open=1.0-over,twilight=(1.0-smoothstep(.02,.32,abs(uSun.y)));
   if(ray.y>.005 && (uNight<.999 || over>.001)) {
-    vec2 p=ray.xz/max(ray.y,.035)*2.4+uCloudDrift;
+    vec2 base=ray.xz/max(ray.y,.035),p=base*2.4+uCloudDrift;
     float lod=max(0.0,log2(.031/(ray.y*ray.y))-.5),lift=smoothstep(.025,.13,ray.y);
-    vec4 field=textureLod(uNoiseMap,p*.025,lod);
-    // The same field thickens from scattered cumulus into a closed deck as the weather builds.
-    float cloud=smoothstep(.60-over*.44,.78-over*.40,field.r)*lift*mix(.20,.94,over);
-    float shade=field.g;
+    // Each visit turns, shifts and scales the cumulus field its own way; the wind still carries it (uCumulus, uCloudShift).
+    vec4 field=textureLod(uNoiseMap,mat2(uCumulus)*base+uCloudShift.xy,max(0.0,lod+uCloudShape.x));
+    // Where the climate is low only the highest tops of the field show, as small scattered cumulus; where it is high they
+    // merge into larger, denser clouds with grey cores. Weather closes all of it into one deck.
+    float threshold=mix(mix(.64,.47,climate),.16,over),soft=mix(mix(.08,.17,climate),.22,over);
+    float cloud=smoothstep(threshold,threshold+soft,field.r)*lift*mix(mix(.30,.72,climate),.94,over);
+    float shade=field.g*(1.0-.3*climate*smoothstep(threshold+.08,threshold+.28,field.r)*open);
     vec3 cloudColor=mix(vec3(.63,.77,.83),vec3(1.0,.96,.85),smoothstep(.40,.68,shade));
     cloudColor=mix(cloudColor,vec3(.077,.105,.18)+shade*.05,uNight);
     cloudColor=mix(cloudColor,mix(vec3(.52,.22,.32),vec3(1.0,.67,.38),shade),twilight*.68);
@@ -223,9 +253,10 @@ vec3 skyDetail(vec3 color,vec3 ray) {
     if(uWeather.z>.01)color*=1.0-uWeather.z*.36*lift*smoothstep(.36,.62,textureLod(uNoiseMap,p*.0055+uCloudDrift*.004,max(0.0,lod-2.0)).a);
     // The sun's glow is baked beneath this layer; it shines through cloud, so the covered share is put back.
     color+=sunHalo(ray)*cover;
-    // Thin high cirrus, distinct from the lower cumulus field; hidden above the deck.
+    // Thin high cirrus, distinct from the lower cumulus field; hidden above the deck. It is higher, so it moves slower
+    // across the sky; its streaks lie along a direction of each visit's own, and it is thickest in the clear gaps.
     if(open>.01&&uNight<.999){
-      float cirrus=pow(textureLod(uNoiseMap,vec2(p.x*.12+p.y*.06,p.y*2.3)*.03125,lod+1.2).b,4.0)*.38;
+      float cirrus=pow(textureLod(uNoiseMap,mat2(uCirrus)*base+uCloudShift.zw,lod+1.2).b,4.0)*.38*uCloudShape.y*(1.0-.55*climate);
       color=mix(color,mix(vec3(.96,.95,.89),vec3(.11,.15,.22),uNight),cirrus*smoothstep(.1,.5,ray.y)*(1.0-uNight)*open);
     }
   }
@@ -264,11 +295,13 @@ varying vec3 vRay;
 void main(){
   vec3 rd=normalize(vRay);
   #if defined(SKY_ABOVE)
-  vec3 color=skyDetail(skyBase(rd),rd);
+  vec4 baked=skyBaked(rd);
+  vec3 color=skyDetail(baked.rgb,rd,baked.a);
   #elif defined(SKY_BELOW)
   vec3 color=oceanBackdrop(rd,uLookSun,uSurfaceLight,uDepth);
   #else
-  vec3 color=mix(skyDetail(skyBase(rd),rd),oceanBackdrop(rd,uLookSun,uSurfaceLight,uDepth),uDive);
+  vec4 baked=skyBaked(rd);
+  vec3 color=mix(skyDetail(baked.rgb,rd,baked.a),oceanBackdrop(rd,uLookSun,uSurfaceLight,uDepth),uDive);
   #endif
   gl_FragColor=vec4(color,1.0);
   #include <tonemapping_fragment>
@@ -283,7 +316,7 @@ void main(){
   vec2 t=(gl_FragCoord.xy-.5)/${(SKY_MAP - 1).toFixed(1)}*2.0-1.0;
   vec2 p=vec2(t.x+t.y,t.x-t.y)*.5;
   vec3 ray=normalize(vec3(p.x,max(1.0-abs(p.x)-abs(p.y),0.0),p.y));
-  gl_FragColor=vec4(sqrt(max(skySmooth(ray),0.0)*.25),1.0);
+  gl_FragColor=vec4(sqrt(max(skySmooth(ray),0.0)*.25),cloudClimate(ray));
 }
 `;
 
