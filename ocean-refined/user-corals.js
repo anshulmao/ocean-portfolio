@@ -92,8 +92,10 @@ export function createUserCorals({terrainHeightAt,collisions,economy=false}={}){
         const anchors=patches[species.zone]??[],[minDepth,maxDepth]=ZONES[species.zone]??ZONES.mid;
         for(let i=0;i<target;i++){
           let placed=false;
-          for(let attempt=0;attempt<100&&!placed&&anchors.length;attempt++){
-            const anchor=anchors[(i+Math.floor(attempt/25))%anchors.length],angle=rng()*Math.PI*2,radius=Math.sqrt(rng())*7;
+          // A garden that has filled up spreads: tries further out round each of its anchors in turn, in the same depth
+          // band, rather than giving the colony up (with the keep-outs, the mid gardens came up a sixth short).
+          for(let attempt=0;attempt<320&&!placed&&anchors.length;attempt++){
+            const anchor=anchors[(i+Math.floor(attempt/40))%anchors.length],angle=rng()*Math.PI*2,radius=Math.sqrt(rng())*(7+6*Math.min(1,attempt/160));
             const x=anchor.x+Math.cos(angle)*radius,z=anchor.z+Math.sin(angle)*radius,height=floor(x,z),depth=-height;
             // The files are already at the site's scale (widthMetres): colonies vary around it rather than growing past it.
             const scale=.7+rng()*.45;

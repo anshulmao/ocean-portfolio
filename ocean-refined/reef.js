@@ -568,8 +568,7 @@ export function* reefSteps({ economy = false } = {}) {
     }
   }
 
-  function seaFan(origin, scale, color) {
-    const angle = random() * Math.PI;
+  function seaFan(origin, scale, color, angle = random() * Math.PI) {
     const rotation = new THREE.Quaternion().setFromEuler(new THREE.Euler(.07, angle, -.12 + random() * .24));
     fans.add(origin, [scale, scale * 1.25, scale], rotation, color);
   }
@@ -595,13 +594,21 @@ export function* reefSteps({ economy = false } = {}) {
     for (let r = 0; r < rockCount; r++) {
       const angle = random() * TAU, distance = random() * size * 1.9;
       const s = size * (.55 + random() * .85);
-      const x = cx + Math.cos(angle) * distance, z = cz + Math.sin(angle) * distance;
+      let x = cx + Math.cos(angle) * distance, z = cz + Math.sin(angle) * distance;
       if(grottoSites.some(([ax,az,,length])=>Math.abs(x-ax)<3.5+s*2&&Math.abs(z-az)<length+2+s*2))continue;
       // (The same draws from random(), in the same order, as when they were written in the call.)
-      const y = terrainHeightAt(x, z) + s * .24, height = s * (.45 + random() * .25), rotation = [random() * .3, random() * TAU, random() * .3];
+      let y = terrainHeightAt(x, z) + s * .24;
+      const height = s * (.45 + random() * .25), rotation = [random() * .3, random() * TAU, random() * .3];
       const stone = { x, y, z, rx: s * 1.25, ry: height, rz: s, reach: s * 1.6, inverse: new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation)).invert() };
-      // Nor over a coral a neighbouring colony has already planted (it would be buried in the rock).
-      if (planted.some(p => Math.abs(p.x - x) < stone.reach + p.reach && Math.abs(p.z - z) < stone.reach + p.reach && [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([u, v]) => stoneTop(stone, p.x + u * p.reach, p.z + v * p.reach) > p.y + .3))) continue;
+      // Nor over a coral a neighbouring colony has already planted (it would be buried in the rock): the rock moves out
+      // from that coral, up to 4 m, keeping its own height above the sand where it comes to rest.
+      const buries = () => planted.find(p => Math.abs(p.x - stone.x) < stone.reach + p.reach && Math.abs(p.z - stone.z) < stone.reach + p.reach && [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([u, v]) => stoneTop(stone, p.x + u * p.reach, p.z + v * p.reach) > p.y + .3));
+      for (let step = 0, coral; step < 8 && (coral = buries()); step++) {
+        const away = Math.hypot(stone.x - coral.x, stone.z - coral.z) || 1;
+        stone.x += (stone.x - coral.x) / away * .5; stone.z += (stone.z - coral.z) / away * .5; stone.y = terrainHeightAt(stone.x, stone.z) + s * .24;
+      }
+      if (buries() || grottoSites.some(([ax,az,,length])=>Math.abs(stone.x-ax)<3.5+s*2&&Math.abs(stone.z-az)<length+2+s*2)) continue;
+      x = stone.x; z = stone.z; y = stone.y;
       rocks.add(new THREE.Vector3(x, y, z), [s * 1.25, height, s], rotation, r % 3 ? '#7688a2' : '#99a9ba');
       stones.push(stone);
     }
@@ -634,8 +641,15 @@ export function* reefSteps({ economy = false } = {}) {
       } else if (type === 2) {
         // A fan is a half disc standing on its diameter, as wide as it is tall, whose foot starts 0.16 of its size up:
         // set it down so that foot meets the sand, and on a slope reaches the lower side.
-        const size = plantScale * .88, low = Math.min(ground(x + size, z), ground(x - size, z), ground(x, z + size), ground(x, z - size));
-        seaFan(origin.clone().setY(Math.min(origin.y, low - .04) - size * .2), size, color);
+        // Its foot runs along its own facing (the angle, drawn here as seaFan would draw it): set down so the lower end
+        // of the foot meets the ground, sand or rock.
+        // Where the foot would straddle a drop (a rim), it moves to the nearest spot within 4 m where it does not.
+        const size = plantScale * .88, angle = random() * Math.PI, ux = Math.cos(angle) * size * .9, uz = -Math.sin(angle) * size * .9;
+        const drop = (px, pz) => Math.abs(ground(px + ux, pz + uz) - ground(px - ux, pz - uz));
+        let fx = x, fz = z;
+        for (let d = .5; d <= 4 && drop(fx, fz) > size * .35; d += .5) for (let k = 0; k < 8; k++) { const px = x + Math.cos(k * Math.PI / 4) * d, pz = z + Math.sin(k * Math.PI / 4) * d; if (drop(px, pz) <= size * .35) { fx = px; fz = pz; break; } }
+        const foot = Math.min(ground(fx, fz) - .06, ground(fx + ux, fz + uz), ground(fx - ux, fz - uz)) - .04;
+        seaFan(new THREE.Vector3(fx, foot - size * .16, fz), size, color, angle);
       }
       else if (type === 3) brains.add(origin.clone().add(new THREE.Vector3(0, plantScale * .32, 0)), [plantScale * .7, plantScale * .5, plantScale * .65], [0, random() * TAU, .05], index % 2 ? '#d0bc7c' : '#8ebba7');
       else if (type === 4) {

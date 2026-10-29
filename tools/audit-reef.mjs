@@ -272,7 +272,7 @@ async function auditCreatures({seconds, rate, player, spawn, label, until = 0, c
     }
     s.shallow = Math.min(s.shallow, -floor(x, z)); if (s.shallow === -floor(x, z)) s.shallowWhere = at(x, y, z);
     if (!last) return;
-    const vx = (x - last.x) / dt, vz = (z - last.z) / dt, speed = Math.hypot(vx, vz); s.distance += speed * dt;
+    const vx = (x - last.x) / dt, vz = (z - last.z) / dt, speed = Math.hypot(vx, vz), moving = Math.hypot(vx, (y - last.y) / dt, vz); s.distance += speed * dt;
     // Which way it moves against which way it faces (horizontal), once it is moving at all.
     if (speed > Math.max(.2, length * .12)) {
       s.moving++; const off = Math.abs(Math.atan2(Math.sin(Math.atan2(vx, vz) - yaw), Math.cos(Math.atan2(vx, vz) - yaw)));
@@ -283,7 +283,8 @@ async function auditCreatures({seconds, rate, player, spawn, label, until = 0, c
     const turn = Math.atan2(Math.sin(yaw - last.yaw), Math.cos(yaw - last.yaw)) / dt;
     if (roll !== null && Math.abs(turn) > .25 && Math.abs(roll) > .02) { s.turnSamples++; if (Math.sign(roll) === Math.sign(turn)) s.wrongBank++; }
     // The clip matches the motion: no resting clip on the move, no stroke while lying still.
-    if (clip && ((/rest|breathe|sway/.test(clip) && speed > .6) || (/swim|fast/.test(clip) && speed < .02 && !bottom))) { s.clipMismatch++; s.clipWhere = `${clip} at ${round(speed)} m/s`; s.clipRun = (s.clipRun || 0) + dt; s.clipLongest = Math.max(s.clipLongest || 0, s.clipRun); }
+    // (Rising or sinking counts as swimming here: a ray pulling up over a coral head moves vertically.)
+    if (clip && ((/rest|breathe|sway/.test(clip) && moving > .6) || (/swim|fast/.test(clip) && moving < .02 && !bottom))) { s.clipMismatch++; s.clipWhere = `${clip} at ${round(moving)} m/s`; s.clipRun = (s.clipRun || 0) + dt; s.clipLongest = Math.max(s.clipLongest || 0, s.clipRun); }
     else s.clipRun = 0;
   }
   // Instanced fish, read back from their meshes in the order the groups were packed.

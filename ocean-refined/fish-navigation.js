@@ -83,7 +83,8 @@ export function fishNavigator(heightAt) {
     if (recover) targetY = Math.min(ceiling, Math.max(targetY, floor + .05));
     // Climbing out of the floor footprint answers at once; ordinary depth changes ease like the pace does.
     // (A blocked swimmer's pace eases toward zero but never quite reaches it, so `rise` is tested first.)
-    const vyWant = rise && s.blocked && !recover ? clamp((ceiling - s.y) * 1.2, 0, speed * climb) : travel > 0 || recover ? clamp((targetY - s.y) * 1.2, -speed * climb, speed * climb) : 0;
+    // (Nor while a step ahead is refused as it turns toward a clear course: it pulls up instead of stopping dead.)
+    const vyWant = rise && (s.blocked || travel === 0) && !recover ? clamp((ceiling - s.y) * 1.2, 0, speed * climb) : travel > 0 || recover ? clamp((targetY - s.y) * 1.2, -speed * climb, speed * climb) : 0;
     const vy = recover ? vyWant : (s.vy ?? 0) + (vyWant - (s.vy ?? 0)) * ease(3);
     s.vx = (x - s.x) / dt; s.vz = (z - s.z) / dt; s.vy = vy;
     s.x = x; s.z = z; s.y += vy * dt;
