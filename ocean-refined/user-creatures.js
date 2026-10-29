@@ -79,6 +79,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   }
   const ground = (x, z) => hard[clamp(Math.round(z - GZ), 0, GH - 1) * GW + clamp(Math.round(x - GX), 0, GW - 1)];
   const navigation = fishNavigator(cover);
+  const resting = {};
   const solid = (x, z) => ground(x, z) > floor(x, z) + .25;
   /** Open, fairly level sand near a wished-for spot: for the animals that lie on the bottom. */
   function sand(x, z, radius = 2) {
@@ -330,7 +331,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       spotted.push({ actor: a, from: a.pos.clone(), to: a.pos.clone(), go: 0, yaw: a.yaw });
     }
     const n = RESIDENTS.sleeper;
-    if (gltfs.has(n.species)) { const a = actor(n.species, { clip: 'rest' }); if (a) { const [x, z] = sand(...n.near, 3.5); a.pos.set(x, floor(x, z) + .45, z); a.yaw = rr(0, TAU); a.started = true; a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(0, a.yaw, 0, 'YXZ'); } }
+    if (gltfs.has(n.species)) { const a = actor(n.species, { clip: 'rest' }); if (a) { const [x, z] = sand(...n.near, 3.5); a.pos.set(x, floor(x, z) + .45, z); resting.sleeper = a.pos.toArray(); a.yaw = rr(0, TAU); a.started = true; a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(0, a.yaw, 0, 'YXZ'); } }
     const g = RESIDENTS.sentinel, wreck = landmark(g.landmark) || { x: 18, y: -23, z: -39 };
     if (gltfs.has(g.species)) { const a = actor(g.species, { clip: 'swim' }); if (a) { sentinel = { actor: a, home: new THREE.Vector3(wreck.x + g.offset[0], wreck.y + g.offset[1], wreck.z + g.offset[2]), drift: rr(0, TAU), dart: 0, calm: 0, away: new THREE.Vector3(), phase: rr(0, TAU), turn: Math.random() < .5 ? 1 : -1, hover: 0, cruise: rr(8, 14) }; a.pos.copy(sentinel.home); a.pos.x += Math.cos(sentinel.phase) * g.patrol[0]; a.pos.z += Math.sin(sentinel.phase) * g.patrol[1]; a.started = true; a.ease = 1.2; } }
     // Dens: at the foot of a formation, looking out from it, the rest of the body inside the rock.
@@ -580,5 +581,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     /** Move an encounter under way to a point of its pass (0..1; .5 is its closest approach). */
     seek(id, u) { const e = casts.get(id); if (!e?.path) return false; e.u = u; for (const c of e.cast) c.actor.started = false; for (const r of e.riders) r.actor.started = false; return true; }
   };
-  return { root, load, update, diagnostics, sites: sitesNow, debug };
+  // Where a resident that stays put actually settled (sand() can move it well away from its wished-for spot): the guided dive frames it from here.
+  const residentAt = id => resting[id] ?? null;
+  return { root, load, update, diagnostics, sites: sitesNow, debug, residentAt };
 }

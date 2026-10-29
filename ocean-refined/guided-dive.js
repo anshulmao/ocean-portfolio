@@ -2,16 +2,16 @@ import * as THREE from './vendor/three.module.min.js';
 import { LANDMARKS, terrainHeightAt } from './reef.js';
 import { onFrame, setQuiet, discover, say } from './journey.js';
 import { planGuidedRoute } from './guided-route.js';
-import { STEPS, SPEED, WELCOME } from './guided-script.js';
+import { STEPS, SPEED, BEAT, WELCOME, holdOf } from './guided-script.js';
 
 // The guided dive runs the steps in guided-script.js. Each leg is a scripted route, not a camera path: it hands
 // waypoints to the same autopilot the atlas uses, so the diver still collides and still routes over terrain. The
 // visitor keeps the view (free look: the mouse, a drag, the arrow keys and a look stick only look), and any input
 // that swims takes the controls straight back.
-export { STEPS };
+export { STEPS, holdOf };
 // The portfolio sites among the steps: the tour's three stories.
 export const STOPS = STEPS.filter(step => step.kind === 'stop');
-const ARRIVE_RADIUS = 1.6, PAN_BEAT = 3, INTRO_BEAT = 2.6, HOLD_SIGNAL = '#8ff4ff';
+const ARRIVE_RADIUS = 1.6, PAN_BEAT = 3, INTRO_BEAT = 4.5, HOLD_SIGNAL = '#8ff4ff';
 const motionMedia = matchMedia('(prefers-reduced-motion: reduce)'), coarse = matchMedia('(pointer: coarse)');
 // The phone layout of the layout contract (tokens.css): there the card is a bottom sheet and the copy is the short one.
 const compact = matchMedia('(max-width:599px),(pointer:coarse) and (max-height:499px)');
@@ -48,8 +48,32 @@ function landmarkOf(step) {
   const placed = controls()?.landmarks?.find(item => item.id === step.landmark);
   return placed && (window.oceanDiagnostics?.landmarksReady || window.oceanDiagnostics?.landmarksSettled) ? placed : null;
 }
+// An animal that lies still is framed from where it actually settled: the open spot a few metres from it, with a
+// clear line of sight, nearest to where the tour comes from. Worked out once a tour; null until the creatures load.
+const framed = new Map();
+function frame(step) {
+  if (framed.has(step.resident)) return framed.get(step.resident);
+  const at = controls()?.residentAt?.(step.resident); if (!at) return null;
+  const before = [0, 0, 0], eye = [at[0], at[1] + 1.2, at[2]], prior = STEPS[STEPS.indexOf(step) - 1];
+  if (prior) resolve(prior, before, [0, 0, 0]);
+  // The closest ring that has a clear spot wins, and a spot never crowds a landmark's model.
+  const models = (controls()?.landmarks ?? LANDMARKS).map(item => item.position);
+  let best = null, nearest = Infinity;
+  for (const radius of [5, 6.5, 8]) {
+    for (let k = 0; k < 16; k++) {
+      const angle = k / 16 * Math.PI * 2, x = at[0] + Math.cos(angle) * radius, z = at[2] + Math.sin(angle) * radius;
+      const point = [x, Math.max(terrainHeightAt(x, z) + 2.5, at[1] + 2.5), z], d = from.fromArray(point).distanceTo(to.fromArray(before));
+      if (d < nearest && !models.some(model => Math.hypot(model[0] - x, model[2] - z) < 6) && clear(point, eye)) { nearest = d; best = point; }
+    }
+    if (best) break;
+  }
+  const result = best && { point: best, subject: at };
+  framed.set(step.resident, result); return result;
+}
 // Where a step swims to, and the subject it turns to on arrival.
 function resolve(step, target = goal, subject = look) {
+  const resident = step.resident && frame(step);
+  if (resident) { target.splice(0, 3, ...resident.point); subject.splice(0, 3, ...resident.subject); return true; }
   if (!step.landmark) { target.splice(0, 3, ...step.at); subject.splice(0, 3, ...(step.pan?.[0] ?? step.at)); return true; }
   const placed = landmarkOf(step);
   if (placed) { target.splice(0, 3, ...placed.interactionPosition); subject.splice(0, 3, ...placed.position); return true; }
@@ -118,15 +142,17 @@ function setBar(value) { const rounded = Math.round(value * 250) / 250; if (roun
 function startPan() {
   const step = STEPS[index]; pans.length = 0; panIndex = 0; panTime = 0; stepTime = 0;
   if (step.pan) pans.push(...step.pan);
+  // A resident found where it settled replaces the stand-in first subject.
+  const resident = step.resident && frame(step); if (resident) pans.splice(0, 1, resident.subject);
   if (step.landmark) { const subject = [0, 0, 0]; resolve(step, [0, 0, 0], subject); pans.push(subject); }
   if (pans.length && !reduced()) controls()?.lookAt(pans[0]);
 }
 function pan(dt) {
   if (paused) return;
-  const step = STEPS[index], beat = step.kind === 'look' ? step.hold / Math.max(1, pans.length) : step.kind === 'intro' ? INTRO_BEAT : PAN_BEAT;
+  const step = STEPS[index], beat = step.kind === 'look' ? step.beat ?? BEAT : step.kind === 'intro' ? INTRO_BEAT : PAN_BEAT;
   stepTime += dt; panTime += dt;
   if (!reduced() && panIndex < pans.length - 1 && panTime >= beat) { panIndex++; panTime = 0; controls()?.lookAt(pans[panIndex]); }
-  if (status === 'look' && stepTime >= step.hold) advance();
+  if (status === 'look' && stepTime >= holdOf(step)) advance();
 }
 function launch() {
   const api = controls();
@@ -180,7 +206,7 @@ export function startTour() {
   const api = controls();
   if (!api || !window.oceanDiagnostics?.ready || status !== 'off') return false;
   if (api.getMode() === 'surface' && !api.startDive({ capture: false })) return false;
-  status = 'starting'; index = 0; arrived = -1; waited = 0; paused = false; paint();
+  status = 'starting'; index = 0; arrived = -1; waited = 0; paused = false; framed.clear(); paint();
   return true;
 }
 export const tourStatus = () => status;
@@ -193,7 +219,7 @@ export function tourPlan() {
     if (item.kind === 'intro') continue;
     resolve(item, point, subject);
     for (const next of [...(item.via || []), point]) { const d = from.fromArray(last).distanceTo(to.fromArray(next)); distance += d; seconds += d / (item.speed ?? SPEED); last = [...next]; }
-    seconds += 1.4 + (item.kind === 'look' ? item.hold : 0);
+    seconds += 1.4 + (item.kind === 'look' ? holdOf(item) : 0);
   }
   return { stops: STOPS.length, distance, seconds };
 }

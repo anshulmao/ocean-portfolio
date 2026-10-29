@@ -194,3 +194,12 @@ A hint the visitor has already used is skipped.
   - The test drives the whole route on the real reef at 30, 60 and 120 Hz. It's about 335 m, roughly 102 s of
     swimming plus 39 s of scenic beats. The legs' acceleration and braking set most of the swim time, so cut beats
     rather than raise `SPEED` to shorten it.
+- **Review round 1 (after trying phase 2):**
+  - **Pans ease in and out.** A guided pan is a sine-eased sweep: slow away, fastest midway, slow to rest. Bigger turns
+    take longer (about 4 s for a quarter turn). The drift back after the visitor's own look is a sweep too.
+  - **A relaxed pace.** Each subject of a scenic beat gets 6 s (5 s on three-subject beats), the eased pan included,
+    and the cruise drops to 3.6 m/s. That's about 115 s of swimming plus 93 s of looking, roughly 3.5 minutes of
+    motion. This deliberately replaces the 2-minute budget.
+  - **The nurse shark.** It settles wherever level sand is (`sand()` in user-creatures.js), which is behind the
+    anchor, not at its wished-for spot. The tour asks the creature system where it actually lies (`residentAt`) and
+    frames it from the nearest clear spot 5–8 m away, kept clear of the landmark models.

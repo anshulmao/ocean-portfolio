@@ -31,9 +31,10 @@ document.createElement = () => Object.assign(new Element(), { getContext: () => 
 canvas.requestPointerLock = () => {}; canvas.setPointerCapture = () => {};
 Object.assign(globalThis, { document, window, matchMedia: query => ({ matches: query.includes('reduced-motion') }),
   addEventListener: window.addEventListener.bind(window), removeEventListener: window.removeEventListener.bind(window) });
-const { startTour, tourStatus, STOPS, STEPS, tourPlan } = await import('../ocean-refined/guided-dive.js');
+const { startTour, tourStatus, STOPS, STEPS, tourPlan, holdOf } = await import('../ocean-refined/guided-dive.js');
+const { BEAT } = await import('../ocean-refined/guided-script.js');
 
-function environment(hz, { reducedMotion = false, unavailable = false, collision = null } = {}) {
+function environment(hz, { reducedMotion = false, unavailable = false, collision = null, residents = {} } = {}) {
   const settings = { ...defaults, pointerLock: false, idleMotion: 0 };
   const nav = createExploration(canvas, () => {}, settings);
   nav.setTerrain(terrainHeightAt);
@@ -48,7 +49,7 @@ function environment(hz, { reducedMotion = false, unavailable = false, collision
   const api = window.oceanControls = {
     nav: nav.state, settings, landmarks, reef: { userData: { collisions: collision } }, getMode: () => nav.state.mode, getTransition: () => transition,
     guide: (...args) => nav.setGuided(...args), travelPath: (...args) => unavailable ? false : nav.travelPath(...args),
-    cancelTravel: (...args) => nav.cancelTravel(...args), place: (...args) => { placed++; nav.place(...args); }, lookAt: point => nav.lookAt(point),
+    cancelTravel: (...args) => nav.cancelTravel(...args), place: (...args) => { placed++; nav.place(...args); }, lookAt: point => nav.lookAt(point), residentAt: id => residents[id] ?? null,
   };
   const samples = [];
   function tick(seconds = 1 / hz) {
@@ -95,7 +96,9 @@ const keyup = code => window.dispatchEvent({ type: 'keyup', code, target: { clos
 // decorative canvas texture is stubbed; navigation uses the real solid reef.
 const reefCollision = createReef({ economy: true }).userData.collisions;
 for (const hz of [30, 60, 120]) {
-  const env = environment(hz, { collision: reefCollision });
+  // The nurse shark settles on level sand behind the anchor in the app; a stand-in spot there exercises the framing.
+  const sleeper = [-17, terrainHeightAt(-17, -19) + .45, -19];
+  const env = environment(hz, { collision: reefCollision, residents: { sleeper } });
   env.transition = true;
   assert.equal(startTour(), true);
   env.tick(1);
@@ -118,8 +121,9 @@ for (const hz of [30, 60, 120]) {
     const leg = env.samples.slice(before);
     moving += leg.length / hz;
     assert.equal(tourStatus(), { stop: 'dwell', look: 'look', end: 'done' }[step.kind], `${step.key} arrived at ${hz} Hz: ${JSON.stringify(env.state.tour)}`);
-    const target = step.landmark ? env.landmarks.find(item => item.id === step.landmark).interactionPosition : step.at;
-    assert.ok(distance(env.state.playerPosition, target) < 1.6, `${step.key}: arrival reflects the body position`);
+    const target = step.landmark ? env.landmarks.find(item => item.id === step.landmark).interactionPosition : step.resident ? null : step.at;
+    if (step.resident) assert.ok(distance(env.state.playerPosition, sleeper) < 7, `${step.key}: framed from beside where it lies (at ${env.state.playerPosition.map(v => v.toFixed(1))}, shark ${sleeper.map(v => v.toFixed(1))})`);
+    else assert.ok(distance(env.state.playerPosition, target) < 1.6, `${step.key}: arrival reflects the body position`);
     assert.ok(leg.length > hz, 'the swim lasts across many frames');
     for (let j = 1; j < leg.length; j++) { const d = distance(leg[j - 1], leg[j]); maxStep = Math.max(maxStep, d); totalDistance += d; }
     if (step.kind === 'stop') {
@@ -130,11 +134,18 @@ for (const hz of [30, 60, 120]) {
       window.oceanTour.next();
     } else if (step.kind === 'look') {
       // A scenic beat pans its subjects, then moves on by itself.
-      const yaw = env.nav.state.yaw, pitch = env.nav.state.pitch; let frames = 0;
-      while (tourStatus() === 'look' && frames < hz * (step.hold + 2)) { env.tick(); frames++; }
+      const yaw = env.nav.state.yaw, pitch = env.nav.state.pitch, hold = holdOf(step); let frames = 0;
+      while (tourStatus() === 'look' && frames < hz * (hold + 2)) {
+        env.tick(); frames++;
+        if (step.resident && frames === Math.round(hz * (step.beat ?? BEAT) * .9)) {
+          const at = env.state.playerPosition, s = env.nav.state, aim = [-Math.sin(s.yaw) * Math.cos(s.pitch), Math.sin(s.pitch), -Math.cos(s.yaw) * Math.cos(s.pitch)];
+          const to = sleeper.map((v, k) => v - at[k]), length = Math.hypot(...to), angle = Math.acos(Math.max(-1, Math.min(1, aim.reduce((sum, v, k) => sum + v * to[k], 0) / length)));
+          assert.ok(angle < .12, `${step.key}: the view settles on the shark itself (${angle.toFixed(3)} rad off)`);
+        }
+      }
       scenic += frames / hz;
-      assert.equal(tourStatus(), 'travel', `${step.key}: moves on after ${step.hold} s`);
-      assert.ok(Math.abs(frames / hz - step.hold) < .2, `${step.key}: holds ${step.hold} s (${(frames / hz).toFixed(2)})`);
+      assert.equal(tourStatus(), 'travel', `${step.key}: moves on after ${hold} s`);
+      assert.ok(Math.abs(frames / hz - hold) < .2, `${step.key}: holds ${hold} s (${(frames / hz).toFixed(2)})`);
       assert.ok(Math.abs(env.nav.state.yaw - yaw) + Math.abs(env.nav.state.pitch - pitch) > .1, `${step.key}: the view pans`);
     }
   }
@@ -143,7 +154,8 @@ for (const hz of [30, 60, 120]) {
   assert.ok(maxStep < 7 / hz, `bounded continuous body steps (${maxStep})`);
   assert.ok(totalDistance > 250, `the player crossed the whole reef (${totalDistance})`);
   // About two minutes of movement (SPEC: timing budget); the reading is on top and at the visitor's pace.
-  assert.ok(moving + scenic > 100 && moving + scenic < 150, `about two minutes of motion (${(moving + scenic).toFixed(0)} s)`);
+  // Relaxed on review: longer looks and a slower swim, about three and a half minutes of motion (SPEC: timing budget).
+  assert.ok(moving + scenic > 170 && moving + scenic < 260, `a relaxed pace (${(moving + scenic).toFixed(0)} s of motion)`);
   const plan = tourPlan();
   assert.ok(Math.abs(plan.seconds - (moving + scenic)) < 40, `the planner's estimate is close (${plan.seconds.toFixed(0)} s planned)`);
   // Swimming off from the overview simply ends the tour.
@@ -222,7 +234,8 @@ for (const hz of [30, 60, 120]) {
   window.oceanInput.aim(400, 0); env.tick(.2);
   const away = env.nav.state.yaw; env.tick(1);
   assert.ok(Math.abs(env.nav.state.yaw - away) < .05, 'the visitor\'s look holds for a moment');
-  env.tick(6);
+  // The hold, then an eased sweep back of up to PAN_MAX seconds.
+  env.tick(8.5);
   const subject = env.landmarks.find(item => item.id === STOPS[0].landmark).position, at = env.state.playerPosition;
   const facing = Math.atan2(-(subject[0] - at[0]), -(subject[2] - at[2]));
   assert.ok(Math.abs(Math.atan2(Math.sin(env.nav.state.yaw - facing), Math.cos(env.nav.state.yaw - facing))) < .15, 'then the view drifts back to the subject');
@@ -246,6 +259,26 @@ for (const hz of [30, 60, 120]) {
   assert.equal(tourStatus(), 'free', 'the thumb-stick takes over');
   window.oceanTour.stop(); phone.nav.destroy();
   console.log(`PASS: free look turned the view ${looked.turned.toFixed(2)} rad with no change to the guided course; hold, drift back, arrows and takeover.`);
+}
+// A guided pan eases in and out: it starts slowly, is fastest about midway and comes slowly to rest.
+{
+  const env = environment(120);
+  toTravel(env);
+  for (let frame = 0; frame < 120 * 100 && tourStatus() !== 'dwell'; frame++) env.tick();
+  env.tick(6);
+  const at = env.state.playerPosition, start = env.nav.state.yaw, side = start + Math.PI / 2;
+  window.oceanControls.lookAt([at[0] - Math.sin(side) * 10, at[1], at[2] - Math.cos(side) * 10]);
+  const rates = []; let last = start;
+  for (let i = 0; i < 120 * 6; i++) { env.tick(1 / 120); const yaw = env.nav.state.yaw; rates.push(Math.abs(Math.atan2(Math.sin(yaw - last), Math.cos(yaw - last))) * 120); last = yaw; }
+  const moving = rates.findLastIndex(rate => rate > 1e-3) + 1, peak = Math.max(...rates), at10 = rates[Math.round(moving * .1)], at90 = rates[Math.round(moving * .9)];
+  const peakAt = rates.indexOf(peak) / moving;
+  assert.ok(moving / 120 > 2.5 && moving / 120 < 5.6, `a quarter turn takes a few seconds (${(moving / 120).toFixed(2)} s)`);
+  assert.ok(at10 < peak * .4 && at90 < peak * .4, `slow at both ends (${at10.toFixed(2)}, ${at90.toFixed(2)} of ${peak.toFixed(2)} rad/s)`);
+  assert.ok(peakAt > .35 && peakAt < .65, `fastest about midway (${peakAt.toFixed(2)})`);
+  const final = Math.atan2(Math.sin(env.nav.state.yaw - side), Math.cos(env.nav.state.yaw - side));
+  assert.ok(Math.abs(final) < .02, 'and it arrives on the subject');
+  window.oceanTour.stop(); env.nav.destroy();
+  console.log(`PASS: eased pan, ${(moving / 120).toFixed(1)} s for a quarter turn, fastest at ${Math.round(peakAt * 100)}%.`);
 }
 // The actual planned open-water body route bows across the view, and an
 // impenetrable collision world never yields a successful route.

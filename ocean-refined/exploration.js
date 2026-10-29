@@ -22,6 +22,10 @@ const AUTO_RESPONSE = 10, AUTO_ACCEL = 3.5, AUTO_BRAKE = 3.5, COURSE_RATE = 4, F
 const LOOK_AUTO = 4, LOOK_GUIDED = 3.2, SWEEP_AUTO = 2.2, SWEEP_GUIDED = 1.4;
 // Free look under the guide: the visitor's own look holds this long (s) after their last aim before the guide's drifts back. BODY_TURN: the body's turn onto the course (1/s).
 const LOOK_HOLD = 2.5, BODY_TURN = 3;
+// A guided pan between subjects is a sweep with a sine ease in and out: slow away, fastest midway, slow to rest. It takes
+// PAN_BASE plus PAN_PER_RADIAN for each radian it turns, within PAN_MIN..PAN_MAX seconds.
+const PAN_BASE = 1.2, PAN_PER_RADIAN = 1.8, PAN_MIN = 1.6, PAN_MAX = 5.5, PAN_START = .04;
+const easeInOut = t => (1 - Math.cos(Math.PI * clamp(t, 0, 1))) / 2;
 const SOFT_RATE = 2.2, HARD_RATE = 4.5, FLOOR_GIVE = .5, LOOK_AHEAD = .5, PITCH_ZONE = 14 * RAD, CARVE_RATE = 2.2, ASCENT_RESPONSE = 3.2;
 // value[key] follows goal with rate[key] as its derivative; returns the integral of the value over the step (the distance covered, when the value is a velocity).
 function ease(value, rate, key, goal, frequency, dt) {
@@ -58,7 +62,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   const state={offset,yaw:0,pitch:0,perspective:initialPerspective,moving:false,exploring:false,speed:0,atBoundary:false,colliding:false,contacts:0,mode:'surface',transition:false,ascentProgress:0,ascentDepth:0,ascentLaunch:0,travelling:false,travelBlocked:false,manualInput:false,pointerLocked:false,scooter:0,lamp:true,inputs:0,guided:false,freeLook:false,bodyYaw:0,bodyPitch:0,suspended:false,velocity,turnRate:0,roll:0,pitchLead:0,lean:0,float:drift,idle:0,device:'keys'};
   // look: where the diver faces. spin: its turn rate (rad/s). spinPush: the rate's own derivative while the keys drive it.
   // pend: aim input summed since the last update (rad). lag: aim not yet shown, when smoothing is on.
-  const look={yaw:0,pitch:0},body={yaw:0,pitch:0},spin={yaw:0,pitch:0},spinPush={yaw:0,pitch:0},pend={yaw:0,pitch:0},lag={yaw:0,pitch:0},bank={roll:0,lead:0},bankRate={roll:0,lead:0};
+  const look={yaw:0,pitch:0},body={yaw:0,pitch:0},sweep={on:false,t:0,length:0,yaw:0,pitch:0,turn:0,tilt:0,goal:0},spin={yaw:0,pitch:0},spinPush={yaw:0,pitch:0},pend={yaw:0,pitch:0},lag={yaw:0,pitch:0},bank={roll:0,lead:0},bankRate={roll:0,lead:0};
   // The touch thumb-stick and the gamepad write here; update() reads them. x is right, y is forward (or up, for a look).
   const stick={x:0,y:0,active:false},pad={active:false,x:0,y:0,lookX:0,lookY:0,rise:0,sink:0,scooter:false};
   const moveOptions={radius:.55,length:2,yaw:0,pitch:0,padding:.08,step:.2,iterations:4},lastPointer={x:0,y:0,set:false};
@@ -206,7 +210,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     snapBody();wake();
   }
   // Turn the view to a subject without moving (the guided dive's pans); null lets the view go. Any deliberate input clears it.
-  function lookAt(point){if(!point){hasFocus=false;wake();return;}const at=coordinate(point);focus.set(at[0],at[1],at[2]);hasFocus=true;wake();}
+  function lookAt(point){sweep.on=false;if(!point){hasFocus=false;wake();return;}const at=coordinate(point);focus.set(at[0],at[1],at[2]);hasFocus=true;wake();}
   function prepareDive(options){pendingDive=options||null;}
   const travelClear=(a,b)=>!collisions||!settings.collisionEnabled||collisions.segmentClear(scratchA.fromArray(a),scratchB.fromArray(b),Math.max(settings.collisionRadius+.25,.85));
   function useTravelRoute(points){
@@ -446,7 +450,20 @@ export function createExploration(canvas, wake, settings=savedSettings) {
       // --- the view ---
       // Under freeLook the visitor's look wins while they are using it and for LOOK_HOLD after; then the guide's look eases back in.
       if(freeLook&&(yawAsk||pitchAsk))lookIdle=0;
-      if(autoLook&&!(freeLook&&lookIdle<LOOK_HOLD)){
+      const leading=autoLook&&!(freeLook&&lookIdle<LOOK_HOLD);
+      // Held still by the guide, a new subject (or the view coming back after the visitor's own look) is a sweep, not a chase.
+      if(!leading||!guided||hasDest||instant)sweep.on=false;
+      else if(!sweep.on&&Math.abs(wrap(goalYaw-look.yaw))+Math.abs(goalPitch-look.pitch)>PAN_START){
+        sweep.on=true;sweep.t=0;sweep.yaw=look.yaw;sweep.pitch=look.pitch;sweep.goal=goalYaw;sweep.turn=wrap(goalYaw-look.yaw);sweep.tilt=goalPitch-look.pitch;
+        sweep.length=clamp(PAN_BASE+(Math.abs(sweep.turn)+Math.abs(sweep.tilt))*PAN_PER_RADIAN,PAN_MIN,PAN_MAX);
+      }
+      if(sweep.on){
+        // The turn is fixed when the sweep starts, so a subject straight behind cannot flip it the other way round; a subject that drifts is followed.
+        sweep.t+=dt;const eased=easeInOut(sweep.t/sweep.length);
+        look.yaw=sweep.yaw+(sweep.turn+wrap(goalYaw-sweep.goal))*eased;look.pitch=sweep.pitch+(goalPitch-sweep.pitch)*eased;
+        spin.yaw=spin.pitch=spinPush.yaw=spinPush.pitch=lag.yaw=lag.pitch=pend.yaw=pend.pitch=0;
+        if(sweep.t>=sweep.length)sweep.on=false;
+      }else if(leading){
         // A guided camera turns slowly enough to read as a sweep rather than a snap, and a long turn is held to a steady rate.
         const frequency=guided?LOOK_GUIDED:LOOK_AUTO,reach=(guided?SWEEP_GUIDED:SWEEP_AUTO)*Math.E/frequency,turn=wrap(goalYaw-look.yaw);
         if(instant){look.yaw+=turn;look.pitch=goalPitch;spin.yaw=spin.pitch=0;}
