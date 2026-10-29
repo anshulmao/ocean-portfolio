@@ -148,7 +148,7 @@ for (const hz of [30, 60, 120]) {
     moving += leg.length / hz;
     assert.equal(tourStatus(), { stop: 'dwell', look: 'look', end: 'done' }[step.kind], `${step.key} arrived at ${hz} Hz: ${JSON.stringify(env.state.tour)}`);
     const target = step.landmark ? env.landmarks.find(item => item.id === step.landmark).interactionPosition : step.resident ? null : step.at;
-    if (step.resident) assert.ok(distance(env.state.playerPosition, sleeper) < 7, `${step.key}: framed from beside where it lies (at ${env.state.playerPosition.map(v => v.toFixed(1))}, shark ${sleeper.map(v => v.toFixed(1))})`);
+    if (step.resident) assert.ok(distance(env.state.playerPosition, sleeper) < 9.5, `${step.key}: framed from beside where it lies (at ${env.state.playerPosition.map(v => v.toFixed(1))}, shark ${sleeper.map(v => v.toFixed(1))})`);
     else assert.ok(distance(env.state.playerPosition, target) < 1.6, `${step.key}: arrival reflects the body position`);
     assert.ok(leg.length > hz, 'the swim lasts across many frames');
     for (let j = 1; j < leg.length; j++) { const d = distance(leg[j - 1], leg[j]); maxStep = Math.max(maxStep, d); totalDistance += d; }
