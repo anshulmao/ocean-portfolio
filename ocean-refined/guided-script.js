@@ -62,6 +62,7 @@ export const STEPS = [
     title: 'The treasure', line: 'This is where you’ll find my projects.' },
   { key: 'overview', kind: 'end', at: [-44, -12, -36], via: [[-38, -34, -64], [-47, -22, -50]], speed: 2.8, teach: 'view', place: 'Above the reef', signal: '#ff9d8a',
     title: 'This is my reef', line: 'My portfolio lives here. Dive around on your own and look at the life, or head up when you’re ready.',
+    short: 'My portfolio lives here. Explore on your own, or head up.',
     pan: [[0, -20, -40], [-20, -30, -70], [20, -20, -20]] },
 ];
 // Shown on the At a glance page, only while the tour is on (D6).

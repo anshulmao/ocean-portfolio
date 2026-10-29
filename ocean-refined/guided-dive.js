@@ -206,7 +206,7 @@ function paintControls(step, fingers) {
   // The scooter is taught on the swim into its beat, where it does something; the rest once the beat is reached.
   const id = step.teach, here = id === 'scooter' ? status === 'travel' : status === 'look' || status === 'dwell' || status === 'done';
   const text = here && !used.has(id) ? CONTROLS[id]?.tip?.[fingers ? 1 : 0] ?? '' : '';
-  tip.hidden = !text; tip.textContent = text;
+  tip.hidden = !text; tip.textContent = text; card.dataset.tip = String(Boolean(text));
   return text;
 }
 // Points out the nearest notable visitor not yet seen on this pass; once it has been in view for SEEN_AFTER seconds the
