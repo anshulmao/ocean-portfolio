@@ -17,13 +17,14 @@ blacktip 5.2 m, dolphin 7.3 m, orca bull 13.3 m, whale shark 17 m, right whale 2
 - **Encounters.** The big animals are visitors, not residents. A director keeps two slots. The giant slot holds a whale far out in the
   blue, a whale shark with remoras, or an orca family (bull, cow and calf in formation). The pelagic slot holds a dolphin pod, a pair of
   blacktips or a tuna school. Each comes in from beyond the haze on a line that passes the diver once, swims out of sight and is then
-  switched off entirely. It does not return until its slot's cooldown has passed (giants 80 to 170 s, pelagics 35 to 80 s; longer in
+  switched off entirely. Every line runs parallel to the reef face (east or west) out over the deep shelf, at z -30 or deeper
+  (`across`), so no visitor comes in over the shallows; it bows only seaward, and is switched off only once beyond the haze. It does not return until its slot's cooldown has passed (giants 80 to 170 s, pelagics 35 to 80 s; longer in
   economy quality). The same encounter never comes twice in a row.
 - **In passing.** Orcas speed up when the diver is close. A dolphin now and then spins out of the line. A blacktip bolts if the diver
   gets too near. Remoras ride under the whale shark, and one sometimes lets go, circles its host and returns.
 - **Residents.** These live on the reef:
   - a bumphead herd that travels and stops together to graze;
-  - a whipray gliding over sand;
+  - a whipray gliding over the open sand west of the cleaning reef;
   - bluespotted rays resting on open sand that scoot off when crowded;
   - a nurse shark asleep on the sand;
   - a barracuda off the wreck that turns to watch the diver and darts away if crowded;
@@ -35,6 +36,15 @@ blacktip 5.2 m, dolphin 7.3 m, orca bull 13.3 m, whale shark 17 m, right whale 2
   - a garden eel colony that draws into the sand;
   - a fusilier ribbon along the reef edge, a wheel of young barracuda, trevally hunting the bait ball, and flying fish under the surface.
 - The boid schools of `marine-life.js` are unchanged.
+- Everything that lies on the bottom (rays, the nurse shark, garden eels, dens, every coral) stands on the seabed as it is drawn
+  (`seabedHeightAt` in `reef.js`), which runs up to 1.5 m off `terrainHeightAt` across a crease, and rays and the shark follow its slope.
+
+## Audit
+
+`node tools/audit-reef.mjs` loads the world headless and checks every coral placement and animal against the drawn seabed, the
+landmarks, the formations and the living world's sites, and samples the animals' motion (facing, banking, clipping, habitats,
+schools, encounters, frame rate). `npm run audit:reef` runs it all (both qualities, about a quarter of an hour); CI runs
+`--quick` (economy, about five minutes).
 
 ## Cost
 

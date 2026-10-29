@@ -73,3 +73,24 @@ jobs:
         with:
           name: layout-screenshots
           path: layout-report
+
+  # The reef audit (tools/audit-reef.mjs): every coral placement and the animals' motion in the real world, economy quality.
+  # Software WebGL and a world load make it a few minutes; like the layout job it stays out of the required checks.
+  reef:
+    name: Reef audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run audit:reef -- --quick --json=reef-audit.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reef-audit
+          path: reef-audit.json
