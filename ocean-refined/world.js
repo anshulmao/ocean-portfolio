@@ -675,7 +675,8 @@ function labelVisible(worldPosition,item,alpha,padding=35){
 // Haze range: beyond it the shared look has absorbed a surface to under about
 // 1.5 % of its colour, so reef cells, schools and animals out there are skipped.
 function refreshView(){
-  view.eye.copy(camera.position);view.range=4.2/(THREE.MathUtils.lerp(.021,.034,look.uLookDepth.value)+.008);
+  // Clearer water (look.uLookClarity) reaches further, so what is drawn reaches as far.
+  view.eye.copy(camera.position);view.range=4.2*look.uLookClarity.value/(THREE.MathUtils.lerp(.021,.034,look.uLookDepth.value)+.008);
   view.frustum.setFromProjectionMatrix(viewProjection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));
 }
 function cullWorld(dt){
@@ -849,7 +850,7 @@ function updateWorld(dt,clockDt=dt){
   const solar=THREE.MathUtils.smoothstep(sunHeight,0,.6),lunar=moonHeight*Math.sqrt(skyState.moonIllumination??0);
   const surfaceLight=weather.surfaceLight(solar+lunar*.12),boost=settings.brightnessBoost/100;
   uniforms.uSurfaceLight.value=surfaceLight;
-  look.uLookTime.value=elapsed;look.uLookUnder.value=underwater;look.uLookLight.value=surfaceLight;look.uLookDepth.value=depthLight;look.uLookBrightness.value=boost*underwater;look.uLookSun.value.copy(sunHeight>0?uniforms.uSun.value:uniforms.uMoon.value);
+  look.uLookClarity.value=(settings.waterClarity??100)/100;look.uLookTime.value=elapsed;look.uLookUnder.value=underwater;look.uLookLight.value=surfaceLight;look.uLookDepth.value=depthLight;look.uLookBrightness.value=boost*underwater;look.uLookSun.value.copy(sunHeight>0?uniforms.uSun.value:uniforms.uMoon.value);
   renderer.toneMappingExposure=1.15;
   ambient.color.copy(ambientDay).lerp(skyFillNight,night);
   ambient.intensity=(.55+solar*1.3)*(1-underwater*.18)*(1-depthLight*.62);

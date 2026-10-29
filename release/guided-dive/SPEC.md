@@ -248,3 +248,18 @@ A hint the visitor has already used is skipped.
     - `tour_ended` {step, index, how}, where how is exit, explore, surface, swam_off, surfaced, failed or stopped.
     - Together these give a step-by-step funnel of where visitors leave.
   - **Layout:** the CI layout test now also measures the overview sheet on phone, landscape and desktop.
+- **Review round 2 (after trying phases 1–6):**
+  - **Controls one at a time.** The welcome asks for C, then E, Q and V, one prompt each. Each is ticked as it's done
+    ("✓ Dive computer") before the next is asked for. **N skips the controls** and starts the tour. F is dropped from
+    the welcome, since there's nothing to open there; it's taught at the anchor.
+  - **New deep section.** Down the gully from the wreck and **through the limestone arch** (reef.js: 20, −72).
+    - The route goes over the cliff edge, then about 3 m off the gully floor under the roof. It holds for seabed
+      clearances up to 2.2 m, and a test checks the swim passes under the roof.
+    - It comes out over the **lantern garden**, then the bait ball over the soft coral spire.
+  - **The look-up moves.** It now happens **beside the spire** (40, −46, −80), facing back up the reef to the wreck and
+    the light: the owner's reference shot. The whale shark's line moves 10 m in front of the diver as they face the
+    reef, still over 50 m+ of water.
+  - **Timing:** about 356 m, roughly 130 s swimming plus 115 s of looking, so a little over 4 minutes of motion.
+  - **Water clarity.** A new setting, Settings → General → Lighting → Water clarity (70–180%). The owner's profile
+    defaults to 125%. It stretches the underwater haze (`ocean-look.js` `uLookClarity`) and the cull distance with
+    it, so clearer water also draws further: more of the reef at once, which costs more on slower devices.

@@ -132,18 +132,26 @@ function toTravel(env) {
 const key = code => window.dispatchEvent({ type: 'keydown', code, repeat: false, target: { closest: () => null }, preventDefault() {} });
 const keyup = code => window.dispatchEvent({ type: 'keyup', code, target: { closest: () => null }, preventDefault() {} });
 
-// The controls: the welcome lists them and notices each one tried, by what it changed, whatever the input; a beat's tip
-// is shown once, where the control is useful, and not at all once it has been tried.
+// The controls: the welcome asks for one at a time, ticks each as it is done (by what it changed, whatever the input) and
+// moves on; done out of order, it asks for the first one left. A beat's tip is shown once, where the control is useful,
+// and not at all once it has been tried. N skips the controls (toTravel above).
 {
   const env = environment(60);
   startTour(); env.tick(.5);
   assert.equal(tourStatus(), 'intro');
-  assert.deepEqual(window.oceanTour.tried, []);
+  assert.equal(env.state.tour.tip, 'Try it, 1 of 4: Press C to open your dive computer.');
   env.nav.setLamp(!env.nav.state.lamp); env.tick(.1);
-  env.nav.togglePerspective(); env.tick(.1);
+  assert.equal(env.state.tour.tip, '✓ Flashlight', 'a control done is ticked');
+  env.tick(1.3);
+  assert.equal(env.state.tour.tip, 'Try it, 2 of 4: Press C to open your dive computer.', 'then the first one left is asked for');
   document.body.dataset.computerOpen = 'true'; env.tick(.1); delete document.body.dataset.computerOpen;
-  key('KeyE'); env.tick(.6); keyup('KeyE');
-  assert.equal(tourStatus(), 'intro', 'trying the controls never hands the dive over');
+  assert.equal(env.state.tour.tip, '✓ Dive computer'); env.tick(1.3);
+  assert.equal(env.state.tour.tip, 'Try it, 3 of 4: Hold E to spin up your scooter.');
+  key('KeyE'); env.tick(.6); keyup('KeyE'); env.tick(1.3);
+  assert.equal(env.state.tour.tip, 'Try it, 4 of 4: Press V to see yourself in third person.');
+  env.nav.togglePerspective(); env.tick(1.5);
+  assert.equal(env.state.tour.tip, 'That’s the controls. Press N to start the tour.');
+  assert.equal(tourStatus(), 'intro', 'trying the controls never hands the dive over, nor starts the tour');
   assert.deepEqual(window.oceanTour.tried.sort(), ['computer', 'lamp', 'scooter', 'view']);
   // Opening a site counts as F, from wherever it was opened.
   window.oceanArchive = { isOpen: true }; env.tick(.1); window.oceanArchive = { isOpen: false };
@@ -158,7 +166,7 @@ const keyup = code => window.dispatchEvent({ type: 'keyup', code, target: { clos
   for (let frame = 0; frame < 60 * 400 && !(env.state.tour.stop === deep && tourStatus() === 'look'); frame++) { env.tick(); if (tourStatus() === 'dwell') window.oceanTour.next(); }
   assert.equal(env.state.tour.tip, '', 'the computer was tried in the welcome');
   window.oceanTour.stop(); env.nav.destroy(); delete window.oceanExpedition; delete window.oceanArchive;
-  console.log('PASS: the welcome notices each control tried; beat tips show once and skip what was tried.');
+  console.log('PASS: the welcome asks for each control in turn and ticks it; beat tips show once and skip what was tried.');
 }
 
 // Build the production procedural reef and its collision geometry. Only the
@@ -194,6 +202,11 @@ for (const hz of [30, 60, 120]) {
     if (step.resident) assert.ok(distance(env.state.playerPosition, sleeper) < 14, `${step.key}: framed from beside where it lies (at ${env.state.playerPosition.map(v => v.toFixed(1))}, shark ${sleeper.map(v => v.toFixed(1))})`);
     else assert.ok(distance(env.state.playerPosition, target) < 1.6, `${step.key}: arrival reflects the body position`);
     assert.ok(leg.length > hz, 'the swim lasts across many frames');
+    // The arch beat swims through the arch itself, under its roof (reef.js: arch at 20, -72, roof 9.6 m over its floor).
+    if (step.key === 'arch') {
+      const roof = terrainHeightAt(20, -72) + 9.6 - .6, under = leg.filter(p => Math.abs(p[2] + 72) < 1.5);
+      assert.ok(under.length && under.every(p => Math.abs(p[0] - 20) < 3.5 && p[1] < roof), `through the arch, under its roof (${JSON.stringify(under[0])})`);
+    }
     for (let j = 1; j < leg.length; j++) { const d = distance(leg[j - 1], leg[j]); maxStep = Math.max(maxStep, d); totalDistance += d; }
     if (step.kind === 'stop') {
       assert.equal(window.oceanTour.opens(step.landmark), step.opens ?? null, `${step.key}: Read it opens ${step.opens ?? 'its own section'}`);
