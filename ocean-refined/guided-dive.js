@@ -53,7 +53,8 @@ function landmarkOf(step) {
   return placed && (window.oceanDiagnostics?.landmarksReady || window.oceanDiagnostics?.landmarksSettled) ? placed : null;
 }
 // An animal that lies still is framed from where it actually settled: the open spot a few metres from it, with a
-// clear line of sight, nearest to where the tour comes from. Far enough to take in a whole shark, tail and all. Worked out once a tour; null until the creatures load.
+// clear line of sight, nearest to where the tour comes from. Far enough to take in the whole animal: the nurse shark's
+// model is about 7.5 m long in the scene, so it is framed from about 11 m out and 5 m above. Worked out once a tour; null until the creatures load.
 const framed = new Map();
 function frame(step) {
   if (framed.has(step.resident)) return framed.get(step.resident);
@@ -63,10 +64,10 @@ function frame(step) {
   // The closest ring that has a clear spot wins, and a spot never crowds a landmark's model.
   const models = (controls()?.landmarks ?? LANDMARKS).map(item => item.position);
   let best = null, nearest = Infinity;
-  for (const radius of [7, 8.5, 5.5]) {
+  for (const radius of [11, 9.5, 12.5]) {
     for (let k = 0; k < 16; k++) {
       const angle = k / 16 * Math.PI * 2, x = at[0] + Math.cos(angle) * radius, z = at[2] + Math.sin(angle) * radius;
-      const point = [x, Math.max(terrainHeightAt(x, z) + 3, at[1] + 3.2), z], d = from.fromArray(point).distanceTo(to.fromArray(before));
+      const point = [x, Math.max(terrainHeightAt(x, z) + 3, at[1] + 5), z], d = from.fromArray(point).distanceTo(to.fromArray(before));
       if (d < nearest && !models.some(model => Math.hypot(model[0] - x, model[2] - z) < 6) && clear(point, eye)) { nearest = d; best = point; }
     }
     if (best) break;
