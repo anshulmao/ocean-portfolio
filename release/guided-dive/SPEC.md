@@ -291,5 +291,8 @@ A hint the visitor has already used is skipped.
     last had: the free-look body after the tour's Surface, or the last swim on a plain rise. It now turns with the
     swim home and tilts with the climb, and the view turns with it along a route. Easing back onto an overrun hold or
     the safety stop is a drift, not a turn about. `tools/test-navigation-clock.mjs` checks it at 30, 60 and 120 Hz.
+  - **The safety stop is offered as the diver arrives.** The return used to reach its last point at cruise, overrun it
+    by 2 m and swing back for a few seconds before the offer appeared. It now brakes smoothly into the stop, and the
+    offer comes up within 0.6 m of the stop, at a drift. The test checks there's no overrun and no wait.
   - **#15 merged in** (a shorter waterline hold on slow devices; the tour's assets start loading at the Show me
     around click).
