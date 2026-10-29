@@ -163,8 +163,14 @@ ${backdropGLSL}
 float valueNoise(vec2 p,float lod){return textureLod(uValueMap,p*.03125,lod).r;}
 vec3 skySmooth(vec3 ray) {
   float h=max(ray.y,0.0),over=uWeather.w,open=1.0-over;
-  vec3 color=mix(vec3(.48,.70,.81),vec3(.055,.26,.48),pow(min(h*2.5,1.0),.55));
-  color+=vec3(.14,.085,.025)*pow(max(dot(ray,uSun),0.0),5.0);
+  // A low sun keeps the soft cyan of morning and evening; once it is well up (about 7 to 25 degrees) the sky turns a
+  // clear blue: light toward the horizon, a mid blue through the band the surface copy sits on (kept light enough for
+  // its dark text), deep overhead. ACES flattens a pale sky to white, so these keep red low and let blue run past 1.
+  float day=smoothstep(.12,.42,uSun.y);
+  vec3 low=mix(vec3(.48,.70,.81),vec3(.055,.26,.48),pow(min(h*2.5,1.0),.55));
+  vec3 high=mix(mix(vec3(.13,.46,1.50),vec3(.08,.33,1.22),smoothstep(0.0,.24,h)),vec3(.025,.09,.46),smoothstep(.18,.85,h));
+  vec3 color=mix(low,high,day);
+  color+=vec3(.14,.085,.025)*pow(max(dot(ray,uSun),0.0),5.0)*(1.0-day*.7);
   color=mix(color,mix(vec3(.057,.101,.17),vec3(.006,.015,.051),pow(h,.45)),uNight);
   // Sunset/sunrise follows the moving sun along the horizon, including reflections.
   float twilight=(1.0-smoothstep(.02,.32,abs(uSun.y)));
