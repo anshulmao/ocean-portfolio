@@ -157,7 +157,8 @@ function paint() {
   const brief = reading ? step.short ?? full : full;
   part('.tour-lines').textContent = small && !more ? brief : full;
   const moreButton = part('.tour-more');
-  moreButton.hidden = !(small && wide && brief !== full);
+  // On a phone the welcome's controls take the caption's place, so More is how it is read there.
+  moreButton.hidden = !(small && wide && (brief !== full || status === 'intro'));
   moreButton.setAttribute('aria-expanded', String(more));
   moreButton.firstChild.textContent = more ? 'Less' : 'More';
   card.dataset.more = String(small && more);

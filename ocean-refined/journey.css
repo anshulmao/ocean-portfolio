@@ -169,8 +169,9 @@ html[data-input="touch"] .tour-card footer kbd{display:none}
   .tour-card[data-more="true"] .tour-more span{padding:0;background:none}
   /* A beat's tip takes the caption's third line, so a sheet with one is no taller than one without. */
   .tour-card[data-tip="true"]:not([data-more="true"]) .tour-lines{-webkit-line-clamp:2;line-clamp:2}
-  /* The welcome's control to try is the point of it here: its caption keeps to one line beside it. */
-  .tour-card[data-state="intro"][data-tip="true"]:not([data-more="true"]) .tour-lines{-webkit-line-clamp:1;line-clamp:1}
+  /* The welcome's controls are the point of it here: the chips and the one to try take the caption's place, and More
+     brings the title and caption back (the title card and the sheet's own head have just said welcome). */
+  .tour-card[data-state="intro"][data-tip="true"]:not([data-more="true"]) :is(.tour-title,.tour-lines){display:none}
   .tour-teach{margin-top:6px;font-size:12.5px;line-height:17px}
   .tour-keys{flex-wrap:nowrap;gap:4px;margin-top:6px;overflow-x:auto;scrollbar-width:none}
   .tour-keys li{flex:none;padding:2px 8px 2px 4px;font-size:11px}
