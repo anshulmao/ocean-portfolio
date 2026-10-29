@@ -403,7 +403,7 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   // QA hook: after placing the camera by hand, cull the scene for it again.
   recull(){camera.updateMatrixWorld(true);refreshView();userCreatures?.update(0,playerPosition,viewerOrbit?null:view);if(built)cullWorld(0);},
   // Dive planner and guided tour hooks: autopilot, instant placement, dive start / surfacing, and the flashlight and scooter state.
-  travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free,looking){exploration.setGuided(value,free,looking);},
+  travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free,looking){exploration.setGuided(value,free,looking);},lookAt(point){exploration.lookAt(point);wake();},
   travelPath(points,focus,speed){return exploration.travelPath(points,focus,speed);},
   cancelTravel(options){return exploration.cancelTravel(options);},
   startDive(options){if(!diagnostic.ready||diveTarget===1||getMode()!=='surface')return false;exploration.prepareDive(options);if(options?.at)snapCamera=true;$('#dive').click();return true;},

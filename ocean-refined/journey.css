@@ -112,7 +112,7 @@ body:is([data-clear-ui="true"],[data-safety-stop="true"]) section.tour-card{visi
 .tour-fade{position:fixed;inset:0;z-index:var(--o-z-labels);pointer-events:none;background:#04303f;opacity:0;transition:opacity var(--journey-standard) var(--journey-ease)}
 .tour-fade[data-on="true"]{opacity:1;transition:opacity 200ms var(--journey-out)}
 /* The tour narrates each landmark itself, so the generic prompt to click in stays out of its way. */
-body:is([data-tour="travel"],[data-tour="dwell"]) .waypoint{opacity:0}
+body:is([data-tour="intro"],[data-tour="travel"],[data-tour="look"],[data-tour="dwell"]) .waypoint{opacity:0}
 /* Key caps mean nothing without a keyboard. */
 html[data-input="touch"] .tour-card footer kbd{display:none}
 @media (pointer:coarse){html:not([data-input]) .tour-card footer kbd{display:none}}

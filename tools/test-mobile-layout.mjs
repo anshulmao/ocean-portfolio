@@ -148,7 +148,10 @@ async function run(profileName) {
     await page.evaluate(() => oceanControls.surface({instant: true}));
     await page.waitForFunction(() => oceanControls.getMode() === 'surface', null, {timeout: 60000});
     await page.evaluate(() => oceanTour.start());
-    await page.waitForFunction(() => oceanDiagnostics.submerged && ['travel', 'dwell'].includes(oceanTour.status), null, {timeout: 120000});
+    await page.waitForFunction(() => oceanDiagnostics.submerged && oceanTour.status === 'intro', null, {timeout: 120000});
+    await state('guided-welcome', true);
+    await page.evaluate(() => oceanTour.next());
+    await page.waitForFunction(() => ['travel', 'dwell'].includes(oceanTour.status), null, {timeout: 30000});
     await page.waitForTimeout(2500); await state('guided-travel', true);
     await page.waitForFunction(() => oceanTour.status === 'dwell', null, {timeout: 120000});
     await state('guided-stop', true);

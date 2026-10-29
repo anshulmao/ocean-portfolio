@@ -181,3 +181,16 @@ A hint the visitor has already used is skipped.
   capsule) keep the guide's course. When it ends, the body eases back onto the view. `world.js` poses the diver from
   the body. The current tour uses it. Covered in `tools/test-guided-motion.mjs`: the course is identical with and
   without the visitor looking, plus the hold-then-drift, arrows, swim-key and thumb-stick takeover, and the body settle.
+- **Phase 2: the tour as data (done).**
+  - `guided-script.js` holds the 12 steps: the route, the pans, the copy and the hold times. `guided-dive.js` runs them.
+  - Statuses:
+    - `intro`: the welcome, which waits for N.
+    - `look`: a scenic beat that pans its subjects and moves on by itself after `hold` seconds.
+    - `dwell`: a portfolio site, which waits for N.
+    - `done`: the overview, offering Explore or Surface.
+    - Unchanged: `travel`, `free`, `starting`, `off`.
+  - At the anchor, Read it (F) opens **At a glance**, which carries the welcome only while the tour is on.
+  - The swim controller gains `lookAt(point)` for the pans.
+  - The test drives the whole route on the real reef at 30, 60 and 120 Hz. It's about 335 m, roughly 102 s of
+    swimming plus 39 s of scenic beats. The legs' acceleration and braking set most of the swim time, so cut beats
+    rather than raise `SPEED` to shorten it.
