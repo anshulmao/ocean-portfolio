@@ -1,8 +1,8 @@
 // Frames of the schooling fish (marine-life.js) for before/after comparisons: at the shallow reef and around the wreck,
-// a still and a short sequence stepped at a fixed 1/30 s, written as PNG frames, an animated GIF and a strip.
+// a still and a short sequence stepped at a fixed 1/30 s, written as a JPEG still, an animated GIF and a strip.
 //   node tools/capture-schools.mjs [--dist dir] [--out dir] [--label name] [--frames 36]
 // Run `npm run build` first (or pass --dist, a copy of an earlier build). PLAYWRIGHT_CHROMIUM_PATH as for smoke. The GIF
-// and strip need ffmpeg and ImageMagick; without them the PNG frames are still written.
+// and strip need ffmpeg and ImageMagick; without them the PNG frames are left in <out>/<label>-<place>/.
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -74,11 +74,12 @@ try {
       }, spot.approach || 0);
       await page.locator('canvas').first().screenshot({path: path.join(dir, `${String(i).padStart(3, '0')}.png`)});
     }
-    await fs.copyFile(path.join(dir, '000.png'), path.join(OUT, `${LABEL}-${name}.png`));
     try {
-      execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', '30', '-i', path.join(dir, '%03d.png'), '-vf', 'split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse', path.join(OUT, `${LABEL}-${name}.gif`)]);
+      // Kept small for the repository: a JPEG still, a 400 px GIF at 15 fps (64 colours) and a strip of six frames.
+      execFileSync('convert', [path.join(dir, '000.png'), '-quality', '82', path.join(OUT, `${LABEL}-${name}.jpg`)]);
+      execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', '30', '-i', path.join(dir, '%03d.png'), '-vf', 'fps=15,scale=400:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=64[p];[b][p]paletteuse=dither=bayer', path.join(OUT, `${LABEL}-${name}.gif`)]);
       const picks = Array.from({length: 6}, (_, k) => path.join(dir, `${String(Math.round(k * (FRAMES - 1) / 5)).padStart(3, '0')}.png`));
-      execFileSync('convert', [...picks, '-resize', '320x', '+append', path.join(OUT, `${LABEL}-${name}-strip.png`)]);
+      execFileSync('convert', [...picks, '-resize', '320x', '+append', '-quality', '80', path.join(OUT, `${LABEL}-${name}-strip.jpg`)]);
       await fs.rm(dir, {recursive: true, force: true});
     } catch (error) { console.warn('GIF/strip skipped:', error.message); }
   }
