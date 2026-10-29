@@ -200,7 +200,7 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
       const geometry = node.geometry, count = geometry.index?.count ?? geometry.attributes.position.count;
       const vertex = (index, out) => node.getVertexPosition(geometry.index ? geometry.index.getX(index) : index, out).applyMatrix4(node.matrixWorld);
       for (let i = 0; i + 2 < count; i += 3) {
-        if (i % 192 === 0) { const pause = breathe(); if (pause) await pause; }
+        if (i % 24 === 0) { const pause = breathe(); if (pause) await pause; }
         vertex(i, a); vertex(i + 1, b); vertex(i + 2, c);
         sample(a); sample(b); sample(c);
         const span = Math.max(Math.hypot(a.x-b.x,a.z-b.z),Math.hypot(a.x-c.x,a.z-c.z),Math.hypot(b.x-c.x,b.z-c.z));

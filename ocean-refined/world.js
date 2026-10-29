@@ -248,15 +248,18 @@ function afterFrame(){
 // pace (a weak GPU, or SwiftShader in perf-hold.mjs, busy building shader variants: callbacks then come a tenth of a
 // second apart while this thread works for a fraction of each; frames drawn every other callback) the work goes on in
 // slices of its own, each in a task of its own and ending a few ms before the next callback is due (by the pace the
-// callbacks have kept: paceGap), so the frames still come when they would have. While a dive is held and the visitor is
-// waiting on the work, the slices go on whatever the pace, up to 30 ms each, and the frames fit between them.
+// callbacks have kept: paceGap), so the frames still come when they would have, up to 30 ms each. Only once a dive is
+// wanted (hurry: a pointer or a finger on the way in, the guided prelude): before that, slices like these, however short,
+// made the surface's frames late and its tasks long against how it was (frame gaps over 50 ms and long tasks measured
+// with tools/perf-hold.mjs), so the surface keeps what the frames leave (afterFrame). While a dive is held and the
+// visitor is waiting on the work, the slices go on whatever the pace, up to 30 ms each, and the frames fit between them.
 let callbackAt=0,slicePosted=false;
 const slicePort=new MessageChannel();
 slicePort.port1.onmessage=()=>{slicePosted=false;idleSlice();};
-function idleSlices(){if(!slicePosted&&!ticking&&diagnostic.ready&&jobs.some(job=>!job.waiting&&!job.gpu)){slicePosted=true;slicePort.port2.postMessage(0);}}
+function idleSlices(){if(!slicePosted&&!ticking&&hurry&&diagnostic.ready&&jobs.some(job=>!job.waiting&&!job.gpu)){slicePosted=true;slicePort.port2.postMessage(0);}}
 function idleSlice(){
   if(!running||diagnostic.error)return;
-  const room=hurry>1?30:Math.min(30,callbackAt+paceGap-performance.now()-4);
+  const room=hurry>1?30:hurry?Math.min(30,callbackAt+paceGap-performance.now()-4):0;
   if(room<2)return;
   if(runJobs(room,'cpu'))idleSlices();
 }
@@ -294,9 +297,10 @@ const programsLinked=materials=>new Promise(resolve=>{
 // The graphics process builds that variant after the draw has been handed to it, and this thread would wait for it at
 // the next call that asks the graphics process anything (the next new program's first use): a tenth to a third of a
 // second each in SwiftShader. A fence goes in behind each new program's draw, and the next step waits until it has been
-// passed, without blocking: this thread goes on with frames and the build meanwhile. Each part of the world is drawn
-// this way as soon as it is built (warmFirst), so its variants are built while the next part is; listWarm then draws
-// everything once more (buffers, the distant cells, whatever was left out), most of it with programs already built.
+// passed, without blocking: this thread goes on with frames and the build meanwhile. (Not as each part is built: a
+// program drawn right after its compile was handed over is linked on this thread, at its first use, a tenth of a second
+// or so each; by the end of the build the browser has linked them on its own.)
+const warmedGeometry=new WeakSet(),geometryBytes=geometry=>{let n=geometry?.index?.array.byteLength||0;for(const attribute of Object.values(geometry?.attributes||{}))n+=attribute.array?.byteLength||0;return n;};
 const warmQueue=[],warmed=new WeakSet(),warmCamera=new THREE.PerspectiveCamera(120,1,.5,4000);
 let warmTarget=null,warming=false,warmListed=false;
 warmCamera.position.set(0,170,-35);warmCamera.lookAt(0,-30,-35);warmCamera.layers.set(1);
@@ -305,25 +309,33 @@ function warmLater(...roots){
   for(const root of roots){const visit=node=>{if(node.isMesh||node.isPoints||node.isLine)warmQueue.push({node,root});for(const child of node.children)if(child.visible)visit(child);};if(root)visit(root);}
   warmSoon();
 }
-// One draw for each material of these parts not drawn before.
-const warmListedMaterials=new WeakSet();
-function warmFirst(...roots){
-  for(const root of roots){const visit=node=>{if(node.isMesh||node.isPoints||node.isLine){const material=[node.material].flat()[0];if(material&&!warmListedMaterials.has(material)){warmListedMaterials.add(material);warmQueue.push({node,root});}}for(const child of node.children)if(child.visible)visit(child);};if(root)visit(root);}
-  warmSoon();
-}
 // Settles once the graphics process has passed the fence (polled: asking does not wait).
 const fencePassed=fence=>new Promise(resolve=>{const gl=renderer.getContext(),poll=()=>{if(!diagnostic.error&&gl.clientWaitSync(fence,0,0)===gl.TIMEOUT_EXPIRED){setTimeout(poll,8);return;}gl.deleteSync(fence);resolve();};poll();});
+// Settles once the graphics process has done everything asked of it so far. While nobody has asked for a dive, a step
+// that would wait for it (a program's first use waits for its link, an upload for what is queued ahead of it) waits for
+// this first, so it never holds up the frame it goes ahead of: the surface stays as smooth as it was before the world
+// was prepared this early. Once a dive is wanted (hurry) the steps go ahead at once.
+const caughtUp=()=>{const gl=renderer.getContext(),fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);if(!fence)return Promise.resolve();gl.flush();return fencePassed(fence);};
+const freshNext=()=>{const material=warmQueue[0]&&[warmQueue[0].node.material].flat()[0];return Boolean(material&&!warmed.has(material));};
 function warmSoon(){
   if(warming||!warmQueue.length)return;warming=true;
   later('first draws',function*(){
-    while(warmQueue.length){if(uniforms.uDive.value>0){warmQueue.length=0;break;}yield GPU;if(warmQueue.length&&uniforms.uDive.value===0&&warmStep()){const gl=renderer.getContext(),fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();if(fence)yield fencePassed(fence);}}
+    while(warmQueue.length){if(uniforms.uDive.value>0){warmQueue.length=0;break;}if(!hurry&&freshNext())yield caughtUp();yield GPU;if(warmQueue.length&&uniforms.uDive.value===0&&warmStep()){const gl=renderer.getContext(),fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();if(fence)yield fencePassed(fence);}}
     warming=false;if(warmListed)startup.warmedAt??=Math.round(performance.now());
   }).catch(error=>{warming=false;console.warn('First draws stopped:',error);});
 }
 function warmStep(){
   // Up to 96 draws whose programs have been used before, or exactly one that uses a new one. True when there was one.
   const batch=[],hidden=[];let fresh=false;
-  while(warmQueue.length&&batch.length<96){const item=warmQueue.shift(),material=[item.node.material].flat()[0];batch.push(item);if(material&&!warmed.has(material)){warmed.add(material);fresh=true;break;}}
+  // A draw also uploads its geometry the first time: while nobody has asked for a dive a step takes about a megabyte of
+  // that at most (the copy waits for room in the graphics process's transfer buffer, and the reef alone is twelve).
+  let bytes=0;const room=hurry?Infinity:1e6;
+  while(warmQueue.length&&batch.length<96){
+    const item=warmQueue[0],geometry=item.geometry||item.node.geometry,size=warmedGeometry.has(geometry)?0:geometryBytes(geometry);
+    if(batch.length&&bytes+size>room)break;
+    warmQueue.shift();bytes+=size;warmedGeometry.add(geometry);
+    const material=[item.node.material].flat()[0];batch.push(item);if(material&&!warmed.has(material)){warmed.add(material);fresh=true;break;}
+  }
   for(const item of batch){
     for(let node=item.root;node&&node!==scene;node=node.parent)if(!node.visible){node.visible=true;hidden.push(node);}
     if(item.geometry){item.usual=item.node.geometry;item.node.geometry=item.geometry;}
@@ -378,7 +390,7 @@ async function prepare(root,urgent=false){
   const textures=new Set();
   root.traverse(node=>{for(const material of [node.material].flat())if(material)for(const key of ['map','emissiveMap','alphaMap'])if(material[key]?.image)textures.add(material[key]);});
   try{await later('model shaders',()=>compileSteps(root),{urgent});}catch{}
-  for(const texture of textures)try{await later('texture upload',()=>{renderer.initTexture(texture);},{gpu:true,urgent});}catch{}
+  for(const texture of textures)try{await later('texture upload',function*(){if(!hurry)yield caughtUp();renderer.initTexture(texture);},{gpu:true,urgent});}catch{}
   if(uniforms.uDive.value===0)warmLater(root);
   prepared.add(root);wake();
 }
@@ -397,9 +409,12 @@ function preloadModels(){
 
 let diveAskedNow=null;const diveAsked=new Promise(resolve=>{diveAskedNow=resolve;});
 // Downloads ahead of the work that needs them. The landmark files go first, as soon as the build starts: the dive waits
-// on them. The creature set's follow once those are in (they share the connection), as soon as the build starts in
-// standard detail, which loads the set right after the landmarks anyway, and in economy once a dive is asked for
-// (Dive in, Show me around): the guided dive shows those animals, and it should not reach one still in transit.
+// on them. The creature set's follow once those are in (they share the connection), as soon as the build starts: in
+// standard detail, which loads the set right after the landmarks anyway, and in economy too, where only its files come
+// then (3.2 MB) and its parsing and uploads wait for a dive to be asked for (Dive in, Show me around): the guided dive
+// shows those animals, it should not reach one still in transit, and a first dive that waited for their download as
+// well spent its descent on them. Not on a connection that says it is 2G (economy), and nothing with Save-Data on.
+const slowConnection=()=>/(^|-)2g$/.test(navigator.connection?.effectiveType||'');
 let filesFetched=null,enrichmentFetched=false;
 const prefetchFiles=()=>filesFetched??=import('./model-scene.js').then(({prefetchLandmarks})=>prefetchLandmarks(quality==='economy')).catch(()=>{});
 function prefetchEnrichment(){
@@ -626,24 +641,24 @@ function* buildUnderwater(linking){
   reef=yield* reefSteps({economy});reef.visible=false;scene.add(reef);
   exploration.setCollisions(reef.userData.collisions);if(modelsWanted)beginModels();
   diagnostic.collisionPieces=reef.userData.collisions?.count??0;diagnostic.habitats=reef.userData.habitatCounts;
-  yield;stylizeTree(reef,{glow:'near'});yield* compileSteps(reef,linking);warmFirst(reef);
+  yield;stylizeTree(reef,{glow:'near'});yield* compileSteps(reef,linking);
   buildStage='chart';yield* chartSteps();
   buildStage='animals';yield 8;
   marine=yield* marineLifeSteps({economy,terrainHeightAt,collisions:reef.userData.collisions});marine.root.visible=false;scene.add(marine.root);diagnostic.fishCount=marine.count;
   yield;extraLife=yield* underwaterLifeSteps({economy,terrainHeightAt});extraLife.root.visible=false;scene.add(extraLife.root);diagnostic.extraLife=extraLife.counts;
   yield 5;setPieces=createSetPieces({terrainHeightAt,collisions:reef.userData.collisions,economy});setPieces.root.visible=false;scene.add(setPieces.root);diagnostic.setPieces=setPieces.counts;
   yield;stylizeTree(marine.root,{toon:.35,rim:.45,caustics:.5});stylizeTree(extraLife.root,{rim:.42});stylizeTree(setPieces.root);
-  yield* compileSteps(marine.root,linking);yield* compileSteps(extraLife.root,linking);yield* compileSteps(setPieces.root,linking);warmFirst(marine.root,extraLife.root,setPieces.root);
+  yield* compileSteps(marine.root,linking);yield* compileSteps(extraLife.root,linking);yield* compileSteps(setPieces.root,linking);
   // The polyp glows reach about fifteen metres: only what stands inside that takes them (see ocean-look.js). The diver, who swims through them, takes one colour.
   buildStage='formations';yield;
   const formations=yield* heroFormationSteps({terrainHeightAt,collisions:reef.userData.collisions,economy});
   yield;stylizeTree(formations.root,{glow:'near'});formations.root.visible=false;scene.add(formations.root);heroFormations=formations;diagnostic.heroFormations=heroFormations.counts;
-  yield* compileSteps(formations.root,linking);warmFirst(formations.root);
+  yield* compileSteps(formations.root,linking);
   // Built after the formations so its height map sees their collision boxes; nothing in it is solid.
   buildStage='living';yield;
   const living=yield* livingWorldSteps({terrainHeightAt,collisions:reef.userData.collisions,economy,uniforms});
   yield;scene.add(living.root);livingWorld=living;diagnostic.livingWorld=livingWorld.counts;
-  yield* compileSteps(living.root,linking);warmFirst(living.under,...Object.values(living.debug?.surface?.meshes||{}));
+  yield* compileSteps(living.root,linking);
   diagnostic.visitorCount=0;
   buildStage='effects';yield;
   const material=new THREE.ShaderMaterial({uniforms,vertexShader:beamVertex,fragmentShader:beamFragment,transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending});
@@ -663,7 +678,7 @@ function* buildUnderwater(linking){
     vertexShader:`uniform float uTime;uniform float uRatio;varying float vAlpha;void main(){vec3 p=position;p.x+=sin(uTime*.16+position.z*.06)*1.3;p.z+=sin(uTime*.11+position.x*.08)*.9;p.y+=sin(uTime*.19+position.x*.1)*.25;vec4 mv=modelViewMatrix*vec4(p,1.);gl_Position=projectionMatrix*mv;gl_PointSize=clamp(100.*uRatio/max(1.,-mv.z),1.,7.);vAlpha=.25*exp(-length(mv.xyz)*.026);}`,
     fragmentShader:`varying float vAlpha;void main(){vec2 p=(gl_PointCoord-.5)*vec2(1.,2.8);float a=exp(-dot(p,p)*8.);gl_FragColor=vec4(.68,.86,.91,a*vAlpha);}`}));dust.visible=false;scene.add(dust);
   beamGroup=shafts;bubbleMesh=air;motes=dust;
-  yield* compileSteps(shafts,linking);yield* compileSteps(air,linking);yield* compileSteps(dust,linking);warmFirst(shafts,air,dust);
+  yield* compileSteps(shafts,linking);yield* compileSteps(air,linking);yield* compileSteps(dust,linking);
   // Meshes built with unshared vertices are shared now, a few thousand vertices a step (see assets.js), before anything of theirs is uploaded.
   buildStage='sharing';yield* shareSteps();
   built=true;diagnostic.underwater='built';builtDone();
@@ -677,7 +692,7 @@ function startUnderwater(){
   worldLinking=new Set();buildSteps=buildUnderwater(worldLinking);diagnostic.underwater='building';
   // The landmarks are placed once the reef exists (beginModels), but their files can be on their way and parsed meanwhile.
   // (Not with Save-Data on: the files then come with the dive, see preloadModels.)
-  if(!navigator.connection?.saveData){prefetchFiles();if(quality!=='economy')prefetchEnrichment();}
+  if(!navigator.connection?.saveData){prefetchFiles();if(quality!=='economy'||!slowConnection())prefetchEnrichment();}
   const tally=ms=>{startup.under[buildStage]=+((startup.under[buildStage]||0)+ms).toFixed(1);};
   const queued=later(buildName,()=>buildSteps,{tally});
   queued.then(()=>{startup.builtAt=Math.round(performance.now());if(modelsWanted)beginModels();return programsLinked(worldLinking);})
