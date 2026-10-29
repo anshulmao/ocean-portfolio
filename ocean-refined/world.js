@@ -1136,6 +1136,9 @@ paintTheme(selectedNight);updateMotionUI();
 // under the water is built behind that frame (see buildUnderwater); the dive button works from the start (see updateWorld).
 async function boot(){
   mark('setup');
+  // The landmark and prepared coral files, which a first dive waits for, start downloading now (not parsed until the
+  // surface is up, see startUnderwater): on a slow connection they are the longest wait. Not with Save-Data on.
+  if(!navigator.connection?.saveData)import('./model-scene.js').then(({fetchLandmarkFiles})=>fetchLandmarkFiles(quality==='economy')).catch(()=>{});
   // The scene is GPU-bound; on a laptop with two GPUs the default hint picks the weak one. It changes nothing on a single integrated GPU.
   // The GPU is named before the canvas gets its context, since multisampling is fixed at that moment: a throwaway context asks, and is given back at once.
   // The page's first WebGL context costs a fifth of a second wherever it is made, so index.html asks from a worker while the

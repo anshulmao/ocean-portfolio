@@ -61,29 +61,35 @@ const earlyLoader = new GLTFLoader();
 const landmarkHref = (file, economy) => new URL(economy ? file.replace(/\.glb$/, '-economy.glb') : file, ASSET).href;
 // A parse runs in a turn of the frame loop's queue (see setPacer in assets.js), so it lands between frames.
 const parseLater = bytes => bytes ? nextTask().then(() => earlyLoader.parseAsync(bytes, ASSET.href)).catch(() => null) : Promise.resolve(null);
-// Settles when the landmark files are in (or could not be fetched); their parsing and the prepared corals go on behind.
+// Only the downloads, from the start of the page (world.js boot): the surface's own start-up is busy enough without
+// the parsing, and on a slow connection the files are what a first dive waits for longest.
+export function fetchLandmarkFiles(economy = false) {
+  for (const file of [MODEL_FILES.anchor, MODEL_FILES.ship, MODEL_FILES.chest]) { const href = landmarkHref(file, economy); if (!early.has(href)) early.set(href, modelBytes(href)); }
+  coralFiles(economy).catch(() => {});
+}
+// Settles when the landmark and prepared coral files are in (or could not be fetched): what follows them on the
+// connection (the creature set, world.js prefetchEnrichment) does not compete with what a first dive waits for. Their
+// parsing and the coral checks go on behind.
 export function prefetchLandmarks(economy = false) {
-  for (const file of [MODEL_FILES.anchor, MODEL_FILES.ship, MODEL_FILES.chest]) {
-    const href = landmarkHref(file, economy);
-    if (!early.has(href)) { const bytes = modelBytes(href); early.set(href, bytes); parsedEarly.set(href, bytes.then(parseLater)); }
-  }
+  fetchLandmarkFiles(economy);
+  for (const file of [MODEL_FILES.anchor, MODEL_FILES.ship, MODEL_FILES.chest]) { const href = landmarkHref(file, economy); if (!parsedEarly.has(href)) parsedEarly.set(href, early.get(href).then(parseLater)); }
   preparedCoralData(economy).catch(() => {});
-  return Promise.all(early.values());
+  return Promise.all([...early.values(), coralFiles(economy).then(files => files.geometry).catch(() => {})]);
 }
 
 // The prepared coral cache (tools/prepare-corals.mjs), checked against its sources and parsed: everything about it that
 // does not need the reef. Rejects when the cache cannot be used; the corals are then built from their source models.
 const sha256 = async bytes => [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(n => n.toString(16).padStart(2, '0')).join('');
-function preparedCoralData(economy) {
+// Its recipe and its geometry (most of the bytes), fetched ahead of the checks below; used only once they pass.
+const coralFetched = new Map();
+function coralFiles(economy) {
   const variant = economy ? 'economy' : 'full';
-  if (!coralsEarly.has(variant)) coralsEarly.set(variant, (async () => {
+  if (!coralFetched.has(variant)) coralFetched.set(variant, (async () => {
     const response = await fetch(new URL(`${variant}.json`, CORAL_CACHE), { cache: 'no-cache' });
     if (!response.ok) throw Error('Prepared coral metadata unavailable');
     const metadata = await response.json();
     if (metadata.schema !== CORAL_CACHE_SCHEMA || metadata.variant !== variant || metadata.habitats.length !== 15 || metadata.coralLoaded !== 5) throw Error('Prepared coral recipe mismatch');
     if (metadata.sources?.length !== 2 || !['reef.js', 'model-scene.js'].every(file => metadata.sources.some(source => source.file === file)) || metadata.assets?.length !== MODEL_FILES.coral.length || !MODEL_FILES.coral.every(file => metadata.assets.some(asset => asset.file === file))) throw Error('Incomplete prepared coral input validators');
-    if (!globalThis.crypto?.subtle) throw Error('Source checks unavailable');
-    // The geometry is fetched alongside the checks below (it is most of the bytes) and only used once they pass.
     // Gzipped where the build put a copy (modelBytes, assets.js); checked byte for byte either way.
     const bytesURL = new URL(metadata.glb.file, CORAL_CACHE).href;
     const geometry = modelBytes(bytesURL).then(async bytes => {
@@ -93,6 +99,15 @@ function preparedCoralData(economy) {
       return bytesResponse.arrayBuffer();
     });
     geometry.catch(() => {});
+    return { metadata, geometry };
+  })());
+  return coralFetched.get(variant);
+}
+function preparedCoralData(economy) {
+  const variant = economy ? 'economy' : 'full';
+  if (!coralsEarly.has(variant)) coralsEarly.set(variant, (async () => {
+    const { metadata, geometry } = await coralFiles(economy);
+    if (!globalThis.crypto?.subtle) throw Error('Source checks unavailable');
     // Code hashes catch changes to the terrain and grounding/LOD recipe.
     // Cheap HEAD validators catch replacement source models without fetching
     // the original 24 MB merely to decide whether the cache is current.
@@ -498,7 +513,7 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     try {
       // Parsed once (see preparedCoralData); a second scene in the same page builds its corals from the source models.
       const data = await preparedCoralData(economy);
-      coralsEarly.delete(economy ? 'economy' : 'full');
+      coralsEarly.delete(economy ? 'economy' : 'full'); coralFetched.delete(economy ? 'economy' : 'full');
       const { metadata, gltf } = data;
       const imported = new Map(); gltf.scene.traverse(node => { if (node.isMesh) imported.set(node.name, node); });
       const prepared = [];
