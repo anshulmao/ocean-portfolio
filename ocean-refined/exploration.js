@@ -248,7 +248,9 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   }
   function startDive(){syncPerspectiveSetting();ascent=null;state.ascentLaunch=0;surfaceLocked=false;base.y=0;halt();look.yaw=defaultYaw;look.pitch=-.18;state.yaw=look.yaw;state.pitch=look.pitch;state.mode='diver';captureRequired=true;state.exploring=false;setGuided(false);snapBody();boost=spool=0;floorStale=true;
     // A dive may begin over a chosen site, and a guided one leaves the mouse free for the tour's own buttons.
-    const options=pendingDive;pendingDive=null;if(options?.at){const at=coordinate(options.at);base.x=clamp(at[0],-bounds.x,bounds.x);base.z=clamp(at[2]??0,bounds.zMin,bounds.zMax);}
+    // The guided dive goes in first person whatever the saved view is; the setting itself is left alone, so V still toggles from here.
+    const options=pendingDive;pendingDive=null;if(options?.perspective==='first'||options?.perspective==='third')state.perspective=options.perspective;
+    if(options?.at){const at=coordinate(options.at);base.x=clamp(at[0],-bounds.x,bounds.x);base.z=clamp(at[2]??0,bounds.zMin,bounds.zMax);}
     offset.copy(base);
     if(options?.capture===false){captureRequired=false;state.exploring=true;}else recapture();wake();}
   function describeBody(pitch){moveOptions.radius=settings.collisionRadius;moveOptions.length=settings.collisionLength;moveOptions.yaw=body.yaw;moveOptions.pitch=pitch;moveOptions.padding=settings.collisionPadding;moveOptions.step=settings.collisionStep;moveOptions.iterations=settings.collisionIterations;}

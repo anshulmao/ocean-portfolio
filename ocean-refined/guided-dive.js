@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.min.js';
 import { LANDMARKS, terrainHeightAt } from './reef.js';
-import { onFrame, setQuiet, discover, say } from './journey.js';
+import { onFrame, setQuiet, discover, say, splash } from './journey.js';
 import { planGuidedRoute } from './guided-route.js';
 import { STEPS, SPEED, BEAT, WELCOME, holdOf } from './guided-script.js';
 
@@ -12,6 +12,9 @@ export { STEPS, holdOf };
 // The portfolio sites among the steps: the tour's three stories.
 export const STOPS = STEPS.filter(step => step.kind === 'stop');
 const ARRIVE_RADIUS = 1.6, PAN_BEAT = 3, INTRO_BEAT = 4.5, HOLD_SIGNAL = '#8ff4ff';
+// The opening from the surface (SPEC step 0): a held beat while the surface copy fades, the camera eases in on the diver
+// (world.js frameDiver), and the dive starts in first person. Underwater, the title card shows before the welcome sheet.
+const PRELUDE_HOLD = 1, PRELUDE_DIVE = 2.4, REVEAL = 1.8;
 const motionMedia = matchMedia('(prefers-reduced-motion: reduce)'), coarse = matchMedia('(pointer: coarse)');
 // The phone layout of the layout contract (tokens.css): there the card is a bottom sheet and the copy is the short one.
 const compact = matchMedia('(max-width:599px),(pointer:coarse) and (max-height:499px)');
@@ -39,7 +42,7 @@ let open = null, more = false, shownFor = '';
 // itself) · dwell (a portfolio site; waits for Continue) · free (visitor has the controls) · done (the overview)
 let status = 'off', index = 0, arrived = -1, legTime = 0, paused = false, inputs = 0;
 let best = Infinity, stall = 0, waited = 0, cut = null, cutTime = 0, barShown = -1;
-let detours = 0, routeIssue = false, panIndex = 0, panTime = 0, stepTime = 0;
+let detours = 0, routeIssue = false, panIndex = 0, panTime = 0, stepTime = 0, prelude = -1, reveal = 0;
 const leg = [], goal = [0, 0, 0], look = [0, 0, 0], pans = [], from = new THREE.Vector3(), to = new THREE.Vector3(), here = new THREE.Vector3();
 const controls = () => window.oceanControls;
 const touring = () => status === 'intro' || status === 'travel' || status === 'look' || status === 'dwell';
@@ -94,7 +97,7 @@ function route(start, step, scenic = true) {
   return leg.length > 0;
 }
 function paint() {
-  const step = STEPS[index], shown = status !== 'off' && status !== 'starting', reading = status === 'intro' || status === 'look' || status === 'dwell' || status === 'done';
+  const step = STEPS[index], shown = status !== 'off' && status !== 'starting' && reveal <= 0, reading = status === 'intro' || status === 'look' || status === 'dwell' || status === 'done';
   // A new step, or a change of state, starts from the tour's own choice again.
   if (`${status}:${index}` !== shownFor) { shownFor = `${status}:${index}`; open = null; more = false; }
   // Open where there is something to read or decide; folded while the tour swims or waits on hold.
@@ -184,8 +187,10 @@ function advance() { if (index < STEPS.length - 1) go(index + 1); }
 // The welcome is read where the dive levels out: nothing to swim to, only a look around.
 function begin() {
   const api = controls(); index = 0; arrived = 0; status = 'intro'; paused = false; inputs = api.nav.inputs;
+  endPrelude(); splash('Guided dive', 'Welcome to the reef'); reveal = REVEAL;
   api.guide(true, true, true); startPan(); paint();
 }
+function endPrelude() { prelude = -1; delete document.body.dataset.prelude; controls()?.frameDiver?.(false); }
 function handOver() { status = 'free'; paused = false; cut = null; fade.dataset.on = 'false'; controls()?.guide(false); paint(); }
 function rejoin() {
   if (status !== 'free') return;
@@ -196,7 +201,7 @@ function rejoin() {
 }
 function stop(message) {
   if (status === 'off') return;
-  const api = controls(); status = 'off'; paused = false; cut = null; fade.dataset.on = 'false';
+  const api = controls(); status = 'off'; paused = false; cut = null; fade.dataset.on = 'false'; reveal = 0; endPrelude();
   // Let go of the view too, so it does not stay on the last subject the tour showed.
   if (api) { api.guide(false); api.cancelTravel(); api.lookAt?.(null); }
   paint();
@@ -205,7 +210,9 @@ function stop(message) {
 export function startTour() {
   const api = controls();
   if (!api || !window.oceanDiagnostics?.ready || status !== 'off') return false;
-  if (api.getMode() === 'surface' && !api.startDive({ capture: false })) return false;
+  if (api.getMode() !== 'surface' && api.getMode() !== 'diver') return false;
+  // From the surface the opening plays first; under water the tour starts where the diver is.
+  if (api.getMode() === 'surface') { prelude = 0; document.body.dataset.prelude = 'on'; }
   status = 'starting'; index = 0; arrived = -1; waited = 0; paused = false; framed.clear(); paint();
   return true;
 }
@@ -229,6 +236,12 @@ function update(dt, api, state, diving) {
   const mode = api.getMode();
   if (status === 'starting') {
     waited += dt;
+    if (prelude >= 0) {
+      const before = prelude; prelude += dt;
+      if (before < PRELUDE_HOLD && prelude >= PRELUDE_HOLD) api.frameDiver?.(true);
+      if (prelude >= PRELUDE_DIVE) { prelude = -1; waited = 0; if (!api.startDive({ capture: false, perspective: 'first' })) stop('The ocean is still getting ready. Try again in a moment.'); }
+      return;
+    }
     // Navigation started during the entry animation is overwritten by startDive.
     // Landmarks also move while models load: wait for their final viewpoints.
     if (diving && !api.getTransition() && (state.landmarksReady || state.landmarksSettled)) begin();
@@ -243,6 +256,7 @@ function update(dt, api, state, diving) {
   // Swimming off from the overview simply ends the tour; anywhere else it puts the tour on hold.
   if (nav.inputs !== inputs) { if (status === 'done') stop(); else handOver(); return; }
   if (cut) { cutTime -= dt; if (cutTime <= 0) { const then = cut; cut = null; then(); fade.dataset.on = 'false'; } return; }
+  if (reveal > 0) { reveal -= dt; if (reveal <= 0) paint(); }
   if (status !== 'travel') { pan(dt); return; }
   // Pause the route itself, rather than only its caption.
   if (paused) return;

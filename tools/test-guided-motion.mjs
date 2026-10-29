@@ -10,7 +10,7 @@ import { CollisionWorld } from '../ocean-refined/collisions.js';
 
 // Only replace the journey UI scheduler; the tour and swimming integrator below
 // are the production modules. Every assertion samples the actual player body.
-const journey = 'data:text/javascript,' + encodeURIComponent('export const onFrame=fn=>globalThis.tourFrame=fn; export const setQuiet=()=>{}; export const discover=()=>{}; export const say=()=>{};');
+const journey = 'data:text/javascript,' + encodeURIComponent('export const onFrame=fn=>globalThis.tourFrame=fn; export const setQuiet=()=>{}; export const discover=()=>{}; export const say=()=>{}; export const splash=(...a)=>(globalThis.splashes??=[]).push(a);');
 registerHooks({ resolve(specifier, context, next) {
   if (specifier === './journey.js' && context.parentURL?.endsWith('/guided-dive.js')) return { url: journey, shortCircuit: true };
   return next(specifier, context);
@@ -34,20 +34,22 @@ Object.assign(globalThis, { document, window, matchMedia: query => ({ matches: q
 const { startTour, tourStatus, STOPS, STEPS, tourPlan, holdOf } = await import('../ocean-refined/guided-dive.js');
 const { BEAT } = await import('../ocean-refined/guided-script.js');
 
-function environment(hz, { reducedMotion = false, unavailable = false, collision = null, residents = {} } = {}) {
+function environment(hz, { reducedMotion = false, unavailable = false, collision = null, residents = {}, surface = false } = {}) {
   const settings = { ...defaults, pointerLock: false, idleMotion: 0 };
   const nav = createExploration(canvas, () => {}, settings);
   nav.setTerrain(terrainHeightAt);
   if (collision) nav.setCollisions(collision);
   let placed = 0, transition = false;
   const state = window.oceanDiagnostics = { ready: true, landmarksReady: true, reducedMotion, playerPosition: [0, -8, 0] };
-  nav.startDive();
+  let atSurface = surface; const calls = [];
+  if (!surface) nav.startDive();
   // Placed model viewpoints: model-scene.js's own, before a model's bounds refine them, with the real seabed beneath.
   const approach = { about: [5.2, 5.3], experience: [6, 4.4], projects: [6, 4.3] };
   const landmarks = LANDMARKS.map(item => { const [x, , z] = item.position, floor = terrainHeightAt(x, z), [dx, up] = approach[item.id];
     return { ...item, position: [x, floor + 1.4, z], interactionPosition: [x + dx, floor + up, z] }; });
   const api = window.oceanControls = {
-    nav: nav.state, settings, landmarks, reef: { userData: { collisions: collision } }, getMode: () => nav.state.mode, getTransition: () => transition,
+    nav: nav.state, settings, landmarks, reef: { userData: { collisions: collision } }, getMode: () => atSurface ? 'surface' : nav.state.mode,
+    frameDiver: value => calls.push(['frameDiver', value]), startDive: options => { calls.push(['startDive', options]); nav.startDive(); atSurface = false; return true; }, getTransition: () => transition,
     guide: (...args) => nav.setGuided(...args), travelPath: (...args) => unavailable ? false : nav.travelPath(...args),
     cancelTravel: (...args) => nav.cancelTravel(...args), place: (...args) => { placed++; nav.place(...args); }, lookAt: point => nav.lookAt(point), residentAt: id => residents[id] ?? null,
   };
@@ -59,7 +61,7 @@ function environment(hz, { reducedMotion = false, unavailable = false, collision
       globalThis.tourFrame(1 / hz, api, state, true);
     }
   }
-  return { nav, state, landmarks, samples, tick, set transition(value) { transition = value; }, get placed() { return placed; } };
+  return { nav, state, landmarks, samples, tick, calls, set transition(value) { transition = value; }, get placed() { return placed; } };
 }
 
 // Past the welcome, which waits for Continue where the dive levels out, onto the first swim.
@@ -68,6 +70,30 @@ function toTravel(env) {
   assert.equal(tourStatus(), 'intro', 'the tour opens with the welcome');
   window.oceanTour.next(); env.tick(1);
   assert.equal(tourStatus(), 'travel');
+}
+
+// From the surface: a held beat while the copy fades, the camera's move in on the diver, then the dive in first person;
+// under water the title card comes before the welcome sheet.
+{
+  const env = environment(60, { surface: true });
+  globalThis.splashes = [];
+  assert.equal(startTour(), true);
+  assert.equal(document.body.dataset.prelude, 'on', 'the surface copy steps aside');
+  env.tick(.8);
+  assert.deepEqual(env.calls, [], 'a held beat first');
+  env.tick(.4);
+  assert.deepEqual(env.calls, [['frameDiver', true]], 'then the camera moves in on the diver');
+  env.tick(1);
+  assert.equal(env.calls.length, 1, 'the dive waits for the move to finish');
+  env.tick(.4);
+  assert.deepEqual(env.calls[1], ['startDive', { capture: false, perspective: 'first' }], 'and the dive starts in first person');
+  env.tick(.2);
+  assert.equal(tourStatus(), 'intro');
+  assert.equal(document.body.dataset.prelude, undefined, 'the surface copy is back for the dive interface');
+  assert.deepEqual(globalThis.splashes, [['Guided dive', 'Welcome to the reef']], 'the title card');
+  assert.deepEqual(env.calls.at(-1), ['frameDiver', false]);
+  window.oceanTour.stop(); env.nav.destroy();
+  console.log('PASS: the opening holds, moves in on the diver and dives in first person.');
 }
 
 // A solid coral outcrop blocks the first approach. The production planner and

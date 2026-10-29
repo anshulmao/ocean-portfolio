@@ -203,3 +203,10 @@ A hint the visitor has already used is skipped.
   - **The nurse shark.** It settles wherever level sand is (`sand()` in user-creatures.js), which is behind the
     anchor, not at its wished-for spot. The tour asks the creature system where it actually lies (`residentAt`) and
     frames it from the nearest clear spot 5–8 m away, kept clear of the landmark models.
+- **Phase 3: the opening (done).**
+  - From the surface, **Show me around** fades the surface copy (`body[data-prelude]`) and holds still for 1 s.
+  - The camera then eases in on the diver and centres them (`world.js` `frameDiver`, 1.4 s sine ease), and the dive
+    starts in **first person**. The saved view setting is left alone, so V still toggles.
+  - Underwater, the "Guided dive · Welcome to the reef" title card shows for about 1.8 s before the welcome sheet, while
+    the camera looks around.
+  - Started under water, the tour skips the surface part.

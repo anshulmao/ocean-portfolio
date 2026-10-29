@@ -75,6 +75,10 @@ let mobile=innerWidth<600,quality=mobile||(navigator.hardwareConcurrency&&naviga
 let nextBubble=0,bubbleCursor=0,bubbleClock=-1,exploring=false,mapDestination=null;
 let mapCollapsed=mobile;
 let previousMode='surface',surfaceX=0,surfaceZ=0,surfaceFramingYaw=0,expeditionUI=null;
+// The guided dive's opening (release/guided-dive/SPEC.md, step 0): at the surface the camera eases in on the diver and
+// centres them before the dive. prelude runs 0..1 over PRELUDE seconds with a sine ease in and out, and gives way to
+// the dive's own approach as the descent starts.
+const PRELUDE=1.4,PRELUDE_ZOOM=.62;let prelude=0,preludeOn=false;
 let ascentCameraTime=0,surfaceLandingTime=0;const ascentCameraStart=new THREE.Vector3(),ascentAimStart=new THREE.Vector3();
 const ascentComposition=createAscentComposition(),diverPoseGoal=new THREE.Quaternion();
 const aimObject=new THREE.Object3D(),aimQuaternion=new THREE.Quaternion();
@@ -403,7 +407,7 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   // QA hook: after placing the camera by hand, cull the scene for it again.
   recull(){camera.updateMatrixWorld(true);refreshView();userCreatures?.update(0,playerPosition,viewerOrbit?null:view);if(built)cullWorld(0);},
   // Dive planner and guided tour hooks: autopilot, instant placement, dive start / surfacing, and the flashlight and scooter state.
-  travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free,looking){exploration.setGuided(value,free,looking);},lookAt(point){exploration.lookAt(point);wake();},residentAt(id){return userCreatures?.residentAt?.(id)??null;},
+  travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free,looking){exploration.setGuided(value,free,looking);},frameDiver(value){preludeOn=Boolean(value);if(reducedMotion)prelude=Number(preludeOn);wake();},lookAt(point){exploration.lookAt(point);wake();},residentAt(id){return userCreatures?.residentAt?.(id)??null;},
   travelPath(points,focus,speed){return exploration.travelPath(points,focus,speed);},
   cancelTravel(options){return exploration.cancelTravel(options);},
   startDive(options){if(!diagnostic.ready||diveTarget===1||getMode()!=='surface')return false;exploration.prepareDive(options);if(options?.at)snapCamera=true;$('#dive').click();return true;},
@@ -763,6 +767,13 @@ function updateWorld(dt,clockDt=dt){
   lookTarget.copy(playerPosition).addScaledVector(swimDirection,firstPerson?10:settings.cameraLookAhead);
   if(!firstPerson&&!reducedMotion&&nav.velocity)lookTarget.addScaledVector(nav.velocity,.18);
   lookTarget.lerp(relative,1-easedDive);
+  prelude=THREE.MathUtils.clamp(prelude+(preludeOn?dt:-dt)/PRELUDE,0,1);
+  const framing=(1-Math.cos(Math.PI*prelude))/2*(1-THREE.MathUtils.smoothstep(easedDive,0,.4));
+  if(framing>0&&!viewerOrbit&&!ascending){
+    // In toward the diver along the line the camera already has, and turned to hold them in the middle of the frame.
+    cameraGoal.lerp(scratchA.copy(cameraGoal).sub(diver.root.position).multiplyScalar(PRELUDE_ZOOM).add(diver.root.position),framing);
+    lookTarget.lerp(scratchB.copy(diver.root.position).add(scratchC.set(0,.35,0)),framing);
+  }
   if(diveTarget===1&&easedDive>.03&&easedDive<.95&&!ascending){
     const approach=THREE.MathUtils.smoothstep(easedDive,.03,.45)*(1-THREE.MathUtils.smoothstep(easedDive,.45,.95));
     const surfaceOffset=Math.tan(THREE.MathUtils.degToRad(camera.fov*.5))*camera.aspect*7.2*.66;
