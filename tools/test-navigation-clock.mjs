@@ -37,14 +37,16 @@ for(const hz of [30,60,120]){
   returning.place([40,-45,-90]);assert.ok(returning.beginAscent(undefined,true));
   // The body faces the way the return swims, not the way it last faced (world.js poses the diver from bodyYaw and bodyPitch).
   // And it brakes into the stop instead of overrunning it: the offer comes as it arrives, not after a swing back.
-  let worstFacing=0,facingFrames=0,nearest=Infinity,overrun=0,stillFor=0;
+  let worstFacing=0,facingFrames=0,nearest=Infinity,overrun=0,stillFor=0,climbPitch=Infinity;
   for(let t=0;t<60&&returning.state.returnPhase!=='offer';t+=dt){
    returning.update(dt,true);const v=returning.state.velocity,flat=Math.hypot(v.x,v.z);
    const end=returning.state.returnRoute.at(-1),here=returning.getPlayerPosition(),toEnd=Math.hypot(here.x-end[0],here.y-end[1],here.z-end[2]);
    nearest=Math.min(nearest,toEnd);overrun=Math.max(overrun,toEnd-nearest);stillFor=v.length()<.5?stillFor+dt:0;
+   if(t>3&&v.y/v.length()>.45)climbPitch=Math.min(climbPitch,returning.state.bodyPitch);
    if(t>3&&flat>2){facingFrames++;const off=Math.abs(Math.atan2(Math.sin(returning.state.bodyYaw-Math.atan2(-v.x,-v.z)),Math.cos(returning.state.bodyYaw-Math.atan2(-v.x,-v.z))));worstFacing=Math.max(worstFacing,off);}
   }
   assert.ok(facingFrames>hz,'the return swims a while');
+  assert.ok(climbPitch>.3&&climbPitch<Infinity,`climbing, the body tilts up the climb, not the view's pitch (${climbPitch.toFixed(2)} rad)`);
   assert.ok(overrun<.25,`no overrun and swing back at the stop (${overrun.toFixed(2)} m)`);
   assert.ok(stillFor<.3,`the offer comes as the diver arrives, not after it has stopped (${stillFor.toFixed(2)} s still)`);
   assert.ok(worstFacing<.45,`the body follows the course home (at worst ${worstFacing.toFixed(2)} rad off)`);

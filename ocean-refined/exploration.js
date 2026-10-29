@@ -25,6 +25,8 @@ const LOOK_HOLD = 2.5, BODY_TURN = 3, BACKING = 2;
 // The return's arrival at the safety stop: how hard it brakes into it (m/s²) and how near counts as there (m).
 // The swim answers a new pace HOLD_LAG seconds late (ASCENT_RESPONSE), so the braking looks that far ahead.
 const HOLD_BRAKE = 1.6, ARRIVE_HOLD = .6, HOLD_LAG = .6;
+// How much of the climb's angle the body takes on the ascent: most of it, so it visibly swims up the slope.
+const CLIMB_TILT = .8;
 // A guided pan between subjects is a sweep with a sine ease in and out: slow away, fastest midway, slow to rest. It takes
 // PAN_BASE plus PAN_PER_RADIAN for each radian it turns, within PAN_MIN..PAN_MAX seconds.
 const PAN_BASE = 1.2, PAN_PER_RADIAN = 1.8, PAN_MIN = 1.6, PAN_MAX = 5.5, PAN_START = .04;
@@ -346,7 +348,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     // than BACKING off the body leaves it be.
     const flat=Math.hypot(velocity.x,velocity.z),speed=velocity.length(),turnBody=1-Math.exp(-dt*BODY_TURN),holding=ascent.returnViaReef?ascent.waypoint>=ascent.route.length-1:!routed;
     if(flat>.35){const heading=Math.atan2(-velocity.x,-velocity.z),off=wrap(heading-body.yaw);if(!holding||Math.abs(off)<BACKING){body.yaw+=off*turnBody;if(routed)look.yaw+=wrap(heading-look.yaw)*(1-Math.exp(-dt*3));}}
-    body.pitch+=((speed>.2?clamp(Math.asin(clamp(velocity.y/speed,-1,1))*.45,-.38,.38):0)-body.pitch)*turnBody;
+    body.pitch+=((speed>.2?clamp(Math.asin(clamp(velocity.y/speed,-1,1))*CLIMB_TILT,-.7,.7):0)-body.pitch)*turnBody;
     base.set(position.x,position.y+8,position.z);state.ascentDepth=Math.max(0,-position.y);state.ascentProgress=ascent.initialDepth?1-state.ascentDepth/ascent.initialDepth:1;
     if(position.y>=-.025){base.y=8;ascent=null;state.returning=false;state.returnPhase=null;state.safetyOfferRemaining=0;surfaceLocked=true;look.yaw=defaultYaw;look.pitch=0;state.ascentProgress=1;state.ascentLaunch=1;state.mode='surface';state.exploring=false;captureRequired=true;clear();halt();}
   }
@@ -578,7 +580,8 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     }else{drift.set(0,0,0);state.lean=0;}
     offset.copy(base).add(drift);
     state.roll=bank.roll;state.pitchLead=bank.lead;state.idle=idle;
-    if(ascent||surfaceLocked)snapBody();
+    // At the surface the body is the view. On the ascent updateAscent() turns it with the swim, so it is left alone.
+    if(surfaceLocked&&!ascent)snapBody();
     state.offset=offset;state.yaw=look.yaw;state.pitch=look.pitch;state.bodyYaw=body.yaw;state.bodyPitch=body.pitch;state.travelling=hasDest;state.manualInput=manual;
     const ascentMoving=Boolean(ascent)&&!(ascent.returnViaReef&&(state.returnPhase==='offer'||state.returnPhase==='stop')&&state.speed<.05);
     state.moving=manual||state.speed>.015||Math.abs(spin.yaw)+Math.abs(spin.pitch)>.0005||Math.abs(lag.yaw)+Math.abs(lag.pitch)>.0002||Math.abs(bank.roll)>.0005||docking||ascentMoving;
