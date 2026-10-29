@@ -8,7 +8,7 @@ import { distance } from '../ocean-refined/cinematic-route.js';
 import * as THREE from '../ocean-refined/vendor/three.module.min.js';
 import { CollisionWorld } from '../ocean-refined/collisions.js';
 import { heroFormationSteps } from '../ocean-refined/hero-formations.js';
-import { wildlifeBearing } from '../ocean-refined/guided-wildlife.js';
+import { createWildlifeGuide, wildlifeBearing } from '../ocean-refined/guided-wildlife.js';
 
 // Only replace the journey UI scheduler; the tour and swimming integrator below
 // are the production modules. Every assertion samples the actual player body.
@@ -205,4 +205,30 @@ assert.ok(wildlifeBearing([0, 10, -10]).y < 0);
 assert.equal(wildlifeBearing([0, 0, -10]).onScreen, true);
 assert.equal(wildlifeBearing([0, 0, 10]).onScreen, false);
 assert.equal(tourPlan().stops, 3, 'the planner counts portfolio sites separately from scenic stages');
+{
+  let cue, samples = 0;
+  const guideDocument = { createElement: () => (cue = new Element()), body: { append() {} } };
+  const camera = new THREE.PerspectiveCamera(60, 1, .1, 100); camera.updateMatrixWorld();
+  let animals = [{ id: 'visitor', species: 'whale-shark', position: [12, 0, -20] }];
+  const api = { getCamera: () => camera, creatures: { root: { visible: false }, sites: () => { samples++; return animals; } } };
+  const guide = createWildlifeGuide(guideDocument, new THREE.Vector3());
+  guide.update(.25, api, true);
+  assert.equal(cue.hidden, true, 'unprepared creatures cannot create a phantom cue at the origin');
+  api.creatures.root.visible = true; guide.update(.25, api, true);
+  assert.equal(cue.hidden, false, 'a nearby prepared animal produces a cue');
+  const bearing = cue.style.left;
+  camera.rotation.y = -.5; camera.updateMatrixWorld(); guide.update(.01, api, true);
+  assert.notEqual(cue.style.left, bearing, 'camera look updates the cue between animal samples');
+  assert.equal(samples, 1, 'camera frames do not reallocate the animal list');
+  guide.update(.01, api, false); assert.equal(cue.hidden, true, 'reading hides the cue');
+  animals = []; guide.update(.25, api, true);
+  assert.equal(cue.hidden, true, 'departed animal clears the cue');
+  guide.reset(); animals = [{ id: 'visitor', species: 'whale-shark', position: [0, 0, -20] }];
+  guide.update(.25, api, true); assert.equal(cue.hidden, false);
+  animals[0].position = [100, 0, -20]; guide.update(.25, api, true);
+  assert.equal(cue.hidden, true, 'an active animal outside the nearby range clears the cue');
+  guide.reset(); animals[0].position = [0, 0, -20]; guide.update(.25, api, true);
+  for (let i = 0; i < 41; i++) guide.update(.25, api, true);
+  assert.equal(cue.hidden, true, 'a cue expires without waiting for the animal');
+}
 console.log('PASS: mouse, touch and arrow-key free look preserve the body route; wildlife bearings follow the view.');
