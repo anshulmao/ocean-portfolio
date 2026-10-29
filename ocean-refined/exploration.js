@@ -22,6 +22,9 @@ const AUTO_RESPONSE = 10, AUTO_ACCEL = 3.5, AUTO_BRAKE = 3.5, COURSE_RATE = 4, F
 const LOOK_AUTO = 4, LOOK_GUIDED = 3.2, SWEEP_AUTO = 2.2, SWEEP_GUIDED = 1.4;
 // Free look under the guide: the visitor's own look holds this long (s) after their last aim before the guide's drifts back. BODY_TURN: the body's turn onto the course (1/s).
 const LOOK_HOLD = 2.5, BODY_TURN = 3, BACKING = 2;
+// The return's arrival at the safety stop: how hard it brakes into it (m/s²) and how near counts as there (m).
+// The swim answers a new pace HOLD_LAG seconds late (ASCENT_RESPONSE), so the braking looks that far ahead.
+const HOLD_BRAKE = 1.6, ARRIVE_HOLD = .6, HOLD_LAG = .6;
 // A guided pan between subjects is a sweep with a sine ease in and out: slow away, fastest midway, slow to rest. It takes
 // PAN_BASE plus PAN_PER_RADIAN for each radian it turns, within PAN_MIN..PAN_MAX seconds.
 const PAN_BASE = 1.2, PAN_PER_RADIAN = 1.8, PAN_MIN = 1.6, PAN_MAX = 5.5, PAN_START = .04;
@@ -287,11 +290,15 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     state.returning=routed&&ascent.returnViaReef;
     if(routed){
       const point=ascent.route[ascent.waypoint];delta.copy(point).sub(position);const gap=delta.length(),final=ascent.waypoint===ascent.route.length-1;
-      if(gap<(final?.25:1)&&(!final||velocity.length()<.5)){
+      // The last point is the safety stop's: arriving within ARRIVE_HOLD at a drift counts, and the hold settles the rest.
+      if(gap<(final?ARRIVE_HOLD:1)&&(!final||velocity.length()<.8)){
         ascent.waypoint++;
         if(final&&ascent.returnViaReef){state.returnPhase='offer';state.safetyOfferRemaining=ascent.offerWait;}
       }
-      else if(gap>.001){const cruise=ascent.returnViaReef?Math.min(10,settings.atlasCruiseSpeed*1.2):settings.ascentSpeed;desired.copy(delta).multiplyScalar(Math.min(cruise,gap*(final?1.2:2.5)+(final?0:.4))/gap);}
+      // Into the route's end it brakes at HOLD_BRAKE from as far out as that takes (measured to the end, not the point
+      // steered for: the route is a chain of close points), so it arrives slowly instead of overrunning at cruise and
+      // swinging back, which read as a stop long before the offer came up.
+      else if(gap>.001){const cruise=ascent.returnViaReef?Math.min(10,settings.atlasCruiseSpeed*1.2):settings.ascentSpeed;const brake=Math.max(.6,Math.sqrt(2*HOLD_BRAKE*Math.max(0,position.distanceTo(ascent.route.at(-1))-velocity.length()*HOLD_LAG)));desired.copy(delta).multiplyScalar(Math.min(cruise,brake,final?Infinity:gap*2.5+.4)/gap);}
     }
     else if(ascent.returnViaReef&&state.returnPhase==='stop'){
       // Keep the diver at the return waypoint for as long as the stop is active.
