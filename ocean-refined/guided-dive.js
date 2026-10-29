@@ -22,16 +22,16 @@ const PRELUDE_HOLD = 1, PRELUDE_DIVE = 2.4, REVEAL = 3.2;
 // lamp, the view, the scooter, the computer, a photo, the records), so a key, a touch button and a gamepad all count.
 // Each tip is [keyboard, touch].
 const CONTROLS = {
-  computer: { key: 'C', name: 'Dive computer', touch: 'Dive computer button',
+  computer: { key: 'C', name: 'Dive computer', touch: 'Computer',
     tip: ['Press C to check your depth on your dive computer.', 'Tap Dive computer to check your depth.'] },
-  interact: { key: 'F', name: 'Open a site', touch: 'Read it, at a site' },
-  scooter: { key: 'E', name: 'Scooter (hold)', touch: 'Scooter button (hold)',
+  interact: { key: 'F', name: 'Open a site', touch: 'Read it' },
+  scooter: { key: 'E', name: 'Scooter (hold)', touch: 'Scooter (hold)',
     tip: ['Hold E for the scooter: the guide speeds up too.', 'Hold the scooter button: the guide speeds up too.'] },
-  lamp: { key: 'Q', name: 'Flashlight', touch: 'Lamp button',
+  lamp: { key: 'Q', name: 'Flashlight', touch: 'Lamp',
     tip: ['It’s darker by the wreck. Press Q for your lamp.', 'It’s darker by the wreck. Tap the lamp button.'] },
-  view: { key: 'V', name: 'First / third person', touch: 'View button',
+  view: { key: 'V', name: 'First / third person', touch: 'View',
     tip: ['Press V to see yourself against the reef.', 'Tap the view button to see yourself against the reef.'] },
-  photo: { key: 'H', name: 'Photo', touch: 'Photo button',
+  photo: { key: 'H', name: 'Photo', touch: 'Photo',
     tip: ['Press H to take a photo.', 'Tap Photo to take a picture.'] },
 };
 const PRIMER = ['computer', 'interact', 'scooter', 'lamp', 'view'];
@@ -65,7 +65,7 @@ let open = null, more = false, shownFor = '';
 // itself) · dwell (a portfolio site; waits for Continue) · free (visitor has the controls) · done (the overview)
 let status = 'off', index = 0, arrived = -1, legTime = 0, paused = false, inputs = 0;
 let best = Infinity, stall = 0, waited = 0, cut = null, cutTime = 0, barShown = -1;
-let detours = 0, routeIssue = false, panIndex = 0, panTime = 0, stepTime = 0, prelude = -1, reveal = 0, keysShown = '';
+let detours = 0, routeIssue = false, panIndex = 0, panTime = 0, stepTime = 0, prelude = -1, reveal = 0, keysShown = '', called = true;
 // used: the controls tried on this tour. seen: what they last read, to notice a change.
 const used = new Set(); let seen = null;
 // pointed: visitors already seen on their current pass. marked: the one the marker is on, and how long it has been in view.
@@ -150,7 +150,8 @@ function paint() {
   const moreButton = part('.tour-more');
   moreButton.hidden = !(small && wide && brief !== full);
   moreButton.setAttribute('aria-expanded', String(more));
-  moreButton.firstChild.textContent = more ? 'Less' : 'More';
+  // On a phone the welcome's controls are behind this button, so there it says what it opens.
+  moreButton.firstChild.textContent = more ? 'Less' : status === 'intro' ? 'Controls' : 'More';
   card.dataset.more = String(small && more);
   const tip = paintControls(step, fingers);
   // Folded, the row offers one action: the one the moment calls for.
@@ -232,7 +233,8 @@ function startPan() {
   // A resident found where it settled replaces the stand-in first subject.
   const resident = step.resident && frame(step); if (resident) pans.splice(0, 1, resident.subject);
   if (step.landmark) { const subject = [0, 0, 0]; resolve(step, [0, 0, 0], subject); pans.push(subject); }
-  if (step.encounter) controls()?.encounter?.(step.encounter.id, step.encounter.course);
+  // The creature set loads after the dive starts: a beat that calls an animal in keeps asking until it can come.
+  called = !step.encounter || Boolean(controls()?.encounter?.(step.encounter.id, step.encounter.course));
   if (pans.length && !reduced()) aim(pans[0]);
 }
 // A pan subject is a point, or { visitor } for an animal passing (null while it is not there).
@@ -242,6 +244,7 @@ function pan(dt) {
   if (paused) return;
   const step = STEPS[index], beat = step.kind === 'look' ? step.beat ?? BEAT : step.kind === 'intro' ? INTRO_BEAT : PAN_BEAT;
   stepTime += dt; panTime += dt;
+  if (!called) called = Boolean(controls()?.encounter?.(step.encounter.id, step.encounter.course));
   if (!reduced() && panIndex < pans.length - 1 && panTime >= beat) { panIndex++; panTime = 0; aim(pans[panIndex]); }
   else if (!reduced() && pans[panIndex]?.visitor) aim(pans[panIndex], true);
   if (status === 'look' && stepTime >= holdOf(step)) advance();

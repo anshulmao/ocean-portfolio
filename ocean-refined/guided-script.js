@@ -30,6 +30,7 @@ const depth = y => `${Math.round(toDisplayDepth(-y))} m`;
 export const STEPS = [
   { key: 'welcome', kind: 'intro', place: 'Guided dive', title: 'Welcome to the guided dive',
     line: 'This is my portfolio, as a reef. Look anywhere as we go. There’s a lot of life down here.',
+    short: 'This is my portfolio, as a reef. Look anywhere as we go.',
     pan: [[-12, -9, -15], [26, -14, -10], [0, -26, -55], [-12, -9, -15]] },
   { key: 'about', kind: 'stop', landmark: 'about', opens: 'glance', place: `About · The Anchor · ${depth(-9)}`, signal: '#7ff0cf',
     title: 'This anchor is me', line: 'Open it for my portfolio at a glance: who I am and where everything lives.' },

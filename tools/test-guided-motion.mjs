@@ -41,7 +41,7 @@ function environment(hz, { reducedMotion = false, unavailable = false, collision
   if (collision) nav.setCollisions(collision);
   let placed = 0, transition = false;
   const state = window.oceanDiagnostics = { ready: true, landmarksReady: true, reducedMotion, playerPosition: [0, -8, 0] };
-  let atSurface = surface, clock = 0, whaleFrom = null; const calls = [];
+  let atSurface = surface, clock = 0, whaleFrom = null, asked = null; const calls = [];
   if (!surface) nav.startDive();
   // Placed model viewpoints: model-scene.js's own, before a model's bounds refine them, with the real seabed beneath.
   const approach = { about: [5.2, 5.3], experience: [6, 4.4], projects: [6, 4.3] };
@@ -51,7 +51,8 @@ function environment(hz, { reducedMotion = false, unavailable = false, collision
     nav: nav.state, settings, landmarks, reef: { userData: { collisions: collision } }, getMode: () => atSurface ? 'surface' : nav.state.mode,
     frameDiver: value => calls.push(['frameDiver', value]),
     // A called-in whale shark swims its course at its own pace (user-creature-routes.js: 1.5 m/s), from `ahead` short of its closest approach.
-    encounter: (id, course) => { calls.push(['encounter', id, course]); whaleFrom = { at: [...state.playerPosition], course, clock }; return true; },
+    // The creature set may still be loading when the beat asks: here it can come only two seconds after the first ask.
+    encounter: (id, course) => { asked ??= clock; if (clock < asked + 2) return false; calls.push(['encounter', id, course]); whaleFrom = { at: [...state.playerPosition], course, clock }; return true; },
     visitors: () => whaleFrom ? [whaleAt(whaleFrom, clock)] : [], startDive: options => { calls.push(['startDive', options]); nav.startDive(); atSurface = false; return true; }, getTransition: () => transition,
     guide: (...args) => nav.setGuided(...args), travelPath: (...args) => unavailable ? false : nav.travelPath(...args),
     cancelTravel: (...args) => nav.cancelTravel(...args), place: (...args) => { placed++; nav.place(...args); }, lookAt: (point, follow) => nav.lookAt(point, follow), residentAt: id => residents[id] ?? null,
@@ -223,7 +224,7 @@ for (const hz of [30, 60, 120]) {
   // The whale shark is called in at the deep beat, on a course that stays over open water (SPEC D4): along its whole
   // line across the reef the seabed is deep, and it swims well clear of it.
   const called = env.calls.filter(call => call[0] === 'encounter');
-  assert.deepEqual(called.map(call => call[1]), ['whale-shark'], 'one guaranteed whale shark');
+  assert.deepEqual(called.map(call => call[1]), ['whale-shark'], 'one guaranteed whale shark, even when it was not ready at first');
   for (let x = -62; x <= 62; x += 2) {
     const { course, at } = env.whaleFrom, along = (x - at[0]) / Math.sin(course.angle), z = at[2] - Math.sin(course.angle) * course.side * course.pass + Math.cos(course.angle) * along;
     assert.ok(terrainHeightAt(x, z) < -38 && course.y - terrainHeightAt(x, z) > 10, `open water under the whale shark at x ${x} (seabed ${terrainHeightAt(x, z).toFixed(1)})`);

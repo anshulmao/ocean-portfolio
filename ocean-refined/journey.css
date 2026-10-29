@@ -165,6 +165,8 @@ html[data-input="touch"] .tour-card footer kbd{display:none}
   .tour-card[data-more="true"] .tour-lines{display:block}
   .tour-card[data-more="true"] .tour-more:not([hidden]){position:static;margin-left:auto}
   .tour-card[data-more="true"] .tour-more span{padding:0;background:none}
+  /* The welcome's controls wait behind its Controls button here, so the sheet is no taller than a stop's. */
+  .tour-card:not([data-more="true"]) .tour-keys{display:none}
   /* The sheet carries the landmark's action while it is up (Read it), so the scene's own prompt stands down. */
   body[data-sheet] #interact-prompt{visibility:hidden}
 }
