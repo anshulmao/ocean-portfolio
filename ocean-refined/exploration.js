@@ -21,7 +21,7 @@ const T90 = 3.89, VERTICAL = .8;
 const AUTO_RESPONSE = 10, AUTO_ACCEL = 3.5, AUTO_BRAKE = 3.5, COURSE_RATE = 4, FOCUS_RANGE = 5;
 const LOOK_AUTO = 4, LOOK_GUIDED = 3.2, SWEEP_AUTO = 2.2, SWEEP_GUIDED = 1.4;
 // Free look under the guide: the visitor's own look holds this long (s) after their last aim before the guide's drifts back. BODY_TURN: the body's turn onto the course (1/s).
-const LOOK_HOLD = 2.5, BODY_TURN = 3;
+const LOOK_HOLD = 2.5, BODY_TURN = 3, BACKING = 2;
 // A guided pan between subjects is a sweep with a sine ease in and out: slow away, fastest midway, slow to rest. It takes
 // PAN_BASE plus PAN_PER_RADIAN for each radian it turns, within PAN_MIN..PAN_MAX seconds.
 const PAN_BASE = 1.2, PAN_PER_RADIAN = 1.8, PAN_MIN = 1.6, PAN_MAX = 5.5, PAN_START = .04;
@@ -245,7 +245,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     state.returnRoute=returnViaReef?route.map(p=>p.isVector3?p.toArray():[...p]):null;
     state.returnPhase=returnViaReef?'travel':null;state.safetyOfferRemaining=0;
     ascent={route:route.map(p=>p.isVector3?p.clone():new THREE.Vector3(...p)),returnViaReef,routeProvider,offerWait:returnViaReef?10:0,initialDepth:Math.max(0,-position.y),elapsed:0,waypoint:0,exitSearchAt:0,blockedFor:0,launchAt:null};state.ascentLaunch=0;
-    hasDest=hasFocus=docking=false;spin.yaw=spin.pitch=spinPush.yaw=spinPush.pitch=lag.yaw=lag.pitch=0;pathCheckAt=0;pathIsClear=true;pathCheckPosition.copy(position);wake();return true;
+    freeLook=state.freeLook=settling=false;hasDest=hasFocus=docking=false;spin.yaw=spin.pitch=spinPush.yaw=spinPush.pitch=lag.yaw=lag.pitch=0;pathCheckAt=0;pathIsClear=true;pathCheckPosition.copy(position);wake();return true;
   }
   function startDive(){syncPerspectiveSetting();ascent=null;state.ascentLaunch=0;surfaceLocked=false;base.y=0;halt();look.yaw=defaultYaw;look.pitch=-.18;state.yaw=look.yaw;state.pitch=look.pitch;state.mode='diver';captureRequired=true;state.exploring=false;setGuided(false);snapBody();boost=spool=0;floorStale=true;
     // A dive may begin over a chosen site, and a guided one leaves the mouse free for the tour's own buttons.
@@ -333,7 +333,13 @@ export function createExploration(canvas, wake, settings=savedSettings) {
         }
       }else{state.ascentBlocked=true;ascent.blockedFor=.8;}
     }else if(routed)ascent.blockedFor=0;
-    if(state.returning&&Math.hypot(velocity.x,velocity.z)>.2)look.yaw+=wrap(Math.atan2(-velocity.x,-velocity.z)-look.yaw)*(1-Math.exp(-dt*3));
+    // The body faces the way it is going, the whole way up: round the reef it turns with the swim and tilts with the climb,
+    // and straight up it keeps its heading (world.js tips it head-up as it launches). On a route the view turns with it.
+    // Easing back onto a hold it overran (the route's end, the safety stop) is a drift, not a turn: there a course more
+    // than BACKING off the body leaves it be.
+    const flat=Math.hypot(velocity.x,velocity.z),speed=velocity.length(),turnBody=1-Math.exp(-dt*BODY_TURN),holding=ascent.returnViaReef?ascent.waypoint>=ascent.route.length-1:!routed;
+    if(flat>.35){const heading=Math.atan2(-velocity.x,-velocity.z),off=wrap(heading-body.yaw);if(!holding||Math.abs(off)<BACKING){body.yaw+=off*turnBody;if(routed)look.yaw+=wrap(heading-look.yaw)*(1-Math.exp(-dt*3));}}
+    body.pitch+=((speed>.2?clamp(Math.asin(clamp(velocity.y/speed,-1,1))*.45,-.38,.38):0)-body.pitch)*turnBody;
     base.set(position.x,position.y+8,position.z);state.ascentDepth=Math.max(0,-position.y);state.ascentProgress=ascent.initialDepth?1-state.ascentDepth/ascent.initialDepth:1;
     if(position.y>=-.025){base.y=8;ascent=null;state.returning=false;state.returnPhase=null;state.safetyOfferRemaining=0;surfaceLocked=true;look.yaw=defaultYaw;look.pitch=0;state.ascentProgress=1;state.ascentLaunch=1;state.mode='surface';state.exploring=false;captureRequired=true;clear();halt();}
   }

@@ -35,7 +35,16 @@ for(const hz of [30,60,120]){
  const returning=make();
  {
   returning.place([40,-45,-90]);assert.ok(returning.beginAscent(undefined,true));
-  for(let t=0;t<60&&returning.state.returnPhase!=='offer';t+=dt)returning.update(dt,true);
+  // The body faces the way the return swims, not the way it last faced (world.js poses the diver from bodyYaw and bodyPitch).
+  let worstFacing=0,facingFrames=0;
+  for(let t=0;t<60&&returning.state.returnPhase!=='offer';t+=dt){
+   returning.update(dt,true);const v=returning.state.velocity,flat=Math.hypot(v.x,v.z);
+   if(t>3&&flat>2){facingFrames++;const off=Math.abs(Math.atan2(Math.sin(returning.state.bodyYaw-Math.atan2(-v.x,-v.z)),Math.cos(returning.state.bodyYaw-Math.atan2(-v.x,-v.z))));worstFacing=Math.max(worstFacing,off);}
+  }
+  assert.ok(facingFrames>hz,'the return swims a while');
+  assert.ok(worstFacing<.45,`the body follows the course home (at worst ${worstFacing.toFixed(2)} rad off)`);
+  const v=returning.state.returnRoute,leg=Math.atan2(-(v.at(-1)[0]-v.at(-2)[0]),-(v.at(-1)[2]-v.at(-2)[2])),arrived=returning.state.bodyYaw-leg;
+  assert.ok(Math.abs(Math.atan2(Math.sin(arrived),Math.cos(arrived)))<.3,'and still faces that way at the stop: easing back onto the hold is no turn about');
   assert.equal(returning.state.returnPhase,'offer');
   const held=returning.getPlayerPosition();assert.ok(Math.hypot(held.x,held.z+6)<.5);
   returning.holdSafetyStop(true);
