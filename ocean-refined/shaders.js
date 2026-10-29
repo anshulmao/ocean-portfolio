@@ -161,6 +161,11 @@ uniform sampler2D uSkyMap;
 ${noise}
 ${backdropGLSL}
 float valueNoise(vec2 p,float lod){return textureLod(uValueMap,p*.03125,lod).r;}
+// The glow close round the sun: warm while it is low, a near-white blue once it is well up (on a deep blue sky a warm
+// glow reads violet). skySmooth bakes it under the clouds and skyDetail puts back the share a cloud covers.
+vec3 sunHalo(vec3 ray) {
+  return mix(vec3(.70,.47,.17),vec3(.48,.56,.66),smoothstep(.12,.42,uSun.y))*pow(max(dot(ray,uSun),0.0),70.0)*(1.0-uNight)*(1.0-uWeather.w*.85);
+}
 vec3 skySmooth(vec3 ray) {
   float h=max(ray.y,0.0),over=uWeather.w,open=1.0-over;
   // A low sun keeps the soft cyan of morning and evening; once it is well up (about 7 to 25 degrees) the sky turns a
@@ -168,7 +173,7 @@ vec3 skySmooth(vec3 ray) {
   // its dark text), deep overhead. ACES flattens a pale sky to white, so these keep red low and let blue run past 1.
   float day=smoothstep(.12,.42,uSun.y);
   vec3 low=mix(vec3(.48,.70,.81),vec3(.055,.26,.48),pow(min(h*2.5,1.0),.55));
-  vec3 high=mix(mix(vec3(.13,.46,1.50),vec3(.08,.33,1.22),smoothstep(0.0,.24,h)),vec3(.025,.09,.46),smoothstep(.18,.85,h));
+  vec3 high=mix(mix(vec3(.13,.46,1.50),vec3(.08,.33,1.22),smoothstep(0.0,.24,h)),vec3(.025,.11,.46),smoothstep(.18,.85,h));
   vec3 color=mix(low,high,day);
   color+=vec3(.14,.085,.025)*pow(max(dot(ray,uSun),0.0),5.0)*(1.0-day*.7);
   color=mix(color,mix(vec3(.057,.101,.17),vec3(.006,.015,.051),pow(h,.45)),uNight);
@@ -183,7 +188,7 @@ vec3 skySmooth(vec3 ray) {
   // Overcast flattens the gradient into the weather's grey deck; lightning lifts it for a moment.
   color=mix(color,mix(uDeckLow,uDeckHigh,pow(min(h*3.0,1.0),.6)),over*.9);
   color+=vec3(.46,.54,.74)*uFlash.w*(.2+.8*pow(max(dot(ray,uFlash.xyz),0.0),3.0));
-  color+=vec3(.70,.47,.17)*pow(max(dot(ray,uSun),0.0),70.0)*(1.0-uNight)*(1.0-over*.85);
+  color+=sunHalo(ray);
   color+=vec3(.11,.15,.22)*pow(max(dot(ray,uMoon),0.0),100.0)*uNight*uMoonFraction*open;
   // Smooth broad dust lanes stay continuous when looking toward the zenith.
   float band=exp(-pow(abs(dot(ray,uMilkyWay))/.12,2.0));
@@ -217,7 +222,7 @@ vec3 skyDetail(vec3 color,vec3 ray) {
     color=mix(color,cloudColor,cover);
     if(uWeather.z>.01)color*=1.0-uWeather.z*.36*lift*smoothstep(.36,.62,textureLod(uNoiseMap,p*.0055+uCloudDrift*.004,max(0.0,lod-2.0)).a);
     // The sun's glow is baked beneath this layer; it shines through cloud, so the covered share is put back.
-    color+=vec3(.70,.47,.17)*pow(max(dot(ray,uSun),0.0),70.0)*(1.0-uNight)*(1.0-over*.85)*cover;
+    color+=sunHalo(ray)*cover;
     // Thin high cirrus, distinct from the lower cumulus field; hidden above the deck.
     if(open>.01&&uNight<.999){
       float cirrus=pow(textureLod(uNoiseMap,vec2(p.x*.12+p.y*.06,p.y*2.3)*.03125,lod+1.2).b,4.0)*.38;
