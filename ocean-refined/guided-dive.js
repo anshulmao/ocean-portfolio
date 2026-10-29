@@ -14,7 +14,8 @@ export const STOPS = STEPS.filter(step => step.kind === 'stop');
 const ARRIVE_RADIUS = 1.6, PAN_BEAT = 3, INTRO_BEAT = 4.5, HOLD_SIGNAL = '#8ff4ff';
 // The opening from the surface (SPEC step 0): a held beat while the surface copy fades, the camera eases in on the diver
 // (world.js frameDiver), and the dive starts in first person. Underwater, the title card shows before the welcome sheet.
-const PRELUDE_HOLD = 1, PRELUDE_DIVE = 2.4, REVEAL = 1.8;
+// REVEAL outlasts the title card (announce.js holds a short one about 2.5 s, then fades), so the two never overlap.
+const PRELUDE_HOLD = 1, PRELUDE_DIVE = 2.4, REVEAL = 3.2;
 const motionMedia = matchMedia('(prefers-reduced-motion: reduce)'), coarse = matchMedia('(pointer: coarse)');
 // The phone layout of the layout contract (tokens.css): there the card is a bottom sheet and the copy is the short one.
 const compact = matchMedia('(max-width:599px),(pointer:coarse) and (max-height:499px)');
