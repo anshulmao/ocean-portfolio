@@ -286,3 +286,10 @@ A hint the visitor has already used is skipped.
   - **Whales cross the reef's face.** With no scripted course, the whale and the whale shark now swim parallel to the
     reef along a line in deep water (z ≤ −55 for the whale and −50 for the whale shark, the `across` setting in
     `user-creature-routes.js`), not toward it. The tour's look-up keeps its own scripted course.
+- **After round 3:**
+  - **Surfacing faces the way it goes.** On the automatic ascent the diver's body used to keep whatever heading it
+    last had: the free-look body after the tour's Surface, or the last swim on a plain rise. It now turns with the
+    swim home and tilts with the climb, and the view turns with it along a route. Easing back onto an overrun hold or
+    the safety stop is a drift, not a turn about. `tools/test-navigation-clock.mjs` checks it at 30, 60 and 120 Hz.
+  - **#15 merged in** (a shorter waterline hold on slow devices; the tour's assets start loading at the Show me
+    around click).
