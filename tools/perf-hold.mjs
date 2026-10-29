@@ -76,7 +76,9 @@ async function run(name, profile, action, index) {
     else await page.evaluate(() => document.querySelector('#guided-dive').click());
     await page.waitForFunction(() => window.__probe.submergedAt || window.oceanDiagnostics?.error, null, {timeout: 300000, polling: 100});
     await page.waitForFunction(() => window.oceanExperienceMetrics?.snapshot().stages.firstUsableDive !== undefined, null, {timeout: 120000, polling: 100}).catch(() => errors.push('no usable dive'));
-    const result = await page.evaluate(() => { const d = window.oceanDiagnostics; return {startup: d.startup, quality: d.quality, error: d.error, probe: window.__probe, usable: window.oceanExperienceMetrics.snapshot().stages.firstUsableDive}; });
+    // Everything the guided dive shows (world.js whenEnriched): the landmarks and the optional sets settled.
+    await page.waitForFunction(() => window.oceanExperienceMetrics?.snapshot().stages.optionalModelsSettled !== undefined, null, {timeout: 180000, polling: 250}).catch(() => errors.push('optional sets never settled'));
+    const result = await page.evaluate(() => { const d = window.oceanDiagnostics; return {startup: d.startup, quality: d.quality, error: d.error, probe: window.__probe, usable: window.oceanExperienceMetrics.snapshot().stages.firstUsableDive, enriched: window.oceanExperienceMetrics.snapshot().stages.optionalModelsSettled}; });
     const s = result.startup, readyAt = (await page.evaluate(() => window.oceanDiagnostics.readyAt)), rel = at => typeof at === 'number' ? at - readyAt : null;
     // The surface between ready and the click: frame gaps over 50 ms and the worst one; long tasks.
     const surfaceGaps = result.probe.gaps.filter(([at]) => at > readyAt && at <= clickAt).map(([, gap]) => gap);
@@ -86,7 +88,7 @@ async function run(name, profile, action, index) {
       // ms after the surface was ready
       marks: {prewarm: rel(s.prewarmAt), built: rel(s.builtAt), underReady: rel(s.underReadyAt), landmarks: rel(s.landmarksReadyAt), warmed: rel(s.warmedAt), optional: rel(s.optionalModelsAt), click: clickAt - readyAt, diveAsked: rel(s.diveAskedAt)},
       // ms after the dive was asked for (the click; for the guided dive, the end of its prelude)
-      hold: {heldMs: s.heldMs ?? 0, toSubmerged: result.probe.submergedAt - (s.diveAskedAt ?? clickAt), clickToSubmerged: result.probe.submergedAt - clickAt, clickToUsable: typeof result.usable === 'number' ? Math.round(result.usable - clickAt) : null},
+      hold: {heldMs: s.heldMs ?? 0, toSubmerged: result.probe.submergedAt - (s.diveAskedAt ?? clickAt), clickToSubmerged: result.probe.submergedAt - clickAt, clickToUsable: typeof result.usable === 'number' ? Math.round(result.usable - clickAt) : null, clickToEnriched: typeof result.enriched === 'number' ? Math.round(result.enriched - clickAt) : null},
       surface: {frames: surfaceGaps.length, over50: surfaceGaps.filter(gap => gap > 50).length, worstGap: Math.round(Math.max(0, ...surfaceGaps)), longTasks: surfaceLong.length, longTaskMs: surfaceLong.reduce((n, [, d]) => n + d, 0)}
     };
   } finally { await browser.close(); }
@@ -108,4 +110,4 @@ try {
 } finally { server.close(); }
 await fs.writeFile(path.join(OUT, `hold-${LABEL}.json`), JSON.stringify({label: LABEL, throttle: THROTTLE, mbps: MBPS, after: AFTER, results}, null, 1));
 console.log(`\n${LABEL}: CPU ${THROTTLE}×${MBPS ? `, ${MBPS} Mbit/s` : ''}, dive asked ${AFTER} ms after ready (medians of ${RUNS})`);
-console.table(Object.fromEntries(Object.entries(results).map(([key, {median: m}]) => [key, {held: m.hold.heldMs, toSubmerged: m.hold.toSubmerged, clickToUsable: m.hold.clickToUsable, built: m.marks.built, underReady: m.marks.underReady, landmarks: m.marks.landmarks, warmed: m.marks.warmed, surfaceOver50: m.surface.over50, surfaceWorst: m.surface.worstGap, longTaskMs: m.surface.longTaskMs}])));
+console.table(Object.fromEntries(Object.entries(results).map(([key, {median: m}]) => [key, {held: m.hold.heldMs, toSubmerged: m.hold.toSubmerged, clickToUsable: m.hold.clickToUsable, clickToEnriched: m.hold.clickToEnriched, built: m.marks.built, underReady: m.marks.underReady, landmarks: m.marks.landmarks, warmed: m.marks.warmed, surfaceOver50: m.surface.over50, surfaceWorst: m.surface.worstGap, longTaskMs: m.surface.longTaskMs}])));

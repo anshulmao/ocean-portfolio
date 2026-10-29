@@ -55,8 +55,10 @@ function normalizeWrapper(wrapper, targetLength, alignBottom = true, minScale = 
 // by URL, so a file asked for at another detail level than the one loaded is simply not used.
 const early = new Map();
 const landmarkHref = (file, economy) => new URL(economy ? file.replace(/\.glb$/, '-economy.glb') : file, ASSET).href;
+// Settles when the files are in (or could not be fetched).
 export function prefetchLandmarks(economy = false) {
   for (const file of [MODEL_FILES.anchor, MODEL_FILES.ship, MODEL_FILES.chest]) { const href = landmarkHref(file, economy); if (!early.has(href)) early.set(href, modelBytes(href)); }
+  return Promise.all(early.values());
 }
 
 function report(onStatus, id, status, extra = {}) {

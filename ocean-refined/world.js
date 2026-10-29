@@ -362,6 +362,20 @@ function preloadModels(){
 }
 
 let diveAskedNow=null;const diveAsked=new Promise(resolve=>{diveAskedNow=resolve;});
+// Downloads ahead of the work that needs them. The landmark files go first, as soon as the build starts: the dive waits
+// on them. The creature set's follow once those are in (they share the connection), as soon as the build starts in
+// standard detail, which loads the set right after the landmarks anyway, and in economy once a dive is asked for
+// (Dive in, Show me around): the guided dive shows those animals, and it should not reach one still in transit.
+let filesFetched=null,enrichmentFetched=false;
+const prefetchFiles=()=>filesFetched??=import('./model-scene.js').then(({prefetchLandmarks})=>prefetchLandmarks(quality==='economy')).catch(()=>{});
+function prefetchEnrichment(){
+  if(enrichmentFetched)return;enrichmentFetched=true;
+  prefetchFiles().then(()=>import('./user-creatures.js')).then(({prefetchCreatures})=>prefetchCreatures()).catch(()=>{});
+}
+diveAsked.then(prefetchEnrichment);
+// Everything a first dive and the guided dive show: the landmarks and the optional creature and coral sets have all
+// settled (loaded or failed; either way nothing more is coming). oceanControls.world.whenEnriched, oceanDiagnostics.enriched.
+let enrichedDone=null;const enriched=new Promise(resolve=>{enrichedDone=()=>{diagnostic.enriched=true;startup.enrichedAt??=Math.round(performance.now());resolve();};});
 function beginModels(){
   // The models stand on the reef: asked for sooner, they start the moment it is built.
   if(!built){modelsWanted=true;return;}
@@ -387,8 +401,8 @@ function beginModels(){
   const creaturesLoad=busy(import('./user-creatures.js').then(({createUserCreatures})=>{userCreatures=createUserCreatures({terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy',sites:{formations:heroFormations?.sites||[],life:livingWorld?.sites||[],landmarks:LANDMARKS,patches:()=>userCorals?.diagnostics?.patches||[]}});scene.add(userCreatures.root);userCreatures.root.visible=false;diagnostic.userCreatures=userCreatures.diagnostics;return userCreatures.load();}).then(()=>{stylizeTree(userCreatures.root,{toon:.25,rim:.22,caustics:.45});return prepare(userCreatures.root);}).catch(error=>console.warn('New creature set unavailable:',error)));
   const coralsLoad=busy(import('./user-corals.js').then(({createUserCorals})=>{userCorals=createUserCorals({terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy'});scene.add(userCorals.root);userCorals.root.visible=false;diagnostic.userCorals=userCorals.diagnostics;return userCorals.load();}).then(()=>{stylizeTree(userCorals.root,{toon:.3,rim:.2,caustics:.55});return prepare(userCorals.root);}).catch(error=>console.warn('New coral set unavailable:',error)));
 
-    Promise.allSettled([creaturesLoad,coralsLoad]).then(()=>{diagnostic.optionalModels='settled';experienceMetrics.mark('optionalModelsSettled');});
-  }).catch(error=>console.warn('Optional ocean enrichment could not start:',error));
+    Promise.allSettled([creaturesLoad,coralsLoad]).then(()=>{diagnostic.optionalModels='settled';experienceMetrics.mark('optionalModelsSettled');enrichedDone();});
+  }).catch(error=>{console.warn('Optional ocean enrichment could not start:',error);enrichedDone();});
 }
 // Set for one frame when the diver is moved at once (start-at-site, tour cuts): the camera cuts with it instead of sweeping.
 let snapCamera=false;
@@ -408,7 +422,8 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   warm(){finishUnderwater();listWarm();let steps=0;while(warmQueue.length){warmStep();steps++;}return steps;},
   // The world under the water is built after the surface is ready. built: every part exists; ready: its shaders have linked too.
   // finish() builds whatever is left at once (a stall of a second or so) and whenReady resolves when a dive can go straight under.
-  world:{get built(){return built;},get ready(){return underReady;},finish(){finishUnderwater();return built;},get whenReady(){return worldReady;}},
+  // whenEnriched: the landmarks and the optional sets have settled as well (see enriched), what the guided dive waits for before it sets off.
+  world:{get built(){return built;},get ready(){return underReady;},finish(){finishUnderwater();return built;},get whenReady(){return worldReady;},get enriched(){return diagnostic.enriched===true;},get whenEnriched(){return enriched;}},
   // QA hook: after placing the camera by hand, cull the scene for it again.
   recull(){camera.updateMatrixWorld(true);refreshView();userCreatures?.update(0,playerPosition,viewerOrbit?null:view);if(built)cullWorld(0);},
   // Dive planner and guided tour hooks: autopilot, instant placement, dive start / surfacing, and the flashlight and scooter state.
@@ -620,7 +635,7 @@ function startUnderwater(){
   if(buildSteps)return;
   worldLinking=new Set();buildSteps=buildUnderwater(worldLinking);diagnostic.underwater='building';
   // The landmarks are placed on the finished reef (beginModels), but their files can be on their way meanwhile.
-  import('./model-scene.js').then(({prefetchLandmarks})=>prefetchLandmarks(quality==='economy')).catch(()=>{});
+  prefetchFiles();if(quality!=='economy')prefetchEnrichment();
   const tally=ms=>{startup.under[buildStage]=+((startup.under[buildStage]||0)+ms).toFixed(1);};
   const queued=later(buildName,()=>buildSteps,{tally});
   queued.then(()=>{startup.builtAt=Math.round(performance.now());if(modelsWanted)beginModels();return programsLinked(worldLinking);})
