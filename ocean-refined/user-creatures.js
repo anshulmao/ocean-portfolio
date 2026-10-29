@@ -20,10 +20,21 @@ import { createMorayDenMotion, updateMorayDenMotion } from './moray-resident.js'
 // the far and the many come from creature-species.js, whose texture layout matches the files.
 const BASE = './assets/models/user-sets/sets/creature-set/';
 // In the published build the 8.8 MB of models travel gzipped, as 3.2 (modelBytes, assets.js).
-async function loadModel(url) {
-  const bytes = await modelBytes(url);
+async function loadModel(url, fetched = null) {
+  const bytes = await (fetched || modelBytes(url));
   if (bytes) try { return await new GLTFLoader().parseAsync(bytes, new URL('./', new URL(url, location.href)).href); } catch {}
   return new GLTFLoader().loadAsync(url);
+}
+// The files, fetched before the set is built (world.js prefetchEnrichment): the guided dive shows these animals, and on
+// a slow connection their download no longer starts only when the landmarks have been placed. Kept by file name until
+// load() takes them; only the published build's gzipped copies are fetched this way (modelBytes).
+let manifestEarly = null;
+const early = new Map();
+const fetchManifest = () => fetch(BASE + 'manifest.json').then(r => { if (!r.ok) throw new Error('Creature manifest ' + r.status); return r.json(); });
+export function prefetchCreatures() {
+  if (manifestEarly) return;
+  manifestEarly = fetchManifest();
+  manifestEarly.then(manifest => { for (const spec of manifest.creatures) early.set(spec.file, modelBytes(BASE + spec.file)); }, () => { manifestEarly = null; });
 }
 const TAU = Math.PI * 2, { clamp, smoothstep } = THREE.MathUtils;
 const turnTo = (from, to) => Math.atan2(Math.sin(to - from), Math.cos(to - from));
@@ -538,11 +549,12 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
 
   // --- Loading -----------------------------------------------------------------------------------------------------
   async function load() {
-    const manifest = await fetch(BASE + 'manifest.json').then(r => { if (!r.ok) throw new Error('Creature manifest ' + r.status); return r.json(); });
+    const manifest = await (manifestEarly || fetchManifest());
     diagnostics.species = manifest.creatures.length;
     let cursor = 0;
     const worker = async () => { while (cursor < manifest.creatures.length) { const spec = manifest.creatures[cursor++]; try {
-      const gltf = await loadModel(BASE + spec.file); floatSkinIndices(gltf.scene); gltfs.set(spec.id, gltf); facts.set(spec.id, spec);
+      const fetched = early.get(spec.file); early.delete(spec.file);
+      const gltf = await loadModel(BASE + spec.file, fetched); floatSkinIndices(gltf.scene); gltfs.set(spec.id, gltf); facts.set(spec.id, spec);
       diagnostics.loaded++; diagnostics.loadedSpecies++; await turn();
     } catch (error) { diagnostics.failed++; diagnostics.errors.push(spec.id + ': ' + error.message); } } };
     await Promise.all([worker(), worker()]);

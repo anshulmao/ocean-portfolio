@@ -49,6 +49,18 @@ function normalizeWrapper(wrapper, targetLength, alignBottom = true, minScale = 
   return { box: visibleBounds(wrapper), offset, scale };
 }
 
+// The landmark files, downloaded while the world under the water is still being built (world.js startUnderwater):
+// placing them needs the finished reef, fetching them does not, so on a slow connection their download no longer
+// starts only when the build ends. Only the published build's gzipped copies are fetched this way (modelBytes); keyed
+// by URL, so a file asked for at another detail level than the one loaded is simply not used.
+const early = new Map();
+const landmarkHref = (file, economy) => new URL(economy ? file.replace(/\.glb$/, '-economy.glb') : file, ASSET).href;
+// Settles when the files are in (or could not be fetched).
+export function prefetchLandmarks(economy = false) {
+  for (const file of [MODEL_FILES.anchor, MODEL_FILES.ship, MODEL_FILES.chest]) { const href = landmarkHref(file, economy); if (!early.has(href)) early.set(href, modelBytes(href)); }
+  return Promise.all(early.values());
+}
+
 function report(onStatus, id, status, extra = {}) {
   onStatus?.({ id, status, ...extra });
 }
@@ -59,7 +71,6 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
   // The landmarks are downloaded before the first dive goes under. In economy detail they come with their textures at
   // half size (tools/webp-landmarks.py --economy: the GPU's first mipmap level, lossless): 3.6 MB instead of 7, and a
   // quarter of the decoding, uploads and GPU memory, on screens that seldom show a texel of the full size.
-  const landmarkFile = file => economy ? file.replace(/\.glb$/, '-economy.glb') : file;
   const loader = new GLTFLoader();
   const landmarkGroups = new Map();
   const chests = new Map();
@@ -332,8 +343,9 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
 
   function loadOne(key, file, place) {
     // The published build's gzipped copy where there is one (modelBytes, assets.js); a copy that does not parse falls back to the plain file.
-    const href = new URL(landmarkFile(file), ASSET).href;
-    return modelBytes(href).then(bytes => new Promise(resolve => {
+    const href = landmarkHref(file, economy), fetched = early.get(href);
+    early.delete(href);
+    return (fetched || modelBytes(href)).then(bytes => new Promise(resolve => {
       const done = async gltf => {
         if (disposed) { resolve(null); return; }
         try {
@@ -566,6 +578,8 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
       }
     };
     loadPromise = Promise.all([worker(), worker()]).then(() => {
+      // Files fetched for the other detail level (the page dropped to economy after the build began) are let go.
+      early.clear();
       root.updateWorldMatrix(true, true);
       if (coralCache.status !== 'hit') return batchCoralMeshes();
     }).then(() => {
