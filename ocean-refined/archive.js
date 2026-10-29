@@ -332,6 +332,8 @@ function renderGlance() {
     el('header', { class: 'arc-glance', 'data-hero': true },
       el('div', { class: 'arc-glance-lead' },
         el('p', { class: 'holo-label', text: `${card.name ? `${card.name} · ` : ''}The portfolio at a glance` }),
+        // The guided dive's welcome, only while the tour is on (release/guided-dive/SPEC.md, D6).
+        window.oceanTour?.welcome && el('p', { class: 'arc-welcome', text: window.oceanTour.welcome }),
         el('h3', { id: 'archive-entry-title', text: card.title }),
         intro('about', card.summary, false),
         el('p', { class: 'arc-strap', text: about.subtitle }),

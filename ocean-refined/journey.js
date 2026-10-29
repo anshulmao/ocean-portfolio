@@ -54,6 +54,8 @@ export const currentZone = () => ZONES[Math.max(0, zone)];
 
 // Every short message goes through the one queue (announce.js). The hold is the queue's: it follows the length of the words.
 export function say(kicker, text, signal = '#7ff0cf') { announce({ kicker, text, signal }); }
+// A chapter title card, as the depth zones use: the guided dive opens with one. It takes the zone's place in the queue.
+export function splash(kicker, title, signal = '#c9fbff') { announce({ kind: 'zone', key: 'zone', kicker, title, signal, stale: 4 }); }
 function showZone(index) {
   const { title, place, range } = ZONES[index];
   announce({ kind: 'zone', key: 'zone', kicker: `${range} · ${place}`, title, signal: '#c9fbff', stale: 3 });

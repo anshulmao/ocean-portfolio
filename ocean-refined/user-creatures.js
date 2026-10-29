@@ -20,10 +20,21 @@ import { createMorayDenMotion, updateMorayDenMotion } from './moray-resident.js'
 // the far and the many come from creature-species.js, whose texture layout matches the files.
 const BASE = './assets/models/user-sets/sets/creature-set/';
 // In the published build the 8.8 MB of models travel gzipped, as 3.2 (modelBytes, assets.js).
-async function loadModel(url) {
-  const bytes = await modelBytes(url);
+async function loadModel(url, fetched = null) {
+  const bytes = await (fetched || modelBytes(url));
   if (bytes) try { return await new GLTFLoader().parseAsync(bytes, new URL('./', new URL(url, location.href)).href); } catch {}
   return new GLTFLoader().loadAsync(url);
+}
+// The files, fetched before the set is built (world.js prefetchEnrichment): the guided dive shows these animals, and on
+// a slow connection their download no longer starts only when the landmarks have been placed. Kept by file name until
+// load() takes them; only the published build's gzipped copies are fetched this way (modelBytes).
+let manifestEarly = null;
+const early = new Map();
+const fetchManifest = () => fetch(BASE + 'manifest.json').then(r => { if (!r.ok) throw new Error('Creature manifest ' + r.status); return r.json(); });
+export function prefetchCreatures() {
+  if (manifestEarly) return;
+  manifestEarly = fetchManifest();
+  manifestEarly.then(manifest => { for (const spec of manifest.creatures) early.set(spec.file, modelBytes(BASE + spec.file)); }, () => { manifestEarly = null; });
 }
 const TAU = Math.PI * 2, { clamp, smoothstep } = THREE.MathUtils;
 const turnTo = (from, to) => Math.atan2(Math.sin(to - from), Math.cos(to - from));
@@ -79,6 +90,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   }
   const ground = (x, z) => hard[clamp(Math.round(z - GZ), 0, GH - 1) * GW + clamp(Math.round(x - GX), 0, GW - 1)];
   const navigation = fishNavigator(cover);
+  const resting = {};
   const solid = (x, z) => ground(x, z) > floor(x, z) + .25;
   /** Open, fairly level sand near a wished-for spot: for the animals that lie on the bottom. */
   function sand(x, z, radius = 2) {
@@ -221,11 +233,17 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       if (kinds.length) slots.push({ slot, config, kinds, active: null, wait: rr(...config.first) * (economy ? 1.2 : 1), last: null });
     }
   }
-  function begin(e, player, view) {
-    const range = view ? Math.min(view.range, 130) : 110, R = range + e.length + 12, angle = rr(0, TAU), sideOf = Math.random() < .5 ? 1 : -1;
-    const dx = Math.sin(angle), dz = Math.cos(angle), nx = dz * sideOf, nz = -dx * sideOf, pass = rr(...e.pass), px = player?.x ?? 0, pz = player?.z ?? -30;
-    e.path = { sx: px + nx * pass - dx * R, sz: pz + nz * pass - dz * R, ex: px + nx * pass + dx * R, ez: pz + nz * pass + dz * R, nx, nz, len: 2 * R, bulge: rr(-1, 1) * e.bulge * R };
-    e.u = 0; e.y0 = rr(...e.depth); e.next = clock + rr(4, 8);
+  // course (the guided dive's own call): angle and side fix the line of the pass, pass its distance from the diver, y its
+  // depth, and ahead starts it that many metres short of its closest approach instead of out beyond the haze.
+  function begin(e, player, view, course = null) {
+    // A kind with `across` swims parallel to the reef, across its face (the reef deepens towards -z, so that is east or west),
+    // its line kept out over the deep shelf at z `across` or deeper, never in over the shallows.
+    const across = !course && e.across !== undefined;
+    const range = view ? Math.min(view.range, 130) : 110, R = range + e.length + 12, angle = course?.angle ?? (across ? (Math.random() < .5 ? 1 : -1) * Math.PI / 2 : rr(0, TAU)), sideOf = course?.side ?? (Math.random() < .5 ? 1 : -1);
+    const dx = Math.sin(angle), dz = Math.cos(angle), nx = dz * sideOf, nz = -dx * sideOf, pass = course?.pass ?? rr(...e.pass), px = player?.x ?? 0, pz = player?.z ?? -30;
+    const cx = across ? px : px + nx * pass, cz = across ? Math.min(pz - pass, e.across) : pz + nz * pass;
+    e.path = { sx: cx - dx * R, sz: cz - dz * R, ex: cx + dx * R, ez: cz + dz * R, nx, nz, len: 2 * R, bulge: rr(-1, 1) * e.bulge * R };
+    e.u = course?.ahead === undefined ? 0 : clamp(.5 - course.ahead / e.path.len, 0, .5); e.y0 = course?.y ?? rr(...e.depth); e.next = clock + rr(4, 8);
     for (const c of e.cast) { c.actor.active = true; c.actor.started = false; play(c.actor, 'swim', 0); }
     for (const r of e.riders) { r.actor.active = true; r.actor.started = false; }
     if (e.school) e.school.active = true;
@@ -330,7 +348,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       spotted.push({ actor: a, from: a.pos.clone(), to: a.pos.clone(), go: 0, yaw: a.yaw });
     }
     const n = RESIDENTS.sleeper;
-    if (gltfs.has(n.species)) { const a = actor(n.species, { clip: 'rest' }); if (a) { const [x, z] = sand(...n.near, 3.5); a.pos.set(x, floor(x, z) + .45, z); a.yaw = rr(0, TAU); a.started = true; a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(0, a.yaw, 0, 'YXZ'); } }
+    if (gltfs.has(n.species)) { const a = actor(n.species, { clip: 'rest' }); if (a) { const [x, z] = sand(...n.near, 3.5); a.pos.set(x, floor(x, z) + .45, z); resting.sleeper = a.pos.toArray(); a.yaw = rr(0, TAU); a.started = true; a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(0, a.yaw, 0, 'YXZ'); } }
     const g = RESIDENTS.sentinel, wreck = landmark(g.landmark) || { x: 18, y: -23, z: -39 };
     if (gltfs.has(g.species)) { const a = actor(g.species, { clip: 'swim' }); if (a) { sentinel = { actor: a, home: new THREE.Vector3(wreck.x + g.offset[0], wreck.y + g.offset[1], wreck.z + g.offset[2]), drift: rr(0, TAU), dart: 0, calm: 0, away: new THREE.Vector3(), phase: rr(0, TAU), turn: Math.random() < .5 ? 1 : -1, hover: 0, cruise: rr(8, 14) }; a.pos.copy(sentinel.home); a.pos.x += Math.cos(sentinel.phase) * g.patrol[0]; a.pos.z += Math.sin(sentinel.phase) * g.patrol[1]; a.started = true; a.ease = 1.2; } }
     // Dens: at the foot of a formation, looking out from it, the rest of the body inside the rock.
@@ -531,11 +549,12 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
 
   // --- Loading -----------------------------------------------------------------------------------------------------
   async function load() {
-    const manifest = await fetch(BASE + 'manifest.json').then(r => { if (!r.ok) throw new Error('Creature manifest ' + r.status); return r.json(); });
+    const manifest = await (manifestEarly || fetchManifest());
     diagnostics.species = manifest.creatures.length;
     let cursor = 0;
     const worker = async () => { while (cursor < manifest.creatures.length) { const spec = manifest.creatures[cursor++]; try {
-      const gltf = await loadModel(BASE + spec.file); floatSkinIndices(gltf.scene); gltfs.set(spec.id, gltf); facts.set(spec.id, spec);
+      const fetched = early.get(spec.file); early.delete(spec.file);
+      const gltf = await loadModel(BASE + spec.file, fetched); floatSkinIndices(gltf.scene); gltfs.set(spec.id, gltf); facts.set(spec.id, spec);
       diagnostics.loaded++; diagnostics.loadedSpecies++; await turn();
     } catch (error) { diagnostics.failed++; diagnostics.errors.push(spec.id + ': ' + error.message); } } };
     await Promise.all([worker(), worker()]);
@@ -580,5 +599,10 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     /** Move an encounter under way to a point of its pass (0..1; .5 is its closest approach). */
     seek(id, u) { const e = casts.get(id); if (!e?.path) return false; e.u = u; for (const c of e.cast) c.actor.started = false; for (const r of e.riders) r.actor.started = false; return true; }
   };
-  return { root, load, update, diagnostics, sites: sitesNow, debug };
+  // Where a resident that stays put actually settled (sand() can move it well away from its wished-for spot): the guided dive frames it from here.
+  const residentAt = id => resting[id] ?? null;
+  // The guided dive brings one encounter in on a course of its own, and points out the visitors passing: where each lead animal is now.
+  function encounter(id, player, view, course) { const e = casts.get(id); if (!e?.cast.length) return false; const s = slots.find(item => item.slot === e.slot); if (s.active) end(s.active); begin(e, player, view, course); s.active = e; return true; }
+  const visitors = () => slots.filter(s => s.active?.path && s.active.cast[0]?.actor.started).map(s => { const p = s.active.cast[0].actor.pos; return { id: s.active.id, x: p.x, y: p.y, z: p.z }; });
+  return { root, load, update, diagnostics, sites: sitesNow, debug, residentAt, encounter, visitors };
 }

@@ -1,6 +1,7 @@
 // Default movement profile supplied by Anshul. Reset controls restores this profile.
 export const movementDefaults = Object.freeze({
   "brightnessBoost": 80,
+  "waterClarity": 125,
   "swimSpeed": 4,
   "reverseMultiplier": 0.75,
   "strafeMultiplier": 0.85,

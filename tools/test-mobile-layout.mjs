@@ -148,10 +148,18 @@ async function run(profileName) {
     await page.evaluate(() => oceanControls.surface({instant: true}));
     await page.waitForFunction(() => oceanControls.getMode() === 'surface', null, {timeout: 60000});
     await page.evaluate(() => oceanTour.start());
-    await page.waitForFunction(() => oceanDiagnostics.submerged && ['travel', 'dwell'].includes(oceanTour.status), null, {timeout: 120000});
+    // The welcome sheet rises once the title card has gone (guided-dive.js REVEAL): measure the sheet, controls and all.
+    await page.waitForFunction(() => oceanDiagnostics.submerged && oceanTour.status === 'intro' && document.querySelector('.tour-card')?.dataset.show === 'true', null, {timeout: 120000});
+    await page.waitForTimeout(600); await state('guided-welcome', true);
+    await page.evaluate(() => oceanTour.next());
+    await page.waitForFunction(() => ['travel', 'dwell'].includes(oceanTour.status), null, {timeout: 30000});
     await page.waitForTimeout(2500); await state('guided-travel', true);
     await page.waitForFunction(() => oceanTour.status === 'dwell', null, {timeout: 120000});
     await state('guided-stop', true);
+    // On to the overview, the tour's last sheet (keep exploring or surface): each Continue skips a swim or a beat.
+    await page.evaluate(async () => { for (let i = 0; i < 60 && oceanTour.status !== 'done'; i++) { if (oceanTour.status !== 'free') oceanTour.next(); await new Promise(resolve => setTimeout(resolve, 500)); } });
+    await page.waitForFunction(() => oceanTour.status === 'done', null, {timeout: 60000});
+    await page.waitForTimeout(800); await state('guided-end', true);
     await page.evaluate(() => oceanTour.stop());
   });
   if (errors.length) { failures.push(`${profileName}/script-errors`); console.log(`FAIL ${profileName}: script errors\n       ${errors.join('\n       ')}`); }

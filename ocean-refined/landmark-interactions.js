@@ -52,7 +52,8 @@ function interact() {
   const controls = window.oceanControls;
   if (!controls || !eligible || controls.getMode() !== 'diver' || controls.getTransition() || panel.open || credits.open) return;
   opened = eligible;
-  openArchive(opened.id,true);
+  // On the guided dive a site can open another page of the records (the anchor opens At a glance).
+  openArchive(window.oceanTour?.opens?.(opened.id) ?? opened.id,true);
 }
 // The expedition key handler runs in capture phase so it can prioritize a
 // nearby portfolio site over an artifact. Keeping the same eligibility check
