@@ -49,16 +49,76 @@ function normalizeWrapper(wrapper, targetLength, alignBottom = true, minScale = 
   return { box: visibleBounds(wrapper), offset, scale };
 }
 
-// The landmark files, downloaded while the world under the water is still being built (world.js startUnderwater):
-// placing them needs the finished reef, fetching them does not, so on a slow connection their download no longer
-// starts only when the build ends. Only the published build's gzipped copies are fetched this way (modelBytes); keyed
-// by URL, so a file asked for at another detail level than the one loaded is simply not used.
+// The landmark files and the prepared corals, downloaded and parsed while the world under the water is still being
+// built (world.js startUnderwater): placing them needs the finished reef, fetching, checking and parsing them does not,
+// so none of that waits for the build any more. Only the published build's gzipped copies are fetched this way
+// (modelBytes); keyed by URL (the corals by detail level), so what was fetched for another detail level than the one
+// loaded is simply not used.
 const early = new Map();
+const parsedEarly = new Map();
+const coralsEarly = new Map();
+const earlyLoader = new GLTFLoader();
 const landmarkHref = (file, economy) => new URL(economy ? file.replace(/\.glb$/, '-economy.glb') : file, ASSET).href;
-// Settles when the files are in (or could not be fetched).
+// A parse runs in a turn of the frame loop's queue (see setPacer in assets.js), so it lands between frames.
+const parseLater = bytes => bytes ? nextTask().then(() => earlyLoader.parseAsync(bytes, ASSET.href)).catch(() => null) : Promise.resolve(null);
+// Settles when the landmark files are in (or could not be fetched); their parsing and the prepared corals go on behind.
 export function prefetchLandmarks(economy = false) {
-  for (const file of [MODEL_FILES.anchor, MODEL_FILES.ship, MODEL_FILES.chest]) { const href = landmarkHref(file, economy); if (!early.has(href)) early.set(href, modelBytes(href)); }
+  for (const file of [MODEL_FILES.anchor, MODEL_FILES.ship, MODEL_FILES.chest]) {
+    const href = landmarkHref(file, economy);
+    if (!early.has(href)) { const bytes = modelBytes(href); early.set(href, bytes); parsedEarly.set(href, bytes.then(parseLater)); }
+  }
+  preparedCoralData(economy).catch(() => {});
   return Promise.all(early.values());
+}
+
+// The prepared coral cache (tools/prepare-corals.mjs), checked against its sources and parsed: everything about it that
+// does not need the reef. Rejects when the cache cannot be used; the corals are then built from their source models.
+const sha256 = async bytes => [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(n => n.toString(16).padStart(2, '0')).join('');
+function preparedCoralData(economy) {
+  const variant = economy ? 'economy' : 'full';
+  if (!coralsEarly.has(variant)) coralsEarly.set(variant, (async () => {
+    const response = await fetch(new URL(`${variant}.json`, CORAL_CACHE), { cache: 'no-cache' });
+    if (!response.ok) throw Error('Prepared coral metadata unavailable');
+    const metadata = await response.json();
+    if (metadata.schema !== CORAL_CACHE_SCHEMA || metadata.variant !== variant || metadata.habitats.length !== 15 || metadata.coralLoaded !== 5) throw Error('Prepared coral recipe mismatch');
+    if (metadata.sources?.length !== 2 || !['reef.js', 'model-scene.js'].every(file => metadata.sources.some(source => source.file === file)) || metadata.assets?.length !== MODEL_FILES.coral.length || !MODEL_FILES.coral.every(file => metadata.assets.some(asset => asset.file === file))) throw Error('Incomplete prepared coral input validators');
+    if (!globalThis.crypto?.subtle) throw Error('Source checks unavailable');
+    // The geometry is fetched alongside the checks below (it is most of the bytes) and only used once they pass.
+    // Gzipped where the build put a copy (modelBytes, assets.js); checked byte for byte either way.
+    const bytesURL = new URL(metadata.glb.file, CORAL_CACHE).href;
+    const geometry = modelBytes(bytesURL).then(async bytes => {
+      if (bytes && bytes.byteLength === metadata.glb.bytes) return bytes;
+      const bytesResponse = await fetch(bytesURL);
+      if (!bytesResponse.ok) throw Error('Prepared coral geometry unavailable');
+      return bytesResponse.arrayBuffer();
+    });
+    geometry.catch(() => {});
+    // Code hashes catch changes to the terrain and grounding/LOD recipe.
+    // Cheap HEAD validators catch replacement source models without fetching
+    // the original 24 MB merely to decide whether the cache is current.
+    await Promise.all([
+      ...metadata.sources.map(async source => {
+        const sourceResponse = await fetch(new URL(source.file, import.meta.url), { cache: 'force-cache' });
+        if (!sourceResponse.ok || await sha256(await sourceResponse.arrayBuffer()) !== source.sha256) throw Error(`Coral source changed: ${source.file}`);
+      }),
+      ...metadata.assets.map(async asset => {
+        const head = await fetch(new URL(asset.file, ASSET), { method: 'HEAD', cache: 'no-cache' });
+        const length = head.headers.get('content-length'), modified = head.headers.get('last-modified'), etag = head.headers.get('etag');
+        // Compression servers may omit HEAD length or report encoded bytes.
+        // Their unchanged opaque ETag plus modification date is still a
+        // build-recorded validator; absent validators decline the cache.
+        const sizeMatches = length !== null && !head.headers.get('content-encoding') && Number(length) === asset.bytes;
+        const tagMatches = Boolean(asset.etag && etag === asset.etag);
+        if (!head.ok || (!sizeMatches && !tagMatches) || !modified || modified !== asset.lastModified) throw Error(`Coral asset validator changed or unavailable: ${asset.file}`);
+      })
+    ]);
+    const bytes = await geometry;
+    if (bytes.byteLength !== metadata.glb.bytes || await sha256(bytes) !== metadata.glb.sha256) throw Error('Prepared coral geometry checksum mismatch');
+    await nextTask();
+    const gltf = await earlyLoader.parseAsync(bytes, CORAL_CACHE.href);
+    return { metadata, gltf, bytes: bytes.byteLength };
+  })());
+  return coralsEarly.get(variant);
 }
 
 function report(onStatus, id, status, extra = {}) {
@@ -343,9 +403,9 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
 
   function loadOne(key, file, place) {
     // The published build's gzipped copy where there is one (modelBytes, assets.js); a copy that does not parse falls back to the plain file.
-    const href = landmarkHref(file, economy), fetched = early.get(href);
-    early.delete(href);
-    return (fetched || modelBytes(href)).then(bytes => new Promise(resolve => {
+    const href = landmarkHref(file, economy), fetched = early.get(href), parsed = parsedEarly.get(href);
+    early.delete(href); parsedEarly.delete(href);
+    return Promise.all([fetched || modelBytes(href), parsed]).then(([bytes, ready]) => new Promise(resolve => {
       const done = async gltf => {
         if (disposed) { resolve(null); return; }
         try {
@@ -362,7 +422,8 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
         report(onStatus, key, 'fallback', { message: String(error?.message || error), loaded, total: 8 });
         resolve(null);
       };
-      if (bytes) loader.parse(bytes, ASSET.href, done, () => loader.load(href, done, undefined, missing));
+      if (ready) done(ready);
+      else if (bytes) loader.parse(bytes, ASSET.href, done, () => loader.load(href, done, undefined, missing));
       else loader.load(href, done, undefined, missing);
     }));
   }
@@ -434,44 +495,11 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     if (!preparedCorals) { coralCache.status = 'disabled'; return false; }
     const started = performance.now();
     coralCache.status = 'checking';
-    const sha256 = async bytes => [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(n => n.toString(16).padStart(2, '0')).join('');
     try {
-      const variant = economy ? 'economy' : 'full';
-      const response = await fetch(new URL(`${variant}.json`, CORAL_CACHE), { cache: 'no-cache' });
-      if (!response.ok) throw Error('Prepared coral metadata unavailable');
-      const metadata = await response.json();
-      if (metadata.schema !== CORAL_CACHE_SCHEMA || metadata.variant !== variant || metadata.habitats.length !== 15 || metadata.coralLoaded !== 5) throw Error('Prepared coral recipe mismatch');
-      if (metadata.sources?.length !== 2 || !['reef.js', 'model-scene.js'].every(file => metadata.sources.some(source => source.file === file)) || metadata.assets?.length !== MODEL_FILES.coral.length || !MODEL_FILES.coral.every(file => metadata.assets.some(asset => asset.file === file))) throw Error('Incomplete prepared coral input validators');
-      if (!globalThis.crypto?.subtle) throw Error('Source checks unavailable');
-      // Code hashes catch changes to the terrain and grounding/LOD recipe.
-      // Cheap HEAD validators catch replacement source models without fetching
-      // the original 24 MB merely to decide whether the cache is current.
-      await Promise.all([
-        ...metadata.sources.map(async source => {
-          const sourceResponse = await fetch(new URL(source.file, import.meta.url), { cache: 'force-cache' });
-          if (!sourceResponse.ok || await sha256(await sourceResponse.arrayBuffer()) !== source.sha256) throw Error(`Coral source changed: ${source.file}`);
-        }),
-        ...metadata.assets.map(async asset => {
-          const head = await fetch(new URL(asset.file, ASSET), { method: 'HEAD', cache: 'no-cache' });
-          const length = head.headers.get('content-length'), modified = head.headers.get('last-modified'), etag = head.headers.get('etag');
-          // Compression servers may omit HEAD length or report encoded bytes.
-          // Their unchanged opaque ETag plus modification date is still a
-          // build-recorded validator; absent validators decline the cache.
-          const sizeMatches = length !== null && !head.headers.get('content-encoding') && Number(length) === asset.bytes;
-          const tagMatches = Boolean(asset.etag && etag === asset.etag);
-          if (!head.ok || (!sizeMatches && !tagMatches) || !modified || modified !== asset.lastModified) throw Error(`Coral asset validator changed or unavailable: ${asset.file}`);
-        })
-      ]);
-      // Gzipped where the build put a copy (modelBytes, assets.js); checked below byte for byte either way.
-      const bytesURL = new URL(metadata.glb.file, CORAL_CACHE).href;
-      let bytes = await modelBytes(bytesURL);
-      if (!bytes || bytes.byteLength !== metadata.glb.bytes) {
-        const bytesResponse = await fetch(bytesURL);
-        if (!bytesResponse.ok) throw Error('Prepared coral geometry unavailable');
-        bytes = await bytesResponse.arrayBuffer();
-      }
-      if (bytes.byteLength !== metadata.glb.bytes || await sha256(bytes) !== metadata.glb.sha256) throw Error('Prepared coral geometry checksum mismatch');
-      const gltf = await loader.parseAsync(bytes, CORAL_CACHE.href);
+      // Parsed once (see preparedCoralData); a second scene in the same page builds its corals from the source models.
+      const data = await preparedCoralData(economy);
+      coralsEarly.delete(economy ? 'economy' : 'full');
+      const { metadata, gltf } = data;
       const imported = new Map(); gltf.scene.traverse(node => { if (node.isMesh) imported.set(node.name, node); });
       const prepared = [];
       for (const spec of metadata.batches) {
@@ -495,7 +523,7 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
       }
       root.userData.preparedCoralHabitats = metadata.habitats;
       coralLoaded = metadata.coralLoaded; loaded += metadata.coralLoaded;
-      Object.assign(coralCache, { status: 'hit', bytes: bytes.byteLength, habitats: metadata.habitats.length, batches: prepared.length, durationMs: Math.round(performance.now() - started) });
+      Object.assign(coralCache, { status: 'hit', bytes: data.bytes, habitats: metadata.habitats.length, batches: prepared.length, durationMs: Math.round(performance.now() - started) });
       report(onStatus, 'prepared-corals', 'loaded', { loaded, total: 8, cache: coralCache });
       return true;
     } catch (error) {
@@ -579,7 +607,7 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     };
     loadPromise = Promise.all([worker(), worker()]).then(() => {
       // Files fetched for the other detail level (the page dropped to economy after the build began) are let go.
-      early.clear();
+      early.clear(); parsedEarly.clear();
       root.updateWorldMatrix(true, true);
       if (coralCache.status !== 'hit') return batchCoralMeshes();
     }).then(() => {
