@@ -63,10 +63,10 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   // The reef surfaces within reach of the body this step (filled by collisions.nearby).
   const contact={count:0,gaps:new Float32Array(24),normals:new Float32Array(72)};
   let defaultYaw=0,terrain=()=>-15,collisions=null,floorY=-Infinity,floorStale=true;
-  // Autopilot (atlas, start-at-site, guided tour): travelSpeed is its pace; while guided, mouse jitter under the slack is forgiven
-  // and, when freeControl is set, the keys work without a captured mouse so the tour's buttons stay clickable.
+  // Autopilot (atlas, start-at-site, guided tour): travelSpeed is its pace. Guided
+  // look leaves the route intact; freeControl keeps keys usable without capture.
   // hasDest: swimming to `dest`. docking: inside the arrival distance, settling onto the point. coursed: `course` holds a bearing to turn from.
-  let hasDest=false,hasFocus=false,docking=false,dockTime=0,coursed=false,pace=0,travelSpeed=0,guided=false,freeControl=false,slack=0,boost=0,spool=0,coast=1,pendingDive=null;
+  let hasDest=false,hasFocus=false,docking=false,dockTime=0,coursed=false,pace=0,travelSpeed=0,guided=false,freeControl=false,guideLook=false,boost=0,spool=0,coast=1,pendingDive=null;
   const coordinate=value=>Array.isArray(value)?value:[value.x,value.y,value.z];
   let suspended=false,captureRequired=true,touchId=null,skipMove=false,blockedTime=0,ascent=null,lastSubmerged=false,surfaceLocked=true,intentionalUnlock=false,pathCheckAt=0,pathIsClear=true;
   let lookIdle=0,breath=0,sway=0,wander=0,calm=false,engaged=false;const hover={idle:0},hoverRate={idle:0};
@@ -76,10 +76,10 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   function listen(target,event,handler,options){target.addEventListener(event,handler,options);cleanup.push(()=>target.removeEventListener(event,handler,options));}
   function releasePointer(){if(document.pointerLockElement===canvas){intentionalUnlock=true;document.exitPointerLock();}}
   // The scooter key only modifies a swim, so it leaves the autopilot alone; from the touch pad with nothing else under way it swims, which is deliberate input.
-  function press(code,fromPad=false){if(ascent||(!lastSubmerged&&!surfaceLocked)||(surfaceLocked&&!code.startsWith('Arrow')))return;keys.add(code);if(fromPad)padKeys.add(code);if(code!=='KeyE'||(fromPad&&!hasDest))takeControl();if(code.startsWith('Arrow'))lookIdle=0;wake();}
+  function press(code,fromPad=false){if(ascent||(!lastSubmerged&&!surfaceLocked)||(surfaceLocked&&!code.startsWith('Arrow')))return;keys.add(code);if(fromPad)padKeys.add(code);if(guided&&code.startsWith('Arrow'))guideLook=true;else if(code!=='KeyE'||(fromPad&&!hasDest))takeControl();if(code.startsWith('Arrow'))lookIdle=0;wake();}
   function release(code){keys.delete(code);padKeys.delete(code);wake();}
-  // Any deliberate input hands the dive back to the visitor at once. Nothing is reset: the swim and the turn under way ease into whatever is asked next.
-  function takeControl(){hasDest=hasFocus=docking=false;travelRoute=[];state.inputs++;guided=freeControl=false;state.guided=false;slack=0;}
+  // Deliberate movement hands the dive back to the visitor at once. Nothing is reset: the swim and the turn under way ease into whatever is asked next.
+  function takeControl(){hasDest=hasFocus=docking=false;travelRoute=[];state.inputs++;guided=freeControl=false;state.guided=false;}
   // Cancel an atlas or guided leg without throwing away the swimmer's momentum.
   // The normal velocity follower then eases the diver to a stop at the current spot.
   function cancelTravel({hold=true}={}){
@@ -88,7 +88,9 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     if(!hold){velocity.set(0,0,0);thrust.set(0,0,0);}
     wake();return true;
   }
-  function setGuided(value,free=false){guided=Boolean(value);freeControl=guided&&Boolean(free);state.guided=guided;slack=0;wake();}
+  // A cue may lead the view until the visitor looks. Once they do, their view
+  // stays theirs across legs, pauses and dialogs until this tour ends.
+  function setGuided(value,free=false){if(!value||!guided)guideLook=false;guided=Boolean(value);freeControl=guided&&Boolean(free);state.guided=guided;wake();}
   function setLamp(value){const on=Boolean(value);if(on===state.lamp)return on;state.lamp=on;lampButton?.setAttribute('aria-pressed',String(on));window.dispatchEvent(new CustomEvent('oceanlamp',{detail:on}));wake();return on;}
   // Lets go of every held input. The swim itself is left to glide out.
   function clear(){keys.clear();padKeys.clear();lastPointer.set=false;touchId=null;pend.yaw=pend.pitch=0;wake();}
@@ -124,7 +126,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   function skipSafetyStop(){if(ascent?.returnViaReef&&state.returnPhase==='offer')holdSafetyStop(false);}
   listen(document,'visibilitychange',()=>{if(document.hidden)requireRecapture();});
   // Aim input in pixels. It is only summed here; update() turns the sum into a change of view, so nothing depends on how many events a frame delivers.
-  function aim(dx,dy,gain=settings.mouseSensitivity){if(suspended||captureRequired||!state.exploring||ascent)return;if(guided){slack+=Math.abs(dx)+Math.abs(dy);if(slack<90)return;}takeControl();pend.yaw-=dx*gain;pend.pitch-=dy*gain*(settings.invertMouse?-1:1);lookIdle=0;wake();}
+  function aim(dx,dy,gain=settings.mouseSensitivity){if(suspended||captureRequired||!state.exploring||ascent||(!dx&&!dy))return;if(guided)guideLook=true;else takeControl();pend.yaw-=dx*gain;pend.pitch-=dy*gain*(settings.invertMouse?-1:1);lookIdle=0;wake();}
   listen(canvas,'pointerdown',e=>{
     if(suspended||ascent)return;
     // One finger on the water looks; the thumb-stick and the buttons keep their own fingers.
@@ -234,7 +236,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   }
   function startDive(){syncPerspectiveSetting();ascent=null;state.ascentLaunch=0;surfaceLocked=false;base.y=0;halt();look.yaw=defaultYaw;look.pitch=-.18;state.yaw=look.yaw;state.pitch=look.pitch;state.mode='diver';captureRequired=true;state.exploring=false;setGuided(false);boost=spool=0;floorStale=true;
     // A dive may begin over a chosen site, and a guided one leaves the mouse free for the tour's own buttons.
-    const options=pendingDive;pendingDive=null;if(options?.at){const at=coordinate(options.at);base.x=clamp(at[0],-bounds.x,bounds.x);base.z=clamp(at[2]??0,bounds.zMin,bounds.zMax);}
+    const options=pendingDive;pendingDive=null;if(options?.guided)togglePerspective(false);if(options?.at){const at=coordinate(options.at);base.x=clamp(at[0],-bounds.x,bounds.x);base.z=clamp(at[2]??0,bounds.zMin,bounds.zMax);}
     offset.copy(base);
     if(options?.capture===false){captureRequired=false;state.exploring=true;}else recapture();wake();}
   function describeBody(pitch){moveOptions.radius=settings.collisionRadius;moveOptions.length=settings.collisionLength;moveOptions.yaw=look.yaw;moveOptions.pitch=pitch;moveOptions.padding=settings.collisionPadding;moveOptions.step=settings.collisionStep;moveOptions.iterations=settings.collisionIterations;}
@@ -339,7 +341,8 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     const diving=submerged&&!surfaceLocked&&!ascent&&!suspended;
     // A stick held over is deliberate input for as long as it is held, the way a held key repeats: it wakes the controls and keeps the autopilot off.
     const analog=!suspended&&!ascent&&(pad.active||(stick.active&&diving));
-    if(analog){if(captureRequired&&(diving||pad.active)){captureRequired=false;state.exploring=true;}if(!engaged||hasDest||hasFocus||docking||guided)takeControl();engaged=true;}else engaged=false;
+    const analogMove=analog&&(stick.active||pad.x||pad.y||pad.rise||pad.sink);
+    if(analog){if(captureRequired&&(diving||pad.active)){captureRequired=false;state.exploring=true;}if(guided&&!analogMove){if(pad.lookX||pad.lookY)guideLook=true;}else if(!engaged||hasDest||hasFocus||docking||guided)takeControl();engaged=true;}else engaged=false;
     const live=analog&&!captureRequired,rising=keys.has('Space')||(live&&pad.rise>.5);
     if(!ascent&&!surfaceLocked&&submerged&&!hasDest&&rising&&base.y-8>=-settings.ascentThreshold){beginAscent(routeProvider);}
     if(ascent&&!suspended)updateAscent(dt);
@@ -347,7 +350,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     if(!submerged&&!ascent&&surfaceLocked){state.mode='surface';}
     if(submerged&&!ascent&&state.mode==='surface'&&!surfaceLocked){state.mode='diver';}
     const manual=keys.size>0||live;
-    if(guided){slack=Math.max(0,slack-dt*140);if(freeControl&&captureRequired&&!suspended&&!ascent&&!surfaceLocked&&submerged){captureRequired=false;state.exploring=true;}}
+    if(guided){if(freeControl&&captureRequired&&!suspended&&!ascent&&!surfaceLocked&&submerged){captureRequired=false;state.exploring=true;}}
     let yawStep=0;
     if(!ascent){
       const limit=settings.pitchLimit*RAD,turnMode=settings.keyboardMode==='turn',yawBefore=look.yaw;
@@ -432,7 +435,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
         }
       }
       // --- the view ---
-      if(autoLook){
+      if(autoLook&&!(guided&&guideLook)){
         // A guided camera turns slowly enough to read as a sweep rather than a snap, and a long turn is held to a steady rate.
         const frequency=guided?LOOK_GUIDED:LOOK_AUTO,reach=(guided?SWEEP_GUIDED:SWEEP_AUTO)*Math.E/frequency,turn=wrap(goalYaw-look.yaw);
         if(instant){look.yaw+=turn;look.pitch=goalPitch;spin.yaw=spin.pitch=0;}

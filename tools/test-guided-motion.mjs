@@ -7,6 +7,8 @@ import { planGuidedRoute } from '../ocean-refined/guided-route.js';
 import { distance } from '../ocean-refined/cinematic-route.js';
 import * as THREE from '../ocean-refined/vendor/three.module.min.js';
 import { CollisionWorld } from '../ocean-refined/collisions.js';
+import { heroFormationSteps } from '../ocean-refined/hero-formations.js';
+import { wildlifeBearing } from '../ocean-refined/guided-wildlife.js';
 
 // Only replace the journey UI scheduler; the tour and swimming integrator below
 // are the production modules. Every assertion samples the actual player body.
@@ -27,11 +29,13 @@ class Element {
 const document = new Element(), window = new Element(), canvas = new Element();
 document.body = new Element(); document.documentElement = new Element();
 document.getElementById = () => null; document.querySelector = () => null;
-document.createElement = () => Object.assign(new Element(), { getContext: () => ({ beginPath() {}, moveTo() {}, lineTo() {}, stroke() {}, quadraticCurveTo() {} }) });
+document.createElement = () => Object.assign(new Element(), { getContext: () => ({ createImageData: (w,h) => ({ data: new Uint8ClampedArray(w*h*4) }), putImageData() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {}, quadraticCurveTo() {} }) });
 canvas.requestPointerLock = () => {}; canvas.setPointerCapture = () => {};
 Object.assign(globalThis, { document, window, matchMedia: query => ({ matches: query.includes('reduced-motion') }),
   addEventListener: window.addEventListener.bind(window), removeEventListener: window.removeEventListener.bind(window) });
-const { startTour, tourStatus, STOPS } = await import('../ocean-refined/guided-dive.js');
+const { startTour, tourStatus, STOPS, tourPlan } = await import('../ocean-refined/guided-dive.js');
+
+const key = code => window.dispatchEvent({ type: 'keydown', code, repeat: false, target: { closest: () => null }, preventDefault() {} });
 
 function environment(hz, { reducedMotion = false, unavailable = false, collision = null } = {}) {
   const settings = { ...defaults, pointerLock: false, idleMotion: 0 };
@@ -66,7 +70,7 @@ function environment(hz, { reducedMotion = false, unavailable = false, collision
   collision.addBox(new THREE.Box3(new THREE.Vector3(-4, -15, -10), new THREE.Vector3(-1, -2, -6)));
   const env = environment(60, { collision });
   startTour();
-  for (let frame = 0; frame < 60 * 100 && tourStatus() !== 'dwell'; frame++) env.tick();
+  for (let frame = 0; frame < 60 * 100 && !['dwell', 'done'].includes(tourStatus()); frame++) env.tick();
   assert.equal(tourStatus(), 'dwell', 'collision-checked scenic detour arrives');
   assert.equal(env.placed, 0);
   const a = new THREE.Vector3(), b = new THREE.Vector3();
@@ -81,6 +85,8 @@ function environment(hz, { reducedMotion = false, unavailable = false, collision
 // Build the production procedural reef and its collision geometry. Only the
 // decorative canvas texture is stubbed; navigation uses the real solid reef.
 const reefCollision = createReef({ economy: true }).userData.collisions;
+const formations = heroFormationSteps({ terrainHeightAt, collisions: reefCollision, economy: true });
+while (!formations.next().done) {}
 for (const hz of [30, 60, 120]) {
   const env = environment(hz, { collision: reefCollision });
   env.transition = true;
@@ -90,17 +96,21 @@ for (const hz of [30, 60, 120]) {
   env.transition = false; env.state.landmarksReady = false; env.tick(.5);
   assert.equal(tourStatus(), 'starting', 'wait for final landmark viewpoints');
   env.state.landmarksReady = true;
-  let totalDistance = 0, maxStep = 0;
+  let totalDistance = 0, maxStep = 0, travelSeconds = 0;
   for (let stop = 0; stop < STOPS.length; stop++) {
     const before = env.samples.length;
-    for (let frame = 0; frame < hz * 100 && tourStatus() !== 'dwell'; frame++) env.tick();
-    assert.equal(tourStatus(), 'dwell', `stop ${stop + 1} arrived at ${hz} Hz: ${JSON.stringify(env.state.tour)}`);
-    assert.ok(distance(env.state.playerPosition, env.landmarks[stop].interactionPosition) < 1.6, 'arrival reflects the body position');
+    for (let frame = 0; frame < hz * 100 && !['dwell', 'done'].includes(tourStatus()); frame++) env.tick();
+    assert.equal(tourStatus(), stop === STOPS.length - 1 ? 'done' : 'dwell', `stop ${stop + 1} arrived at ${hz} Hz: ${JSON.stringify(env.state.tour)}`);
+    const target = STOPS[stop].landmark ? env.landmarks.find(item => item.id === STOPS[stop].landmark).interactionPosition : STOPS[stop].point;
+    assert.ok(distance(env.state.playerPosition, target) < 1.6, 'arrival reflects the body position');
     const leg = env.samples.slice(before);
+    travelSeconds += leg.length / hz;
+    if (hz === 30) console.log(STOPS[stop].key, (leg.length / hz).toFixed(1), env.state.tour.detours);
     assert.ok(leg.length > hz, 'the swim lasts across many frames');
     for (let i = 1; i < leg.length; i++) { const step = distance(leg[i - 1], leg[i]); maxStep = Math.max(maxStep, step); totalDistance += step; }
+    if (STOPS[stop].scenic && tourStatus() === 'dwell') key('KeyP');
     const settled = env.state.playerPosition; env.tick(8);
-    assert.equal(tourStatus(), 'dwell', 'reading has no automatic advance');
+    assert.equal(tourStatus(), stop === STOPS.length - 1 ? 'done' : 'dwell', 'reading and paused scenic moments have no automatic advance');
     assert.ok(distance(settled, env.state.playerPosition) < 1.7, 'the diver settles at the stop');
     window.oceanTour.next();
   }
@@ -108,15 +118,16 @@ for (const hz of [30, 60, 120]) {
   assert.equal(env.placed, 0, 'full-motion tour never places the player, even when OS reduced motion is enabled');
   assert.ok(maxStep < 7 / hz, `bounded continuous body steps (${maxStep})`);
   assert.ok(totalDistance > 100, `the player traversed the reef (${totalDistance})`);
+  assert.ok(travelSeconds > 90 && travelSeconds < 150, `roughly two minutes of movement (${travelSeconds})`);
   window.oceanTour.stop(); env.nav.destroy();
-  console.log(`PASS: ${hz} Hz, three real swims, ${totalDistance.toFixed(1)} m, maximum step ${maxStep.toFixed(3)} m.`);
+  console.log(`PASS: ${hz} Hz, eight reef stages, ${totalDistance.toFixed(1)} m, ${travelSeconds.toFixed(1)} seconds swimming, maximum step ${maxStep.toFixed(3)} m.`);
 }
 
 // A rejected path holds the player rather than triggering the old timed cut.
-const key = code => window.dispatchEvent({ type: 'keydown', code, repeat: false, target: { closest: () => null }, preventDefault() {} });
+
 {
   const env = environment(60);
-  startTour(); env.tick(1.5);
+  startTour(); env.tick(6); window.oceanTour.next(); env.tick(1.5);
   assert.equal(tourStatus(), 'travel');
   key('KeyP'); env.tick(2);
   assert.equal(env.state.tour.paused, true);
@@ -161,3 +172,37 @@ const bow = planGuidedRoute([0, -10, 0], [30, -10, 0], { floor: () => -30, clear
 assert.ok(Math.max(...bow.map(point => Math.abs(point[2]))) > 3, 'a visible gentle curve');
 assert.deepEqual(planGuidedRoute([0, -10, 0], [30, -10, 0], { floor: () => -30, clear: () => false }), []);
 console.log('PASS: rejected routes hold, explicit Skip and reduced motion fade, scenic curve checked.');
+
+// Compare the real integrator frame for frame, with and without free look.
+// Input changes the view but never cancels the route or redirects its thrust.
+let baseline;
+for (const input of ['none', 'mouse', 'touch', 'arrows']) {
+  const env = environment(60);
+  env.nav.setGuided(true, true);
+  env.nav.travelPath([[0, -8, -35]], [0, -8, -40], 4);
+  env.tick(.1);
+  const inputsBefore = env.nav.state.inputs;
+  if (input === 'arrows') key('ArrowLeft');
+  if (input === 'mouse' || input === 'touch') {
+    canvas.dispatchEvent({ type: 'pointerdown', pointerType: input, pointerId: 1, clientX: 100, clientY: 100 });
+    canvas.dispatchEvent({ type: 'pointermove', pointerType: input, pointerId: 1, clientX: 700, clientY: 160 });
+  }
+  env.tick(3);
+  assert.equal(env.nav.state.inputs, inputsBefore, `${input} leaves movement guided`);
+  assert.equal(env.nav.state.guided, true);
+  assert.equal(env.nav.state.travelling, true);
+  if (input === 'none') baseline = env.samples;
+  else {
+    assert.ok(Math.abs(env.nav.state.yaw) > .3, `${input} turns the view`);
+    for (let i = 0; i < baseline.length; i++) assert.ok(distance(env.samples[i], baseline[i]) < .001, `${input} preserves the swim at frame ${i}`);
+  }
+  env.nav.destroy();
+}
+assert.ok(wildlifeBearing([10, 0, -10]).x > 0);
+assert.ok(wildlifeBearing([10, 0, 10]).x > 0, 'behind-camera animal keeps its right bearing');
+assert.ok(wildlifeBearing([-10, 0, 10]).x < 0);
+assert.ok(wildlifeBearing([0, 10, -10]).y < 0);
+assert.equal(wildlifeBearing([0, 0, -10]).onScreen, true);
+assert.equal(wildlifeBearing([0, 0, 10]).onScreen, false);
+assert.equal(tourPlan().stops, 3, 'the planner counts portfolio sites separately from scenic stages');
+console.log('PASS: mouse, touch and arrow-key free look preserve the body route; wildlife bearings follow the view.');

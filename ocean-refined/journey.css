@@ -72,6 +72,15 @@ body[data-announce="on"] .waypoint[data-show="true"]{opacity:0}
    words. On a desktop it keeps the lower right corner, above the dive console and clear of the prompt in the middle;
    while the full computer face is up it stands above that. */
 section.tour-card.holo{--holo-tint-solid:#05222ff2}
+body[data-tour="entering"] .hero{opacity:0;visibility:hidden;pointer-events:none}
+.tour-wildlife{position:fixed;z-index:var(--o-z-sheet);display:flex;align-items:center;gap:8px;translate:-50% -50%;padding:8px 12px;max-width:180px;pointer-events:none;font:12px/1.4 var(--holo-font);color:var(--holo-ink);background:#05222fe8}
+.tour-wildlife[hidden]{display:none}
+.tour-wildlife-arrow{display:inline-block;font-size:22px}
+.tour-wildlife-arrow[hidden]{display:none}
+body:is([data-clear-ui="true"],[data-safety-stop="true"]) .tour-wildlife{display:none}
+#landmark-dialog .tour-archive-continue{flex-shrink:0;white-space:normal}
+#landmark-dialog .tour-archive-continue[hidden]{display:none}
+body[data-tour="dwell"] #landmark-dialog .arc-footer{flex-wrap:wrap}
 section.tour-card{position:fixed;right:var(--pad,24px);bottom:150px;z-index:var(--o-z-sheet);display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head actions";align-items:center;column-gap:12px;box-sizing:border-box;width:min(calc(100vw - 2*var(--o-pad)),440px);max-height:calc(100dvh - 2*var(--o-pad));padding:6px 12px 6px 22px;opacity:0;translate:0 14px;visibility:hidden;transition:opacity 250ms var(--journey-out),translate 250ms var(--journey-out),visibility 0s 250ms}
 section.tour-card[data-show="true"]{opacity:1;translate:0 0;visibility:visible;transition:opacity var(--journey-standard) var(--journey-in),translate var(--journey-standard) var(--journey-in)}
 section.tour-card[data-sheet="expanded"]{grid-template-areas:"head head" "title title" "body body" "pace pace" "actions actions";padding:6px 18px 14px 22px}

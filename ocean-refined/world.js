@@ -771,6 +771,16 @@ function updateWorld(dt,clockDt=dt){
     cameraGoal.lerp(scratchC.set(2.3*Math.sin(surfaceFramingYaw),.15,2.3*Math.cos(surfaceFramingYaw)).add(face),approach);
     lookTarget.lerp(face,approach);
   }
+  // The guided entry first brings the surface diver to centre frame, then
+  // carries that framing into the existing first-person descent.
+  const tourEntry=reducedMotion?0:(window.oceanTour?.entryFraming||0)*(1-easedDive);
+  if(tourEntry>0){
+    const side=Math.tan(THREE.MathUtils.degToRad(camera.fov*.5))*camera.aspect*7.2*.66;
+    const face=scratchB.set(playerPosition.x,THREE.MathUtils.lerp(.65,playerPosition.y+.3,easedDive),playerPosition.z)
+      .add(scratchA.set(side,0,2.8).applyAxisAngle(axisY,surfaceFramingYaw).multiplyScalar(1-easedDive));
+    cameraGoal.lerp(scratchC.set(0,1.1,4.6).applyAxisAngle(axisY,surfaceFramingYaw).add(face),tourEntry);
+    lookTarget.lerp(face,tourEntry);
+  }
   if(ascending){
     lookTarget.copy(playerPosition).add(scratchA.set(0,.7,0));
     const landing=ascentLanding;

@@ -1,33 +1,14 @@
-import { toDisplayDepth } from './depth-metrics.js';
 import * as THREE from './vendor/three.module.min.js';
 import { LANDMARKS, terrainHeightAt } from './reef.js';
 import { onFrame, setQuiet, discover, say } from './journey.js';
 import { planGuidedRoute } from './guided-route.js';
 
-// The guided dive is a scripted route, not a camera path: it hands waypoints to
-// the same autopilot the atlas uses, so the diver still collides, still routes
-// over terrain, and any input from the visitor takes the controls straight back.
-const SPEED = 5.6, ARRIVE_RADIUS = 1.6;
-// Coordinates are world metres (x, y, z); y is negative below the surface.
-// A stop with `landmark` takes its viewpoint and subject from the placed model.
-// `lines` is the full caption; `short` says the same in two lines for the phone sheet, which offers More for the rest.
-// How to open the log is not in the copy: the sheet's Read it button carries it, worded for the input in hand.
-export const STOPS = [
-  { key: 'about', landmark: 'about', title: 'A model response is not a product outcome.', place: 'About · The Anchor', kicker: `About · The Anchor · ${Math.round(toDisplayDepth(9))} m`, signal: '#7ff0cf',
-    lines: 'The complete system includes the workflow, boundaries, evaluation, recovery path, and the reason a user returns. That’s the quality bar behind my work.',
-    short: 'The whole system counts: workflow, boundaries, evaluation, recovery, and the reason a user returns.' },
-  // The wreck's viewpoint sits just above an outcrop, so the route comes down onto it.
-  { key: 'experience', landmark: 'experience', title: 'From research to AI product ownership.', place: 'Experience · The Wreck', kicker: `Experience · The Wreck · ${Math.round(toDisplayDepth(21))} m`, signal: '#ffcf7a', via: [[19, -14.5, -21]],
-    lines: 'I learned the market by studying it, the product by operating it, and AI systems by improving and building them. Today I lead Rae across discovery, product strategy, launches, and adoption.',
-    short: 'Market research, then product operations, then AI systems. Today I lead Rae from discovery to adoption.' },
-  // Round the wreck, come down the cliff into the gully and swim through the arch.
-  // The waypoints follow the gully floor closely because the autopilot rounds every corner by VIA_RADIUS.
-  { key: 'projects', landmark: 'projects', title: 'Useful outcomes, different contexts.', place: 'Projects · The Treasure', kicker: `Projects · The Treasure · ${Math.round(toDisplayDepth(47))} m`, signal: '#c9a2ff', via: [[31, -19, -30], [31, -27, -48], [25, -40, -58], [21, -44.4, -60], [20, -47.3, -62.6], [20, -49.9, -66], [20, -51.6, -70], [20, -52.2, -78.5], [4, -46, -80]],
-    lines: 'Rae brings AI into sales work. WattMana helps households understand an electricity bill. Sage supports organization between appointments. Explore my contribution, the boundaries, and the thinking behind each.',
-    short: 'Rae for sales work, WattMana for electricity bills, Sage between appointments. My part in each, and why.' }
-];
-const FINALE = 'Three places, one thread: making complex systems useful to people. Keep exploring, open the Portfolio button for any section, or surface when you’re ready.';
-const FINALE_SHORT = 'Three places, one thread: making complex systems useful to people. The reef is yours.';
+import { STOPS, SPEED, SCENIC_SECONDS } from './guided-itinerary.js';
+import { createWildlifeGuide } from './guided-wildlife.js';
+export { STOPS };
+const ARRIVE_RADIUS = 1.6;
+const FINALE = 'This is my reef, and my portfolio. Explore at your own pace, or surface. On the way up, you can choose a safety stop or continue straight to the surface.';
+const FINALE_SHORT = FINALE;
 
 const motionMedia = matchMedia('(prefers-reduced-motion: reduce)'), coarse = matchMedia('(pointer: coarse)');
 // The phone layout of the layout contract (tokens.css): there the card is a bottom sheet and the copy is the short one.
@@ -40,7 +21,7 @@ const reduced = () => window.oceanDiagnostics?.reducedMotion ?? motionMedia.matc
 const card = document.createElement('section'), fade = document.createElement('div');
 // The card is a sheet (release/MOBILE_OVERHAUL.md): collapsed it is one row, the stop, the count and one action, so
 // the water stays clear while the tour swims; expanded it carries the stop's headline, its caption and every action.
-// It opens itself at a stop and folds away for the swim; the row toggles it, and that choice holds until the next stop.
+// Guidance stays visible while swimming; the row can fold it away until the next stage.
 card.className = 'tour-card holo holo--reading'; card.setAttribute('aria-label', 'Guided dive'); card.dataset.show = 'false'; card.dataset.sheet = 'collapsed'; card.inert = true;
 card.innerHTML = '<div class="tour-progress" aria-hidden="true"><i></i></div>'
   + '<button type="button" class="tour-head" data-tour="toggle" aria-expanded="false"><span class="holo-label tour-kicker"></span><span class="holo-value tour-count"></span><i class="tour-chevron" aria-hidden="true"></i></button>'
@@ -52,12 +33,18 @@ const part = name => card.querySelector(name), bar = part('.tour-progress i');
 // open: the visitor's own choice for this stop (null follows the tour); more: the full caption on a phone.
 let open = null, more = false, shownFor = '';
 
-// status: off · starting (waiting for the dive) · travel · dwell · free (visitor has the controls) · done
-let status = 'off', index = 0, arrived = -1, legTime = 0, paused = false, inputs = 0;
+// status: off · entering (surface framing) · starting (descent) · travel · dwell · free · done
+let status = 'off', index = 0, arrived = -1, legTime = 0, swimSeconds = 0, paused = false, inputs = 0;
 let best = Infinity, stall = 0, waited = 0, cut = null, cutTime = 0, barShown = -1;
 let detours = 0, routeIssue = false;
 const leg = [], goal = [0, 0, 0], look = [0, 0, 0], from = new THREE.Vector3(), to = new THREE.Vector3(), here = new THREE.Vector3();
 const controls = () => window.oceanControls;
+const wildlife = createWildlifeGuide(document, new THREE.Vector3());
+const archiveContinue = document.createElement('button');
+archiveContinue.type = 'button'; archiveContinue.className = 'tour-archive-continue holo-chip'; archiveContinue.hidden = true;
+archiveContinue.textContent = 'Continue guided dive · N';
+document.querySelector('#landmark-dialog .arc-footer')?.append(archiveContinue);
+archiveContinue.addEventListener('click', () => { window.oceanArchive?.close(); next(); });
 
 function resolve(stop, target = goal, subject = look) {
   if (!stop.landmark) { target.splice(0, 3, ...stop.point); subject.splice(0, 3, ...stop.focus); return true; }
@@ -74,18 +61,21 @@ function clear(a, b) {
   return !world?.segmentClear || world.segmentClear(from.fromArray(a), to.fromArray(b), radius);
 }
 function route(start, stop, scenic = true) {
+  const via = Array.isArray(scenic) ? scenic : scenic && arrived === index - 1 ? stop.via : [];
   leg.length = 0;
-  leg.push(...planGuidedRoute(start, goal, { via: scenic && arrived === index - 1 ? stop.via : [], floor: terrainHeightAt, clear,
+  leg.push(...planGuidedRoute(start, goal, { via, floor: terrainHeightAt, clear,
     clearance: Math.max(1.5, controls()?.settings?.floorClearance ?? 1.5) }));
   return leg.length > 0;
 }
 function paint() {
-  const stop = STOPS[index], touring = status === 'travel' || status === 'dwell', shown = status !== 'off' && status !== 'starting';
+  const stop = STOPS[index], touring = status === 'travel' || status === 'dwell', shown = !['off', 'entering', 'starting'].includes(status);
   // A new stop, or a change of state, starts from the tour's own choice again.
   if (`${status}:${index}` !== shownFor) { shownFor = `${status}:${index}`; open = null; more = false; }
-  // Open at a stop, at the end, and when the route needs a decision; folded while the tour swims or waits on hold.
-  const wide = open ?? (status === 'dwell' || status === 'done' || routeIssue), small = compact.matches, fingers = touch();
+  // Keep progressive instructions visible; folding the guide is the visitor's choice.
+  const wide = open ?? (status === 'dwell' || status === 'done' || status === 'travel' || routeIssue), small = compact.matches, fingers = touch();
   document.body.dataset.tour = status; card.dataset.state = status; card.dataset.show = String(shown);
+  archiveContinue.hidden = status !== 'dwell' || !stop.landmark;
+  archiveContinue.textContent = fingers ? 'Continue guided dive' : 'Continue guided dive · N';
   card.dataset.sheet = wide ? 'expanded' : 'collapsed';
   // The rest of the interface reads the sheet from the body: world labels and announcements keep out of its way.
   if (shown) document.body.dataset.sheet = card.dataset.sheet; else delete document.body.dataset.sheet;
@@ -99,26 +89,26 @@ function paint() {
   // The caption. On a phone the short one, with More for the full text; the hint follows the input in hand.
   const full = status === 'free' ? `Swim wherever you like. ${fingers ? 'Tap Rejoin' : 'Press G'} when you want me to lead again.`
     : status === 'done' ? FINALE
-    : status === 'travel' ? (routeIssue ? 'The route is blocked. Resume to try again, skip this swim, or explore freely.' : fingers ? 'Swimming there now. Drag the water or touch the pad to take over.' : 'Swimming there now. Any movement key hands the dive to you.')
-    : stop.lines;
-  const brief = status === 'done' ? FINALE_SHORT : status === 'dwell' ? stop.short : full;
+    : status === 'travel' ? (routeIssue ? 'The route is blocked. Resume to try again, skip this swim, or explore freely.' : fingers ? (stop.touchLines || stop.lines) : stop.lines)
+    : fingers ? (stop.touchLines || stop.short) : stop.lines;
+  const brief = fingers ? full : status === 'done' ? FINALE_SHORT : status === 'dwell' ? stop.short : full;
   part('.tour-lines').textContent = small && !more ? brief : full;
   const moreButton = part('.tour-more');
-  moreButton.hidden = !(small && wide && brief !== full);
+  moreButton.hidden = !(small && wide && (brief !== full || full.length > 95));
   moreButton.setAttribute('aria-expanded', String(more));
   moreButton.firstChild.textContent = more ? 'Less' : 'More';
   card.dataset.more = String(small && more);
   // Folded, the row offers one action: the one the moment calls for.
-  const primary = status === 'travel' ? 'next' : status === 'dwell' ? (stop.landmark ? 'read' : 'next') : status === 'free' ? 'rejoin' : 'explore';
-  const show = { pause: status === 'travel', read: status === 'dwell' && Boolean(stop.landmark), next: touring, rejoin: status === 'free', surface: status === 'done', explore: status === 'done', exit: touring || status === 'free' };
+  const primary = status === 'travel' ? 'pause' : status === 'dwell' ? 'next' : status === 'free' ? 'rejoin' : 'explore';
+  const show = { pause: status === 'travel' || (status === 'dwell' && stop.scenic), read: status === 'dwell' && Boolean(stop.landmark), next: touring, rejoin: status === 'free', surface: status === 'done', explore: status === 'done', exit: touring || status === 'free' };
   for (const button of card.querySelectorAll('footer [data-tour]')) { const action = button.dataset.tour; button.hidden = wide ? !show[action] : action !== primary; }
   part('[data-tour="pause"]').firstChild.textContent = paused ? 'Resume ' : 'Pause ';
   part('[data-tour="pause"]').setAttribute('aria-pressed', String(paused));
   part('[data-tour="next"]').firstChild.textContent = status === 'travel' ? (wide ? 'Skip travel ' : 'Skip ') : index === STOPS.length - 1 ? 'Finish route ' : 'Continue ';
-  part('.tour-pace').textContent = status === 'dwell' ? `${stop.landmark ? (fingers ? 'Tap Read it to open the log. ' : 'Press F to read it. ') : ''}Take your time. Continue when you’re ready.` : status === 'travel' ? (routeIssue ? '' : paused ? 'Travel paused. Resume when you’re ready.' : 'You can skip this swim or take the controls at any time.') : '';
-  setQuiet(touring || status === 'starting');
+  part('.tour-pace').textContent = status === 'dwell' ? `${stop.landmark ? (fingers ? 'Tap Read it to open the log. ' : 'Press F to read it. ') : ''}${stop.scenic ? (paused ? 'Paused. Resume when you’re ready.' : 'A moment to look. We’ll continue shortly; Pause to stay.') : 'Take your time. Continue when you’re ready.'}` : status === 'travel' ? (routeIssue ? '' : paused ? 'Travel paused. Resume when you’re ready.' : 'Look freely. P pauses; N skips this swim. Movement keys take over; G rejoins.') : '';
+  setQuiet(touring || status === 'starting' || status === 'entering');
   setBar(status === 'done' ? 1 : (index + (status === 'dwell' ? 1 : 0)) / STOPS.length);
-  if (window.oceanDiagnostics) window.oceanDiagnostics.tour = { status, stop: index, key: stop.key, arrived, paused, routeIssue, detours };
+  if (window.oceanDiagnostics) window.oceanDiagnostics.tour = { status, stop: index, key: stop.key, arrived, paused, routeIssue, detours, goal: [...goal], swimSeconds };
 }
 function setBar(value) { const rounded = Math.round(value * 250) / 250; if (rounded !== barShown) { barShown = rounded; bar.style.transform = `scaleX(${rounded})`; } }
 function launch() {
@@ -134,6 +124,8 @@ function arrive() {
   const stop = STOPS[index]; arrived = index; waited = 0; status = 'dwell'; inputs = controls().nav.inputs;
   if (stop.landmark) discover(stop.landmark, true);
   paint();
+  if (stop.key === 'overview') finish();
+  else if (stop.key === 'about') window.oceanArchive?.open?.('glance');
 }
 // A cut: fade the water over, move the diver, fade back. Reduced motion always travels this way.
 function cutTo(then) { controls()?.cancelTravel(); cut = then; cutTime = .24; fade.dataset.on = 'true'; }
@@ -152,42 +144,51 @@ function handOver() { status = 'free'; paused = false; cut = null; fade.dataset.
 function rejoin() {
   if (status !== 'free') return;
   if (arrived >= STOPS.length - 1) { finish(); return; }
-  here.fromArray(window.oceanDiagnostics.playerPosition);
-  let nearest = arrived + 1, distance = Infinity; const point = [0, 0, 0], subject = [0, 0, 0];
-  for (let i = arrived + 1; i < STOPS.length; i++) { resolve(STOPS[i], point, subject); const d = here.distanceTo(to.fromArray(point)); if (d < distance) { distance = d; nearest = i; } }
-  go(nearest);
+  // Rejoin the interrupted leg; looking around or taking a detour never skips sites.
+  go(index);
 }
 function stop(message) {
   if (status === 'off') return;
   const api = controls(); status = 'off'; paused = false; cut = null; fade.dataset.on = 'false';
   if (api) { api.guide(false); api.cancelTravel(); }
+  wildlife.reset();
   paint();
   if (message) say('Guided dive', message, '#8ff4ff', 3200);
 }
 export function startTour() {
   const api = controls();
-  if (!api || !window.oceanDiagnostics?.ready || status !== 'off') return false;
-  if (api.getMode() === 'surface' && !api.startDive({ capture: false })) return false;
-  status = 'starting'; index = 0; arrived = -1; waited = 0; paused = false; paint();
+  if (!api || !window.oceanDiagnostics?.ready || status !== 'off' || api.getMode() === 'transition') return false;
+  wildlife.reset();
+  status = api.getMode() === 'surface' ? 'entering' : 'starting'; index = 0; arrived = -1; waited = swimSeconds = 0; paused = false; paint();
   return true;
 }
 export const tourStatus = () => status;
 // Travel estimate only. Reading at each landmark has no countdown or automatic
 // advance: the visitor chooses Continue after reading as much as they want.
-export const DIVE_IN = 6.5;
+export const DIVE_IN = 7.5;
 export function tourPlan() {
   let distance = 0, seconds = DIVE_IN; const point = [0, 0, 0], subject = [0, 0, 0]; let last = [0, -8, 0];
   for (const item of STOPS) {
     resolve(item, point, subject);
     for (const next of [...(item.via || []), point]) { distance += from.fromArray(last).distanceTo(to.fromArray(next)); last = [...next]; }
-    seconds += 1.4;
+    seconds += item.scenic ? SCENIC_SECONDS + 1.4 : 1.4;
   }
-  return { stops: STOPS.length, distance: distance + 8, seconds: seconds + distance / SPEED };
+  return { stops: STOPS.filter(stop => stop.landmark).length, stages: STOPS.length, distance: distance + 8, seconds: seconds + distance / SPEED };
 }
 
 function update(dt, api, state, diving) {
+  wildlife.update(dt, api, diving && !api.nav.suspended && ['travel', 'dwell'].includes(status));
   if (status === 'off') return;
   const mode = api.getMode();
+  if (status === 'entering') {
+    if (api.nav.suspended) return;
+    waited += dt;
+    if (waited >= 1) {
+      if (!api.startDive({ capture: false, guided: true })) { stop(); return; }
+      status = 'starting'; waited = 0; paint();
+    }
+    return;
+  }
   if (status === 'starting') {
     waited += dt;
     // Navigation started during the entry animation is overwritten by startDive.
@@ -203,11 +204,15 @@ function update(dt, api, state, diving) {
   if (status !== 'travel' && status !== 'dwell') return;
   const nav = api.nav;
   if (nav.inputs !== inputs) { handOver(); return; }
-  if (cut) { cutTime -= dt; if (cutTime <= 0) { const then = cut; cut = null; then(); fade.dataset.on = 'false'; } return; }
-  if (status === 'dwell') return;
+  if (cut) { if (!paused) cutTime -= dt; if (cutTime <= 0) { const then = cut; cut = null; then(); fade.dataset.on = 'false'; } return; }
+  if (status === 'dwell') {
+    if (STOPS[index].scenic && !paused) { waited += dt; if (waited >= SCENIC_SECONDS) advance(); }
+    return;
+  }
   // Pause the route itself, rather than only its caption countdown.
   if (paused) return;
   legTime += dt;
+  swimSeconds += dt;
   const distance = here.fromArray(state.playerPosition).distanceTo(to.fromArray(goal));
   if (distance < ARRIVE_RADIUS && (!nav.travelling || distance < .6)) { arrive(); return; }
   // A scenic route can initially swim away from its destination. Its remaining
@@ -245,23 +250,31 @@ function read() {
 function next() {
   if (cut) return;
   if (status === 'dwell') { paused = false; advance(); }
-  else if (status === 'travel') cutTo(land);
+  else if (status === 'travel') { paused = false; cutTo(land); }
 }
 function togglePause() {
+  if (status === 'dwell' && STOPS[index].scenic) { paused = !paused; paint(); return; }
   if (status !== 'travel') return;
   paused = !paused;
   if (paused && !cut) controls()?.cancelTravel();
   if (!paused && !cut) {
     routeIssue = false; detours = 0; here.fromArray(window.oceanDiagnostics.playerPosition);
-    if (!route(here.toArray(), STOPS[index], false)) { blockRoute(); return; }
+    let nearest = 0, distance = Infinity;
+    for (let i = 0; i < leg.length; i++) { const d = here.distanceToSquared(to.fromArray(leg[i])); if (d < distance) { nearest = i; distance = d; } }
+    const remaining = leg.slice(nearest);
+    if (!route(here.toArray(), STOPS[index], remaining)) { blockRoute(); return; }
     launch();
   }
   paint();
 }
 addEventListener('keydown', event => {
-  if (status === 'off' || event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.target.closest?.('input,textarea,select,[contenteditable="true"]') || document.querySelector('dialog[open]')) return;
+  if (status === 'off' || event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.target.closest?.('input,textarea,select,[contenteditable="true"]')) return;
+  if (document.querySelector('dialog[open]')) {
+    if (event.code === 'KeyN' && status === 'dwell' && window.oceanArchive?.isOpen) { event.preventDefault(); window.oceanArchive.close(); next(); }
+    return;
+  }
   if (event.code === 'KeyG' && status === 'free') { event.preventDefault(); rejoin(); }
   else if (event.code === 'KeyN' && (status === 'travel' || status === 'dwell')) { event.preventDefault(); next(); }
-  else if (event.code === 'KeyP' && status === 'travel') { event.preventDefault(); togglePause(); }
+  else if (event.code === 'KeyP' && (status === 'travel' || status === 'dwell')) { event.preventDefault(); togglePause(); }
 });
-window.oceanTour = { start: startTour, stop, rejoin, next, plan: tourPlan, get status() { return status; }, STOPS };
+window.oceanTour = { start: startTour, stop, rejoin, next, plan: tourPlan, get status() { return status; }, get entryFraming() { return status === 'entering' ? THREE.MathUtils.smoothstep(waited, .2, 1) : status === 'starting' ? 1 : 0; }, STOPS };
