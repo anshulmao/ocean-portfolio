@@ -6,7 +6,8 @@ import { planGuidedRoute } from './guided-route.js';
 
 // The guided dive is a scripted route, not a camera path: it hands waypoints to
 // the same autopilot the atlas uses, so the diver still collides, still routes
-// over terrain, and any input from the visitor takes the controls straight back.
+// over terrain. The visitor keeps the view (free look: the mouse, a drag, the arrow keys and a look stick only
+// look), and any input that swims takes the controls straight back.
 const SPEED = 5.6, ARRIVE_RADIUS = 1.6;
 // Coordinates are world metres (x, y, z); y is negative below the surface.
 // A stop with `landmark` takes its viewpoint and subject from the placed model.
@@ -99,7 +100,7 @@ function paint() {
   // The caption. On a phone the short one, with More for the full text; the hint follows the input in hand.
   const full = status === 'free' ? `Swim wherever you like. ${fingers ? 'Tap Rejoin' : 'Press G'} when you want me to lead again.`
     : status === 'done' ? FINALE
-    : status === 'travel' ? (routeIssue ? 'The route is blocked. Resume to try again, skip this swim, or explore freely.' : fingers ? 'Swimming there now. Drag the water or touch the pad to take over.' : 'Swimming there now. Any movement key hands the dive to you.')
+    : status === 'travel' ? (routeIssue ? 'The route is blocked. Resume to try again, skip this swim, or explore freely.' : fingers ? 'Swimming there now. Drag the water to look around, or touch the pad to take over.' : 'Swimming there now. Look around freely; any movement key hands the dive to you.')
     : stop.lines;
   const brief = status === 'done' ? FINALE_SHORT : status === 'dwell' ? stop.short : full;
   part('.tour-lines').textContent = small && !more ? brief : full;
@@ -123,7 +124,7 @@ function paint() {
 function setBar(value) { const rounded = Math.round(value * 250) / 250; if (rounded !== barShown) { barShown = rounded; bar.style.transform = `scaleX(${rounded})`; } }
 function launch() {
   const api = controls();
-  api.guide(true, true);
+  api.guide(true, true, true);
   inputs = api.nav.inputs; best = Infinity; stall = 0; legTime = 0;
   if (!api.travelPath(leg, look, SPEED)) blockRoute();
 }
@@ -145,7 +146,7 @@ function go(next) {
   if (!route(here.toArray(), STOPS[index])) { blockRoute(); return; }
   launch();
 }
-function land() { const api = controls(); api.guide(true, true); api.place(goal, look); arrive(); }
+function land() { const api = controls(); api.guide(true, true, true); api.place(goal, look); arrive(); }
 function advance() { if (index >= STOPS.length - 1) { finish(); return; } go(index + 1); }
 function finish() { status = 'done'; paused = false; controls()?.cancelTravel(); controls()?.guide(false); paint(); }
 function handOver() { status = 'free'; paused = false; cut = null; fade.dataset.on = 'false'; controls()?.guide(false); paint(); }

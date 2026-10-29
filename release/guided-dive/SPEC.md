@@ -162,3 +162,22 @@ A hint the visitor has already used is skipped.
 - At least one big animal is pointed out during the tour.
 - Surface from the overview runs the existing ascent and safety-stop offer.
 - No regression in atlas travel, start-at-site, or free swimming.
+
+## Decisions (29 Oct 2026)
+
+| # | Question | Decision |
+|---|----------|----------|
+| D1 | Movement keys during the tour | They **take over**. The tour holds and **G** rejoins. Mouse, drag, arrow keys and a gamepad look stick only look. |
+| D2 | Coral tower vs semicircle order | Anchor → **table coral tower** (shallow) → **pillar coral cathedral** (the semicircle) → wreck. |
+| D3 | Bait ball | **Included** in the main route (step 7 is no longer optional). |
+| D4 | Big animal | A **guaranteed whale shark**, scripted for the deep look-up. Its pass must stay in **open water**, over the deep shelf, and never swim in toward the shallows. Natural encounters are also pointed out. |
+| D5 | Camera when idle | **Drift**: the visitor's look holds for 2.5 s after their last input, then eases back to the guide's subject. |
+| D6 | Welcome text | Shown **only on the tour**, inside the At a glance page. A visitor who opens At a glance outside the tour doesn't see it. |
+
+## Build log
+
+- **Phase 1: steering mode (done).** `exploration.js` has a free-look mode (`setGuided(value, free, looking)`). Under it, aim, arrows and the look stick
+  change only the view, and the swim and the diver's body (`state.bodyYaw`, `state.bodyPitch`, which also orient the collision
+  capsule) keep the guide's course. When it ends, the body eases back onto the view. `world.js` poses the diver from
+  the body. The current tour uses it. Covered in `tools/test-guided-motion.mjs`: the course is identical with and
+  without the visitor looking, plus the hold-then-drift, arrows, swim-key and thumb-stick takeover, and the body settle.

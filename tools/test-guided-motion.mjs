@@ -45,7 +45,7 @@ function environment(hz, { reducedMotion = false, unavailable = false, collision
   const landmarks = LANDMARKS.map(item => ({ ...item, interactionPosition: [item.position[0] + 6, terrainHeightAt(item.position[0], item.position[2]) + 5, item.position[2]] }));
   const api = window.oceanControls = {
     nav: nav.state, settings, landmarks, reef: { userData: { collisions: collision } }, getMode: () => nav.state.mode, getTransition: () => transition,
-    guide: (value, free) => nav.setGuided(value, free), travelPath: (...args) => unavailable ? false : nav.travelPath(...args),
+    guide: (...args) => nav.setGuided(...args), travelPath: (...args) => unavailable ? false : nav.travelPath(...args),
     cancelTravel: (...args) => nav.cancelTravel(...args), place: (...args) => { placed++; nav.place(...args); },
   };
   const samples = [];
@@ -154,6 +154,60 @@ const key = code => window.dispatchEvent({ type: 'keydown', code, repeat: false,
   assert.equal(tourStatus(), 'free', 'manual takeover also cancels an explicit skip fade');
   assert.equal(env.placed, 0, 'the pending placement cannot overrule manual control');
   window.oceanTour.stop(); env.nav.destroy();
+}
+// Free look: under the guide the visitor's look is theirs and the course is the guide's.
+{
+  const keyup = code => window.dispatchEvent({ type: 'keyup', code, target: { closest: () => null }, preventDefault() {} });
+  const run = looking => {
+    const env = environment(60);
+    startTour(); env.tick(1.5);
+    assert.equal(tourStatus(), 'travel');
+    assert.equal(env.nav.state.freeLook, true, 'the tour guides with free look');
+    let turned = 0;
+    for (let frame = 0; frame < 60 * 100 && tourStatus() !== 'dwell'; frame++) {
+      if (looking && frame % 20 === 0) window.oceanInput.aim(frame % 40 ? 160 : -90, frame % 60 ? 25 : -40);
+      env.tick();
+      if (looking) turned = Math.max(turned, Math.abs(Math.atan2(Math.sin(env.nav.state.yaw - env.nav.state.bodyYaw), Math.cos(env.nav.state.yaw - env.nav.state.bodyYaw))));
+    }
+    assert.equal(tourStatus(), 'dwell', `the swim arrives ${looking ? 'while the visitor looks around' : 'untouched'}`);
+    return { env, samples: env.samples.slice(), turned };
+  };
+  const still = run(false); window.oceanTour.stop(); still.env.nav.destroy();
+  const looked = run(true);
+  assert.equal(looked.env.nav.state.inputs, 0, 'looking never hands the dive over');
+  assert.ok(looked.turned > .5, `the view really turned away from the body (${looked.turned.toFixed(2)} rad)`);
+  assert.equal(looked.samples.length, still.samples.length, 'looking does not change how long the swim takes');
+  const drift = Math.max(...looked.samples.map((p, i) => distance(p, still.samples[i])));
+  assert.ok(drift < 1e-6, `looking does not change the course (${drift})`);
+  // At the stop the guide's look comes back to the subject once the visitor has let go for LOOK_HOLD.
+  const env = looked.env;
+  window.oceanInput.aim(400, 0); env.tick(.2);
+  const away = env.nav.state.yaw; env.tick(1);
+  assert.ok(Math.abs(env.nav.state.yaw - away) < .05, 'the visitor\'s look holds for a moment');
+  env.tick(6);
+  const subject = STOPS[0] && env.landmarks[0].position, at = env.state.playerPosition;
+  const facing = Math.atan2(-(subject[0] - at[0]), -(subject[2] - at[2]));
+  assert.ok(Math.abs(Math.atan2(Math.sin(env.nav.state.yaw - facing), Math.cos(env.nav.state.yaw - facing))) < .15, 'then the view drifts back to the subject');
+  // The arrow keys look; a swim key takes over and the body turns back onto the view.
+  window.oceanTour.next(); env.tick(1.5);
+  assert.equal(tourStatus(), 'travel');
+  key('ArrowLeft'); env.tick(.6); keyup('ArrowLeft');
+  assert.equal(tourStatus(), 'travel', 'an arrow key only looks');
+  key('KeyD'); env.tick(.2); keyup('KeyD');
+  assert.equal(tourStatus(), 'free', 'a swim key takes over');
+  assert.equal(env.nav.state.freeLook, false);
+  env.tick(3);
+  assert.ok(Math.abs(Math.atan2(Math.sin(env.nav.state.yaw - env.nav.state.bodyYaw), Math.cos(env.nav.state.yaw - env.nav.state.bodyYaw))) < .02, 'the body settles back onto the view');
+  window.oceanTour.stop(); env.nav.destroy();
+  // On a phone, a drag on the water only looks and the thumb-stick takes over.
+  const phone = environment(60);
+  startTour(); phone.tick(1.5);
+  for (let i = 0; i < 10; i++) { window.oceanInput.aim(30, 6); phone.tick(.05); }
+  assert.equal(tourStatus(), 'travel', 'a drag on the water only looks');
+  window.oceanInput.axis(0, 1); phone.tick(.2); window.oceanInput.axis(0, 0);
+  assert.equal(tourStatus(), 'free', 'the thumb-stick takes over');
+  window.oceanTour.stop(); phone.nav.destroy();
+  console.log(`PASS: free look turned the view ${looked.turned.toFixed(2)} rad with no change to the guided course; hold, drift back, arrows and takeover.`);
 }
 // The actual planned open-water body route bows across the view, and an
 // impenetrable collision world never yields a successful route.

@@ -403,7 +403,7 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   // QA hook: after placing the camera by hand, cull the scene for it again.
   recull(){camera.updateMatrixWorld(true);refreshView();userCreatures?.update(0,playerPosition,viewerOrbit?null:view);if(built)cullWorld(0);},
   // Dive planner and guided tour hooks: autopilot, instant placement, dive start / surfacing, and the flashlight and scooter state.
-  travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free){exploration.setGuided(value,free);},
+  travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free,looking){exploration.setGuided(value,free,looking);},
   travelPath(points,focus,speed){return exploration.travelPath(points,focus,speed);},
   cancelTravel(options){return exploration.cancelTravel(options);},
   startDive(options){if(!diagnostic.ready||diveTarget===1||getMode()!=='surface')return false;exploration.prepareDive(options);if(options?.at)snapCamera=true;$('#dive').click();return true;},
@@ -871,8 +871,9 @@ function updateWorld(dt,clockDt=dt){
   const diverBlend=ascending?1-ascentLanding:easedDive;
   diver.root.position.set(THREE.MathUtils.lerp(surfaceWorldX,playerPosition.x,diverBlend),THREE.MathUtils.lerp(surfaceY,playerPosition.y,diverBlend),THREE.MathUtils.lerp(surfaceWorldZ,playerPosition.z,diverBlend));
   // Deliberate trim change followed by small alternating fin kicks.
-  const swimPitch=Math.PI/2-settings.diverTrim-nav.pitch-(nav.pitchLead||0);
-  poseYaw.setFromAxisAngle(axisY,THREE.MathUtils.lerp(framingYaw-.2,Math.PI+nav.yaw,diverBlend));posePitch.setFromAxisAngle(axisX,diverBlend*(ascending?THREE.MathUtils.lerp(swimPitch,.22,nav.ascentLaunch||0):swimPitch));
+  // The body, not the view: under the guide's free look they differ (exploration.js: bodyYaw, bodyPitch).
+  const swimPitch=Math.PI/2-settings.diverTrim-nav.bodyPitch-(nav.pitchLead||0);
+  poseYaw.setFromAxisAngle(axisY,THREE.MathUtils.lerp(framingYaw-.2,Math.PI+nav.bodyYaw,diverBlend));posePitch.setFromAxisAngle(axisX,diverBlend*(ascending?THREE.MathUtils.lerp(swimPitch,.22,nav.ascentLaunch||0):swimPitch));
   // The body banks into a turn and sways a little at rest (exploration.js: roll and lean, in radians, zero under reduced motion).
   diverPoseGoal.copy(poseYaw).multiply(posePitch).multiply(scratchQ.setFromAxisAngle(axisY,-diverBlend*((nav.roll||0)+(nav.lean||0))));lookGlowAt(diver.root.position,diverGlow);
   if(safetyStop.blend>0){
