@@ -81,3 +81,15 @@ body:is([data-clear-ui="true"],[data-menu="open"],[data-dialog="open"]) .expedit
 @keyframes stop-invite-glow{50%{border-color:#bcf3df;box-shadow:0 8px 28px #001c3650,0 0 16px #98f6d42b}}
 @media(max-width:650px){.expedition-tools:has([data-stop]:not([hidden])){top:auto;bottom:calc(145px + env(safe-area-inset-bottom));left:50%;right:auto;transform:translateX(-50%);max-width:calc(100vw - 32px);width:300px}.expedition-tools [data-stop]{min-height:70px}}
 @media(prefers-reduced-motion:reduce){.expedition-tools [data-stop]{animation:none}}
+/* Touch: the artifact prompt is a button in the controls zone, where the landmark prompt stands (hud.css 13), and its
+   words carry no key (expedition-interactions.js). */
+.artifact-prompt{cursor:pointer}
+.artifact-prompt:focus-visible{outline:2px solid #dcfbff;outline-offset:3px}
+html[data-input="touch"] .artifact-prompt{left:auto;right:max(12px,var(--o-safe-r));bottom:calc(var(--keys-top) + var(--o-gap));z-index:var(--o-z-controls);min-height:var(--o-tap);max-width:calc(100vw - var(--o-pad) - min(176px,40vw + 12px));transform:none;text-align:left}
+/* Phones (the layout tokens' query): the stop offer belongs to the sheet zone, and notices stand in the free row under
+   the bar, beside the scope. */
+@media(max-width:599px),(pointer:coarse) and (max-height:499px){
+  .expedition-tools,.expedition-tools:has([data-stop]:not([hidden])){top:auto;right:auto;bottom:var(--o-sheet-bottom);left:50%;z-index:var(--o-z-sheet);width:min(300px,calc(100vw - 2*var(--o-pad)));max-width:none;transform:translateX(-50%)}
+  .expedition-notice{top:var(--o-under-bar);right:auto;bottom:auto;left:calc(var(--o-pad) + var(--o-safe-l));z-index:var(--o-z-announce);max-width:calc(100vw - 2*var(--o-pad) - var(--map-size) - var(--o-gap))}
+}
+@media(pointer:coarse) and (max-height:499px){html[data-input="touch"] .artifact-prompt{max-width:calc(20vw - var(--o-pad))}}

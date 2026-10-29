@@ -258,6 +258,23 @@ export function setPacer(gate) { pacer = gate; }
 export function turn() { return (pacer ? pacer() : nextTask().then(() => 5)).then(ms => { paceEnd = performance.now() + (ms > 0 ? ms : 5); }); }
 export function breathe() { return performance.now() < paceEnd ? null : turn(); }
 
+// GLB files are rigs, clips, float geometry and textures, and a static host compresses text but sends
+// model/gltf-binary as it is. The published build (tools/build.mjs) puts a gzipped copy beside each model the page
+// loads and sets GZIPPED; modelBytes(url) then fetches that copy and inflates it with the browser's native
+// DecompressionStream. null (the switch is off, as in the source; no DecompressionStream; any failure) means: load
+// the plain file. A host that labels .gz files Content-Encoding: gzip has the browser inflate them already, so only
+// data that starts with gzip's own magic number is inflated here.
+const GZIPPED = false;
+export async function modelBytes(url) {
+  if (!GZIPPED || typeof DecompressionStream !== 'function') return null;
+  try {
+    const response = await fetch(url + '.gz');
+    if (!response.ok) return null;
+    const bytes = await response.arrayBuffer(), head = new Uint8Array(bytes, 0, 2);
+    return head[0] === 0x1f && head[1] === 0x8b ? await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer() : bytes;
+  } catch { return null; }
+}
+
 // A skinned model's joint indices arrive as unsigned shorts. Direct3D has no vertex format that feeds those to the
 // float input the skinning shader reads, so a browser drawing through it rebuilds the vertex shader for that layout at
 // the model's first draw: a tenth of a second in the graphics process for every skinned program, in the middle of a

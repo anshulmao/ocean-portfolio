@@ -64,13 +64,14 @@ try {
   await world.locator('#landmark-dialog .dialog-close').click();
   await world.setViewportSize({width:1440,height:900});
   await world.waitForFunction(()=>window.oceanDiagnostics?.ready&&oceanDiagnostics.landmarksReady,null,{timeout:120000});
-  await world.waitForFunction(()=>oceanDiagnostics.startup.optionalModelsAt>0,null,{timeout:120000});
-  const startup=await world.evaluate(()=>({...oceanDiagnostics.startup}));
-  assert.ok(startup.optionalModelsAt>=startup.landmarksReadyAt,'Landmarks prepare before optional pack processing.');
   await world.screenshot({path:shot('surface'),animations:'disabled'});
   await world.locator('#portfolio-options summary').click();
   await world.locator('#guided-dive').click();
   await world.waitForFunction(()=>oceanDiagnostics.submerged&&!oceanControls.getTransition(),null,{timeout:120000});
+  // (In economy detail the optional packs wait for a dive: see world.js.)
+  await world.waitForFunction(()=>oceanDiagnostics.startup.optionalModelsAt>0,null,{timeout:120000});
+  const startup=await world.evaluate(()=>({...oceanDiagnostics.startup}));
+  assert.ok(startup.optionalModelsAt>=startup.landmarksReadyAt,'Landmarks prepare before optional pack processing.');
   await world.waitForFunction(()=>['travel','dwell'].includes(oceanTour.status),null,{timeout:30000});
   if(await world.evaluate(()=>oceanTour.status==='travel'))await world.locator('[data-tour="next"]').click();
   await world.waitForFunction(()=>oceanTour.status==='dwell',null,{timeout:30000});

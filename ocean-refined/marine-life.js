@@ -225,18 +225,20 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
   const swimmerPrevious = new THREE.Vector3(), swimmerVelocity = new THREE.Vector3();
   const swimmerAhead = new THREE.Vector3(), swimmerSegment = new THREE.Vector3(), closest = new THREE.Vector3();
   const tangent = new THREE.Vector3(), avoidance = new THREE.Vector3();
-  let hadSwimmer = false, frame = 0, painted = -1;
+  let hadSwimmer = false, frame = 0, painted = true;
+  // Which schools were drawn last frame: the instance colours are written again only when that changes.
+  const wasShown = new Uint8Array(schools.length);
   const bounds = { x: [-84, 84], y: [-85, -1.6], z: [-128, 56] };
   // Beyond this distance from the diver a school cannot feel them (its
   // members stay within ~20 m of the roaming target; avoidance reaches 13 m).
-  const NEAR_SQ = 40 * 40;
+  const NEAR_SQ = 40 * 40, FINE_STEP = economy ? 1 / 30 : 1 / 60;
 
   // view: { frustum, eye, range }. Only schools in view and within the haze
   // are written, packed to the front of each mesh, so the instance count (and
   // the vertex work) follows what can be seen rather than the whole reef.
   function draw(elapsed, view) {
     swimTime.value = elapsed;
-    let total = 0, mask = '';
+    let total = 0, changed = painted; painted = false;
     for (const type in families) families[type].drawn = 0;
     for (let s = 0; s < schools.length; s++) {
       const home = schools[s], members = home.members;
@@ -250,10 +252,10 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
         // A half-metre fish is lost in the haze well before the range itself.
         home.shown = view.eye.distanceTo(bounds3.center) - bounds3.radius < view.range * .75 && view.frustum.intersectsSphere(bounds3);
       }
-      mask += home.shown ? '1' : '0';
+      if (wasShown[s] !== +home.shown) { wasShown[s] = +home.shown; changed = true; }
     }
     // Instance colours only move when the set of visible schools changes.
-    const repaint = mask !== painted; painted = mask;
+    const repaint = changed;
     for (let s = 0; s < schools.length; s++) {
       const home = schools[s], members = home.members;
       if (!home.shown) continue;
@@ -284,7 +286,10 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
   function update(dt, elapsed, swimmerPosition, view = null) {
     elapsed = Number.isFinite(elapsed) ? elapsed : 0;
     const frameDelta = Math.min(Math.max(dt || 0, 0), .1);
-    const steps = frameDelta > 0 ? Math.ceil(frameDelta / (1 / 60)) : 0;
+    // Economy detail draws 30 frames a second, and a sixtieth-of-a-second step made each near school's flocking and
+    // navigation run twice a frame (six times on a slow phone at 10 fps). There a step of a thirtieth keeps one per
+    // frame drawn; the diver's swept clearance is tested on every step either way.
+    const steps = frameDelta > 0 ? Math.ceil(frameDelta / FINE_STEP - 1e-9) : 0;
     const step = steps ? frameDelta / steps : 0;
     const hasSwimmer = !!swimmerPosition?.isVector3;
     if (hasSwimmer) {

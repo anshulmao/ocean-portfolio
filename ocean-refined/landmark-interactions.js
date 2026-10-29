@@ -182,10 +182,13 @@ function update() {
     eligible = item; nearest = distance;
   }
   setHidden(prompt, !eligible);
-  if (eligible && eligible !== prompted) {
-    prompted = eligible;
-    promptLabel.textContent = `Explore ${eligible.title}`;
-    prompt.setAttribute('aria-label', `Explore ${eligible.title}. Press F.`);
+  // The words follow the input in use (<html data-input>, kept by touch-controls.js): a phone has no F key, so on
+  // touch the prompt is the action itself, a button that says what it opens.
+  const touch = document.documentElement.dataset.input === 'touch', key = eligible && `${eligible.id}|${touch}`;
+  if (eligible && key !== prompted) {
+    prompted = key;
+    promptLabel.textContent = touch ? `Read · ${eligible.title}` : `Explore ${eligible.title}`;
+    prompt.setAttribute('aria-label', touch ? `Read ${eligible.title}` : `Explore ${eligible.title}. Press F.`);
   }
   state.nearbyLandmark = eligible?.id || null;
 }

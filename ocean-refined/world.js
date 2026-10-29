@@ -28,6 +28,14 @@ import { livingWorldSteps } from './living-world.js';
 import { waveHeight, waterVertex, waterFragment, beamVertex, beamFragment, smoothVertex, smoothFragment } from './shaders.js';
 import { refreshRate, drawStride, windowPace, windowHitch, workBudget, createScaleController } from './frame-pacing.js';
 
+// Matrix4.toArray writes a matrix into whatever array it is handed. three hands it every kind there is (plain arrays,
+// Float32Arrays, Float64Arrays), so its sixteen stores are megamorphic and run on V8's slow generic path: 650 ns a
+// matrix where 25 would do. It is behind every InstancedMesh.setMatrixAt (every school fish, bubble, jellyfish and
+// turtle part, each frame) and every bone of every skinned animal in Skeleton.update: the costliest single function of
+// a dive's frame. Writes into a Float32Array, which is what all of those are, now go through a loop that only ever sees
+// one; the values written are the same.
+const intoFloats=(array,offset,e)=>{for(let i=0;i<16;i++)array[offset+i]=e[i];return array;},matrixToArray=THREE.Matrix4.prototype.toArray;
+THREE.Matrix4.prototype.toArray=function(array=[],offset=0){return array instanceof Float32Array?intoFloats(array,offset,this.elements):matrixToArray.call(this,array,offset);};
 const $=s=>document.querySelector(s), canvas=$('#world'), status=$('#status');
 const themeMedia=matchMedia('(prefers-color-scheme: dark)'), motionMedia=matchMedia('(prefers-reduced-motion: reduce)');
 let selectedNight=false;
@@ -60,6 +68,8 @@ let running=false,raf=0,lastFrame=0,elapsed=0,focused=!document.hidden;
 let phase=selectedNight?Math.PI:0,phaseTarget=null;
 const cycleSeconds=1200;
 const skyClockFormat=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kuala_Lumpur',hour:'2-digit',minute:'2-digit',hour12:false});
+// Formatting in a time zone is the dearest call of a HUD paint; the clock shows minutes, so it is formatted once a minute.
+let skyClockMinute=NaN,skyClockText='';const skyClock=date=>{const minute=Math.floor(date.getTime()/60000);if(minute!==skyClockMinute){skyClockMinute=minute;skyClockText=skyClockFormat.format(date);}return skyClockText;};
 let night=selectedNight?1:0,diveTarget=0,dive=0,frameCount=0,perfDuration=0,perfSamples=0;
 let mobile=innerWidth<600,quality=mobile||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<5)?'economy':'standard';
 let nextBubble=0,bubbleCursor=0,bubbleClock=-1,exploring=false,mapDestination=null;
@@ -93,6 +103,11 @@ const view={frustum:new THREE.Frustum(),eye:new THREE.Vector3(),range:Infinity},
 // Adaptive resolution steps and their controller (see frame-pacing.js), and counters for the frame-rate windows.
 const RENDER_SCALES=[1,.85,.72,.6],scaler=createScaleController({floor:RENDER_SCALES.length-1,economy:quality==='economy',scales:RENDER_SCALES});
 let tickCount=0,displayHz=60,viewWidth=innerWidth,viewHeight=innerHeight;
+// Projected labels keep out of the HUD's bands: 110 px at the top and bottom, and on a phone (the layout tokens' query)
+// the top bar with the scope under it, and the controls zone with the collapsed sheet above it (hud.css 14).
+const phoneLayout=matchMedia('(max-width:599px),(pointer:coarse) and (max-height:499px)');let labelTop=110,labelBottom=110;
+function measureLabelBands(){const phone=phoneLayout.matches;labelTop=phone?180:110;labelBottom=phone?(innerWidth>innerHeight?80:210):110;}
+measureLabelBands();
 // Frame pacing: the display's refresh interval is read from the callbacks themselves, and a frame is drawn every stride-th one.
 const frameGaps=new Float32Array(24),gapOrder=new Float32Array(24),drawGaps=new Float32Array(160),drawOrder=new Float32Array(160);
 let gapCursor=0,stride=1,sinceDraw=0,drawCount=0,lastDraw=0,gpuTier='unknown',started=false;
@@ -337,6 +352,7 @@ function preloadModels(){
   setTimeout(()=>{diagnostic.prewarm='loading';startup.prewarmAt=Math.round(performance.now());start();},450);
 }
 
+let diveAskedNow=null;const diveAsked=new Promise(resolve=>{diveAskedNow=resolve;});
 function beginModels(){
   // The models stand on the reef: asked for sooner, they start the moment it is built.
   if(!built){modelsWanted=true;return;}
@@ -352,7 +368,10 @@ function beginModels(){
   // Existing generated schools/coral are already part of the reef; optional packs enrich them afterward.
   // Failure still settles this promise, so missing landmark assets cannot prevent wildlife from loading.
   diagnostic.optionalModels='waiting-for-landmarks';
-  landmarksLoad.then(()=>nextTask()).then(()=>{
+  // In economy detail (phones, small machines) they also wait for a dive to be asked for: a visit that only reads the
+  // portfolio at the surface is spared their 9 MB and the seconds of parsing and baking, and a dive gets them a few
+  // seconds into its descent, as the enrichment they are (nothing waits on them).
+  landmarksLoad.then(()=>{if(quality!=='economy'||diveTarget===1||viewerOrbit)return;diagnostic.optionalModels='waiting-for-dive';return diveAsked;}).then(()=>nextTask()).then(()=>{
     if(diagnostic.error||optionalModelsStarted)return;optionalModelsStarted=true;
     diagnostic.optionalModels='loading';startup.optionalModelsAt=Math.round(performance.now());
   // The creature set (user-creatures.js): residents on the reef, schools by the coral, and big animals that come and go.
@@ -464,7 +483,7 @@ $('#dive').addEventListener('click',()=>{
   $('#dive-label').textContent=wasDiving?'Ascending to the surface…':'Back to the surface';
   status.textContent=wasDiving?'Returning to the surface.':'Diving beneath the surface.';
   setTimeout(()=>{if(diagnostic.ready)status.textContent='';},1600);
-  if(!wasDiving){exploration.startDive();beginModels();setExploring(true);hurry=Math.max(hurry,1);}
+  if(!wasDiving){exploration.startDive();beginModels();diveAskedNow();setExploring(true);hurry=Math.max(hurry,1);}
   else if(exploration.state.mode!=='surface'){window.oceanTour?.stop();exploration.beginAscent(reef?.userData.safeAscentRoute,true);}
   if(reducedMotion){dive=diveTarget;status.textContent='';}canvas.focus({preventScroll:true});wake();
 });
@@ -479,7 +498,7 @@ canvas.addEventListener('webglcontextrestored',()=>location.reload());
 function resize(){
   const wasMobile=mobile;mobile=innerWidth<600;
   if(wasMobile!==mobile)mapCollapsed=mobile;paintAtlas();
-  viewWidth=innerWidth;viewHeight=innerHeight;depthTrack=0;const scaleStep=scaler.state.step=Math.min(scaler.state.step,quality==='economy'?2:RENDER_SCALES.length-1);
+  viewWidth=innerWidth;viewHeight=innerHeight;depthTrack=0;measureLabelBands();const scaleStep=scaler.state.step=Math.min(scaler.state.step,quality==='economy'?2:RENDER_SCALES.length-1);
   const ratio=fullRatio()*RENDER_SCALES[scaleStep];
   renderer.setPixelRatio(ratio);renderer.setSize(innerWidth,innerHeight,false);uniforms.uRatio.value=ratio;sizePost();
   camera.aspect=innerWidth/innerHeight;camera.fov=settings.cameraFov+(mobile?7:0);camera.updateProjectionMatrix();
@@ -640,7 +659,7 @@ function labelVisible(worldPosition,item,alpha,padding=35){
   if(shown){
     projected.copy(worldPosition).project(camera);
     const x=(projected.x*.5+.5)*viewWidth,y=(-projected.y*.5+.5)*viewHeight;
-    shown=projected.z<1&&x>padding&&x<viewWidth-padding&&y>110&&y<viewHeight-110;
+    shown=projected.z<1&&x>padding&&x<viewWidth-padding&&y>labelTop&&y<viewHeight-labelBottom;
     // Moved by transform alone, so a label that tracks the camera costs the page no layout.
     if(shown)item.label.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px)${item.shift}`;
   }
@@ -681,7 +700,7 @@ function paintHud(nav,submerged,depth,edge,skyState){
   setAttribute(hud('.heading-indicator'),'aria-label',`Heading ${Math.round(bearing)} degrees. North is ${Math.round((360-bearing)%360)} degrees clockwise.`);
   setText(hud('#speed-value'),`${nav.speed.toFixed(1)} M/S`);
   setText(hud('#reef-zone'),nav.colliding?'CORAL NEARBY':nav.atBoundary?'EXPLORATION LIMIT':edge?'OUTER SLOPE':'REEF SHELF');
-  const skyTime=skyState.date?skyClockFormat.format(skyState.date):'';
+  const skyTime=skyState.date?skyClock(skyState.date):'';
   setText(hud('#sky-clock'),`KL ${skyTime} · ${paused?'PAUSED':'72× TIME'}`);
   setAttribute(hud('#sky-clock'),'title','Kuala Lumpur sky · current lunar phase · 20 minutes per simulated day');
   // Diagnostics nobody polls per frame follow the HUD rate.

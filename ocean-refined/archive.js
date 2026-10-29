@@ -348,7 +348,8 @@ function renderGlance() {
         logged.length && ['Explore', `${logged.length} career chapters · ${found.length} projects`],
       ].filter(Boolean).map(([label, value, note]) => el('div', {}, el('dt', { class: 'holo-label', text: label }), el('dd', {}, el('strong', { text: value }), note && el('span', { text: note })))))),
     proof.length && block(['The work behind the words', null, 'Choose a story'], 'arc-proof-title', el('ul', { class: 'arc-proofs' }, proof)),
-    block(['Selected work', null, 'Enterprise products & independent builds'], 'arc-reel-title', el('ul', { class: 'arc-reel' }, found.map(find =>
+    // On narrower screens the reel is a carousel that scrolls sideways on purpose (data-scroll-x, archive.css).
+    block(['Selected work', null, 'Enterprise products & independent builds'], 'arc-reel-title', el('ul', { class: 'arc-reel', 'data-scroll-x': true }, found.map(find =>
       el('li', {}, el('button', { type: 'button', class: 'arc-reel-find', 'data-go': `finds/${find.entry.id}` },
         el('span', { class: 'arc-thumb' }, thumb(find)), el('span', { class: 'holo-label', text: `Find ${pad(find.number)}` }), el('strong', { text: find.entry.title }), el('span', { class: 'arc-find-kind', text: find.kind })))))),
     career && block(['Experience', null, PORTFOLIO_CONTENT.experience.subtitle], 'arc-career-title', career),
@@ -564,7 +565,8 @@ function buildRail() {
   // First in the rail for keyboard readers: straight to the page, past the list of every other page.
   const skip = el('button', { type: 'button', class: 'arc-skip', text: 'Skip to the page' });
   skip.addEventListener('click', event => { event.stopPropagation(); page.focus(); });
-  indexNav.replaceChildren(skip, el('ol', { class: 'arc-rail' }, groups), toggle);
+  // On the phone reading sheet the rail is the row of section tabs, which scrolls sideways (archive.css 15).
+  indexNav.replaceChildren(skip, el('ol', { class: 'arc-rail', 'data-scroll-x': true }, groups), toggle);
   track.replaceChildren(...sequence().map((stop, index, list) => el('i', { 'data-group': stop.section, 'data-first': index > 0 && list[index - 1].section !== stop.section })));
   railBuilt = true;
 }
@@ -573,6 +575,7 @@ function setIndexOpen(open) {
 }
 
 let sectionId = GLANCE, entryId = GLANCE, rendered = null, position = 0, announced = null;
+const calm = matchMedia('(prefers-reduced-motion: reduce)');
 function paint(stop) {
   const list = sequence(), stops = stopsFor(stop.section), meta = SECTIONS[stop.section];
   // The visible count is within the section (the pager shows only this section's segments); the label keeps the whole.
@@ -593,9 +596,12 @@ function paint(stop) {
     button.dataset.seen = String(memory.seen.has(button.dataset.stop));
   }
   [...track.children].forEach((segment, index) => { segment.dataset.state = index === stop.index ? 'current' : memory.seen.has(list[index].hash) ? 'seen' : 'ahead'; });
-  toggle.children[0].textContent = stop.code; toggle.children[1].textContent = stop.title;
-  toggle.children[2].textContent = `${stops.length} ${stops.length === 1 ? 'page' : 'pages'}`;
-  toggle.setAttribute('aria-controls', `archive-rail-${stop.section}`);
+  // The page menu's button is the reading sheet's header on phones: the section over the entry, so a reader
+  // always sees where they are. A section of one page has no menu to open.
+  const where = stop.section === GLANCE || stop.title === meta.label ? 'Logbook' : meta.label, count = `${stops.length} ${stops.length === 1 ? 'page' : 'pages'}`;
+  toggle.children[0].textContent = where; toggle.children[1].textContent = stop.title; toggle.children[2].textContent = count;
+  toggle.setAttribute('aria-label', `${where}: ${stop.title}. ${stops.length > 1 ? `Pages in ${meta.label}, ${count}` : count}`);
+  toggle.setAttribute('aria-controls', `archive-rail-${stop.section}`); toggle.disabled = stops.length < 2;
   indexNav.dataset.single = String(stops.length < 2); setIndexOpen(false);
   const trail = [el('li', {}, el('button', { type: 'button', 'data-section': GLANCE, text: 'Logbook' }))];
   if (stop.section !== GLANCE && stops.length > 1) trail.push(el('li', {}, el('button', { type: 'button', 'data-section': stop.section, text: meta.label })));
@@ -606,6 +612,12 @@ function paint(stop) {
   if (onTrail) page.focus({ preventScroll: true });
   panel.dataset.section = stop.section; panel.dataset.entry = stop.id;
   if (!panel.open) return;
+  // When the section tabs are a sideways row (phones), the current tab is brought to the middle of it.
+  const rail = indexNav.querySelector('.arc-rail'), tab = rail?.querySelector(`[data-group="${stop.section}"]>.arc-rail-section`);
+  if (tab && rail.scrollWidth > rail.clientWidth + 1) {
+    const box = rail.getBoundingClientRect(), at = tab.getBoundingClientRect();
+    rail.scrollTo({ left: rail.scrollLeft + at.left + at.width / 2 - box.left - box.width / 2, behavior: calm.matches ? 'auto' : 'smooth' });
+  }
   // The address always names the page being read, without adding history entries or waking other hash listeners.
   try { history.replaceState(history.state, '', `#${stop.hash}`); } catch {}
   const line = `${meta.label}${stops.length > 1 ? `: ${stopName(stop)}` : ''}. Page ${stop.index + 1} of ${list.length}.`;
@@ -754,8 +766,33 @@ indexNav.addEventListener('click', event => {
   if (control !== toggle && !control.offsetParent) page.focus({ preventScroll: true });
 });
 crumbs.addEventListener('click', event => { const section = event.target.closest?.('[data-section]')?.dataset.section; if (section) show(section); });
+// The page menu (phones) closes on a tap anywhere else, and Escape closes it before it closes the records.
+panel.addEventListener('click', event => { if (indexNav.dataset.open === 'true' && !event.target.closest?.('.arc-rail-entries,.arc-index-toggle')) setIndexOpen(false); });
+panel.addEventListener('cancel', event => { if (indexNav.dataset.open === 'true') { event.preventDefault(); setIndexOpen(false); toggle?.focus(); } });
 copyButton.addEventListener('click', copyLink);
-printButton.addEventListener('click', print);
+const more = panel.querySelector('#archive-more');
+printButton.addEventListener('click', () => { try { more?.hidePopover?.(); } catch {} print(); });
+// On the phone reading sheet the reading-style review control (where a build ships it) moves from the footer
+// into the "more" menu, so the bottom bar holds only the page controls.
+const phone = matchMedia('(max-width:760px),(pointer:coarse) and (max-height:499px)'), styleRow = variant.closest('.arc-variant');
+function placeStyle() { if (styleRow && more && 'popover' in more) (phone.matches ? more.append(styleRow) : panel.querySelector('.arc-footer').prepend(styleRow)); }
+placeStyle(); phone.addEventListener('change', placeStyle);
+// A sideways swipe on the page turns it, on touch screens. It must be clearly sideways, quick and long enough, and
+// it never starts on something that scrolls sideways itself or at the screen edge (the system's back gesture), so
+// reading by scrolling up and down is untouched. The listeners are passive and never block scrolling.
+let swipe = null;
+page.addEventListener('touchstart', event => {
+  const touch = event.touches[0];
+  swipe = event.touches.length === 1 && touch.clientX > 24 && touch.clientX < innerWidth - 24 && !event.target.closest?.('[data-scroll-x],input,select,textarea,.arc-chart-plot')
+    ? { x: touch.clientX, y: touch.clientY, time: event.timeStamp } : null;
+}, { passive: true });
+page.addEventListener('touchend', event => {
+  if (!swipe) return;
+  const touch = event.changedTouches[0], dx = touch.clientX - swipe.x, dy = touch.clientY - swipe.y, quick = event.timeStamp - swipe.time < 700;
+  swipe = null;
+  if (quick && Math.abs(dx) > 64 && Math.abs(dx) > Math.abs(dy) * 2 && !String(getSelection?.() || '') && !lightboxOpen()) step(dx < 0 ? 1 : -1);
+}, { passive: true });
+page.addEventListener('touchcancel', () => { swipe = null; }, { passive: true });
 previousButton.addEventListener('click', () => step(-1));
 nextButton.addEventListener('click', () => step(1));
 // Left and right turn the pages. Heard on the document, so the keys still work when focus has fallen back to the
