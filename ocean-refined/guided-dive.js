@@ -3,6 +3,7 @@ import { LANDMARKS, terrainHeightAt } from './reef.js';
 import { onFrame, setQuiet, discover, say, splash } from './journey.js';
 import { planGuidedRoute } from './guided-route.js';
 import { STEPS, SPEED, BEAT, WELCOME, holdOf } from './guided-script.js';
+import { pointAt } from './look-indicator.js';
 
 // The guided dive runs the steps in guided-script.js. Each leg is a scripted route, not a camera path: it hands
 // waypoints to the same autopilot the atlas uses, so the diver still collides and still routes over terrain. The
@@ -34,6 +35,9 @@ const CONTROLS = {
     tip: ['Press H to take a photo.', 'Tap Photo to take a picture.'] },
 };
 const PRIMER = ['computer', 'interact', 'scooter', 'lamp', 'view'];
+// Visitors worth turning for while the tour leads, and how near one must be to be pointed out (m).
+const NOTED = { 'whale-shark': ['Whale shark', 90], whale: ['A whale', 110], orcas: ['Orcas', 90], dolphins: ['Dolphins', 50], blacktips: ['Reef sharks', 40] };
+const SEEN_AFTER = 2.4;
 const motionMedia = matchMedia('(prefers-reduced-motion: reduce)'), coarse = matchMedia('(pointer: coarse)');
 // The phone layout of the layout contract (tokens.css): there the card is a bottom sheet and the copy is the short one.
 const compact = matchMedia('(max-width:599px),(pointer:coarse) and (max-height:499px)');
@@ -64,6 +68,8 @@ let best = Infinity, stall = 0, waited = 0, cut = null, cutTime = 0, barShown = 
 let detours = 0, routeIssue = false, panIndex = 0, panTime = 0, stepTime = 0, prelude = -1, reveal = 0, keysShown = '';
 // used: the controls tried on this tour. seen: what they last read, to notice a change.
 const used = new Set(); let seen = null;
+// pointed: visitors already seen on their current pass. marked: the one the marker is on, and how long it has been in view.
+const pointed = new Set(); let marked = null, markedFor = 0;
 const leg = [], goal = [0, 0, 0], look = [0, 0, 0], pans = [], from = new THREE.Vector3(), to = new THREE.Vector3(), here = new THREE.Vector3();
 const controls = () => window.oceanControls;
 const touring = () => status === 'intro' || status === 'travel' || status === 'look' || status === 'dwell';
@@ -99,7 +105,7 @@ function frame(step) {
 function resolve(step, target = goal, subject = look) {
   const resident = step.resident && frame(step);
   if (resident) { target.splice(0, 3, ...resident.point); subject.splice(0, 3, ...resident.subject); return true; }
-  if (!step.landmark) { target.splice(0, 3, ...step.at); subject.splice(0, 3, ...(step.pan?.[0] ?? step.at)); return true; }
+  if (!step.landmark) { target.splice(0, 3, ...step.at); subject.splice(0, 3, ...(Array.isArray(step.pan?.[0]) ? step.pan[0] : step.at)); return true; }
   const placed = landmarkOf(step);
   if (placed) { target.splice(0, 3, ...placed.interactionPosition); subject.splice(0, 3, ...placed.position); return true; }
   // Before the models settle, a viewpoint beside the charted position stands in.
@@ -199,6 +205,24 @@ function paintControls(step, fingers) {
   tip.hidden = !text; tip.textContent = text;
   return text;
 }
+// Points out the nearest notable visitor not yet seen on this pass; once it has been in view for SEEN_AFTER seconds the
+// marker lets it go. A visitor that leaves can be pointed out again on a later pass.
+function lookThere(dt, api, state) {
+  const camera = api.getCamera?.(); if (!camera) return;
+  const live = api.visitors?.() ?? [], [px, py, pz] = state.playerPosition;
+  for (const id of pointed) if (!live.some(item => item.id === id)) pointed.delete(id);
+  let subject = null, nearest = Infinity;
+  for (const item of live) {
+    const noted = NOTED[item.id]; if (!noted || pointed.has(item.id)) continue;
+    const d = Math.hypot(item.x - px, item.y - py, item.z - pz);
+    if (d < noted[1] && d < nearest) { nearest = d; subject = item; }
+  }
+  if (!subject) { if (marked) { pointAt(camera, null); marked = null; } return; }
+  if (marked !== subject.id) { marked = subject.id; markedFor = 0; }
+  const rise = subject.y - py, where = rise > 4 ? 'above' : rise < -4 ? 'below' : 'nearby';
+  markedFor = pointAt(camera, [subject.x, subject.y, subject.z], `${NOTED[subject.id][0]} · ${where}`) ? markedFor + dt : 0;
+  if (markedFor > SEEN_AFTER) { pointed.add(subject.id); pointAt(camera, null); marked = null; }
+}
 function setBar(value) { const rounded = Math.round(value * 250) / 250; if (rounded !== barShown) { barShown = rounded; bar.style.transform = `scaleX(${rounded})`; } }
 
 // The camera's subjects once a step is reached: the step's own, then a site's landmark. Reduced motion holds the first.
@@ -208,13 +232,18 @@ function startPan() {
   // A resident found where it settled replaces the stand-in first subject.
   const resident = step.resident && frame(step); if (resident) pans.splice(0, 1, resident.subject);
   if (step.landmark) { const subject = [0, 0, 0]; resolve(step, [0, 0, 0], subject); pans.push(subject); }
-  if (pans.length && !reduced()) controls()?.lookAt(pans[0]);
+  if (step.encounter) controls()?.encounter?.(step.encounter.id, step.encounter.course);
+  if (pans.length && !reduced()) aim(pans[0]);
 }
+// A pan subject is a point, or { visitor } for an animal passing (null while it is not there).
+const visitorAt = id => { const found = controls()?.visitors?.().find(item => item.id === id); return found ? [found.x, found.y, found.z] : null; };
+function aim(subject, follow = false) { const point = subject.visitor ? visitorAt(subject.visitor) : subject; if (point) controls()?.lookAt(point, follow); }
 function pan(dt) {
   if (paused) return;
   const step = STEPS[index], beat = step.kind === 'look' ? step.beat ?? BEAT : step.kind === 'intro' ? INTRO_BEAT : PAN_BEAT;
   stepTime += dt; panTime += dt;
-  if (!reduced() && panIndex < pans.length - 1 && panTime >= beat) { panIndex++; panTime = 0; controls()?.lookAt(pans[panIndex]); }
+  if (!reduced() && panIndex < pans.length - 1 && panTime >= beat) { panIndex++; panTime = 0; aim(pans[panIndex]); }
+  else if (!reduced() && pans[panIndex]?.visitor) aim(pans[panIndex], true);
   if (status === 'look' && stepTime >= holdOf(step)) advance();
 }
 function launch() {
@@ -261,7 +290,7 @@ function rejoin() {
 }
 function stop(message) {
   if (status === 'off') return;
-  const api = controls(); status = 'off'; paused = false; cut = null; fade.dataset.on = 'false'; reveal = 0; endPrelude();
+  const api = controls(); status = 'off'; paused = false; cut = null; fade.dataset.on = 'false'; reveal = 0; endPrelude(); pointAt(null); marked = null;
   // Let go of the view too, so it does not stay on the last subject the tour showed.
   if (api) { api.guide(false); api.cancelTravel(); api.lookAt?.(null); }
   paint();
@@ -273,7 +302,7 @@ export function startTour() {
   if (api.getMode() !== 'surface' && api.getMode() !== 'diver') return false;
   // From the surface the opening plays first; under water the tour starts where the diver is.
   if (api.getMode() === 'surface') { prelude = 0; document.body.dataset.prelude = 'on'; }
-  status = 'starting'; index = 0; arrived = -1; waited = 0; paused = false; framed.clear(); used.clear(); seen = null; paint();
+  status = 'starting'; index = 0; arrived = -1; waited = 0; paused = false; framed.clear(); used.clear(); seen = null; pointed.clear(); paint();
   return true;
 }
 export const tourStatus = () => status;
@@ -312,7 +341,8 @@ function update(dt, api, state, diving) {
   if (!diving) { if (mode !== 'diver') stop(); return; }
   notice(api);
   // Reading the archive or changing settings holds the tour where it is.
-  if (api.nav.suspended || status === 'free') return;
+  if (api.nav.suspended || status === 'free') { pointAt(null); return; }
+  lookThere(dt, api, state);
   const nav = api.nav;
   // Swimming off from the overview simply ends the tour; anywhere else it puts the tour on hold.
   if (nav.inputs !== inputs) { if (status === 'done') stop(); else handOver(); return; }

@@ -41,7 +41,7 @@ function environment(hz, { reducedMotion = false, unavailable = false, collision
   if (collision) nav.setCollisions(collision);
   let placed = 0, transition = false;
   const state = window.oceanDiagnostics = { ready: true, landmarksReady: true, reducedMotion, playerPosition: [0, -8, 0] };
-  let atSurface = surface; const calls = [];
+  let atSurface = surface, clock = 0, whaleFrom = null; const calls = [];
   if (!surface) nav.startDive();
   // Placed model viewpoints: model-scene.js's own, before a model's bounds refine them, with the real seabed beneath.
   const approach = { about: [5.2, 5.3], experience: [6, 4.4], projects: [6, 4.3] };
@@ -49,19 +49,28 @@ function environment(hz, { reducedMotion = false, unavailable = false, collision
     return { ...item, position: [x, floor + 1.4, z], interactionPosition: [x + dx, floor + up, z] }; });
   const api = window.oceanControls = {
     nav: nav.state, settings, landmarks, reef: { userData: { collisions: collision } }, getMode: () => atSurface ? 'surface' : nav.state.mode,
-    frameDiver: value => calls.push(['frameDiver', value]), startDive: options => { calls.push(['startDive', options]); nav.startDive(); atSurface = false; return true; }, getTransition: () => transition,
+    frameDiver: value => calls.push(['frameDiver', value]),
+    // A called-in whale shark swims its course at its own pace (user-creature-routes.js: 1.5 m/s), from `ahead` short of its closest approach.
+    encounter: (id, course) => { calls.push(['encounter', id, course]); whaleFrom = { at: [...state.playerPosition], course, clock }; return true; },
+    visitors: () => whaleFrom ? [whaleAt(whaleFrom, clock)] : [], startDive: options => { calls.push(['startDive', options]); nav.startDive(); atSurface = false; return true; }, getTransition: () => transition,
     guide: (...args) => nav.setGuided(...args), travelPath: (...args) => unavailable ? false : nav.travelPath(...args),
-    cancelTravel: (...args) => nav.cancelTravel(...args), place: (...args) => { placed++; nav.place(...args); }, lookAt: point => nav.lookAt(point), residentAt: id => residents[id] ?? null,
+    cancelTravel: (...args) => nav.cancelTravel(...args), place: (...args) => { placed++; nav.place(...args); }, lookAt: (point, follow) => nav.lookAt(point, follow), residentAt: id => residents[id] ?? null,
   };
   const samples = [];
   function tick(seconds = 1 / hz) {
     for (let i = 0; i < Math.round(seconds * hz); i++) {
-      nav.update(1 / hz, true, state.reducedMotion);
+      nav.update(1 / hz, true, state.reducedMotion); clock += 1 / hz;
       state.playerPosition = nav.getPlayerPosition().toArray(); samples.push([...state.playerPosition]);
       globalThis.tourFrame(1 / hz, api, state, true);
     }
   }
-  return { nav, state, landmarks, samples, tick, calls, set transition(value) { transition = value; }, get placed() { return placed; } };
+  return { nav, state, landmarks, samples, tick, calls, get clock() { return clock; }, get whaleFrom() { return whaleFrom; }, set transition(value) { transition = value; }, get placed() { return placed; } };
+}
+
+// Where a whale shark on a course is, `clock` seconds on: the same line user-creatures.js begin() lays down.
+function whaleAt({ at, course, clock: from }, clock) {
+  const dx = Math.sin(course.angle), dz = Math.cos(course.angle), nx = dz * course.side, nz = -dx * course.side, along = -course.ahead + 1.5 * (clock - from);
+  return { id: 'whale-shark', x: at[0] + nx * course.pass + dx * along, y: course.y, z: at[2] + nz * course.pass + dz * along };
 }
 
 // Past the welcome, which waits for Continue where the dive levels out, onto the first swim.
@@ -192,6 +201,12 @@ for (const hz of [30, 60, 120]) {
       const yaw = env.nav.state.yaw, pitch = env.nav.state.pitch, hold = holdOf(step); let frames = 0;
       while (tourStatus() === 'look' && frames < hz * (hold + 2)) {
         env.tick(); frames++;
+        if (step.encounter && frames === Math.round(hz * (step.beat ?? BEAT) * 1.9)) {
+          const whale = whaleAt(env.whaleFrom, env.clock), at = env.state.playerPosition, s = env.nav.state;
+          const aim = [-Math.sin(s.yaw) * Math.cos(s.pitch), Math.sin(s.pitch), -Math.cos(s.yaw) * Math.cos(s.pitch)], to = [whale.x - at[0], whale.y - at[1], whale.z - at[2]];
+          const angle = Math.acos(Math.max(-1, Math.min(1, aim.reduce((sum, v, k) => sum + v * to[k], 0) / Math.hypot(...to))));
+          assert.ok(angle < .15, `${step.key}: the view follows the whale shark as it swims (${angle.toFixed(3)} rad off)`);
+        }
         if (step.resident && frames === Math.round(hz * (step.beat ?? BEAT) * .9)) {
           const at = env.state.playerPosition, s = env.nav.state, aim = [-Math.sin(s.yaw) * Math.cos(s.pitch), Math.sin(s.pitch), -Math.cos(s.yaw) * Math.cos(s.pitch)];
           const to = sleeper.map((v, k) => v - at[k]), length = Math.hypot(...to), angle = Math.acos(Math.max(-1, Math.min(1, aim.reduce((sum, v, k) => sum + v * to[k], 0) / length)));
@@ -205,6 +220,14 @@ for (const hz of [30, 60, 120]) {
     }
   }
   assert.equal(tourStatus(), 'done', 'the tour ends at the overview');
+  // The whale shark is called in at the deep beat, on a course that stays over open water (SPEC D4): along its whole
+  // line across the reef the seabed is deep, and it swims well clear of it.
+  const called = env.calls.filter(call => call[0] === 'encounter');
+  assert.deepEqual(called.map(call => call[1]), ['whale-shark'], 'one guaranteed whale shark');
+  for (let x = -62; x <= 62; x += 2) {
+    const { course, at } = env.whaleFrom, along = (x - at[0]) / Math.sin(course.angle), z = at[2] - Math.sin(course.angle) * course.side * course.pass + Math.cos(course.angle) * along;
+    assert.ok(terrainHeightAt(x, z) < -38 && course.y - terrainHeightAt(x, z) > 10, `open water under the whale shark at x ${x} (seabed ${terrainHeightAt(x, z).toFixed(1)})`);
+  }
   assert.equal(env.placed, 0, 'full-motion tour never places the player, even when OS reduced motion is enabled');
   assert.ok(maxStep < 7 / hz, `bounded continuous body steps (${maxStep})`);
   assert.ok(totalDistance > 250, `the player crossed the whole reef (${totalDistance})`);
@@ -334,6 +357,17 @@ for (const hz of [30, 60, 120]) {
   assert.ok(Math.abs(final) < .02, 'and it arrives on the subject');
   window.oceanTour.stop(); env.nav.destroy();
   console.log(`PASS: eased pan, ${(moving / 120).toFixed(1)} s for a quarter turn, fastest at ${Math.round(peakAt * 100)}%.`);
+}
+// The look-there marker: on screen it rings the animal; behind or off to the side it points the short way round.
+{
+  const { pointAt } = await import('../ocean-refined/look-indicator.js');
+  Object.assign(globalThis, { innerWidth: 1280, innerHeight: 800 });
+  const camera = new THREE.PerspectiveCamera(60, 1.6, .1, 500); camera.position.set(0, -20, 0); camera.lookAt(0, -20, -10); camera.updateMatrixWorld(true);
+  assert.equal(pointAt(camera, [2, -18, -30], 'Whale shark · above'), true, 'ahead: on screen');
+  assert.equal(pointAt(camera, [0, -20, 30], 'Whale shark'), false, 'behind: an arrow at the edge');
+  assert.equal(pointAt(camera, [40, -20, -2], 'Whale shark'), false, 'far to the side: an arrow at the edge');
+  assert.equal(pointAt(camera, null), false, 'and it hides');
+  console.log('PASS: the look-there marker rings what is in view and points the way to what is not.');
 }
 // The actual planned open-water body route bows across the view, and an
 // impenetrable collision world never yields a successful route.

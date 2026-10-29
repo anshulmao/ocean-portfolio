@@ -222,11 +222,13 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       if (kinds.length) slots.push({ slot, config, kinds, active: null, wait: rr(...config.first) * (economy ? 1.2 : 1), last: null });
     }
   }
-  function begin(e, player, view) {
-    const range = view ? Math.min(view.range, 130) : 110, R = range + e.length + 12, angle = rr(0, TAU), sideOf = Math.random() < .5 ? 1 : -1;
-    const dx = Math.sin(angle), dz = Math.cos(angle), nx = dz * sideOf, nz = -dx * sideOf, pass = rr(...e.pass), px = player?.x ?? 0, pz = player?.z ?? -30;
+  // course (the guided dive's own call): angle and side fix the line of the pass, pass its distance from the diver, y its
+  // depth, and ahead starts it that many metres short of its closest approach instead of out beyond the haze.
+  function begin(e, player, view, course = null) {
+    const range = view ? Math.min(view.range, 130) : 110, R = range + e.length + 12, angle = course?.angle ?? rr(0, TAU), sideOf = course?.side ?? (Math.random() < .5 ? 1 : -1);
+    const dx = Math.sin(angle), dz = Math.cos(angle), nx = dz * sideOf, nz = -dx * sideOf, pass = course?.pass ?? rr(...e.pass), px = player?.x ?? 0, pz = player?.z ?? -30;
     e.path = { sx: px + nx * pass - dx * R, sz: pz + nz * pass - dz * R, ex: px + nx * pass + dx * R, ez: pz + nz * pass + dz * R, nx, nz, len: 2 * R, bulge: rr(-1, 1) * e.bulge * R };
-    e.u = 0; e.y0 = rr(...e.depth); e.next = clock + rr(4, 8);
+    e.u = course?.ahead === undefined ? 0 : clamp(.5 - course.ahead / e.path.len, 0, .5); e.y0 = course?.y ?? rr(...e.depth); e.next = clock + rr(4, 8);
     for (const c of e.cast) { c.actor.active = true; c.actor.started = false; play(c.actor, 'swim', 0); }
     for (const r of e.riders) { r.actor.active = true; r.actor.started = false; }
     if (e.school) e.school.active = true;
@@ -583,5 +585,8 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   };
   // Where a resident that stays put actually settled (sand() can move it well away from its wished-for spot): the guided dive frames it from here.
   const residentAt = id => resting[id] ?? null;
-  return { root, load, update, diagnostics, sites: sitesNow, debug, residentAt };
+  // The guided dive brings one encounter in on a course of its own, and points out the visitors passing: where each lead animal is now.
+  function encounter(id, player, view, course) { const e = casts.get(id); if (!e?.cast.length) return false; const s = slots.find(item => item.slot === e.slot); if (s.active) end(s.active); begin(e, player, view, course); s.active = e; return true; }
+  const visitors = () => slots.filter(s => s.active?.path && s.active.cast[0]?.actor.started).map(s => { const p = s.active.cast[0].actor.pos; return { id: s.active.id, x: p.x, y: p.y, z: p.z }; });
+  return { root, load, update, diagnostics, sites: sitesNow, debug, residentAt, encounter, visitors };
 }

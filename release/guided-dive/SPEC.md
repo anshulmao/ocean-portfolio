@@ -222,3 +222,14 @@ A hint the visitor has already used is skipped.
     - C (computer) on the deep shelf
     - V (view) at the overview
   - Trying a control never hands the dive over.
+- **Phase 5: the whale shark and "look there" (done).**
+  - The deep beat calls a **whale shark** in on a course of its own (`user-creatures.js` `encounter`, `guided-script.js`):
+    - It passes east–west over the deep shelf, 10 m to seaward of the diver and 18 m above, so it never swims in over
+      the shallows. The test checks the seabed stays deeper than 38 m along its whole line across the reef.
+    - It starts 14 m short of its closest approach, so it arrives during the beat.
+    - The camera's second subject there is the shark itself, followed as it swims.
+  - A **look-there marker** (`look-indicator.js`) works while the tour leads:
+    - On screen, it rings the nearest notable visitor not yet seen (the whale shark, a whale, orcas, dolphins, reef
+      sharks) and names it, with "above", "below" or "nearby".
+    - Off screen, it's an arrow pinned to the screen edge, pointing the short way round.
+    - Once the animal has been in view for 2.4 s the marker lets it go. A later pass can be pointed out again.

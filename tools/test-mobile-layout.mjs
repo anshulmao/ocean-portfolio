@@ -148,8 +148,9 @@ async function run(profileName) {
     await page.evaluate(() => oceanControls.surface({instant: true}));
     await page.waitForFunction(() => oceanControls.getMode() === 'surface', null, {timeout: 60000});
     await page.evaluate(() => oceanTour.start());
-    await page.waitForFunction(() => oceanDiagnostics.submerged && oceanTour.status === 'intro', null, {timeout: 120000});
-    await state('guided-welcome', true);
+    // The welcome sheet rises once the title card has gone (guided-dive.js REVEAL): measure the sheet, controls and all.
+    await page.waitForFunction(() => oceanDiagnostics.submerged && oceanTour.status === 'intro' && document.querySelector('.tour-card')?.dataset.show === 'true', null, {timeout: 120000});
+    await page.waitForTimeout(600); await state('guided-welcome', true);
     await page.evaluate(() => oceanTour.next());
     await page.waitForFunction(() => ['travel', 'dwell'].includes(oceanTour.status), null, {timeout: 30000});
     await page.waitForTimeout(2500); await state('guided-travel', true);

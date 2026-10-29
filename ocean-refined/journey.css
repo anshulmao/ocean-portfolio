@@ -99,6 +99,16 @@ body:is([data-clear-ui="true"],[data-safety-stop="true"]) section.tour-card{visi
 .tour-keys li[data-done="true"]::after{content:"✓";margin-left:2px;color:var(--signal,var(--holo))}
 .tour-teach{margin:10px 0 0;font-size:13px;line-height:1.45;color:var(--signal,var(--holo-strong))}
 :is(.tour-keys,.tour-teach)[hidden]{display:none}
+/* Look there (look-indicator.js): a ring on an animal worth turning for, or an arrow at the screen's edge pointing the
+   way to turn. Moved with a transform each frame; never takes a pointer. */
+.look-there{position:fixed;left:0;top:0;z-index:var(--o-z-sheet);pointer-events:none;opacity:0;visibility:hidden;transition:opacity .45s var(--journey-ease),visibility 0s .45s;will-change:transform}
+.look-there[data-show="true"]{opacity:1;visibility:visible;transition:opacity .45s var(--journey-ease)}
+.look-there i{position:absolute;left:-18px;top:-18px;width:36px;height:36px;box-sizing:border-box;border:1.5px solid var(--holo-strong);border-radius:50%;box-shadow:0 0 14px var(--holo),inset 0 0 8px var(--holo-faint)}
+.look-there[data-edge="true"] i{left:-8px;top:-8px;width:16px;height:16px;border-width:2.5px 2.5px 0 0;border-radius:1px;box-shadow:none;rotate:var(--turn,0deg);filter:drop-shadow(0 0 6px var(--holo))}
+.look-there span{position:absolute;top:-7px;left:26px;white-space:nowrap;font:500 11px/14px var(--holo-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--holo-strong);text-shadow:0 0 8px #0009}
+.look-there[data-side="left"] span{left:auto;right:26px}
+body[data-clear-ui="true"] .look-there{visibility:hidden}
+@media (prefers-reduced-motion:reduce){.look-there{transition:none}}
 .tour-pace:empty{display:none}
 /* Progress runs along the top edge, so it costs the sheet no height. The bar grows many times a second while a stop
    is narrated: on its own layer that is a compositor move, not a repaint of the card. */

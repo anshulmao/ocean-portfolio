@@ -15,7 +15,12 @@ import { toDisplayDepth } from './depth-metrics.js';
 //   via      scenic waypoints on the way there, used when the tour arrives from the step before.
 //   pan      what the camera looks at, in turn, once there (the first is also what it turns to on arrival).
 //   beat     seconds each subject of a look beat gets (default BEAT); speed: the swim's pace for the leg into it (m/s).
-//   teach    the control this beat introduces (phase 4 shows it).
+//   teach    the control this beat introduces.
+//   encounter  an animal this beat calls in on its own course (user-creatures.js begin): `course` sets the line of its
+//            pass. A pan subject { visitor: id } is that animal, followed as it swims.
+// The whale shark's course (SPEC D4): east to west and back is along the deep shelf, never in over the shallows. Its line
+// lies 10 m to seaward of the diver (side 1 at angle π/2 puts it at lower z), 18 m above them, and it starts 14 m short of
+// its closest approach so it arrives during the beat.
 // Copy is a signpost, not a summary: one short line, two at most. The portfolio itself lives in the archive.
 export const SPEED = 3.6, BEAT = 6;
 // Seconds a look beat lasts before the tour moves on.
@@ -49,8 +54,9 @@ export const STEPS = [
     title: 'Through the bait ball', line: 'Thousands of fry turning as one. They open a tunnel around you.',
     pan: [[48, -27.8, -67], [50, -38, -72]] },
   { key: 'deep', kind: 'look', at: [8, -46, -70], teach: 'computer', place: `The deep shelf · ${depth(-46)}`,
-    title: 'Look up', line: `About ${depth(-46)} down. The reef you swam over is up there in the light.`,
-    pan: [[10, -24, -30], [-6, -20, -44], [30, -30, -50]], beat: 5 },
+    title: 'Look up', line: `About ${depth(-46)} down. The reef you swam over is up there in the light, and there’s life above.`,
+    encounter: { id: 'whale-shark', course: { angle: Math.PI / 2, side: 1, pass: 10, y: -28, ahead: 14 } },
+    pan: [[10, -24, -30], { visitor: 'whale-shark' }, [-6, -20, -44]], beat: 5 },
   { key: 'projects', kind: 'stop', landmark: 'projects', place: `Projects · The Treasure · ${depth(-45)}`, signal: '#c9a2ff',
     title: 'The treasure', line: 'This is where you’ll find my projects.' },
   { key: 'overview', kind: 'end', at: [-44, -12, -36], via: [[-38, -34, -64], [-47, -22, -50]], speed: 2.8, teach: 'view', place: 'Above the reef', signal: '#ff9d8a',

@@ -210,7 +210,8 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     snapBody();wake();
   }
   // Turn the view to a subject without moving (the guided dive's pans); null lets the view go. Any deliberate input clears it.
-  function lookAt(point){sweep.on=false;if(!point){hasFocus=false;wake();return;}const at=coordinate(point);focus.set(at[0],at[1],at[2]);hasFocus=true;wake();}
+  // follow: the same subject has moved (an animal swimming by), so a sweep under way carries on towards where it is now.
+  function lookAt(point,follow=false){if(follow&&point&&hasFocus){const at=coordinate(point);focus.set(at[0],at[1],at[2]);return;}sweep.on=false;if(!point){hasFocus=false;wake();return;}const at=coordinate(point);focus.set(at[0],at[1],at[2]);hasFocus=true;wake();}
   function prepareDive(options){pendingDive=options||null;}
   const travelClear=(a,b)=>!collisions||!settings.collisionEnabled||collisions.segmentClear(scratchA.fromArray(a),scratchB.fromArray(b),Math.max(settings.collisionRadius+.25,.85));
   function useTravelRoute(points){
