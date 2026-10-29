@@ -225,9 +225,13 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   // course (the guided dive's own call): angle and side fix the line of the pass, pass its distance from the diver, y its
   // depth, and ahead starts it that many metres short of its closest approach instead of out beyond the haze.
   function begin(e, player, view, course = null) {
-    const range = view ? Math.min(view.range, 130) : 110, R = range + e.length + 12, angle = course?.angle ?? rr(0, TAU), sideOf = course?.side ?? (Math.random() < .5 ? 1 : -1);
+    // A kind with `across` swims parallel to the reef, across its face (the reef deepens towards -z, so that is east or west),
+    // its line kept out over the deep shelf at z `across` or deeper, never in over the shallows.
+    const across = !course && e.across !== undefined;
+    const range = view ? Math.min(view.range, 130) : 110, R = range + e.length + 12, angle = course?.angle ?? (across ? (Math.random() < .5 ? 1 : -1) * Math.PI / 2 : rr(0, TAU)), sideOf = course?.side ?? (Math.random() < .5 ? 1 : -1);
     const dx = Math.sin(angle), dz = Math.cos(angle), nx = dz * sideOf, nz = -dx * sideOf, pass = course?.pass ?? rr(...e.pass), px = player?.x ?? 0, pz = player?.z ?? -30;
-    e.path = { sx: px + nx * pass - dx * R, sz: pz + nz * pass - dz * R, ex: px + nx * pass + dx * R, ez: pz + nz * pass + dz * R, nx, nz, len: 2 * R, bulge: rr(-1, 1) * e.bulge * R };
+    const cx = across ? px : px + nx * pass, cz = across ? Math.min(pz - pass, e.across) : pz + nz * pass;
+    e.path = { sx: cx - dx * R, sz: cz - dz * R, ex: cx + dx * R, ez: cz + dz * R, nx, nz, len: 2 * R, bulge: rr(-1, 1) * e.bulge * R };
     e.u = course?.ahead === undefined ? 0 : clamp(.5 - course.ahead / e.path.len, 0, .5); e.y0 = course?.y ?? rr(...e.depth); e.next = clock + rr(4, 8);
     for (const c of e.cast) { c.actor.active = true; c.actor.started = false; play(c.actor, 'swim', 0); }
     for (const r of e.riders) { r.actor.active = true; r.actor.started = false; }

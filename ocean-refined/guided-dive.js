@@ -3,7 +3,6 @@ import { LANDMARKS, terrainHeightAt } from './reef.js';
 import { onFrame, setQuiet, discover, say, splash } from './journey.js';
 import { planGuidedRoute } from './guided-route.js';
 import { STEPS, SPEED, BEAT, WELCOME, holdOf } from './guided-script.js';
-import { pointAt } from './look-indicator.js';
 import { track } from './analytics.js';
 
 // The guided dive runs the steps in guided-script.js. Each leg is a scripted route, not a camera path: it hands
@@ -28,6 +27,9 @@ const CONTROLS = {
   computer: { key: 'C', name: 'Dive computer', touch: 'Computer', try: ['Press C to open your dive computer.', 'Tap the computer button.'],
     tip: ['Press C to check your depth on your dive computer.', 'Tap Dive computer to check your depth.'] },
   interact: { key: 'F', name: 'Open a site', touch: 'Read it' },
+  // Swimming and rising or sinking are noticed by the diver moving under the visitor's own control (notice()).
+  swim: { key: 'W A S D', name: 'Swim', touch: 'Stick: swim', try: ['Swim with W A S D. The tour waits for you here.', 'Swim with the stick. The tour waits for you here.'] },
+  updown: { key: 'Space · Shift', name: 'Up and down', touch: 'Rise and sink', try: ['Space to rise, Shift to sink.', 'Use the rise and sink buttons.'] },
   scooter: { key: 'E', name: 'Scooter', touch: 'Scooter (hold)', try: ['Hold E to spin up your scooter.', 'Hold the scooter button.'],
     tip: ['Hold E for the scooter: the guide speeds up too.', 'Hold the scooter button: the guide speeds up too.'] },
   lamp: { key: 'Q', name: 'Flashlight', touch: 'Lamp', try: ['Press Q to switch your flashlight.', 'Tap the lamp button.'],
@@ -37,11 +39,12 @@ const CONTROLS = {
   photo: { key: 'H', name: 'Photo', touch: 'Photo',
     tip: ['Press H to take a photo.', 'Tap Photo to take a picture.'] },
 };
-// F is not among them: there is nothing to open where the welcome is read. It is taught at the anchor, where there is.
-const PRIMER = ['computer', 'scooter', 'lamp', 'view'], CHEER = 1.2;
-// Visitors worth turning for while the tour leads, and how near one must be to be pointed out (m).
-const NOTED = { 'whale-shark': ['Whale shark', 90], whale: ['A whale', 110], orcas: ['Orcas', 90], dolphins: ['Dolphins', 50], blacktips: ['Reef sharks', 40] };
-const SEEN_AFTER = 2.4;
+// F is not among them: there is nothing to open where the welcome is read; it is taught at the anchor, where there is.
+// The scooter is taught on the first swim, where it speeds the guide up, and the lamp at the wreck.
+// ROAM: in the welcome the visitor may swim this far (m) from where it started and still be on the tour; further puts it on hold.
+const PRIMER = ['computer', 'swim', 'updown', 'view'], CHEER = 1.2, ROAM = 5, MOVED = 1.2;
+// The tour waits up to ASSETS_WAIT seconds at Start for the creature set (the nurse shark, the whale shark) to be in.
+const ASSETS_WAIT = 20;
 const motionMedia = matchMedia('(prefers-reduced-motion: reduce)'), coarse = matchMedia('(pointer: coarse)');
 // The phone layout of the layout contract (tokens.css): there the card is a bottom sheet and the copy is the short one.
 const compact = matchMedia('(max-width:599px),(pointer:coarse) and (max-height:499px)');
@@ -57,7 +60,7 @@ const card = document.createElement('section'), fade = document.createElement('d
 card.className = 'tour-card holo holo--reading'; card.setAttribute('aria-label', 'Guided dive'); card.dataset.show = 'false'; card.dataset.sheet = 'collapsed'; card.inert = true;
 card.innerHTML = '<div class="tour-progress" aria-hidden="true"><i></i></div>'
   + '<button type="button" class="tour-head" data-tour="toggle" aria-expanded="false"><span class="holo-label tour-kicker"></span><span class="holo-value tour-count"></span><i class="tour-chevron" aria-hidden="true"></i></button>'
-  + '<h2 class="tour-title"></h2><div class="tour-body"><p class="tour-lines" aria-live="polite"></p><button type="button" class="tour-more" data-tour="more" aria-expanded="false"><span>More</span></button><p class="tour-teach" hidden></p></div><p class="tour-pace"></p>'
+  + '<h2 class="tour-title"></h2><div class="tour-body"><p class="tour-lines" aria-live="polite"></p><button type="button" class="tour-more" data-tour="more" aria-expanded="false"><span>More</span></button><ul class="tour-keys" aria-label="Controls to try" hidden></ul><p class="tour-teach" hidden></p></div><p class="tour-pace"></p>'
   + '<footer><button type="button" data-tour="pause">Pause <kbd>P</kbd></button><button type="button" data-tour="read">Read it <kbd>F</kbd></button><button type="button" data-tour="next">Next <kbd>N</kbd></button><button type="button" data-tour="rejoin">Rejoin <kbd>G</kbd></button><button type="button" data-tour="surface">Surface</button><button type="button" data-tour="explore">Keep exploring</button><button type="button" data-tour="exit">Exit tour</button></footer>';
 fade.className = 'tour-fade'; fade.setAttribute('aria-hidden', 'true');
 document.body.append(fade, card);
@@ -71,11 +74,11 @@ let status = 'off', index = 0, arrived = -1, legTime = 0, paused = false, inputs
 let best = Infinity, stall = 0, waited = 0, cut = null, cutTime = 0, barShown = -1;
 let detours = 0, routeIssue = false, panIndex = 0, panTime = 0, stepTime = 0, prelude = -1, reveal = 0, called = true;
 // cheer: the control just done in the welcome, shown ticked for CHEER seconds before the next is asked for.
-let cheer = null, cheerFor = 0;
+let cheer = null, cheerFor = 0, keysShown = '';
+// roaming: the visitor has taken the controls in the welcome, inside ROAM of `start`. starting: Start pressed, waiting on the assets.
+let roaming = false, starting = false, introFor = 0; const start = new THREE.Vector3();
 // used: the controls tried on this tour. seen: what they last read, to notice a change.
 const used = new Set(); let seen = null;
-// pointed: visitors already seen on their current pass. marked: the one the marker is on, and how long it has been in view.
-const pointed = new Set(); let marked = null, markedFor = 0;
 const leg = [], goal = [0, 0, 0], look = [0, 0, 0], pans = [], from = new THREE.Vector3(), to = new THREE.Vector3(), here = new THREE.Vector3();
 const controls = () => window.oceanControls;
 const touring = () => status === 'intro' || status === 'travel' || status === 'look' || status === 'dwell';
@@ -186,18 +189,40 @@ function notice(api) {
   if (now.photos > seen.photos) used.add('photo');
   if (now.reading && !seen.reading) used.add('interact');
   if (api.nav.scooter > .1) used.add('scooter');
+  if (status === 'intro' && api.nav.manualInput) {
+    const [x, y, z] = window.oceanDiagnostics.playerPosition;
+    if (Math.hypot(x - start.x, z - start.z) > MOVED) used.add('swim');
+    if (Math.abs(y - start.y) > MOVED) used.add('updown');
+  }
   seen = now;
   if (used.size === before) return;
   const done = [...used].at(-1);
   if (status === 'intro' && PRIMER.includes(done)) { cheer = done; cheerFor = CHEER; }
   paint();
 }
-// The welcome's one control at a time, and a beat's one tip, worded for the input in hand.
+// The welcome's controls, as key buttons ticked once done with the one to try next lit, and one prompt at a time; a beat's
+// one tip. All worded for the input in hand.
 const primerLeft = () => PRIMER.filter(id => !used.has(id));
+function paintKeys(fingers) {
+  const list = part('.tour-keys'), next = primerLeft()[0];
+  list.hidden = status !== 'intro';
+  const shown = list.hidden ? '' : PRIMER.map(id => `${id}:${used.has(id)}`).join() + next + fingers;
+  if (shown && shown !== keysShown) list.replaceChildren(...PRIMER.map(id => {
+    const control = CONTROLS[id], item = document.createElement('li');
+    item.dataset.done = String(used.has(id)); item.dataset.next = String(id === next);
+    if (fingers) item.textContent = control.touch;
+    else { const key = document.createElement('kbd'); key.textContent = control.key; item.append(key, control.name); }
+    item.setAttribute('aria-label', `${fingers ? control.touch : `${control.key}: ${control.name}`}${used.has(id) ? ', done' : ''}`);
+    return item;
+  }));
+  keysShown = shown;
+}
 function paintControls(step, fingers) {
   const tip = part('.tour-teach'), input = fingers ? 1 : 0;
   let text = '';
-  if (status === 'intro') {
+  paintKeys(fingers);
+  if (status === 'intro' && starting) text = 'Getting the reef ready…';
+  else if (status === 'intro') {
     const left = primerLeft(), next = left[0];
     text = cheer ? `✓ ${CONTROLS[cheer].name}`
       : next ? `Try it, ${PRIMER.length - left.length + 1} of ${PRIMER.length}: ${CONTROLS[next].try[input]}`
@@ -209,24 +234,6 @@ function paintControls(step, fingers) {
   }
   tip.hidden = !text; tip.textContent = text; card.dataset.tip = String(Boolean(text));
   return text;
-}
-// Points out the nearest notable visitor not yet seen on this pass; once it has been in view for SEEN_AFTER seconds the
-// marker lets it go. A visitor that leaves can be pointed out again on a later pass.
-function lookThere(dt, api, state) {
-  const camera = api.getCamera?.(); if (!camera) return;
-  const live = api.visitors?.() ?? [], [px, py, pz] = state.playerPosition;
-  for (const id of pointed) if (!live.some(item => item.id === id)) pointed.delete(id);
-  let subject = null, nearest = Infinity;
-  for (const item of live) {
-    const noted = NOTED[item.id]; if (!noted || pointed.has(item.id)) continue;
-    const d = Math.hypot(item.x - px, item.y - py, item.z - pz);
-    if (d < noted[1] && d < nearest) { nearest = d; subject = item; }
-  }
-  if (!subject) { if (marked) { pointAt(camera, null); marked = null; } return; }
-  if (marked !== subject.id) { marked = subject.id; markedFor = 0; }
-  const rise = subject.y - py, where = rise > 4 ? 'above' : rise < -4 ? 'below' : 'nearby';
-  markedFor = pointAt(camera, [subject.x, subject.y, subject.z], `${NOTED[subject.id][0]} · ${where}`) ? markedFor + dt : 0;
-  if (markedFor > SEEN_AFTER) { pointed.add(subject.id); pointAt(camera, null); marked = null; }
 }
 function setBar(value) { const rounded = Math.round(value * 250) / 250; if (rounded !== barShown) { barShown = rounded; bar.style.transform = `scaleX(${rounded})`; } }
 
@@ -249,6 +256,8 @@ function pan(dt) {
   const step = STEPS[index], beat = step.kind === 'look' ? step.beat ?? BEAT : step.kind === 'intro' ? INTRO_BEAT : PAN_BEAT;
   stepTime += dt; panTime += dt;
   if (!called) called = Boolean(controls()?.encounter?.(step.encounter.id, step.encounter.course));
+  // The visitor swimming about in the welcome has the view; the look-around waits.
+  if (roaming) return;
   if (!reduced() && panIndex < pans.length - 1 && panTime >= beat) { panIndex++; panTime = 0; aim(pans[panIndex]); }
   else if (!reduced() && pans[panIndex]?.visitor) aim(pans[panIndex], true);
   if (status === 'look' && stepTime >= holdOf(step)) advance();
@@ -271,7 +280,7 @@ function arrive() {
 // A cut: fade the water over, move the diver, fade back. Reduced motion always travels this way.
 function cutTo(then) { controls()?.cancelTravel(); cut = then; cutTime = .24; fade.dataset.on = 'true'; }
 function go(next) {
-  index = next; resolve(STEPS[index]); status = 'travel'; paused = routeIssue = false; detours = 0;
+  index = next; resolve(STEPS[index]); status = 'travel'; paused = routeIssue = roaming = false; detours = 0;
   inputs = controls().nav.inputs; paint();
   here.fromArray(window.oceanDiagnostics.playerPosition);
   if (reduced()) { cutTo(land); return; }
@@ -283,6 +292,7 @@ function advance() { if (index < STEPS.length - 1) go(index + 1); }
 // The welcome is read where the dive levels out: nothing to swim to, only a look around.
 function begin() {
   const api = controls(); index = 0; arrived = 0; status = 'intro'; paused = false; inputs = api.nav.inputs;
+  roaming = starting = false; introFor = 0; start.fromArray(window.oceanDiagnostics.playerPosition);
   endPrelude(); splash('Guided dive', 'Welcome to the reef'); reveal = REVEAL; note('tour_step');
   api.guide(true, true, true); startPan(); paint();
 }
@@ -299,7 +309,7 @@ function rejoin() {
 function stop(message, how = 'stopped') {
   if (status === 'off') return;
   note('tour_ended', { how });
-  const api = controls(); status = 'off'; paused = false; cut = null; fade.dataset.on = 'false'; reveal = 0; endPrelude(); pointAt(null); marked = null;
+  const api = controls(); status = 'off'; paused = false; cut = null; fade.dataset.on = 'false'; reveal = 0; endPrelude(); roaming = starting = false;
   // Let go of the view too, so it does not stay on the last subject the tour showed.
   if (api) { api.guide(false); api.cancelTravel(); api.lookAt?.(null); }
   paint();
@@ -312,7 +322,7 @@ export function startTour() {
   // From the surface the opening plays first; under water the tour starts where the diver is.
   if (api.getMode() === 'surface') { prelude = 0; document.body.dataset.prelude = 'on'; }
   track('tour_started', { from: prelude === 0 ? 'surface' : 'underwater' });
-  status = 'starting'; index = 0; arrived = -1; waited = 0; paused = false; framed.clear(); used.clear(); seen = null; pointed.clear(); cheer = null; cheerFor = 0; paint();
+  status = 'starting'; index = 0; arrived = -1; waited = 0; paused = false; framed.clear(); used.clear(); seen = null; cheer = null; cheerFor = 0; paint();
   return true;
 }
 export const tourStatus = () => status;
@@ -351,11 +361,19 @@ function update(dt, api, state, diving) {
   if (!diving) { if (mode !== 'diver') stop(null, 'surfaced'); return; }
   notice(api);
   // Reading the archive or changing settings holds the tour where it is.
-  if (api.nav.suspended || status === 'free') { pointAt(null); return; }
-  lookThere(dt, api, state);
+  if (api.nav.suspended || status === 'free') return;
   const nav = api.nav;
-  // Swimming off from the overview simply ends the tour; anywhere else it puts the tour on hold.
-  if (nav.inputs !== inputs) { if (status === 'done') stop(null, 'swam_off'); else handOver(); return; }
+  // In the welcome the visitor may swim about to try the controls: the tour holds only once they leave its ROAM. Swimming
+  // off from the overview simply ends the tour; anywhere else it puts the tour on hold.
+  if (nav.inputs !== inputs) {
+    if (status === 'intro') { roaming = true; inputs = nav.inputs; }
+    else { if (status === 'done') stop(null, 'swam_off'); else handOver(); return; }
+  }
+  if (status === 'intro') {
+    introFor += dt;
+    if (roaming && here.fromArray(state.playerPosition).distanceTo(start) > ROAM) { handOver(); return; }
+    if (starting && (assetsIn(state) || introFor > ASSETS_WAIT)) { starting = false; advance(); return; }
+  }
   if (cut) { cutTime -= dt; if (cutTime <= 0) { const then = cut; cut = null; then(); fade.dataset.on = 'false'; } return; }
   if (reveal > 0) { reveal -= dt; if (reveal <= 0) paint(); }
   if (cheerFor > 0) { cheerFor -= dt; if (cheerFor <= 0) { cheer = null; paint(); } }
@@ -397,8 +415,12 @@ function read() {
   const prompt = document.querySelector('#interact-prompt'), step = STEPS[index];
   if (prompt && !prompt.hidden) prompt.click(); else window.oceanArchive?.open?.(step.opens ?? step.landmark);
 }
+// The tour's own animals (user-creatures.js: the nurse shark, the whale shark) are in once the optional set has settled.
+const assetsIn = state => state.optionalModels === undefined || state.optionalModels === 'settled' || state.userCreatures?.ready === true;
 function next() {
   if (cut) return;
+  // Start waits (ASSETS_WAIT at most) for the animals the tour shows, so none of them comes in late.
+  if (status === 'intro' && !assetsIn(window.oceanDiagnostics ?? {}) && introFor < ASSETS_WAIT) { starting = true; paint(); return; }
   if (status === 'intro' || status === 'look' || status === 'dwell') { paused = false; advance(); }
   else if (status === 'travel') cutTo(land);
 }

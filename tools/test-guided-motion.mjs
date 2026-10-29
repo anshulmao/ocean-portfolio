@@ -132,32 +132,45 @@ function toTravel(env) {
 const key = code => window.dispatchEvent({ type: 'keydown', code, repeat: false, target: { closest: () => null }, preventDefault() {} });
 const keyup = code => window.dispatchEvent({ type: 'keyup', code, target: { closest: () => null }, preventDefault() {} });
 
-// The controls: the welcome asks for one at a time, ticks each as it is done (by what it changed, whatever the input) and
-// moves on; done out of order, it asks for the first one left. A beat's tip is shown once, where the control is useful,
-// and not at all once it has been tried. N skips the controls (toTravel above).
+// The controls: the welcome lays out C, W A S D, up and down and V as key chips and asks for one at a time, ticking each as
+// it is done (by what it changed, whatever the input) and moving on. Swimming about to try them keeps the tour within
+// ROAM (5 m) of where the welcome began. The scooter is taught on the first swim, the photo at the tower, and a control
+// already tried is not taught again. N skips the controls (toTravel above).
 {
   const env = environment(60);
   startTour(); env.tick(.5);
   assert.equal(tourStatus(), 'intro');
   assert.equal(env.state.tour.tip, 'Try it, 1 of 4: Press C to open your dive computer.');
-  env.nav.setLamp(!env.nav.state.lamp); env.tick(.1);
-  assert.equal(env.state.tour.tip, '✓ Flashlight', 'a control done is ticked');
-  env.tick(1.3);
-  assert.equal(env.state.tour.tip, 'Try it, 2 of 4: Press C to open your dive computer.', 'then the first one left is asked for');
   document.body.dataset.computerOpen = 'true'; env.tick(.1); delete document.body.dataset.computerOpen;
-  assert.equal(env.state.tour.tip, '✓ Dive computer'); env.tick(1.3);
-  assert.equal(env.state.tour.tip, 'Try it, 3 of 4: Hold E to spin up your scooter.');
-  key('KeyE'); env.tick(.6); keyup('KeyE'); env.tick(1.3);
+  assert.equal(env.state.tour.tip, '✓ Dive computer', 'a control done is ticked'); env.tick(1.3);
+  assert.equal(env.state.tour.tip, 'Try it, 2 of 4: Swim with W A S D. The tour waits for you here.');
+  const from = [...env.state.playerPosition];
+  key('KeyW'); env.tick(.8); keyup('KeyW'); env.tick(.6);
+  const swum = Math.hypot(env.state.playerPosition[0] - from[0], env.state.playerPosition[2] - from[2]);
+  assert.ok(swum > 1.2 && swum < 5, `swum a little (${swum.toFixed(2)} m)`);
+  assert.equal(tourStatus(), 'intro', 'swimming about in the welcome keeps the tour');
+  assert.ok(window.oceanTour.tried.includes('swim'));
+  env.tick(1);
+  assert.equal(env.state.tour.tip, 'Try it, 3 of 4: Space to rise, Shift to sink.');
+  key('ShiftLeft'); env.tick(1); keyup('ShiftLeft'); env.tick(.6);
+  assert.ok(window.oceanTour.tried.includes('updown'), 'sinking counts as up and down');
+  env.tick(1);
   assert.equal(env.state.tour.tip, 'Try it, 4 of 4: Press V to see yourself in third person.');
   env.nav.togglePerspective(); env.tick(1.5);
   assert.equal(env.state.tour.tip, 'That’s the controls. Press N to start the tour.');
   assert.equal(tourStatus(), 'intro', 'trying the controls never hands the dive over, nor starts the tour');
-  assert.deepEqual(window.oceanTour.tried.sort(), ['computer', 'lamp', 'scooter', 'view']);
+  assert.deepEqual(window.oceanTour.tried.sort(), ['computer', 'swim', 'updown', 'view']);
+  // The scooter, on the first swim: it speeds the guide up there.
+  window.oceanTour.next(); env.tick(.5);
+  assert.equal(tourStatus(), 'travel', 'Start leads on from wherever the visitor swam to');
+  assert.equal(env.state.tour.tip, 'Hold E for the scooter: the guide speeds up too.');
+  key('KeyE'); env.tick(.6); keyup('KeyE'); env.tick(.1);
+  assert.equal(env.state.tour.tip, '', 'gone once used');
+  assert.equal(tourStatus(), 'travel', 'the scooter speeds the guide, it does not take over');
   // Opening a site counts as F, from wherever it was opened.
   window.oceanArchive = { isOpen: true }; env.tick(.1); window.oceanArchive = { isOpen: false };
   assert.ok(window.oceanTour.tried.includes('interact'));
   // The photo tip at the table coral tower, gone once a photo is taken; the computer tip is skipped, already tried.
-  window.oceanTour.next();
   const tower = STEPS.findIndex(step => step.key === 'tower'), deep = STEPS.findIndex(step => step.key === 'deep');
   for (let frame = 0; frame < 60 * 400 && !(env.state.tour.stop === tower && tourStatus() === 'look'); frame++) { env.tick(); if (tourStatus() === 'dwell') window.oceanTour.next(); }
   assert.equal(env.state.tour.tip, 'Press H to take a photo.');
@@ -166,7 +179,44 @@ const keyup = code => window.dispatchEvent({ type: 'keyup', code, target: { clos
   for (let frame = 0; frame < 60 * 400 && !(env.state.tour.stop === deep && tourStatus() === 'look'); frame++) { env.tick(); if (tourStatus() === 'dwell') window.oceanTour.next(); }
   assert.equal(env.state.tour.tip, '', 'the computer was tried in the welcome');
   window.oceanTour.stop(); env.nav.destroy(); delete window.oceanExpedition; delete window.oceanArchive;
-  console.log('PASS: the welcome asks for each control in turn and ticks it; beat tips show once and skip what was tried.');
+  console.log('PASS: the welcome asks for each control in turn and ticks it; the scooter on the first swim; tips show once.');
+}
+
+// Swimming off past ROAM in the welcome puts the tour on hold, to be rejoined.
+{
+  const env = environment(60);
+  startTour(); env.tick(.5);
+  const from = [...env.state.playerPosition];
+  key('KeyW');
+  for (let frame = 0; frame < 60 * 8 && tourStatus() === 'intro'; frame++) env.tick();
+  keyup('KeyW');
+  const swum = Math.hypot(...env.state.playerPosition.map((v, i) => v - from[i]));
+  assert.equal(tourStatus(), 'free', 'out of the welcome\'s reach, the tour holds');
+  assert.ok(swum > 5 && swum < 6.5, `held as the diver left the 5 m around the start (${swum.toFixed(2)} m)`);
+  window.oceanTour.stop(); env.nav.destroy();
+  console.log('PASS: leaving 5 m of the welcome puts the tour on hold.');
+}
+
+// Start waits for the tour's animals: while the creature set loads it says so, then leads on as soon as it is in.
+{
+  const env = environment(60);
+  startTour(); env.tick(.5);
+  env.state.optionalModels = 'loading';
+  window.oceanTour.next(); env.tick(1);
+  assert.equal(tourStatus(), 'intro', 'Start waits for the animals');
+  assert.equal(env.state.tour.tip, 'Getting the reef ready…');
+  env.state.optionalModels = 'settled'; env.tick(.5);
+  assert.equal(tourStatus(), 'travel', 'and leads on once they are in');
+  window.oceanTour.stop(); env.nav.destroy();
+  const slow = environment(60);
+  startTour(); slow.tick(.5);
+  slow.state.optionalModels = 'loading';
+  window.oceanTour.next();
+  for (let frame = 0; frame < 60 * 25 && tourStatus() === 'intro'; frame++) slow.tick();
+  assert.equal(tourStatus(), 'travel', 'never longer than ASSETS_WAIT');
+  assert.ok(slow.clock < 21.5, `led on after ${slow.clock.toFixed(1)} s`);
+  window.oceanTour.stop(); slow.nav.destroy();
+  console.log('PASS: Start waits for the creature set, at most 20 s.');
 }
 
 // Build the production procedural reef and its collision geometry. Only the
