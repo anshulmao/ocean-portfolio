@@ -179,7 +179,7 @@ const prepared=new WeakSet();
 // drawn, when the graphics process has finished the last one, and rest for a few frames after one that stalled it.
 // A visitor waiting on the work (a dive asked for before the world is ready) gets most of every interval instead.
 const GPU=Symbol('gpu'),jobs=[],buildName='the world under the water',work=diagnostic.work={pending:0,steps:0,ms:0,longest:0,longestName:'',over8:0,over16:0,gpuSteps:0,turns:0,long:[]};
-let jobDebt=0,jobsStarved=0,jobsAt=-1e9,jobsQuietAt=-1e9,jobFrameAt=0,jobFrameDrew=false,jobPosted=false,pumpQueued=false,gpuRest=0,gpuRan=false,hurry=0,ticking=false;
+let jobDebt=0,jobsStarved=0,jobsAt=-1e9,jobsQuietAt=-1e9,jobFrameAt=0,jobGap=0,jobFrameDrew=false,jobPosted=false,pumpQueued=false,gpuRest=0,gpuRan=false,hurry=0,ticking=false;
 function later(name,task,{gpu=false,cost=1,tally=null}={}){
   return new Promise((resolve,reject)=>{jobs.push({name,task,steps:null,resolve,reject,gpu,cost,tally,waiting:false});work.pending=jobs.length;pump();wake();});
 }
@@ -229,7 +229,12 @@ function afterFrame(){
   if(!jobs.length)return;
   const interval=1000/displayHz,used=performance.now()-jobFrameAt,waiting=hurry>1;
   // A frame that was drawn at full pace leaves a few ms; a callback that drew nothing (a reduced budget, a fast display) leaves most of its interval.
-  let budget=workBudget(interval,ticking?0:used,waiting?14:jobFrameDrew&&diagnostic.renderBudget==='full'?(hurry?6:4):9,jobsStarved);
+  // A visitor waiting on the work gets up to half of the time between callbacks, whatever sets that pace: where the
+  // graphics process does (a weak GPU; SwiftShader in perf-hold.mjs) callbacks come a few times a second, the main thread
+  // is free for most of each, and 14 ms of it left the build under a tenth. Where the main thread sets the pace, half the
+  // gap settles at what the frame itself takes (the gap is frame plus work): frames come at most half as often while the
+  // dive is held, and no task runs over 50 ms.
+  let budget=waiting?workBudget(Math.max(interval,jobGap),ticking?0:used,Math.min(50,Math.max(14,jobGap/2)),jobsStarved):workBudget(interval,ticking?0:used,jobFrameDrew&&diagnostic.renderBudget==='full'?(hurry?6:4):9,jobsStarved);
   if(waiting)budget=Math.max(budget,9);
   else if(jobDebt>0){jobDebt-=Math.max(budget,2);budget=0;}
   if(budget<=0){jobsStarved++;return;}
@@ -278,7 +283,7 @@ function warmSoon(){
   if(warming||!warmQueue.length)return;warming=true;
   later('first draws',function*(){
     while(warmQueue.length){if(uniforms.uDive.value>0){warmQueue.length=0;break;}yield GPU;if(warmQueue.length&&uniforms.uDive.value===0)warmStep();}
-    warming=false;
+    warming=false;if(warmListed)startup.warmedAt??=Math.round(performance.now());
   }).catch(error=>{warming=false;console.warn('First draws stopped:',error);});
 }
 function warmStep(){
@@ -357,6 +362,20 @@ function preloadModels(){
 }
 
 let diveAskedNow=null;const diveAsked=new Promise(resolve=>{diveAskedNow=resolve;});
+// Downloads ahead of the work that needs them. The landmark files go first, as soon as the build starts: the dive waits
+// on them. The creature set's follow once those are in (they share the connection), as soon as the build starts in
+// standard detail, which loads the set right after the landmarks anyway, and in economy once a dive is asked for
+// (Dive in, Show me around): the guided dive shows those animals, and it should not reach one still in transit.
+let filesFetched=null,enrichmentFetched=false;
+const prefetchFiles=()=>filesFetched??=import('./model-scene.js').then(({prefetchLandmarks})=>prefetchLandmarks(quality==='economy')).catch(()=>{});
+function prefetchEnrichment(){
+  if(enrichmentFetched)return;enrichmentFetched=true;
+  prefetchFiles().then(()=>import('./user-creatures.js')).then(({prefetchCreatures})=>prefetchCreatures()).catch(()=>{});
+}
+diveAsked.then(prefetchEnrichment);
+// Everything a first dive and the guided dive show: the landmarks and the optional creature and coral sets have all
+// settled (loaded or failed; either way nothing more is coming). oceanControls.world.whenEnriched, oceanDiagnostics.enriched.
+let enrichedDone=null;const enriched=new Promise(resolve=>{enrichedDone=()=>{diagnostic.enriched=true;startup.enrichedAt??=Math.round(performance.now());resolve();};});
 function beginModels(){
   // The models stand on the reef: asked for sooner, they start the moment it is built.
   if(!built){modelsWanted=true;return;}
@@ -382,8 +401,8 @@ function beginModels(){
   const creaturesLoad=busy(import('./user-creatures.js').then(({createUserCreatures})=>{userCreatures=createUserCreatures({terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy',sites:{formations:heroFormations?.sites||[],life:livingWorld?.sites||[],landmarks:LANDMARKS,patches:()=>userCorals?.diagnostics?.patches||[]}});scene.add(userCreatures.root);userCreatures.root.visible=false;diagnostic.userCreatures=userCreatures.diagnostics;return userCreatures.load();}).then(()=>{stylizeTree(userCreatures.root,{toon:.25,rim:.22,caustics:.45});return prepare(userCreatures.root);}).catch(error=>console.warn('New creature set unavailable:',error)));
   const coralsLoad=busy(import('./user-corals.js').then(({createUserCorals})=>{userCorals=createUserCorals({terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy'});scene.add(userCorals.root);userCorals.root.visible=false;diagnostic.userCorals=userCorals.diagnostics;return userCorals.load();}).then(()=>{stylizeTree(userCorals.root,{toon:.3,rim:.2,caustics:.55});return prepare(userCorals.root);}).catch(error=>console.warn('New coral set unavailable:',error)));
 
-    Promise.allSettled([creaturesLoad,coralsLoad]).then(()=>{diagnostic.optionalModels='settled';experienceMetrics.mark('optionalModelsSettled');});
-  }).catch(error=>console.warn('Optional ocean enrichment could not start:',error));
+    Promise.allSettled([creaturesLoad,coralsLoad]).then(()=>{diagnostic.optionalModels='settled';experienceMetrics.mark('optionalModelsSettled');enrichedDone();});
+  }).catch(error=>{console.warn('Optional ocean enrichment could not start:',error);enrichedDone();});
 }
 // Set for one frame when the diver is moved at once (start-at-site, tour cuts): the camera cuts with it instead of sweeping.
 let snapCamera=false;
@@ -403,7 +422,8 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   warm(){finishUnderwater();listWarm();let steps=0;while(warmQueue.length){warmStep();steps++;}return steps;},
   // The world under the water is built after the surface is ready. built: every part exists; ready: its shaders have linked too.
   // finish() builds whatever is left at once (a stall of a second or so) and whenReady resolves when a dive can go straight under.
-  world:{get built(){return built;},get ready(){return underReady;},finish(){finishUnderwater();return built;},get whenReady(){return worldReady;}},
+  // whenEnriched: the landmarks and the optional sets have settled as well (see enriched), what the guided dive waits for before it sets off.
+  world:{get built(){return built;},get ready(){return underReady;},finish(){finishUnderwater();return built;},get whenReady(){return worldReady;},get enriched(){return diagnostic.enriched===true;},get whenEnriched(){return enriched;}},
   // QA hook: after placing the camera by hand, cull the scene for it again.
   recull(){camera.updateMatrixWorld(true);refreshView();userCreatures?.update(0,playerPosition,viewerOrbit?null:view);if(built)cullWorld(0);},
   // Dive planner and guided tour hooks: autopilot, instant placement, dive start / surfacing, and the flashlight and scooter state.
@@ -411,6 +431,10 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   encounter(id,course){return userCreatures?.encounter?.(id,playerPosition,viewerOrbit?null:view,course)??false;},visitors(){return userCreatures?.visitors?.()??[];},
   travelPath(points,focus,speed){return exploration.travelPath(points,focus,speed);},
   cancelTravel(options){return exploration.cancelTravel(options);},
+  // The guided dive's surface prelude: a dive is asked for, and goes under a couple of seconds from now. What it will wait
+  // for starts at once (the build, the landmarks, and in economy detail the optional packs, which wait for a dive to be
+  // asked for), with a little more of every frame (not most of it: the prelude's camera is moving). See guided-dive.js.
+  expectDive(){if(!diagnostic.ready||diveTarget===1||getMode()!=='surface')return false;startUnderwater();modelsWanted=true;beginModels();diveAskedNow();hurry=Math.max(hurry,1);wake();return true;},
   startDive(options){if(!diagnostic.ready||diveTarget===1||getMode()!=='surface')return false;exploration.prepareDive(options);if(options?.at)snapCamera=true;$('#dive').click();return true;},
   surface(options){if(options?.instant)return surfaceNow();if(diveTarget!==1||exploration.state.mode!=='diver')return false;window.oceanTour?.stop();mapDestination=null;const started=exploration.beginAscent(reef?.userData.safeAscentRoute,true);wake();return started;},
   skipSafetyStop(){exploration.skipSafetyStop();},
@@ -468,8 +492,11 @@ function paintAtlas(){
   $('.reef-map').dataset.collapsed=String(mapCollapsed);$('#map-toggle').setAttribute('aria-expanded',String(!mapCollapsed));$('#map-toggle').setAttribute('aria-label',mapCollapsed?'Expand reef atlas':'Collapse reef atlas');$('#map-toggle').textContent=mapCollapsed?'＋':'−';
 }
 $('#map-toggle').addEventListener('click',()=>{mapCollapsed=!mapCollapsed;paintAtlas();});
-// A visitor reaching for the dive button: the first draws go one a frame from here on, since what is not drawn by the time the camera goes under is all paid in one frame there.
-for(const type of ['pointerenter','focus'])$('#dive').addEventListener(type,()=>{hurry=Math.max(hurry,1);wake();},{passive:true});
+// A visitor reaching for a way into the water (Dive in, Show me around, Choose a destination): the first draws go one a
+// frame from here on, since what is not drawn by the time the camera goes under is all paid in one frame there. A touch
+// screen has no hover, so a finger landing on one counts too. (Delegated: the guided dive's buttons are added by dive-plan.js.)
+const DIVE_WAYS='#dive,#guided-dive,#plan-dive';
+for(const type of ['pointerover','pointerdown','focusin'])document.addEventListener(type,event=>{if(hurry<1&&event.target.closest?.(DIVE_WAYS)){hurry=1;wake();}},{passive:true,capture:true});
 $('#camera-toggle')?.addEventListener('click',toggleCamera);
 $('#capture-hint')?.addEventListener('click',()=>exploration.recapture());
 $('#reset-view').addEventListener('click',()=>{exploration.reset();mapDestination=null;$('#map-caption').textContent='Choose a marker to swim closer.';});
@@ -488,7 +515,7 @@ $('#dive').addEventListener('click',()=>{
   $('#dive-label').textContent=wasDiving?'Ascending to the surface…':'Back to the surface';
   status.textContent=wasDiving?'Returning to the surface.':'Diving beneath the surface.';
   setTimeout(()=>{if(diagnostic.ready)status.textContent='';},1600);
-  if(!wasDiving){exploration.startDive();beginModels();diveAskedNow();setExploring(true);hurry=Math.max(hurry,1);}
+  if(!wasDiving){startup.diveAskedAt??=Math.round(performance.now());exploration.startDive();beginModels();diveAskedNow();setExploring(true);hurry=Math.max(hurry,1);}
   else if(exploration.state.mode!=='surface'){window.oceanTour?.stop();exploration.beginAscent(reef?.userData.safeAscentRoute,true);}
   if(reducedMotion){dive=diveTarget;status.textContent='';}canvas.focus({preventScroll:true});wake();
 });
@@ -607,6 +634,8 @@ const worldReady=new Promise(resolve=>{worldReadyDone=resolve;});
 function startUnderwater(){
   if(buildSteps)return;
   worldLinking=new Set();buildSteps=buildUnderwater(worldLinking);diagnostic.underwater='building';
+  // The landmarks are placed on the finished reef (beginModels), but their files can be on their way meanwhile.
+  prefetchFiles();if(quality!=='economy')prefetchEnrichment();
   const tally=ms=>{startup.under[buildStage]=+((startup.under[buildStage]||0)+ms).toFixed(1);};
   const queued=later(buildName,()=>buildSteps,{tally});
   queued.then(()=>{startup.builtAt=Math.round(performance.now());if(modelsWanted)beginModels();return programsLinked(worldLinking);})
@@ -736,8 +765,8 @@ function updateWorld(dt,clockDt=dt){
   // A dive asked for before the world under the water is ready waits in the first tenth of the transition, the camera
   // still above the surface, while the rest is built with most of every frame's time (see afterFrame); the status line
   // says so if that takes more than a moment. The first draws get up to two and a half seconds of it as well.
-  if(diveTarget===1&&(!underReady||!diagnostic.landmarksSettled||warmQueue.length&&diveHeldFor>0&&diveHeldFor<2.5)){if(!buildSteps)startUnderwater();modelsWanted=true;if(built)beginModels();dive=Math.min(dive,DIVE_HOLD);diveHeldFor+=Math.max(dt,1e-4);hurry=2;if(diveHeldFor>.7&&(!underReady||!diagnostic.landmarksSettled)&&!holdNoted){holdNoted=true;status.textContent=HOLD_NOTE;}}
-  else if(diveHeldFor){diveHeldFor=0;hurry=1;if(holdNoted){holdNoted=false;if(status.textContent===HOLD_NOTE)status.textContent='';}if(reducedMotion&&diveTarget===1)dive=diveTarget;}
+  if(diveTarget===1&&(!underReady||!diagnostic.landmarksSettled||warmQueue.length&&diveHeldFor>0&&diveHeldFor<2.5)){if(!diveHeldFor)startup.heldFrom=Math.round(performance.now());if(!buildSteps)startUnderwater();modelsWanted=true;if(built)beginModels();dive=Math.min(dive,DIVE_HOLD);diveHeldFor+=Math.max(dt,1e-4);hurry=2;if(diveHeldFor>.7&&(!underReady||!diagnostic.landmarksSettled)&&!holdNoted){holdNoted=true;status.textContent=HOLD_NOTE;}}
+  else if(diveHeldFor){diveHeldFor=0;hurry=1;startup.heldMs=Math.round(performance.now())-startup.heldFrom;if(holdNoted){holdNoted=false;if(status.textContent===HOLD_NOTE)status.textContent='';}if(reducedMotion&&diveTarget===1)dive=diveTarget;}
   let easedDive=THREE.MathUtils.smoothstep(dive,0,1);let underwater=THREE.MathUtils.smoothstep(easedDive,.13,.27);
   uniforms.uTime.value=elapsed;uniforms.uNight.value=night;uniforms.uDive.value=underwater;
   const nav=exploration.update(dt,easedDive>.95,reducedMotion,reef?.userData.safeAscentRoute);
@@ -1000,6 +1029,10 @@ function renderBudget(){
   if(budgetAsked!=='auto')return budgetAsked;
   if(interfaceOpen)return 'idle';
   if(movementPanelOpen||settingsMenuOpen)return 'reduced';
+  // A dive held at the waterline (see updateWorld) waits on the work, not on the picture: the camera is still and the
+  // status line says what is happening. Half the frames are drawn there, and what they took goes to the work. On a slow
+  // device, the only kind that is held for long, the full pace left the build a third of the main thread (perf-hold.mjs).
+  if(diveHeldFor>0)return 'held';
   // (Not while the first dive is still being warmed up: that work is paced by drawn frames and should be done before the visitor dives.)
   return exploration.state.mode==='surface'&&diveTarget===0&&!viewerOrbit&&!warmQueue.length&&!modelsBusy&&performance.now()-lastInput>IDLE_AFTER?'reduced':'full';
 }
@@ -1011,12 +1044,13 @@ function frame(now){
   if(raw<.25){frameGaps[gapCursor++%24]=raw*1000;if(gapCursor%24===0){const hz=refreshRate(frameGaps,gapOrder);if(Math.abs(hz-displayHz)>displayHz*.03){scaler.state.settling=1;frameCount=0;perfDuration=0;drawCount=0;lastDraw=0;}displayHz=hz;}}
   const budget=renderBudget(),full=budget==='full';
   if(diagnostic.renderBudget!==budget){diagnostic.renderBudget=budget;scaler.state.settling=1;frameCount=0;perfDuration=0;}
-  stride=drawStride(displayHz,full?(quality==='economy'?30:60):BUDGET_FPS[budget]);diagnostic.displayHz=Math.round(displayHz);
+  stride=drawStride(displayHz,full?(quality==='economy'?30:60):budget==='held'?(quality==='economy'?15:30):BUDGET_FPS[budget]);diagnostic.displayHz=Math.round(displayHz);
   const draw=++sinceDraw>=stride||full&&(paused||diagnostic.transition);
   // One step of graphics work goes ahead of the frame (see later()): the graphics process has had a whole interval to
   // finish the last frame, so a call that has to wait for it waits least here. A step that made this callback late rests a few frames.
+  // While a dive is held, the callbacks that draw nothing take one as well: the first draws and uploads are what it waits on.
   if(gpuRan){gpuRan=false;gpuRest=raw*1000>1500/displayHz?4:1;}
-  if(draw&&jobs.length&&diagnostic.ready){if(gpuRest>0&&!hurry)gpuRest--;else gpuRan=runJobs(0,'gpu')>0;}
+  if((draw||budget==='held')&&jobs.length&&diagnostic.ready){if(gpuRest>0&&!hurry)gpuRest--;else gpuRan=runJobs(0,'gpu')>0;}
   // The world moves once per drawn frame, by the time that has passed since the last one. (It used to move on every
   // callback at full pace, drawn or not: with a stride of 2, an economy 30 fps or a fast display, that doubled the
   // simulation per frame seen, on machines whose main thread is already the limit.)
@@ -1037,7 +1071,7 @@ function frame(now){
     if(perfDuration>=1){diagnostic.fps=Math.round(frameCount/perfDuration);adaptQuality(windowPace(drawGaps,drawCount,drawOrder)||frameCount/perfDuration,perfDuration,{busy:windowBusy,hitch:windowHitch(drawGaps,drawCount,100),cost:gpuCount?gpuSum/gpuCount:0});frameCount=0;tickCount=0;perfDuration=0;drawCount=0;perfSamples++;windowBusy=false;gpuSum=0;gpuCount=0;}
   }else{frameCount=0;tickCount=0;perfDuration=0;drawCount=0;lastDraw=0;windowBusy=false;gpuSum=0;gpuCount=0;}
   // Background work for this thread follows the frame in a task of its own (see afterFrame).
-  if(jobs.length&&diagnostic.ready){jobFrameAt=ticking?performance.now():now;jobFrameDrew=draw;jobsAt=performance.now();if(ticking)afterFrame();else if(!jobPosted){jobPosted=true;jobPort.port2.postMessage(0);}}
+  if(jobs.length&&diagnostic.ready){jobFrameAt=ticking?performance.now():now;jobGap=raw*1000;jobFrameDrew=draw;jobsAt=performance.now();if(ticking)afterFrame();else if(!jobPosted){jobPosted=true;jobPort.port2.postMessage(0);}}
   if(paused&&!diagnostic.transition&&!exploration.state.moving&&!diagnostic.cameraMoving&&!wristComputer?.diagnostics.animating){running=false;lastFrame=0;pump();return;}
   raf=requestAnimationFrame(frame);
 }

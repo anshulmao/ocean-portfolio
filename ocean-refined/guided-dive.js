@@ -321,7 +321,8 @@ export function startTour() {
   if (!api || !window.oceanDiagnostics?.ready || status !== 'off') return false;
   if (api.getMode() !== 'surface' && api.getMode() !== 'diver') return false;
   // From the surface the opening plays first; under water the tour starts where the diver is.
-  if (api.getMode() === 'surface') { prelude = 0; document.body.dataset.prelude = 'on'; }
+  // The ocean starts on what the dive will wait for now, not when the prelude ends 2.4 s from here (world.js expectDive).
+  if (api.getMode() === 'surface') { prelude = 0; document.body.dataset.prelude = 'on'; api.expectDive?.(); }
   track('tour_started', { from: prelude === 0 ? 'surface' : 'underwater' });
   status = 'starting'; index = 0; arrived = -1; waited = 0; paused = false; framed.clear(); used.clear(); seen = null; cheer = null; cheerFor = 0; paint();
   return true;
