@@ -4,12 +4,14 @@ import path from 'node:path';
 
 const decode=value=>value.replaceAll('&amp;','&').replaceAll('&quot;','"');
 export async function checkPortfolioPages({out,content,siteURL}){
-  const files=['profile.html',...content.projects.entries.map(entry=>`projects/${entry.id}/index.html`)];
+  const previews=['directions.html',...Array.from({length:5},(_,i)=>`direction-0${i+1}.html`)];
+  const files=['profile.html',...content.projects.entries.map(entry=>`projects/${entry.id}/index.html`),...previews];
   const sitemap=await fs.readFile(path.join(out,'sitemap.xml'),'utf8');
   let linkCount=0,imageCount=0;
   for(const file of files){
     const html=await fs.readFile(path.join(out,file),'utf8');
-    const route=file==='profile.html'?'/profile.html':'/'+file.replace(/index\.html$/,'');
+    const route=file==='profile.html'||previews.includes(file)?'/profile.html':'/'+file.replace(/index\.html$/,'');
+    if(previews.includes(file))assert.ok(html.includes('name="robots" content="noindex,follow"'),'Design option should not be indexed: '+file);
     assert.ok(html.includes(`<link rel="canonical" href="${siteURL}${route}">`),'Missing or wrong canonical: '+file);
     assert.ok(sitemap.includes(`<loc>${siteURL}${route}</loc>`),'Page missing from sitemap: '+file);
     assert.equal([...html.matchAll(/<h1(?:\s|>)/g)].length,1,'Expected one page heading: '+file);
