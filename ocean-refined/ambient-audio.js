@@ -10,7 +10,7 @@ import { onTick } from './ui-ticker.js';
 
 // Tuning. MASTER: output gain at full volume. LEVEL: each layer's gain on the
 // mix (noise loops are normalised to an RMS of .2; the baked patter, bubbles,
-// cues, calls and reef sounds to a peak of 1 before their level). BREATH:
+// cues, calls and reef fish to a peak of 1 before their level). BREATH:
 // seconds per resting cycle, how much shorter it gets at full effort, the
 // share of a cycle spent inhaling, holding and exhaling, and how often a
 // breath is shallow, deep or followed by a pause (and how long that pause is).
@@ -27,7 +27,7 @@ import { onTick } from './ui-ticker.js';
 // nothing above a few kilohertz.
 const MASTER = 1.25;
 const LEVEL = { wind: .4, wave: .9, rain: .3, patter: .16, thunder: .26, drone: .14, tone: .012, rush: .4, motor: .02, inhale: .36, exhale: .2, valve: .03, bubbles: .07, splash: .42, cue: .042, whale: .024,
-  surge: .5, crackle: .07, fish: .05, wash: .45, fizz: .1 };
+  surge: .5, fish: .05, wash: .45, fizz: .1 };
 const BREATH = { cycle: 6, effort: .7, inhale: .3, hold: .06, exhale: .44, shallow: .12, deep: .14, pause: [.18, .8, 3] };
 const THUNDER = { delay: [.7, 2.8], attack: .45, tail: 6.5 };
 const WHALE = { first: [25, 60], gap: [65, 130], below: 12 };
@@ -158,16 +158,6 @@ function bake(ctx) {
     }
     return top(buffer, LEVEL.fish * .7);
   };
-  // Snapping shrimp: the crackle of a living reef, thousands of tiny broadband snaps, most faint and a few sharp,
-  // scattered across the stereo field.
-  const crackling = () => {
-    const buffer = make(6), left = buffer.getChannelData(0), right = buffer.getChannelData(1), n = left.length, width = rate / 2000 | 0;
-    for (let k = 0; k < 3600; k++) {
-      const at = Math.random() * n | 0, gain = Math.random() ** 3, pan = Math.random(), l = gain * Math.cos(pan * PI / 2), r = gain * Math.sin(pan * PI / 2);
-      for (let i = 0, level = 1; i < width; i++, level *= .7) { const value = (Math.random() * 2 - 1) * level, j = (at + i) % n; left[j] += value * l; right[j] += value * r; }
-    }
-    return top(buffer, 1);
-  };
   // The two noise loops and the short cues are drawn at once: they are needed from the first moment and cost little.
   // The rain patter, the bubble stream and the whale calls are most of the work and none is heard in the first
   // second, so they are handed back as jobs; the live engine draws one per idle moment after the click that
@@ -182,7 +172,7 @@ function bake(ctx) {
     lamp: cue(.3, [[0, 1900, .006, .5], [0, 240, .022, .8]]),
     // The demand valve cracking open at the start of a breath: a dry tick and the faintest whistle.
     valve: (() => { const buffer = make(.08, 1), data = buffer.getChannelData(0); ring(buffer, 0, 3300, 3000, .01, .35); for (let i = 0, level = 1; i < rate * .006; i++, level *= .996) data[i] += (Math.random() * 2 - 1) * level; return top(buffer, LEVEL.valve); })() };
-  const jobs = [['bubbles', stream], ['crackle', crackling], ['patter', rainfall], ['whaleA', () => call(170, .85, .35, 3.2)], ['whaleB', () => call(240, .25, 1, 3.8)],
+  const jobs = [['bubbles', stream], ['patter', rainfall], ['whaleA', () => call(170, .85, .35, 3.2)], ['whaleB', () => call(240, .25, 1, 3.8)],
     ['gruntA', () => grunt(130, 6, .07)], ['gruntB', () => grunt(190, 3, .11)], ['crunch', crunch],
     // A right whale's rising "up-call", a long moan and a low groan, each with the echoes of the far calls.
     ['upcall', () => call(72, 0, -1.3, 1.4, 1)], ['moan', () => call(105, .45, .7, 3.2, 1)], ['groan', () => call(58, .2, .4, 2.2, 1)],
@@ -235,11 +225,11 @@ function build(ctx, whole = false) {
   const splashLP = filter('lowpass', 6000, -3), splash = gain();
   wire(white, splashLP, splash, bus);
 
-  // The sea around the diver. Near the surface the swell pushes water back and forth across the reef; on the reef the
-  // shrimp crackle, bright because they are close. Above the water, waves break with a wash and the fizz of their foam.
-  const surgeLP = filter('lowpass', 380, 1), surge = gain(), crackleLoop = later(), crackleHP = filter('highpass', 1800), crackle = gain();
+  // The sea around the diver. Near the surface the swell pushes water back and forth across the reef. Above the water,
+  // waves break with a wash and the fizz of their foam.
+  const surgeLP = filter('lowpass', 380, 1), surge = gain();
   const washBP = filter('bandpass', 600, .6), wash = gain(), fizzHP = filter('highpass', 3500), fizz = gain();
-  wire(white, surgeLP, surge, waterLP); wire(crackleLoop, crackleHP, crackle, water); wire(white, washBP, wash, airLP); wire(white, fizzHP, fizz, airLP);
+  wire(white, surgeLP, surge, waterLP); wire(white, washBP, wash, airLP); wire(white, fizzHP, fizz, airLP);
 
   // Passing animals: one voice for each group, its distance a low-pass and a level, its bearing a pan. The voices skip the
   // water's low-pass: a dolphin's whistle carries far in the sea, and the distance filter already darkens what is far.
@@ -250,7 +240,7 @@ function build(ctx, whole = false) {
   }
 
   // draw(): the next deferred buffer; true while more are waiting.
-  const loops = { patter: patterLoop, bubbles: bubbleLoop, crackle: crackleLoop };
+  const loops = { patter: patterLoop, bubbles: bubbleLoop };
   const draw = () => {
     const job = jobs.shift();
     if (!job) return false;
@@ -261,7 +251,7 @@ function build(ctx, whole = false) {
   if (whole) while (draw());
   return { ctx, buffers, draw, open, count, limiter, master, bus, duck, airLP, air, waterLP, water, windBP, waveLP, rainBP, thunderLP, droneBP, humB, rushBP, motorTone, motorLP,
     reg, inA, inB, exLP, flutterOsc, bubbleLoop, splashLP, surgeLP, washBP, voices,
-    layers: { wind, wave, rain, patter, thunder, drone, tone: hum, rush, motor, inhale, exhale, bubbles, splash, surge, crackle, wash, fizz, ...Object.fromEntries(Object.entries(voices).map(([id, voice]) => [id, voice.level])) },
+    layers: { wind, wave, rain, patter, thunder, drone, tone: hum, rush, motor, inhale, exhale, bubbles, splash, surge, wash, fizz, ...Object.fromEntries(Object.entries(voices).map(([id, voice]) => [id, voice.level])) },
     aim: new Map(), breathAt: 0, pace: 1 };
 }
 
@@ -306,10 +296,9 @@ function steer(g, s, at, glide = GLIDE) {
   set(L.motor.gain, LEVEL.motor * s.scooter ** 1.2);
   // Seen from behind, the diver's regulator is a little further off.
   set(g.reg.gain, s.first ? 1 : .72);
-  const shallow = 1 - smoothstep(s.depth, 3, 18), reef = smoothstep(s.depth, 1.5, 6) * (1 - .4 * smoothstep(s.depth, 22, 45));
+  const shallow = 1 - smoothstep(s.depth, 3, 18);
   set(g.surgeLP.frequency, 220 + 380 * swell);
   set(L.surge.gain, LEVEL.surge * shallow * (.6 + .4 * sea) * (.08 + .92 * swell * swell));
-  set(L.crackle.gain, LEVEL.crackle * reef * (.7 + .3 * Math.sin(at * .13 + 1.9 * Math.sin(at * .041))));
 }
 // Breathing is written ahead of the clock, one whole cycle at a time, and no
 // two cycles are the same. The resting pace wanders; effort (finning hard)
