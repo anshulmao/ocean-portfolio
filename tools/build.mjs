@@ -41,7 +41,7 @@ async function hashPack(directory){for(const entry of (await fs.readdir(director
 await hashPack(packRoot);for(const file of ['creature-kit.js','creature-species.js'])packHash.update(await fs.readFile(path.join(out,file)));
 const packVersion='v-'+packHash.digest('hex').slice(0,16),packParent=path.join(out,'assets/models/user-sets',packVersion);
 await fs.mkdir(packParent,{recursive:true});await fs.rename(packRoot,path.join(packParent,'sets'));
-for(const file of ['user-creatures.js','user-corals.js']){const target=path.join(out,file);await fs.writeFile(target,(await fs.readFile(target,'utf8')).replaceAll('assets/models/user-sets/sets/',`assets/models/user-sets/${packVersion}/sets/`));}
+for(const file of ['user-creatures.js','user-corals.js','school-fish.js']){const target=path.join(out,file);await fs.writeFile(target,(await fs.readFile(target,'utf8')).replaceAll('assets/models/user-sets/sets/',`assets/models/user-sets/${packVersion}/sets/`));}
 for(const f of ['full.json','economy.json','full-webp.glb','economy-webp.glb'])await copy('assets/models/prepared-corals/'+f);
 // A static host compresses text but sends model/gltf-binary as it is. Every model the page loads gets a gzipped copy
 // beside it (the creature set 8.8 -> 3.2 MB; the landmarks and the prepared corals, which a dive waits for, about 2 MB
