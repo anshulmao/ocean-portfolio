@@ -482,6 +482,8 @@ function renderFind(id) {
       el('p', { class: 'arc-intro', text: entry.summary }),
       story && el('p', { class: 'arc-role' }, el('span', { class: 'holo-label', text: 'My role' }), el('span', { text: story.role }))),
     visual && el('div', { class: 'arc-case-visual', 'data-project': entry.id, 'data-rise': true }, visual),
+    entry.gallery?.length && el('section', { class: 'arc-case-gallery', 'aria-label': `${entry.title} experience` },
+      el('h4', { text: entry.galleryTitle || 'The experience' }), el('div', { class: `arc-case-gallery-grid${entry.galleryLayout === 'wide' ? ' arc-case-gallery-grid--wide' : ''}` }, entry.gallery.map(id => figure(id)))),
     story ? el('div', { class: 'arc-story' },
       block(['The problem', '01'], 'arc-problem', el('p', { text: story.problem })),
       block(['The decision', '02'], 'arc-decision', el('p', { text: story.decision })),

@@ -31,8 +31,8 @@ html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{left:c
 html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero>:is(.surface-copy,.portfolio-actions){flex-basis:100%}
 html body:not([data-submerged="true"]) .hero .surface-copy .eyebrow{justify-content:flex-start;gap:14px;margin:0 0 26px;font:500 12px/1.4 var(--o-display);letter-spacing:.18em;color:var(--o-ink-2)}
 .hero .surface-copy .eyebrow span{width:36px;opacity:.8}
-.hero .surface-copy h1{font-family:var(--o-display);font-weight:var(--o-weight-display);font-size:clamp(64px,9.4vw,136px);line-height:.9;letter-spacing:-.045em;color:var(--o-ink)}
-.hero .surface-copy h1 em{display:inline-block;padding-bottom:.1em;background:linear-gradient(180deg,var(--o-ink) 12%,var(--o-sunlit) 60%,var(--o-sunlit-2) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .surface-copy h1{font-family:var(--o-display);font-weight:var(--o-weight-display);font-size:clamp(36px,5.4vw,78px);line-height:1;letter-spacing:-.045em;color:var(--o-ink)}
+.hero .surface-copy h1 em{display:block;padding-bottom:.1em;background:linear-gradient(180deg,var(--o-ink) 12%,var(--o-sunlit) 60%,var(--o-sunlit-2) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
 html body:not([data-submerged="true"]) .hero .surface-copy .lede{max-width:520px;margin:22px 0 0;font:400 clamp(17px,1.55vw,22px)/1.45 var(--o-display);color:var(--o-ink-2)}
 
 /* Two actions, in their original look: the solid dive button and the pale work link */
@@ -85,7 +85,7 @@ html body:not([data-submerged="true"]) .view-controls:is(:hover,:focus-within){o
   html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{left:calc(var(--o-safe-l) + var(--o-pad) + 10px);right:calc(var(--o-safe-r) + var(--o-pad) + 10px);top:calc(var(--o-under-bar) + 36px);width:auto}
   html body:not([data-submerged="true"]) .hero .surface-copy .eyebrow{font-size:10.5px;letter-spacing:.16em;margin-bottom:12px}
   .hero .surface-copy .eyebrow span{width:22px}
-  .hero .surface-copy h1{font-size:clamp(56px,17vw,72px)}
+  .hero .surface-copy h1{font-size:clamp(32px,8vw,48px)}
   html body:not([data-submerged="true"]) .hero .surface-copy .lede{font-size:16.5px;margin-top:12px}
   html body:not([data-submerged="true"]) .portfolio-actions{flex-direction:column;align-items:stretch;gap:10px;margin-top:20px}
   html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.logbook-link){justify-content:flex-start;min-height:54px;font-size:17px;padding:0 22px}
@@ -111,7 +111,7 @@ html body:not([data-submerged="true"]) .view-controls:is(:hover,:focus-within){o
 @media(pointer:coarse) and (max-height:499px){
   html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{left:calc(var(--o-safe-l) + var(--o-pad) + 12px);top:var(--o-under-bar);width:min(560px,62vw);column-gap:20px}
   html body:not([data-submerged="true"]) .hero .surface-copy .eyebrow{margin-bottom:8px;font-size:10.5px}
-  .hero .surface-copy h1{font-size:clamp(38px,11vh,46px)}
+  .hero .surface-copy h1{font-size:clamp(30px,7vh,42px)}
   html body:not([data-submerged="true"]) .hero .surface-copy .lede{margin-top:8px;font-size:15px;line-height:1.4}
   html body:not([data-submerged="true"]) .portfolio-actions{margin-top:14px;gap:10px}
   html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.logbook-link){min-height:44px;padding:0 18px;font-size:15px}
@@ -127,7 +127,7 @@ html body:not([data-submerged="true"]) .view-controls:is(:hover,:focus-within){o
 }
 @media(max-height:760px) and (min-width:601px) and (min-height:500px),(max-height:760px) and (min-width:601px) and (pointer:fine){
   html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{top:118px}
-  .hero .surface-copy h1{font-size:clamp(56px,8vw,104px)}
+  .hero .surface-copy h1{font-size:clamp(36px,5.4vw,78px)}
   .hero .surface-copy .eyebrow{margin-bottom:16px}
   html body:not([data-submerged="true"]) .portfolio-actions{margin-top:24px}
   html body:not([data-submerged="true"]):not([data-exploring="true"]) :is(.portfolio-options,.portfolio-links){margin-top:12px}

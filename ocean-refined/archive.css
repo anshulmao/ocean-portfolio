@@ -625,3 +625,10 @@ body:is([data-submerged="true"],[data-exploring="true"]) .logbook-link{display:n
   @starting-style{#landmark-dialog[open]{scale:1;translate:0 4%}}
 }
 @media(prefers-reduced-motion:reduce){#landmark-dialog .arc-index-toggle::after{transition:none}}
+.arc-case-gallery{margin:24px 0}
+.arc-case-gallery h4{margin:0 0 12px}
+.arc-case-gallery-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.arc-case-gallery-grid .arc-media{min-width:0;margin:0}
+.arc-case-gallery-grid--wide{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:600px){.arc-case-gallery-grid.arc-case-gallery-grid--wide{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:700px){.arc-case-gallery-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

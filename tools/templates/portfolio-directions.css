@@ -1,0 +1,200 @@
+/* Five layout studies on the shared ocean design system. */
+.direction-review-bar{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:52px;padding:8px max(22px,calc((100% - 1320px)/2));background:color-mix(in oklab,var(--o-surface-1) 75%,transparent);border-bottom:1px solid var(--line);font-size:12px}
+.direction-review-bar>a{display:flex;align-items:center;gap:8px;min-height:36px;text-decoration:none}
+.direction-review-bar>a .reading-icon{width:15px;height:15px;rotate:180deg}
+.direction-review-bar>span{color:var(--muted);font-size:11px}
+.direction-review-bar nav{display:flex;gap:5px}
+.direction-review-bar nav a{display:grid;place-items:center;width:32px;height:32px;border:1px solid var(--line);border-radius:50%;text-decoration:none;font:10px var(--o-mono)}
+.direction-review-bar a[aria-current]{background:var(--ink);color:var(--surface)}
+.reading-direction .reading-section-heading{grid-template-columns:1fr;gap:16px}
+.reading-direction .reading-roles,.reading-direction .reading-resume{margin-left:0}
+.direction-hero-portrait{align-self:center;max-width:410px;width:100%;justify-self:center}
+.direction-hero-portrait .reading-portrait{width:100%;max-width:none;border-radius:28px}
+.direction-hero-portrait .reading-portrait img{aspect-ratio:4/5;object-position:center 30%}
+.direction-hero-portrait>.reading-text-link{margin:12px 0 0 4px;font-size:12px;color:var(--muted)}
+.reading-direction .reading-introduction{grid-template-columns:1fr;padding-top:36px;padding-bottom:64px;border-top:1px solid var(--line)}
+.reading-direction .reading-introduction-copy{display:grid;grid-template-columns:1fr 1.2fr;gap:12px 64px;align-items:start}
+.reading-direction .reading-introduction-copy>.reading-kicker{grid-column:1}
+.reading-direction .reading-introduction-copy h2{grid-column:1;grid-row:2/4;font-size:38px;margin:0}
+.reading-direction .reading-introduction-copy .reading-prose{grid-column:2;grid-row:1/4;font-size:16px}
+.reading-direction .reading-introduction-copy .reading-links{grid-column:2;margin-top:12px}
+.reading-direction .reading-introduction-copy>.reading-text-link{grid-column:1;margin-top:8px}
+/* 01: personal introduction, portrait in the first view. */
+.direction-portrait .reading-hero{padding-top:60px;align-items:center;gap:0 90px}
+.direction-portrait .reading-hero h1{font-size:clamp(56px,6.6vw,94px)}
+.direction-portrait .reading-hero .reading-proof{margin-top:36px}
+.direction-portrait .reading-nav .reading-dive{background:var(--o-btn);color:var(--o-btn-ink)}
+/* 02: the work is the primary navigation and content. */
+.direction-work .reading-hero{grid-template-columns:1.7fr .65fr;gap:0 64px;padding-top:40px}
+.direction-work .reading-hero h1{font-size:clamp(42px,4.5vw,65px);max-width:15ch;line-height:1.05}
+.direction-work .reading-hero h1 br{display:none}
+.direction-work .reading-hero h1 em::before,.direction-work .reading-hero h1 em::after{content:' '}
+.direction-work .direction-hero-portrait{max-width:230px}
+.direction-work .direction-hero-portrait .reading-portrait img{aspect-ratio:1}
+.direction-work .direction-hero-portrait .reading-portrait figcaption{display:none}
+.direction-work .reading-hero .reading-proof{margin-top:24px;padding-top:18px}
+.direction-work .reading-hero-foot{margin-top:26px}
+.direction-work .reading-hero .reading-proof,.direction-work .reading-hero-foot{display:none}
+.direction-work .reading-section--work{padding-top:40px}
+.direction-work .reading-flagship-grid,.direction-work .reading-project-grid{grid-template-columns:1fr;gap:28px}
+.direction-work .reading-project-grid{margin-top:28px}
+.direction-work .reading-card-link{display:grid;grid-template-columns:1.15fr 1fr;align-items:stretch}
+.direction-work .reading-card-cover{aspect-ratio:auto;min-height:290px;height:100%}
+.direction-work .reading-card-copy{padding:34px}
+.direction-work .reading-card-title h3{font-size:42px}
+.direction-work .reading-card-copy>p:not(.reading-kicker){font-size:18px}
+.direction-work .reading-card-action{margin-top:auto;padding-top:18px}
+.direction-work .reading-card-copy>.reading-kicker{margin-bottom:12px}
+.direction-work .reading-introduction{padding-top:50px;background:var(--o-g1)}
+/* 03: a filled, persistent rail replaces the empty label column. */
+.direction-field{--band:48px;--page:1000px}
+.direction-field main,.direction-field .reading-footer{margin-left:290px}
+.direction-field .direction-rail{position:fixed;left:22px;top:78px;bottom:22px;width:246px;max-width:none;margin:0;padding:22px 18px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:20px;border-radius:26px;overflow-y:auto}
+.direction-field .direction-rail .reading-wordmark{font-size:12px;gap:10px}
+.direction-field .direction-rail .reading-wordmark small{display:block;font-size:9px}
+.direction-rail-portrait{width:140px;align-self:center}
+.direction-rail-portrait .reading-portrait{border-radius:18px}
+.direction-rail-portrait .reading-portrait img{aspect-ratio:1;object-position:center 32%}
+.direction-rail-portrait figcaption{display:none}
+.direction-field .direction-rail>.reading-kicker{font-size:9px;letter-spacing:.09em;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.direction-field .direction-rail nav{width:100%;margin:0;order:0;border:0;padding:0}
+.direction-field .direction-rail nav ul{display:flex;flex-direction:column;align-items:stretch;gap:4px}
+.direction-field .direction-rail nav a{display:flex;align-items:center;gap:10px;min-height:42px;padding:9px 10px;border-radius:10px;font-size:12px}
+.direction-rail nav .reading-icon{width:16px;height:16px;color:var(--accent)}
+.direction-rail nav small{margin-left:auto;font:8px var(--o-mono);opacity:.55}
+.direction-field .direction-rail>.reading-dive{margin-top:auto;justify-content:center;padding:0 12px;font-size:11px}
+.direction-field .reading-hero{grid-template-columns:1fr;padding-top:50px}
+.direction-field .reading-hero h1{font-size:clamp(54px,6.3vw,86px)}
+.direction-field .reading-hero h1 br{display:none}
+.direction-field .reading-hero h1 em::before,.direction-field .reading-hero h1 em::after{content:' '}
+.direction-field .reading-proof{max-width:640px}
+.direction-field .reading-hero-foot{margin-top:30px}
+.direction-field .reading-introduction-copy{grid-template-columns:1fr;gap:20px}
+.direction-field .reading-introduction-copy>*{grid-column:1!important;grid-row:auto!important}
+.direction-field .reading-flagship-grid,.direction-field .reading-project-grid{gap:24px}
+.direction-field .reading-card-title h3{font-size:30px}
+.direction-field .reading-card-copy{padding:18px}
+.direction-field .reading-card-copy>.reading-kicker{font-size:9px;letter-spacing:.03em}
+.direction-field .reading-about-layout{grid-template-columns:1fr;gap:32px}
+.direction-field .reading-approach-note{max-width:60ch}
+.direction-field .reading-approach-note h3 br{display:none}
+.direction-field .reading-approach-note h3 br::after{content:' '}
+.direction-field .reading-role{grid-template-columns:1fr;gap:16px}
+.direction-field .reading-contact>div{grid-template-columns:1fr;gap:30px}
+/* 04: a chapter sequence with large image-led project rows. */
+.direction-chapters .reading-nav{border-radius:24px}
+.direction-chapters .reading-nav nav a{font-size:11px;padding:10px}
+.direction-chapters .reading-wordmark small{display:none}
+.direction-chapters .reading-hero{grid-template-columns:1.5fr .8fr;gap:0 60px;align-items:center}
+.direction-chapters .reading-hero h1{font-size:clamp(60px,7.5vw,106px)}
+.direction-chapters .direction-hero-portrait{max-width:340px}
+.direction-chapters .direction-hero-portrait .reading-portrait{border-radius:180px 180px 24px 24px}
+.direction-chapters .reading-about-layout{grid-template-columns:1fr;gap:40px}
+.direction-chapters .reading-approach-note{max-width:70ch}
+.direction-chapters .reading-approach-note h3{font-size:34px;display:none}
+.direction-chapters .reading-process ol{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
+.direction-chapters .reading-process li{display:block;border-bottom:0;padding:28px 0}
+.direction-chapters .reading-process-number{display:block;margin-bottom:18px}
+.direction-chapters .reading-process-copy{padding-right:0}
+.direction-chapters .reading-process-icon{position:static;margin-bottom:20px}
+.direction-chapters .reading-process h3{font-size:25px}
+.direction-chapters .reading-process p{font-size:15px}
+.direction-chapters .reading-section--work{background:linear-gradient(var(--deep),var(--deep-2));color:var(--foam);--ink:var(--foam);--ink-2:var(--foam-2);--muted:rgba(255,255,255,.65);--line:var(--deep-line);--accent:var(--o-accent);padding-top:40px}
+.direction-chapters .reading-flagship-grid,.direction-chapters .reading-project-grid{grid-template-columns:1fr;gap:32px}
+.direction-chapters .reading-card-link{display:grid;grid-template-columns:1.3fr 1fr}
+.direction-chapters .reading-card-cover{height:100%;min-height:310px;aspect-ratio:auto}
+.direction-chapters .reading-card-copy{padding:36px}
+.direction-chapters .reading-card-title h3{font-size:42px}
+.direction-chapters .reading-card-action{margin-top:auto}
+/* 05: a compact overview with a persistent, labelled dock. */
+.direction-compact-head{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px var(--band)}
+.direction-compact .direction-dock{position:fixed;top:auto;bottom:16px;left:50%;translate:-50% 0;width:max-content;max-width:calc(100% - 24px);margin:0;padding:8px 12px;border-radius:24px;justify-content:center}
+.direction-compact .direction-dock ul{display:flex;gap:5px}
+.direction-compact .direction-dock a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:66px;min-height:54px;font-size:10px;padding:7px 10px}
+.direction-compact .direction-dock a{text-decoration:none}
+.direction-compact .direction-dock .reading-icon{width:19px;height:19px}
+.direction-compact .reading-hero{grid-template-columns:1.5fr .65fr;gap:0 40px;padding-top:24px}
+.direction-compact .reading-hero h1{font-size:clamp(46px,5vw,72px)}
+.direction-compact .direction-hero-portrait{max-width:260px}
+.direction-compact .reading-hero .reading-proof{margin-top:26px;padding-top:20px}
+.direction-compact .reading-proof{grid-template-columns:repeat(3,minmax(0,1fr));max-width:560px}
+.direction-compact .reading-hero-foot{margin-top:24px}
+.direction-compact .reading-introduction h2{font-size:30px}
+.direction-compact .reading-introduction .reading-prose{font-size:15px}
+.direction-compact .reading-section--work{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;padding-top:40px;padding-bottom:60px}
+.direction-compact .reading-section--work>.reading-section-heading,.direction-compact .reading-more-work{grid-column:1/-1;margin:0}
+.direction-compact .reading-section--work>.reading-section-heading{margin-bottom:12px}
+.direction-compact .reading-flagship-grid,.direction-compact .reading-project-grid{display:contents}
+.direction-compact .reading-card-title h3{font-size:28px}
+.direction-compact .reading-card-copy{padding:18px}
+.direction-compact .reading-card-copy>p:not(.reading-kicker){font-size:14px}
+.direction-compact .reading-card-copy>.reading-kicker{font-size:9px}
+.direction-compact .reading-about-layout{grid-template-columns:1fr;gap:30px}
+.direction-compact .reading-approach-note{max-width:65ch}
+.direction-compact .reading-approach-note h3{font-size:30px;line-height:1.3}
+.direction-compact .reading-approach-note h3 br{display:none}
+.direction-compact .reading-process ol{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px}
+.direction-compact .reading-process li{display:block;border-bottom:0}
+.direction-compact .reading-process-number{display:block;margin-bottom:16px}
+.direction-compact .reading-process-copy{padding:0}
+.direction-compact .reading-process-icon{position:static;margin-bottom:16px}
+.direction-compact .reading-process h3{font-size:25px}
+.direction-compact .reading-process p{font-size:14px}
+.direction-career-grid{display:grid;grid-template-columns:1.15fr 1fr;background:var(--deep-2);padding:0 var(--band);gap:36px}
+.direction-career-grid>.reading-section{padding:64px 0;background:none}
+.direction-career-grid .reading-section-heading h2{font-size:38px}
+.direction-career-grid .reading-section-intro{font-size:14px}
+.direction-career-grid .reading-role{grid-template-columns:1fr;gap:16px}
+.direction-career-grid .reading-role-copy h3{font-size:25px}
+.direction-career-grid .reading-role-copy p{font-size:14px}
+.direction-career-grid .reading-resume{grid-template-columns:1fr;padding:26px;gap:30px}
+.direction-career-grid .reading-resume-preview{max-width:230px}
+.direction-compact .reading-footer{padding-bottom:120px}
+/* The chooser uses small layout diagrams built from the actual supplied assets. */
+.direction-chooser{max-width:1280px;margin:0 auto;padding:64px 40px 80px}
+.direction-chooser h1{font-size:clamp(46px,6vw,80px);font-weight:300;margin:20px 0 24px;line-height:1.02}
+.direction-chooser>.reading-lead{max-width:62ch;font-size:19px}
+.direction-chooser>.reading-text-link{margin-top:18px}
+.direction-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:36px;margin-top:48px}
+.direction-options article{min-width:0}
+.direction-options article>a{display:block;height:100%;padding:10px;border-radius:26px;text-decoration:none;border:1px solid var(--o-g-line);background:var(--o-g1);box-shadow:var(--o-g-shadow)}
+.direction-options article>a:hover{border-color:var(--accent)}
+.direction-options article .reading-kicker{padding:22px 16px 0}
+.direction-options h2{display:flex;align-items:center;justify-content:space-between;gap:16px;font-size:30px;font-weight:300;margin:12px 16px}
+.direction-options h3{font-size:15px;margin:0 16px 10px;font-weight:500;letter-spacing:0}
+.direction-options article p:not(.reading-kicker){margin:0 16px;font-size:14px;color:var(--ink-2)}
+.direction-options article .reading-text-link{margin:18px 16px 8px;font-size:12px}
+.direction-preview{position:relative;aspect-ratio:16/10;border-radius:18px;overflow:hidden;background:linear-gradient(155deg,var(--o-surface-1),var(--o-twilight));border:1px solid var(--line)}
+.direction-preview-nav{position:absolute;left:5%;right:5%;top:7%;height:10%;border:1px solid var(--o-g-line);border-radius:20px;background:var(--o-g1);display:flex;align-items:center;gap:6%;padding:0 5%}
+.direction-preview-nav i{width:12px;height:12px;border-radius:50%;background:var(--accent);margin-right:auto}
+.direction-preview-nav span{width:10%;height:2px;background:var(--ink);opacity:.4}
+.direction-preview-title{position:absolute;left:8%;top:27%;width:48%;font-size:clamp(16px,2.1vw,28px);line-height:1.05;letter-spacing:-.04em}
+.direction-preview-title b{font-weight:300}
+.direction-preview-title i{display:block;width:75%;height:2px;background:var(--ink);opacity:.3;margin-top:14px}
+.direction-preview-title i:last-child{width:55%;margin-top:7px}
+.direction-preview-person{position:absolute;right:9%;top:25%;width:26%;height:50%;object-fit:cover;object-position:center 30%;border-radius:40px 40px 8px 8px}
+.direction-preview-projects{position:absolute;left:8%;right:8%;bottom:8%;display:grid;grid-template-columns:1fr 1fr;gap:10px;height:19%}
+.direction-preview-projects img{width:100%;height:100%;object-fit:cover;object-position:top;border-radius:5px}
+.direction-preview--2 .direction-preview-title{top:24%;font-size:19px;width:62%}
+.direction-preview--2 .direction-preview-person{width:14%;height:23%;top:24%;right:9%;border-radius:50%}
+.direction-preview--2 .direction-preview-projects{top:52%;bottom:auto;height:38%}
+.direction-preview--3 .direction-preview-nav{left:4%;top:6%;bottom:6%;right:auto;width:22%;height:auto;border-radius:12px;flex-direction:column;padding:14px 6px;gap:15px}
+.direction-preview--3 .direction-preview-nav i{margin:0}
+.direction-preview--3 .direction-preview-nav span{width:65%;height:2px}
+.direction-preview--3 .direction-preview-person{left:7%;right:auto;top:20%;width:16%;height:25%;border-radius:8px}
+.direction-preview--3 .direction-preview-title{left:32%;top:12%;font-size:22px;width:57%}
+.direction-preview--3 .direction-preview-projects{left:32%;right:7%;bottom:12%;height:40%}
+.direction-preview--4 .direction-preview-title{left:8%;top:24%;font-size:30px;width:55%}
+.direction-preview--4 .direction-preview-person{height:55%;width:24%;top:25%;right:7%;border-radius:50px 50px 6px 6px}
+.direction-preview--4 .direction-preview-projects{height:12%;bottom:7%}
+.direction-preview--5 .direction-preview-nav{top:auto;bottom:5%;left:24%;right:24%;height:10%}
+.direction-preview--5 .direction-preview-title{top:10%;font-size:22px}
+.direction-preview--5 .direction-preview-person{top:10%;height:27%;width:20%;border-radius:8px}
+.direction-preview--5 .direction-preview-projects{top:45%;height:30%;bottom:auto}
+.direction-chooser-note{margin-top:40px;border-top:1px solid var(--line);padding-top:24px;font-size:14px;color:var(--muted)}
+@media(max-width:1100px){.direction-field{--band:32px}.direction-field main,.direction-field .reading-footer{margin-left:252px}.direction-field .direction-rail{left:16px;width:218px;padding:18px 14px}.direction-field .reading-card-title h3{font-size:25px}.direction-field .reading-card-copy{padding:14px}.direction-chapters .reading-nav nav a{padding:10px 7px}.reading-direction .reading-introduction-copy{gap:12px 36px}}
+@media(max-width:900px){.direction-review-bar{padding-left:18px;padding-right:18px}.direction-review-bar>span{display:none}.direction-field main,.direction-field .reading-footer{margin-left:0}.direction-field .direction-rail{position:sticky;top:8px;bottom:auto;left:auto;width:calc(100% - 24px);margin:8px auto 0;display:grid;grid-template-columns:1fr auto;padding:12px 14px;gap:12px;overflow:visible}.direction-field .direction-rail>.reading-kicker,.direction-field .direction-rail>.reading-dive{display:none}.direction-rail-portrait{width:44px;grid-column:2;grid-row:1}.direction-rail-portrait .reading-portrait{border-radius:50%}.direction-field .direction-rail nav{grid-column:1/-1;overflow-x:auto}.direction-field .direction-rail nav ul{flex-direction:row;align-items:center;width:max-content}.direction-field .direction-rail nav a{font-size:11px;padding:8px}.direction-rail nav small{display:none}.direction-rail nav .reading-icon{width:14px}.direction-portrait .reading-hero{gap:0 40px}.direction-work .reading-card-copy,.direction-chapters .reading-card-copy{padding:24px}.direction-work .reading-card-title h3,.direction-chapters .reading-card-title h3{font-size:32px}.direction-work .reading-card-cover,.direction-chapters .reading-card-cover{min-height:260px}.direction-chapters .reading-process ol,.direction-compact .reading-process ol{grid-template-columns:1fr}.direction-chapters .reading-process li,.direction-compact .reading-process li{display:grid;grid-template-columns:30px 1fr;gap:18px;border-bottom:1px solid var(--line)}.direction-chapters .reading-process-icon,.direction-compact .reading-process-icon{position:absolute;right:0;top:0}.direction-chapters .reading-process-copy,.direction-compact .reading-process-copy{padding-right:50px}.direction-career-grid{grid-template-columns:1fr;padding:0 var(--band);gap:0}.direction-career-grid>.reading-section{padding:48px 0}.direction-career-grid .reading-resume{grid-template-columns:1fr .7fr}.direction-compact-head{padding-top:18px;padding-bottom:10px}}
+@media(max-width:650px){.direction-review-bar{gap:10px;min-height:48px;font-size:10px;padding:6px 14px}.direction-review-bar>a{gap:5px}.direction-review-bar nav{gap:3px}.direction-review-bar nav a{width:28px;height:32px;font-size:9px}.reading-direction .reading-hero{grid-template-columns:1fr;padding-top:32px;gap:26px}.reading-direction .reading-hero h1{font-size:clamp(43px,11vw,62px)}.reading-direction .direction-hero-portrait{grid-row:1;max-width:260px}.reading-direction .direction-hero-portrait .reading-portrait img{aspect-ratio:4/4.5}.reading-direction .reading-hero-copy{grid-row:2}.reading-direction .reading-hero-foot{grid-row:3;margin-top:0}.reading-direction .reading-introduction-copy{grid-template-columns:1fr;gap:18px}.reading-direction .reading-introduction-copy>*{grid-column:1!important;grid-row:auto!important}.reading-direction .reading-introduction h2{font-size:32px}.reading-direction .reading-introduction .reading-prose{font-size:15px}.reading-direction .reading-introduction{padding-top:32px;padding-bottom:40px}.direction-work .direction-hero-portrait{max-width:150px;justify-self:start;grid-row:1}.direction-work .direction-hero-portrait .reading-portrait img{aspect-ratio:1}.direction-work .direction-hero-portrait>.reading-text-link{display:none}.direction-work .reading-hero h1 br{display:initial}.direction-work .reading-hero h1 em::before,.direction-work .reading-hero h1 em::after{content:none}.direction-work .reading-hero .reading-proof{margin-top:24px}.direction-work .reading-card-link,.direction-chapters .reading-card-link{display:flex}.direction-work .reading-card-cover,.direction-chapters .reading-card-cover{height:auto;min-height:0;aspect-ratio:16/9}.direction-work .reading-card-copy,.direction-chapters .reading-card-copy{padding:22px}.direction-work .reading-card-copy>p:not(.reading-kicker){font-size:15px}.direction-work .reading-card-title h3,.direction-chapters .reading-card-title h3{font-size:30px}.direction-work .reading-card-action,.direction-chapters .reading-card-action{margin-top:22px}.direction-field{--band:22px}.direction-field .direction-rail{padding:8px 12px;gap:6px}.direction-field .reading-hero{padding-top:30px}.direction-field .reading-hero h1{font-size:46px}.direction-field .reading-hero h1 br{display:initial}.direction-field .reading-hero h1 em::before,.direction-field .reading-hero h1 em::after{content:none}.direction-field .reading-flagship-grid,.direction-field .reading-project-grid{grid-template-columns:1fr}.direction-chapters .reading-nav nav{overflow-x:auto}.direction-chapters .reading-nav ul{width:max-content;gap:6px}.direction-chapters .reading-nav nav a{font-size:10px;min-height:42px;padding:8px}.direction-chapters .direction-hero-portrait{max-width:250px}.direction-chapters .reading-process h3,.direction-compact .reading-process h3{font-size:24px}.direction-chapters .reading-process-copy,.direction-compact .reading-process-copy{padding-right:0}.direction-chapters .reading-process-icon,.direction-compact .reading-process-icon{position:static}.direction-chapters .reading-process li,.direction-compact .reading-process li{gap:12px;grid-template-columns:25px 1fr}.direction-compact .direction-dock{bottom:8px;padding:5px;max-width:calc(100% - 16px);border-radius:20px}.direction-compact .direction-dock ul{gap:0}.direction-compact .direction-dock a{min-width:42px;min-height:48px;padding:5px 6px;font-size:8px;gap:4px}.direction-compact .direction-dock .reading-icon{width:17px;height:17px}.direction-compact-head{padding:16px 22px}.direction-compact-head .reading-wordmark{font-size:11px}.direction-compact-head .reading-wordmark small{display:none}.direction-compact-head .reading-dive{font-size:10px;padding:0 10px;gap:6px}.direction-compact-head .reading-dive>.reading-icon:last-child{display:none}.direction-compact .direction-hero-portrait{max-width:220px}.direction-compact .reading-section--work{grid-template-columns:1fr}.direction-compact .reading-card-title h3{font-size:30px}.direction-career-grid .reading-resume{grid-template-columns:1fr}.direction-career-grid .reading-section-heading h2{font-size:34px}.direction-chooser{padding:40px 22px 60px}.direction-options{grid-template-columns:1fr;gap:28px;margin-top:34px}.direction-chooser h1{font-size:47px}.direction-chooser>.reading-lead{font-size:17px}.direction-preview-title{font-size:24px}.direction-preview--2 .direction-preview-title{font-size:20px}.direction-preview--3 .direction-preview-title{font-size:23px}.direction-preview--4 .direction-preview-title{font-size:25px}.direction-preview--5 .direction-preview-title{font-size:23px}}
+@media(max-width:900px){.direction-field .direction-rail nav{scrollbar-width:none}.direction-field .direction-rail nav::-webkit-scrollbar{display:none}}
+@media(max-width:650px){.direction-compact .direction-hero-portrait{max-width:130px;justify-self:start}.direction-compact .direction-hero-portrait .reading-portrait img{aspect-ratio:1;border-radius:50%}.direction-compact .direction-hero-portrait figcaption,.direction-compact .direction-hero-portrait>.reading-text-link{display:none}.direction-compact .reading-hero{gap:22px}.direction-compact .direction-dock a{min-width:40px}}
+@media(prefers-reduced-motion:reduce){.direction-preview *{animation:none;transition:none}}
