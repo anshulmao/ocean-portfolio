@@ -187,7 +187,8 @@ export function createWeather({ uniforms, scene, economy = false, onChange } = {
     const dx = Math.cos(visit.streak), dy = Math.sin(visit.streak), hx = drift.x * .55 + visit.cirrusOffset.x, hy = drift.y * .55 + visit.cirrusOffset.y;
     const r0x = .12 * dx - .06 * dy, r0y = .12 * dy + .06 * dx, r1x = -2.3 * dy, r1y = 2.3 * dx;
     cirrus.set(r0x * .06, r1x * .06, r0y * .06, r1y * .06);
-    cloudShift.set(drift.x * s + visit.offset.x, drift.y * s + visit.offset.y, (r0x * hx + r0y * hy) * .03125, (r1x * hx + r1y * hy) * .03125);
+    // The drift is turned with the pattern (c, n carry the 2.4 * s scale), so the cumulus moves with the wind whatever the turn.
+    cloudShift.set((c * drift.x - n * drift.y) / 2.4 + visit.offset.x, (n * drift.x + c * drift.y) / 2.4 + visit.offset.y, (r0x * hx + r0y * hy) * .03125, (r1x * hx + r1y * hy) * .03125);
     // The coverage field moves in its own units (.008 of the cloud's, see cloudClimate), at a share of the cloud's speed.
     const climateStep = -speed * dt * .004 * .008;
     climate.x += climateStep * (CLOUDS.climate[0] * wind.x - CLOUDS.climate[1] * wind.y);
