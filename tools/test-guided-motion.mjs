@@ -470,3 +470,27 @@ const bow = planGuidedRoute([0, -10, 0], [30, -10, 0], { floor: () => -30, clear
 assert.ok(Math.max(...bow.map(point => Math.abs(point[2]))) > 3, 'a visible gentle curve');
 assert.deepEqual(planGuidedRoute([0, -10, 0], [30, -10, 0], { floor: () => -30, clear: () => false }), []);
 console.log('PASS: rejected routes hold, explicit Skip and reduced motion fade, scenic curve checked.');
+
+// A leg replanned partway (a stall's detour, or Resume after Pause) keeps the scenic waypoints still ahead. It used to
+// drop them, so a stall going over the cliff edge below the wreck sent the arch beat in a straight line over the roof.
+for (const interruption of ['stall', 'pause']) {
+  const env = environment(60, { collision: reefCollision, residents: { sleeper: [-17, terrainHeightAt(-17, -19) + .45, -19] } });
+  toTravel(env);
+  // Skip ahead with Continue to the beat before the arch, then let the arch leg swim.
+  for (let i = 0; i < 400 && !(tourStatus() === 'look' && env.state.tour.key === 'wreck-life'); i++) { window.oceanTour.next(); env.tick(.5); }
+  assert.equal(env.state.tour.key, 'wreck-life', 'reached the wreck by Continue');
+  window.oceanTour.next(); env.tick(.1);
+  assert.equal(env.state.tour.key, 'arch');
+  const before = env.samples.length;
+  // Over the cliff edge, where the live app stalled, the swim is interrupted.
+  for (let i = 0; i < 60 * 60 && env.state.playerPosition[1] > -30; i++) env.tick();
+  if (interruption === 'stall') env.nav.cancelTravel();
+  else { key('KeyP'); env.tick(1); key('KeyP'); }
+  for (let i = 0; i < 60 * 100 && tourStatus() === 'travel'; i++) env.tick();
+  assert.equal(tourStatus(), 'look', `the arch beat arrived after a ${interruption}`);
+  if (interruption === 'stall') assert.equal(env.state.tour.detours, 1, 'the stall was recovered by a detour');
+  const roof = terrainHeightAt(20, -72) + 9.6 - .6, under = env.samples.slice(before).filter(p => Math.abs(p[2] + 72) < 1.5);
+  assert.ok(under.length && under.every(p => Math.abs(p[0] - 20) < 3.5 && p[1] < roof), `still through the arch after a ${interruption} (${JSON.stringify(under[0])})`);
+  window.oceanTour.stop(); env.nav.destroy();
+}
+console.log('PASS: a stall or a pause partway keeps the swim through the arch.');

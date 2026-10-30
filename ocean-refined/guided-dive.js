@@ -78,6 +78,8 @@ let best = Infinity, stall = 0, waited = 0, cut = null, cutTime = 0, barShown = 
 let detours = 0, routeIssue = false, panIndex = 0, panTime = 0, stepTime = 0, prelude = -1, reveal = 0, called = true;
 // Seconds since the tour's title card went up, or -1: it goes up as the camera goes under, not once the dive settles.
 let titled = -1;
+// Where the current leg set off along its scenic waypoints, or null on a leg without them.
+let scenicFrom = null;
 // cheer: the control just done in the welcome, shown ticked for CHEER seconds before the next is asked for.
 let cheer = null, cheerFor = 0, keysShown = '';
 // roaming: the visitor has taken the controls in the welcome, inside ROAM of `start`. starting: Start pressed, waiting on the assets.
@@ -132,11 +134,25 @@ function clear(a, b) {
   const radius = Math.max(.85, (controls()?.settings?.collisionRadius ?? .55) + .25);
   return !world?.segmentClear || world.segmentClear(from.fromArray(a), to.fromArray(b), radius);
 }
-function route(start, step, scenic = true) {
+// A leg from the step before takes the step's scenic waypoints. Replanned mid-leg (a detour, or Resume after Pause), it keeps
+// the ones still ahead: dropping them turned the arch's swim-through into a straight line over its roof.
+function route(start, step, via = arrived === index - 1 ? step.via ?? [] : []) {
   leg.length = 0;
-  leg.push(...planGuidedRoute(start, goal, { via: scenic && arrived === index - 1 ? step.via : [], floor: terrainHeightAt, clear,
+  leg.push(...planGuidedRoute(start, goal, { via, floor: terrainHeightAt, clear,
     clearance: Math.max(1.5, controls()?.settings?.floorClearance ?? 1.5) }));
   return leg.length > 0;
+}
+// The scenic waypoints after the stretch of the scenic line (the leg's start, its waypoints, its goal) the diver is nearest.
+function onward(step, at) {
+  if (!scenicFrom || !step.via?.length) return [];
+  const line = [scenicFrom, ...step.via, goal]; let nearest = Infinity, next = 0;
+  for (let i = 1; i < line.length; i++) {
+    from.fromArray(line[i - 1]); to.fromArray(line[i]).sub(from);
+    const t = Math.max(0, Math.min(1, here.fromArray(at).sub(from).dot(to) / Math.max(to.lengthSq(), 1e-6)));
+    const d = here.fromArray(at).distanceTo(from.addScaledVector(to, t));
+    if (d < nearest) { nearest = d; next = i - 1; }
+  }
+  return step.via.slice(next);
 }
 function paint() {
   const step = STEPS[index], shown = status !== 'off' && status !== 'starting' && reveal <= 0, reading = status === 'intro' || status === 'look' || status === 'dwell' || status === 'done';
@@ -289,6 +305,7 @@ function go(next) {
   index = next; resolve(STEPS[index]); status = 'travel'; paused = routeIssue = roaming = false; detours = 0;
   inputs = controls().nav.inputs; paint();
   here.fromArray(window.oceanDiagnostics.playerPosition);
+  scenicFrom = arrived === index - 1 && STEPS[index].via ? here.toArray() : null;
   if (reduced()) { cutTo(land); return; }
   if (!route(here.toArray(), STEPS[index])) { blockRoute(); return; }
   launch();
@@ -400,7 +417,7 @@ function update(dt, api, state, diving) {
   const remaining = Number.isFinite(nav.travelRemaining) ? nav.travelRemaining : distance;
   if (remaining < best - .25) { best = remaining; stall = 0; } else stall += dt;
   if (legTime > 1 && (stall > 5 || !nav.travelling || nav.travelBlocked)) {
-    if (detours++ < 2 && route(here.toArray(), STEPS[index], false)) { launch(); paint(); }
+    if (detours++ < 2 && route(here.toArray(), STEPS[index], onward(STEPS[index], state.playerPosition))) { launch(); paint(); }
     else blockRoute();
   }
 }
@@ -445,7 +462,7 @@ function togglePause() {
   if (paused && !cut) controls()?.cancelTravel();
   if (!paused && !cut) {
     routeIssue = false; detours = 0; here.fromArray(window.oceanDiagnostics.playerPosition);
-    if (!route(here.toArray(), STEPS[index], false)) { blockRoute(); return; }
+    if (!route(here.toArray(), STEPS[index], onward(STEPS[index], window.oceanDiagnostics.playerPosition))) { blockRoute(); return; }
     launch();
   }
   paint();
