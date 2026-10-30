@@ -177,6 +177,8 @@ function bake(ctx) {
     arrive: cue(1.6, [[0, 659.3, .22, .8], [.42, 659.3, .18, .2]]),
     open: cue(.8, [[0, 587.3, .07, .7], [.09, 880, .1, .7]]),
     close: cue(.8, [[0, 880, .07, .7], [.09, 587.3, .1, .6]]),
+    // A big animal in sight: two low, slow notes, a rising fifth, softer than the discovery chime, and their echo.
+    sighting: cue(3, [[0, 392, .55, .75], [.38, 587.3, .7, .7], [1.05, 587.3, .6, .16]]),
     lamp: cue(.3, [[0, 1900, .006, .5], [0, 240, .022, .8]]),
     // The demand valve cracking open at the start of a breath: a dry tick and the faintest whistle.
     valve: (() => { const buffer = make(.08, 1), data = buffer.getChannelData(0); ring(buffer, 0, 3300, 3000, .01, .35); for (let i = 0, level = 1; i < rate * .006; i++, level *= .996) data[i] += (Math.random() * 2 - 1) * level; return top(buffer, LEVEL.valve); })() };
@@ -493,6 +495,16 @@ $('#motion')?.addEventListener('click', () => setTimeout(() => { held = Boolean(
 calm.addEventListener('change', () => { held = false; if (enabled) start(); });
 addEventListener('oceanlightning', event => { if (timer && !calm.matches) { thunderAt = ctx.currentTime + span(THUNDER.delay); thunderPower = (event.detail?.power ?? 1) * intensity.storm; } });
 addEventListener('oceanlamp', () => { if (timer) play(graph, 'lamp'); });
+// The look-there marker found a big animal: the note leans a little towards the side it is on. One animal is marked at
+// most once every SIGHTING seconds, however often the marker comes back to it.
+const SIGHTING = 30, sighted = new Map();
+addEventListener('oceansighting', ({ detail }) => {
+  if (!timer || !primed || scene.open || ctx.currentTime < (sighted.get(detail.id) ?? -Infinity) + SIGHTING) return;
+  sighted.set(detail.id, ctx.currentTime);
+  const ear = window.oceanControls?.getCamera?.()?.matrixWorld.elements, dx = detail.x - (ear?.[12] ?? 0), dz = detail.z - (ear?.[14] ?? 0);
+  const side = ear ? (dx * ear[0] + (detail.y - ear[13]) * ear[1] + dz * ear[2]) / (Math.hypot(dx, detail.y - ear[13], dz) || 1) : 0;
+  play(graph, 'sighting', graph.master, 1, 0, clamp(side * .5, -.5, .5));
+});
 
 // 5. General settings: ambient sound and its level sit with the sky controls.
 const group = document.createElement('section');
