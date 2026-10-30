@@ -200,11 +200,13 @@ function stepJob(job){
   return false;
 }
 // kind: 'gpu' takes one GPU step, 'cpu' the steps of this thread up to the budget, 'all' both (no frame is being drawn). Returns the steps taken.
-function runJobs(budget,kind){
+// strict: nothing whose expected time exceeds the budget, and no model-pipeline turn (their slices run over in parsing).
+function runJobs(budget,kind,strict=false){
   const start=performance.now();let ran=0;
   for(let i=0;i<jobs.length;){
     const job=jobs[i];
     if(job.waiting||kind!=='all'&&(kind==='gpu')!==job.gpu){i++;continue;}
+    if(strict&&(job.turn||performance.now()-start+job.cost>budget))break;
     if(ran&&(kind==='gpu'||performance.now()-start+job.cost>budget))break;
     // A turn for the model pipelines (see setPacer below): they take what is left of this slice, so it is the last thing in it.
     if(job.turn){jobs.splice(i,1);const left=Math.max(2,budget-(performance.now()-start));turnEnd=performance.now()+left;turnCallbacks=callbacks;work.turns++;ran++;job.turn(left);break;}
@@ -256,7 +258,21 @@ function afterFrame(){
 let callbackAt=0,slicePosted=false;
 const slicePort=new MessageChannel();
 slicePort.port1.onmessage=()=>{slicePosted=false;idleSlice();};
-function idleSlices(){if(!slicePosted&&!ticking&&hurry&&diagnostic.ready&&jobs.some(job=>!job.waiting&&!job.gpu)){slicePosted=true;slicePort.port2.postMessage(0);}}
+// Before that, the browser's idle periods take a little of the build (requestIdleCallback, where there is one: it knows
+// when the next frame is due): at most 8 ms each, only steps expected to fit, and only when the last gap between
+// callbacks was on the device's usual pace (a frame running late leaves no room for more). What does not fit waits
+// for the time the frames leave (afterFrame), as it always did.
+let idlePosted=false,lastGap=0;
+function idleSlices(){
+  if(ticking||!diagnostic.ready||!jobs.some(job=>!job.waiting&&!job.gpu))return;
+  if(hurry){if(!slicePosted){slicePosted=true;slicePort.port2.postMessage(0);}return;}
+  if(idlePosted||!window.requestIdleCallback)return;idlePosted=true;
+  requestIdleCallback(deadline=>{
+    idlePosted=false;if(!running||diagnostic.error||hurry)return;
+    const room=Math.min(8,deadline.timeRemaining()-2);
+    if(room>=2&&lastGap<paceGap*1.5&&runJobs(room,'cpu',true))idleSlices();
+  });
+}
 function idleSlice(){
   if(!running||diagnostic.error)return;
   const room=hurry>1?30:hurry?Math.min(30,callbackAt+paceGap-performance.now()-4):0;
@@ -1096,7 +1112,7 @@ function renderBudget(){
 }
 function frame(now){
   if(!focused||!renderer){running=false;return;}
-  callbacks++;callbackAt=performance.now();
+  callbacks++;const callbackNow=performance.now();lastGap=callbackAt?callbackNow-callbackAt:0;callbackAt=callbackNow;
   const raw=lastFrame?Math.min((now-lastFrame)/1000,1):1/60;lastFrame=now;
   // The refresh rate is read from the callback gaps and a frame is drawn every stride-th callback (see frame-pacing.js).
   // A new reading of the rate (the first one, or the window moved to another display) starts the frame-rate windows afresh.
