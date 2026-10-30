@@ -230,6 +230,17 @@ function glowMaterial(time, sways) {
   return stylize(material, { toon: 0, rim: .2, caustics: 0 });
 }
 
+// Where the formations stand and the ground each covers (radius, m): the coral set keeps its gardens off them.
+export const FORMATION_FOOTPRINTS = [
+  { name: 'Table coral tower', x: 38, z: -8, radius: 6 },
+  { name: 'Brain coral dome', x: -42, z: -2, radius: 8 },
+  { name: 'Pillar coral cathedral', x: 48, z: -28, radius: 8 },
+  { name: 'Kelp grove', x: -50, z: -52, radius: 8.5 },
+  { name: 'Giant clam', x: -9, z: -54, radius: 3.5 },
+  { name: 'Soft coral spire', x: 50, z: -72, radius: 6 },
+  { name: 'Lantern garden', x: 8, z: -86, radius: 6.5 }
+];
+
 /**
  * Seven hand-composed reef landmarks placed between the portfolio sites.
  * Returns { root, update(elapsed, night, depth), counts, sites }.
@@ -519,13 +530,14 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
     }
   }
 
-  yield; tableTower(38, -8);
-  yield; brainDome(-42, -2);
-  yield; pillarCathedral(48, -28, Math.atan2(-39 + 28, 18 - 48));
-  yield; kelpGrove(-50, -52);
-  yield; giantClam(-9, -54, .5);
-  yield; rockSpire(50, -72);
-  yield; lanternGarden(8, -86);
+  const at = name => FORMATION_FOOTPRINTS.find(f => f.name === name);
+  yield; tableTower(at('Table coral tower').x, at('Table coral tower').z);
+  yield; brainDome(at('Brain coral dome').x, at('Brain coral dome').z);
+  yield; pillarCathedral(at('Pillar coral cathedral').x, at('Pillar coral cathedral').z, Math.atan2(-39 + 28, 18 - 48));
+  yield; kelpGrove(at('Kelp grove').x, at('Kelp grove').z);
+  yield; giantClam(at('Giant clam').x, at('Giant clam').z, .5);
+  yield; rockSpire(at('Soft coral spire').x, at('Soft coral spire').z);
+  yield; lanternGarden(at('Lantern garden').x, at('Lantern garden').z);
 
   yield; finish();
   for (const geometry of [rockLo, rockHi, plate, stalk, pillar, dome, domeLo, puff, orb, bead, stipe, blade, tentacle]) geometry.dispose();
