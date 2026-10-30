@@ -72,6 +72,8 @@ try {
     camera.rotation.x = pitch + .5; camera.updateMatrixWorld(true);
     const dome = median();
     camera.rotation.x = pitch; camera.updateMatrixWorld(true); for (const child of hidden) child.visible = true;
+    // The canvas still holds the sky-only draw; draw the restored view so the next screenshot is of it.
+    oceanControls.render();
     return {all: Number(all.toFixed(1)), dome: Number(dome.toFixed(1))};
   });
   const shot = async name => page.screenshot({path: path.join(OUT, `${LABEL}-${name}.png`)});
