@@ -113,7 +113,7 @@ function* brainTexture(size = 384) {
   // this loop a fifth of a second), and the waves are read from a flat array; the sums are the same sums.
   const data = image.data, flat = new Float64Array(waves.flat()), count = flat.length;
   for (let y = 0; y < size; y++) {
-    if (y % 12 === 0) yield;
+    if (y % 4 === 0) yield;
     for (let x = 0; x < size; x++) {
       const u = x / size * 2 - 1, v = y / size * 2 - 1; let sum = 0;
       for (let w = 0; w < count; w += 3) sum += Math.cos(flat[w] * u + flat[w + 1] * v + flat[w + 2]);
@@ -220,13 +220,15 @@ transformed.z += cos(heroWave * .77 + aSway.z) * aSway.x * .55;`);
 }
 const standard = options => new THREE.MeshStandardMaterial({ color: '#ffffff', vertexColors: true, roughness: .72, ...options });
 // Emissive follows the vertex colour, so one material carries every glow hue.
-function glowMaterial(time, sways) {
+function glowMaterial(time) {
   const material = standard({ color: '#9aa3a3', roughness: .5, emissive: '#ffffff', emissiveIntensity: .6, side: THREE.DoubleSide });
+  // The still glow (the clam's mantle) runs the swaying program too: its geometry has no sway weights, which read as
+  // zero, so nothing moves, and one program fewer is built.
   material.onBeforeCompile = shader => {
-    if (sways) swayPatch(shader, time);
+    swayPatch(shader, time);
     shader.fragmentShader = shader.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= vColor.rgb;');
   };
-  material.customProgramCacheKey = () => `hero-glow-${sways ? 'sway' : 'still'}-v1`;
+  material.customProgramCacheKey = () => 'hero-glow-sway-v1';
   return stylize(material, { toon: 0, rim: .2, caustics: 0 });
 }
 
@@ -257,7 +259,7 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
   // One set of buffers per formation. The faceted stone carries its face
   // normals in its vertices, so it shares the coral's buffer and material.
   let rocks, corals, brains, swayers, glows;
-  const glowSway = glowMaterial(time, true);
+  const glowSway = glowMaterial(time);
   const swayMaterial = standard({ side: THREE.DoubleSide, roughness: .66 });
   swayMaterial.onBeforeCompile = shader => swayPatch(shader, time);
   swayMaterial.customProgramCacheKey = () => 'hero-sway-v1';
@@ -302,7 +304,7 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
   };
 
   // 1. Table-coral tower: plates spiral up a leaning stone trunk in the shallows.
-  function tableTower(cx, cz) {
+  function* tableTower(cx, cz) {
     const g = begin('Table coral tower', cx, cz, 6, 10.5);
     const trunk = h => [cx + Math.sin(h * .55) * .7 + h * .07, cz + Math.cos(h * .4) * .5 - .5];
     for (let i = 0; i < 6; i++) {
@@ -321,6 +323,7 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
       const x = tx + Math.cos(angle) * d, z = tz + Math.sin(angle) * d;
       table(x, g + h, z, r, lean(angle, .13, R() * TAU), tones[i % tones.length], 1.1);
       solid(x - r * .65, g + h - .25, z - r * .65, x + r * .65, g + h + .25, z + r * .65);
+      yield;
     }
     { const [tx, tz] = trunk(9.2); table(tx, g + 10, tz, 2.4, lean(1, .06, 2), '#ffd27a', 1.8); solid(tx - 1.5, g + 9.7, tz - 1.5, tx + 1.5, g + 10.3, tz + 1.5); }
     // Brackets on the trunk and seedlings on the sand echo the big plates.
@@ -328,6 +331,7 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
       const h = .8 + i * 1.0, angle = i * 2.4 + 2.1, [tx, tz] = trunk(h), d = 2.1 - h * .14;
       table(tx + Math.cos(angle) * d, g + h + .5, tz + Math.sin(angle) * d, rr(.6, 1.05), lean(angle, .3, R() * TAU), pick(tones), .3);
     }
+    yield;
     for (const [dx, dz, r] of [[5.6, 2.2, 1.5], [-4.8, 4.4, 1.2], [-5.4, -3.6, 1.7], [3.2, -5.8, 1.1], [6.6, -2.8, .9]]) {
       const x = cx + dx, z = cz + dz; table(x, floor(x, z) + .7 + r * .3, z, r, lean(R() * TAU, .1, R() * TAU), pick(tones), 1 + r * .3);
     }
@@ -335,7 +339,7 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
   }
 
   // 2. Brain-coral dome on a stone ledge; the gap beneath is a swim-through.
-  function brainDome(cx, cz) {
+  function* brainDome(cx, cz) {
     const g = begin('Brain coral dome', cx, cz, 8, 9.2), ledge = g + 3.2;
     for (const side of [-1, 1]) {
       for (const [dx, w] of [[-3.3, 2.5], [.3, 3], [3.5, 2.4]]) {
@@ -343,9 +347,12 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
       }
       solid(cx - 4.4, g, cz + side * 4.2, cx + 4.6, g + 4.2, cz + side * 7);
     }
+    yield;
     rocks.add(rockHi, xf(cx, ledge + 1, cz, [6.3, 1, 6.7], [0, .4, 0]), stone);
     const low = C('#7fb886'), high = C('#eef0a0'), brain = (c, p, n, l) => c.copy(low).lerp(high, smoothstep(l.y, -.1, .95));
+    yield;
     brains.add(dome, xf(cx, ledge + 1.5, cz, [5.6, 4.5, 5.6], [0, 1.1, 0]), brain);
+    yield;
     solid(cx - 4.3, ledge + .35, cz - 4.5, cx + 4.3, ledge + 5, cz + 4.5);
     for (const [dx, dz, r] of [[6.6, 9.2, 1.7], [-7.2, -9, 1.4], [2.4, -10.2, 1.1]]) {
       const x = cx + dx, z = cz + dz; brains.add(domeLo, xf(x, floor(x, z) - .1, z, [r, r * .8, r], [0, R() * TAU, 0]), brain);
@@ -356,11 +363,12 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
       const dx = rr(-3.6, 3.6), dz = rr(-2.6, 2.6), y = ledge + 1 - Math.sqrt(Math.max(.05, 1 - (dx / 6.3) ** 2 - (dz / 6.7) ** 2));
       glows.add(puff, xf(cx + dx, y - .12, cz + dz, [.2, .3, .2].map(v => v * rr(.8, 1.3))), lantern);
     }
+    yield;
     boulders(cx, cz, [[6.4, 5.2, 1.3], [-6.2, 5.6, 1.1], [-6, -5.4, 1.4], [6.2, -5.8, 1]]);
   }
 
   // 3. Pillar-coral cathedral: organ-pipe columns in a horseshoe, tallest at the back.
-  function pillarCathedral(cx, cz, open) {
+  function* pillarCathedral(cx, cz, open) {
     begin('Pillar coral cathedral', cx, cz, 8, 10.5);
     const base = C('#7658ad'), mid = C('#c3a0ee'), tip = C('#fff1fb');
     const paint = (c, p, n, l) => c.copy(base).lerp(mid, clamp(l.y * 1.5, 0, 1)).lerp(tip, smoothstep(l.y, .72, 1));
@@ -375,13 +383,15 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
         const f = i / (total - 1), a = open + gap + f * (TAU - gap * 2), back = Math.pow(.5 - .5 * Math.cos(f * TAU), 1.3);
         const d = radius + rr(-.35, .35), h = (low + (high - low) * back) * rr(.85, 1.1);
         column(cx + Math.cos(a) * d, cz + Math.sin(a) * d, girth * (.75 + .4 * back) * rr(.9, 1.1), h);
+        if (i % 6 === 5) yield;
       }
+      yield;
     }
     boulders(cx, cz, [[Math.cos(open + 1.5) * 8.4, Math.sin(open + 1.5) * 8.4, 1.3], [Math.cos(open + 3.4) * 8.8, Math.sin(open + 3.4) * 8.8, 1.6], [Math.cos(open - 1.6) * 8.2, Math.sin(open - 1.6) * 8.2, 1.2]]);
   }
 
   // 4. Kelp and sea-whip grove: nothing solid, so the diver can drift through it.
-  function kelpGrove(cx, cz) {
+  function* kelpGrove(cx, cz) {
     begin('Kelp grove', cx, cz, 8.5, 15);
     const stems = economy ? 13 : 22, leaves = economy ? 8 : 12;
     const stemPaint = ramp('#6d6a30', '#a9a84c'), leafPaint = [ramp('#3d7d44', '#c3d76b', 'x'), ramp('#4f8a3c', '#e0d06a', 'x'), ramp('#2f7550', '#a6d67c', 'x')];
@@ -395,22 +405,24 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
         const t = .1 + .88 * (j + R() * .5) / leaves, [px, py, pz] = alongStipe(x, y, z, width, height, yaw, t), size = rr(1.6, 2.6) * (1 - .3 * t);
         swayers.add(blade, xf(px, py, pz, [size, size, size * rr(1.1, 1.6)], [0, j * 2.4 + yaw, rr(.1, .65)]), paint, wave);
       }
+      yield;
     }
     const whipTones = ['#ff7f6a', '#ffb35c', '#e0609a'];
     for (let i = 0, n = economy ? 8 : 14; i < n; i++) {
       const a = i * 2.4 + 1, d = rr(5.5, 9.5), x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d, y = floor(x, z) - .1, height = rr(2.6, 5), tone = pick(whipTones);
       swayers.add(stipe, xf(x, y, z, [.05, height, .05], [0, R() * TAU, 0]), ramp(tone, '#ffe9c9'), { base: y, height, amp: rr(.3, .5), phase: x * .4 + z * .3, power: 1.8 });
     }
+    yield;
     boulders(cx, cz, [[1.5, .8, 1.4], [-2.6, 2.4, 1.1], [3.4, -2.6, 1.2], [-3.2, -3, 1.5], [5.6, 2.8, .9], [-.6, 5.4, 1]], deepStone);
   }
 
   // 5. Giant clam: the valves breathe and the mantle glows between them.
   let clam = null;
-  function giantClam(cx, cz, yaw) {
+  function* giantClam(cx, cz, yaw) {
     const g = begin('Giant clam', cx, cz, 3.5, 2.6), size = 3.6, restAngle = .1;
     const shell = standard({ side: THREE.DoubleSide, roughness: .8 });
     const valves = new THREE.InstancedMesh(valveGeometry(economy ? 26 : 44, economy ? 6 : 9), shell, 2); valves.name = 'Giant clam valves';
-    const mantleMaterial = glowMaterial(time, false);
+    const mantleMaterial = glowMaterial(time);
     const mantle = new THREE.Mesh(mantleGeometry(economy ? 28 : 48, economy ? 6 : 10, restAngle), mantleMaterial); mantle.name = 'Giant clam mantle';
     const origin = new THREE.Vector3(cx, g - .3, cz);
     mantle.position.copy(origin); mantle.rotation.y = yaw; mantle.scale.setScalar(size);
@@ -418,6 +430,7 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
     clam = { valves, mantle, material: mantleMaterial, origin, yaw, size, restAngle };
     const reach = new THREE.Sphere(new THREE.Vector3(cx, g + 1, cz), 4);
     root.add(cullable(valves, reach), cullable(mantle, reach)); breathe(0, 0, 0);
+    yield;
     solid(cx - 1.3, g - .3, cz - 1.3, cx + 1.3, g + 1.6, cz + 1.3);
     const c = Math.cos(yaw), s = Math.sin(yaw), around = (a, b) => [a * c + b * s, -a * s + b * c];
     boulders(cx, cz, [around(2.5, .3), around(-2.6, -.2), around(.7, 2.1), around(-.9, -2.2), around(1.9, -1.8)].map(([dx, dz], i) => [dx, dz, .5 + (i % 3) * .12]), deepStone);
@@ -460,7 +473,7 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
       }
     }
   }
-  function rockSpire(cx, cz) {
+  function* rockSpire(cx, cz) {
     const g = begin('Soft coral spire', cx, cz, 6, 15), height = 14;
     const axis = h => [cx + h * .09 + Math.sin(h * .5) * .5, cz - h * .05 + Math.cos(h * .37) * .4 - .4];
     const girth = h => 3.3 * Math.pow(Math.max(0, 1 - h / (height + 1.5)), .8) + .45;
@@ -469,6 +482,7 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
       rocks.add(rockHi, xf(x, g + h + .4, z, [r * rr(.9, 1.1), 2.2, r * rr(.85, 1.05)], [rr(-.25, .25), R() * TAU, rr(-.25, .25)]), deepStone);
       solid(x - r * .62, g + h - .8, z - r * .62, x + r * .62, g + h + 1.6, z + r * .62);
     }
+    yield;
     // A shorter companion needle and a skirt of fallen blocks.
     for (let i = 0; i < 4; i++) {
       const r = 1.9 - i * .4;
@@ -480,6 +494,7 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
     for (let i = 0, n = economy ? 9 : 16; i < n; i++) {
       const h = 1.4 + i / n * 11 + rr(0, .5), a = i * 2.4 + .7, [x, z] = axis(h), r = girth(h) * .92;
       bouquet(x + Math.cos(a) * r, g + h + .4, z + Math.sin(a) * r, _n.set(Math.cos(a), .6, Math.sin(a)).normalize().clone(), rr(.9, 1.5), tones[i % tones.length]);
+      if (i % 3 === 2) yield;
     }
     for (let i = 0; i < 3; i++) {
       const x = cx - 4.4 + rr(-.6, .6), z = cz + 2.5 + rr(-.6, .6);
@@ -493,7 +508,7 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
   }
 
   // 7. Lantern garden: sea pens, tube anemones and bulbs that light the deep shelf.
-  function lanternGarden(cx, cz) {
+  function* lanternGarden(cx, cz) {
     begin('Lantern garden', cx, cz, 6.5, 5.5);
     boulders(cx, cz, [[0, 0, 1.9], [1.8, 1.2, 1.2], [-1.6, .6, 1.3]].concat(Array.from({ length: 7 }, (_, i) => [Math.cos(i * .9 + .3) * 5.4, Math.sin(i * .9 + .3) * 5.4, .8 + (i % 3) * .25])), deepStone);
     solid(cx - 1.4, floor(cx, cz), cz - 1.2, cx + 1.4, floor(cx, cz) + 1.2, cz + 1.2);
@@ -512,6 +527,7 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
         }
       }
       { const [px, py, pz] = alongStipe(x, y, z, width, height, yaw, 1); glows.add(puff, xf(px, py + .1, pz, .16), light, wave); }
+      yield;
     }
     // Tube anemones: a leathery sleeve with a glowing crown.
     for (let i = 0, n = economy ? 3 : 5; i < n; i++) {
@@ -531,13 +547,13 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
   }
 
   const at = name => FORMATION_FOOTPRINTS.find(f => f.name === name);
-  yield; tableTower(at('Table coral tower').x, at('Table coral tower').z);
-  yield; brainDome(at('Brain coral dome').x, at('Brain coral dome').z);
-  yield; pillarCathedral(at('Pillar coral cathedral').x, at('Pillar coral cathedral').z, Math.atan2(-39 + 28, 18 - 48));
-  yield; kelpGrove(at('Kelp grove').x, at('Kelp grove').z);
-  yield; giantClam(at('Giant clam').x, at('Giant clam').z, .5);
-  yield; rockSpire(at('Soft coral spire').x, at('Soft coral spire').z);
-  yield; lanternGarden(at('Lantern garden').x, at('Lantern garden').z);
+  yield* tableTower(at('Table coral tower').x, at('Table coral tower').z);
+  yield* brainDome(at('Brain coral dome').x, at('Brain coral dome').z);
+  yield* pillarCathedral(at('Pillar coral cathedral').x, at('Pillar coral cathedral').z, Math.atan2(-39 + 28, 18 - 48));
+  yield* kelpGrove(at('Kelp grove').x, at('Kelp grove').z);
+  yield* giantClam(at('Giant clam').x, at('Giant clam').z, .5);
+  yield* rockSpire(at('Soft coral spire').x, at('Soft coral spire').z);
+  yield* lanternGarden(at('Lantern garden').x, at('Lantern garden').z);
 
   yield; finish();
   for (const geometry of [rockLo, rockHi, plate, stalk, pillar, dome, domeLo, puff, orb, bead, stipe, blade, tentacle]) geometry.dispose();

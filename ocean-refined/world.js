@@ -5,7 +5,7 @@ import { toDisplayDepth, DISPLAY_MAX_DEPTH } from './depth-metrics.js';
 import {createDiveScooter} from './scooter.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
 import { createExpeditionUI, drawReefChart } from './expedition-ui.js';
-import { drawPreparedChart } from './prepared-charts.js';
+import { drawPreparedChart, preparedChartsReady } from './prepared-charts.js';
 import * as THREE from './vendor/three.module.min.js';
 import { createClouds, seededRandom, shareSteps, setPacer } from './assets.js';
 import { createDiver } from './diver.js';
@@ -201,11 +201,13 @@ function stepJob(job){
   return false;
 }
 // kind: 'gpu' takes one GPU step, 'cpu' the steps of this thread up to the budget, 'all' both (no frame is being drawn). Returns the steps taken.
-function runJobs(budget,kind){
+// strict: nothing whose expected time exceeds the budget, and no model-pipeline turn (their slices run over in parsing).
+function runJobs(budget,kind,strict=false){
   const start=performance.now();let ran=0;
   for(let i=0;i<jobs.length;){
     const job=jobs[i];
     if(job.waiting||kind!=='all'&&(kind==='gpu')!==job.gpu){i++;continue;}
+    if(strict&&(job.turn||performance.now()-start+job.cost>budget))break;
     if(ran&&(kind==='gpu'||performance.now()-start+job.cost>budget))break;
     // A turn for the model pipelines (see setPacer below): they take what is left of this slice, so it is the last thing in it.
     if(job.turn){jobs.splice(i,1);const left=Math.max(2,budget-(performance.now()-start));turnEnd=performance.now()+left;turnCallbacks=callbacks;work.turns++;ran++;job.turn(left);break;}
@@ -257,7 +259,21 @@ function afterFrame(){
 let callbackAt=0,slicePosted=false;
 const slicePort=new MessageChannel();
 slicePort.port1.onmessage=()=>{slicePosted=false;idleSlice();};
-function idleSlices(){if(!slicePosted&&!ticking&&hurry&&diagnostic.ready&&jobs.some(job=>!job.waiting&&!job.gpu)){slicePosted=true;slicePort.port2.postMessage(0);}}
+// Before that, the browser's idle periods take a little of the build (requestIdleCallback, where there is one: it knows
+// when the next frame is due): at most 8 ms each, only steps expected to fit, and only when the last gap between
+// callbacks was on the device's usual pace (a frame running late leaves no room for more). What does not fit waits
+// for the time the frames leave (afterFrame), as it always did.
+let idlePosted=false,lastGap=0;
+function idleSlices(){
+  if(ticking||!diagnostic.ready||!jobs.some(job=>!job.waiting&&!job.gpu))return;
+  if(hurry){if(!slicePosted){slicePosted=true;slicePort.port2.postMessage(0);}return;}
+  if(idlePosted||!window.requestIdleCallback)return;idlePosted=true;
+  requestIdleCallback(deadline=>{
+    idlePosted=false;if(!running||diagnostic.error||hurry)return;
+    const room=Math.min(8,deadline.timeRemaining()-2);
+    if(room>=2&&lastGap<paceGap*1.5&&runJobs(room,'cpu',true))idleSlices();
+  });
+}
 function idleSlice(){
   if(!running||diagnostic.error)return;
   const room=hurry>1?30:hurry?Math.min(30,callbackAt+paceGap-performance.now()-4):0;
@@ -623,10 +639,12 @@ function makeLandmarkMarks(){
 // The chart samples the seabed 160,000 times. The heights are worked out a few rows a step and handed to
 // drawReefChart() in the order it asks for them; a sample it asks for anywhere else is simply computed.
 function* chartSteps(){
+  // The prepared chart is checked against its sources as the page loads (prepared-charts.js): wait for that to settle.
+  yield preparedChartsReady;
   if(drawPreparedChart('hud',document.querySelector('#reef-bathymetry'))){diagnostic.preparedChart=true;return;}
   const size=400,span=240,half=span/2,centreZ=-35,xs=new Float64Array(size),zs=new Float64Array(size),heights=new Float64Array(size*size);
   for(let i=0;i<size;i++){xs[i]=(i+.5)/size*span-half;zs[i]=(i+.5)/size*span-half+centreZ;}
-  for(let y=0;y<size;y++){for(let x=0;x<size;x++)heights[y*size+x]=terrainHeightAt(xs[x],zs[y]);if(y%16===15)yield;}
+  for(let y=0;y<size;y++){for(let x=0;x<size;x++)heights[y*size+x]=terrainHeightAt(xs[x],zs[y]);if(y%4===3)yield;}
   let next=0;yield 30;
   drawReefChart((x,z)=>{const i=next++;return i<heights.length&&x===xs[i%size]&&z===zs[(i/size)|0]?heights[i]:terrainHeightAt(x,z);});
 }
@@ -1101,7 +1119,7 @@ function renderBudget(){
 }
 function frame(now){
   if(!focused||!renderer){running=false;return;}
-  callbacks++;callbackAt=performance.now();
+  callbacks++;const callbackNow=performance.now();lastGap=callbackAt?callbackNow-callbackAt:0;callbackAt=callbackNow;
   const raw=lastFrame?Math.min((now-lastFrame)/1000,1):1/60;lastFrame=now;
   // The refresh rate is read from the callback gaps and a frame is drawn every stride-th callback (see frame-pacing.js).
   // A new reading of the rate (the first one, or the window moved to another display) starts the frame-rate windows afresh.

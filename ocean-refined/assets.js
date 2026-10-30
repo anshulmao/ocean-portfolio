@@ -225,19 +225,19 @@ export function* reindexSteps(geometry) {
     }
     if (slot === undefined || slot < 0) { slot = unique++; first[slot] = i; const head = heads.get(hash); next[slot] = head === undefined ? -1 : head; heads.set(hash, slot); }
     remap[i] = slot;
-    if ((i & 4095) === 4095) yield;
+    if ((i & 1023) === 1023) yield;
   }
   if (unique > count * .8) return geometry;
   yield;
   const shared = new THREE.BufferGeometry();
   for (let a = 0; a < attributes.length; a++) {
     const source = attributes[a], size = source.itemSize, from = source.array, data = new from.constructor(unique * size);
-    for (let i = 0; i < unique; i++) for (let k = 0, p = first[i] * size; k < size; k++) data[i * size + k] = from[p + k];
+    for (let i = 0; i < unique; i++) { for (let k = 0, p = first[i] * size; k < size; k++) data[i * size + k] = from[p + k]; if ((i & 8191) === 8191) yield; }
     shared.setAttribute(names[a], new THREE.BufferAttribute(data, size, source.normalized));
     yield;
   }
   let order = remap;
-  if (geometry.index) { const corners = geometry.index.array; order = new Uint32Array(corners.length); for (let i = 0; i < corners.length; i++) order[i] = remap[corners[i]]; yield; }
+  if (geometry.index) { const corners = geometry.index.array; order = new Uint32Array(corners.length); for (let i = 0; i < corners.length; i++) { order[i] = remap[corners[i]]; if ((i & 16383) === 16383) yield; } yield; }
   shared.setIndex(new THREE.BufferAttribute(unique > 65535 ? order : new Uint16Array(order), 1));
   for (const group of geometry.groups) shared.addGroup(group.start, group.count, group.materialIndex);
   if (geometry.boundingSphere) shared.boundingSphere = geometry.boundingSphere.clone();
