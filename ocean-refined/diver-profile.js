@@ -168,6 +168,8 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
       hovered = pointed;
       canvas.style.cursor = hovered && !locked() ? 'pointer' : '';
       hint.hidden = !hovered;
+      // Placed once as it appears, like the card: neither rides the swell with the diver.
+      if (hovered) { const { x, y } = anchor(); hint.style.translate = `${Math.round(x)}px ${Math.round(y - 10)}px`; }
       if (diagnostics) diagnostics.hovered = hovered;
     }
     const goal = hovered || shown ? 1 : 0;
@@ -180,9 +182,9 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
       glow?.add(scratch.copy(GLOW_LIFT).multiplyScalar(amount));
       lifted = amount > 0;
     }
-    if (hovered && !shown) { const { x, y } = anchor(); hint.style.translate = `${Math.round(x)}px ${Math.round(y - 10)}px`; }
-    if (shown) place();
   }
+  // The card stays where it opened while the diver bobs under it; only a new size of window moves it.
+  addEventListener('resize', () => { if (shown) place(); });
   const scratch = new THREE.Color();
   const diagnostics = { hovered: false };
 

@@ -1,6 +1,6 @@
 /* The profile card over the surface diver (diver-profile.js), in the hero's palette: a pale card in the day, a deep
-   one at night (tokens.css). It is placed with translate from the top left, every frame while open, so it rides the
-   swell with the diver. No backdrop blur over the moving scene. */
+   one at night (tokens.css). It is placed with translate from the top left, once as it opens, and stays put while the
+   diver bobs under it. No backdrop blur over the moving scene. */
 .diver-profile{position:fixed;left:0;top:0;z-index:20;width:min(340px,calc(100vw - 24px));padding:18px 18px 16px;border:1px solid color-mix(in srgb,var(--o-ink) 12%,transparent);border-radius:18px;background:color-mix(in srgb,var(--o-surface-0) 94%,transparent);color:var(--o-ink);font-family:var(--o-display);box-shadow:0 1px 0 #ffffff80 inset,0 24px 50px -22px #052c3a73,0 4px 14px -6px #052c3a33;pointer-events:auto;outline:none;transform-origin:var(--tail,50%) 100%;animation:profile-in 260ms var(--ease,cubic-bezier(.2,.7,.2,1)) both}
 .diver-profile[hidden]{display:none}
 @keyframes profile-in{from{opacity:0;scale:.96}}
