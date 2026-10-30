@@ -58,6 +58,23 @@ export function terrainHeightAt(x, z) {
   return height;
 }
 
+// The seabed as it is drawn: a lattice of ~2 m cells (2.6 m in economy) over terrainHeightAt with a 5 cm ripple, two
+// triangles a cell. Across a crease (a pad's rim, a terrace edge) the drawn sand runs up to 1.5 m off terrainHeightAt,
+// so whatever stands on the sand or lies on it is placed on this. Inside the swim area only (the lattice there is
+// uniform); outside it, terrainHeightAt.
+export const SEABED_LATTICE = { standard: { fullX: 128, fullZ: 172, startX: 30, startZ: 52, innerZ: 76 }, economy: { fullX: 96, fullZ: 128, startX: 23, startZ: 39, innerZ: 58 } };
+const seabedVertex = (x, z) => terrainHeightAt(x, z) + .05 * Math.sin(x * 1.3 + z * .22);
+export function seabedHeightAt(x, z, economy = false) {
+  const { fullX, fullZ, startX, startZ, innerZ } = economy ? SEABED_LATTICE.economy : SEABED_LATTICE.standard;
+  const cx = 250 / fullX, cz = 340 / fullZ, fi = (x + 125) / cx, fj = (z + 215) / cz;
+  if (fi < startX || fi >= fullX - startX || fj < startZ || fj >= startZ + innerZ) return terrainHeightAt(x, z);
+  const i = Math.floor(fi), j = Math.floor(fj), u = fi - i, v = fj - j, x0 = -125 + i * cx, z0 = -215 + j * cz;
+  const a = seabedVertex(x0, z0), b = seabedVertex(x0, z0 + cz), d = seabedVertex(x0 + cx, z0);
+  if (u + v <= 1) return a + u * (d - a) + v * (b - a);
+  const c = seabedVertex(x0 + cx, z0 + cz);
+  return c + (1 - u) * (b - c) + (1 - v) * (d - c);
+}
+
 // Fractions of the haze range at which a layer of the reef stops being drawn.
 // Measured by comparing frames with and without it: bulky coral reads furthest,
 // grass and polyps are lost in the haze well before the range itself. A layer
@@ -499,6 +516,37 @@ export function* reefSteps({ economy = false } = {}) {
   }
   let colonyCount = 0, groundCoverPatches = 0, meadowTufts = 0;
 
+  // The colonies' rocks so far as ellipsoids, and the ground a coral grows from: the sand, or a rock where one stands.
+  // (Set down on the sand alone, corals were left inside the rocks.)
+  const stones = [], planted = [];
+  // A rock's top over x,z: where the vertical line meets its (turned and tilted) ellipsoid, a little inside it.
+  const stoneTop = (stone, x, z) => {
+    const a = new THREE.Vector3(x - stone.x, 0, z - stone.z).applyQuaternion(stone.inverse), b = new THREE.Vector3(0, 1, 0).applyQuaternion(stone.inverse);
+    const r = [stone.rx * .9, stone.ry * .9, stone.rz * .9], qa = b.x * b.x / r[0] ** 2 + b.y * b.y / r[1] ** 2 + b.z * b.z / r[2] ** 2;
+    const qb = 2 * (a.x * b.x / r[0] ** 2 + a.y * b.y / r[1] ** 2 + a.z * b.z / r[2] ** 2), qc = a.x * a.x / r[0] ** 2 + a.y * a.y / r[1] ** 2 + a.z * a.z / r[2] ** 2 - 1;
+    const disc = qb * qb - 4 * qa * qc;
+    return disc < 0 ? -Infinity : stone.y + (-qb + Math.sqrt(disc)) / (2 * qa);
+  };
+  const ground = (x, z) => {
+    let top = seabedHeightAt(x, z, economy);
+    for (const stone of stones) if (Math.abs(x - stone.x) < stone.reach && Math.abs(z - stone.z) < stone.reach) top = Math.max(top, stoneTop(stone, x, z));
+    return top;
+  };
+  // Beside a rock, a coral moves out from it until its spread (reach) is clear of it (branches grew into rock flanks).
+  const clearOfRocks = (x, z, reach) => {
+    for (let step = 0; step < 8; step++) {
+      const base = ground(x, z), rock = stones.find(stone => Math.abs(x - stone.x) < stone.reach + reach && Math.abs(z - stone.z) < stone.reach + reach && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([u, v]) => stoneTop(stone, x + u * reach, z + v * reach) > base + .3));
+      if (!rock) break;
+      const away = Math.hypot(x - rock.x, z - rock.z) || 1; x += (x - rock.x) / away * .5; z += (z - rock.z) / away * .5;
+    }
+    return { x, z };
+  };
+  const footing = (x, z) => {
+    const steep = (px, pz) => Math.hypot(seabedHeightAt(px + .5, pz, economy) - seabedHeightAt(px - .5, pz, economy), seabedHeightAt(px, pz + .5, economy) - seabedHeightAt(px, pz - .5, economy)) > .8;
+    if (!steep(x, z)) return { x, z };
+    for (let d = .5; d <= 4; d += .5) for (let k = 0; k < 8; k++) { const px = x + Math.cos(k * Math.PI / 4) * d, pz = z + Math.sin(k * Math.PI / 4) * d; if (!steep(px, pz)) return { x: px, z: pz }; }
+    return { x, z };
+  };
   function staghorn(origin, scale, color) {
     const base = origin.clone();
     const crown = base.clone().add(new THREE.Vector3(.06, scale * .7, .03));
@@ -520,8 +568,7 @@ export function* reefSteps({ economy = false } = {}) {
     }
   }
 
-  function seaFan(origin, scale, color) {
-    const angle = random() * Math.PI;
+  function seaFan(origin, scale, color, angle = random() * Math.PI) {
     const rotation = new THREE.Quaternion().setFromEuler(new THREE.Euler(.07, angle, -.12 + random() * .24));
     fans.add(origin, [scale, scale * 1.25, scale], rotation, color);
   }
@@ -547,29 +594,63 @@ export function* reefSteps({ economy = false } = {}) {
     for (let r = 0; r < rockCount; r++) {
       const angle = random() * TAU, distance = random() * size * 1.9;
       const s = size * (.55 + random() * .85);
-      const x = cx + Math.cos(angle) * distance, z = cz + Math.sin(angle) * distance;
+      let x = cx + Math.cos(angle) * distance, z = cz + Math.sin(angle) * distance;
       if(grottoSites.some(([ax,az,,length])=>Math.abs(x-ax)<3.5+s*2&&Math.abs(z-az)<length+2+s*2))continue;
-      rocks.add(new THREE.Vector3(x, terrainHeightAt(x, z) + s * .24, z),
-        [s * 1.25, s * (.45 + random() * .25), s], [random() * .3, random() * TAU, random() * .3], r % 3 ? '#7688a2' : '#99a9ba');
+      // (The same draws from random(), in the same order, as when they were written in the call.)
+      let y = terrainHeightAt(x, z) + s * .24;
+      const height = s * (.45 + random() * .25), rotation = [random() * .3, random() * TAU, random() * .3];
+      const stone = { x, y, z, rx: s * 1.25, ry: height, rz: s, reach: s * 1.6, inverse: new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation)).invert() };
+      // Nor over a coral a neighbouring colony has already planted (it would be buried in the rock): the rock moves out
+      // from that coral, up to 4 m, keeping its own height above the sand where it comes to rest.
+      const buries = () => planted.find(p => Math.abs(p.x - stone.x) < stone.reach + p.reach && Math.abs(p.z - stone.z) < stone.reach + p.reach && [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([u, v]) => stoneTop(stone, p.x + u * p.reach, p.z + v * p.reach) > p.y + .3));
+      for (let step = 0, coral; step < 8 && (coral = buries()); step++) {
+        const away = Math.hypot(stone.x - coral.x, stone.z - coral.z) || 1;
+        stone.x += (stone.x - coral.x) / away * .5; stone.z += (stone.z - coral.z) / away * .5; stone.y = terrainHeightAt(stone.x, stone.z) + s * .24;
+      }
+      if (buries() || grottoSites.some(([ax,az,,length])=>Math.abs(stone.x-ax)<3.5+s*2&&Math.abs(stone.z-az)<length+2+s*2)) continue;
+      x = stone.x; z = stone.z; y = stone.y;
+      rocks.add(new THREE.Vector3(x, y, z), [s * 1.25, height, s], rotation, r % 3 ? '#7688a2' : '#99a9ba');
+      stones.push(stone);
     }
     const plants = deep ? (economy ? 6 : 9) : (economy ? 8 : 12);
     for (let p = 0; p < plants; p++) {
       const a = p / plants * TAU + random() * .4;
       const radius = size * (.35 + random() * 1.8);
-      const x = cx + Math.cos(a) * radius, z = cz + Math.sin(a) * radius;
-      const origin = new THREE.Vector3(x, terrainHeightAt(x, z) + .35 + random() * .28, z);
-      const plantScale = size * (.5 + random() * .55);
+      let x = cx + Math.cos(a) * radius, z = cz + Math.sin(a) * radius;
+      // Corals need a footing: one that falls on a face steeper than 40° (a pad's rim) moves to the nearest ground
+      // that is not, within 4 m. No draw from random(), so nothing else moves.
+      ({ x, z } = footing(x, z));
+      // (The draws from random() in the order they always came.)
+      const sink = random() * .1, plantScale = size * (.5 + random() * .55), reach = plantScale * .8;
+      ({ x, z } = clearOfRocks(x, z, reach)); ({ x, z } = footing(x, z));
+      // Rooted in the sand as drawn (or on a rock), a little into it (it used to stand 0.35-0.63 m up, so trunks, fans,
+      // whips and sponges hung in the water).
+      const origin = new THREE.Vector3(x, ground(x, z) - .06 - sink, z);
+      planted.push({ x, y: origin.y, z, reach });
       const color = coralPalette[(index + p) % coralPalette.length];
       const type = (p + index) % 8;
       if (type === 0) staghorn(origin, plantScale, color);
       else if (type === 1) {
         for (let tier = 0; tier < 3; tier++) {
-          const point = origin.clone().add(new THREE.Vector3((tier - 1) * plantScale * .15, tier * plantScale * .23, 0));
+          // The tiers stand on stalks rising from the sand (the lowest a short one) rather than hanging over it.
+          const point = origin.clone().add(new THREE.Vector3((tier - 1) * plantScale * .15, (.2 + tier * .23) * plantScale, 0));
           const diameter = plantScale * (.95 - tier * .18);
           plates.add(point, [diameter, plantScale * .55, diameter * .8], [.08, random() * TAU, -.12], color);
           segment(branches, origin, point.clone().add(new THREE.Vector3(0, .08, 0)), plantScale * .075, '#b2937f');
         }
-      } else if (type === 2) seaFan(origin, plantScale * .88, color);
+      } else if (type === 2) {
+        // A fan is a half disc standing on its diameter, as wide as it is tall, whose foot starts 0.16 of its size up:
+        // set it down so that foot meets the sand, and on a slope reaches the lower side.
+        // Its foot runs along its own facing (the angle, drawn here as seaFan would draw it): set down so the lower end
+        // of the foot meets the ground, sand or rock.
+        // Where the foot would straddle a drop (a rim), it moves to the nearest spot within 4 m where it does not.
+        const size = plantScale * .88, angle = random() * Math.PI, ux = Math.cos(angle) * size * .9, uz = -Math.sin(angle) * size * .9;
+        const drop = (px, pz) => Math.abs(ground(px + ux, pz + uz) - ground(px - ux, pz - uz));
+        let fx = x, fz = z;
+        for (let d = .5; d <= 4 && drop(fx, fz) > size * .35; d += .5) for (let k = 0; k < 8; k++) { const px = x + Math.cos(k * Math.PI / 4) * d, pz = z + Math.sin(k * Math.PI / 4) * d; if (drop(px, pz) <= size * .35) { fx = px; fz = pz; break; } }
+        const foot = Math.min(ground(fx, fz) - .06, ground(fx + ux, fz + uz), ground(fx - ux, fz - uz)) - .04;
+        seaFan(new THREE.Vector3(fx, foot - size * .16, fz), size, color, angle);
+      }
       else if (type === 3) brains.add(origin.clone().add(new THREE.Vector3(0, plantScale * .32, 0)), [plantScale * .7, plantScale * .5, plantScale * .65], [0, random() * TAU, .05], index % 2 ? '#d0bc7c' : '#8ebba7');
       else if (type === 4) {
         // A paired barrel grouping gives the reef a distinct large-sponge
@@ -583,17 +664,29 @@ export function* reefSteps({ economy = false } = {}) {
         const tubePoint = origin.clone().add(new THREE.Vector3(
           -offset.z * plantScale * .42, plantScale * .04, offset.x * plantScale * .42
         ));
+        ({ x: tubePoint.x, z: tubePoint.z } = clearOfRocks(tubePoint.x, tubePoint.z, plantScale * .2));
+        tubePoint.y = ground(tubePoint.x, tubePoint.z) - .08;
+        planted.push({ x: tubePoint.x, y: tubePoint.y, z: tubePoint.z, reach: plantScale * .15 });
         sponges.add(tubePoint, [plantScale * .25, plantScale * .68, plantScale * .25], [.05, angle + .8, 0], '#b99ca9');
       } else if (type === 5) {
         for (let tube = 0; tube < (economy ? 3 : 5); tube++) {
           const angle = tube * 2.4, height = plantScale * (.75 + random() * .6);
-          const point = origin.clone().add(new THREE.Vector3(Math.cos(angle) * plantScale * .35, -.15, Math.sin(angle) * plantScale * .35));
+          const point = origin.clone().add(new THREE.Vector3(Math.cos(angle) * plantScale * .35, 0, Math.sin(angle) * plantScale * .35));
+          ({ x: point.x, z: point.z } = footing(point.x, point.z));
+          ({ x: point.x, z: point.z } = clearOfRocks(point.x, point.z, plantScale * .4));
+          // Each tube on the sand under it (not at the colony's middle), down to the lowest point under its rim.
+          // (On a rock, its middle: the lowest sand beyond the rock's edge would sink it inside.)
+          const rim = plantScale * .75, middle = ground(point.x, point.z);
+          point.y = (middle > seabedHeightAt(point.x, point.z, economy) + .1 ? middle : Math.min(middle, ground(point.x + rim, point.z), ground(point.x - rim, point.z), ground(point.x, point.z + rim), ground(point.x, point.z - rim))) - .12;
+          planted.push({ x: point.x, y: point.y, z: point.z, reach: plantScale * .3 });
           sponges.add(point, [plantScale * .72, height, plantScale * .72], [.06, angle, (random() - .5) * .2], index % 2 ? '#b89bc2' : '#d7ad81');
           glow.add(point.clone().add(new THREE.Vector3(0, height * .99, 0)), [plantScale * .08, .035, plantScale * .08], null, null);
         }
       } else if (type === 6) {
         for (let whip = 0; whip < (economy ? 3 : 5); whip++) {
           const point = origin.clone().add(new THREE.Vector3((random() - .5) * plantScale, 0, (random() - .5) * plantScale));
+          ({ x: point.x, z: point.z } = footing(point.x, point.z));
+          point.y = ground(point.x, point.z) - .08;
           const height = plantScale * (.65 + random() * .55);
           whips.add(point, [plantScale * .75, height, plantScale * .75], [.08, whip * 1.8, (random() - .5) * .15], index % 2 ? '#ccabcb' : '#d7b48d');
           const tip = new THREE.Vector3(.26 * plantScale * .75, height * 2, 0).applyAxisAngle(UP, whip * 1.8).add(point);
@@ -609,7 +702,7 @@ export function* reefSteps({ economy = false } = {}) {
     // Low cushions, anemones and curved grass soften the rock edges.
     for (let a = 0; a < (economy || deep ? 1 : 2); a++) {
       const ox = cx + (random() - .5) * size * 3, oz = cz + (random() - .5) * size * 3;
-      const origin = new THREE.Vector3(ox, terrainHeightAt(ox, oz) + .25, oz);
+      const origin = new THREE.Vector3(ox, seabedHeightAt(ox, oz, economy) + .2, oz);
       const s = size * (.28 + random() * .2);
       domes.add(origin, [s * 1.1, s * .55, s], null, '#bc9a82');
       const tentacleCount = economy ? 7 : 11;
@@ -620,7 +713,7 @@ export function* reefSteps({ economy = false } = {}) {
       }
       for (let g = 0; g < (economy ? 6 : 11); g++) {
         const gx = cx + (random() - .5) * size * 5, gz = cz + (random() - .5) * size * 4;
-        const point = new THREE.Vector3(gx, terrainHeightAt(gx, gz) + .06, gz);
+        const point = new THREE.Vector3(gx, seabedHeightAt(gx, gz, economy) + .02, gz);
         const h = .6 + random() * size;
         grass.add(point, [1.3, h, 1.3], [0, random() * TAU, (random() - .5) * .22], g % 3 ? '#619e8e' : '#90b698');
       }
@@ -649,7 +742,7 @@ export function* reefSteps({ economy = false } = {}) {
       for (let blade = 0; blade < blades; blade++) {
         const angle = blade * 2.399, radius = .18 + groundRandom() * .65;
         const bx = gx + Math.cos(angle) * radius, bz = gz + Math.sin(angle) * radius;
-        grass.add(new THREE.Vector3(bx, terrainHeightAt(bx, bz) + .025, bz),
+        grass.add(new THREE.Vector3(bx, seabedHeightAt(bx, bz, economy) + .01, bz),
           [.9, .3 + groundRandom() * .7, .9], [0, angle, (groundRandom() - .5) * .3],
           blade % 3 ? '#5a9482' : '#8aaa8f');
       }
@@ -658,7 +751,7 @@ export function* reefSteps({ economy = false } = {}) {
       for (let lobe = 0; lobe < (economy ? 2 : 3); lobe++) {
         const px = gx + (groundRandom() - .5) * 1.6, pz = gz + (groundRandom() - .5) * 1.6;
         const width = .45 + groundRandom() * .65;
-        carpets.add(new THREE.Vector3(px, terrainHeightAt(px, pz) + .06, pz),
+        carpets.add(new THREE.Vector3(px, seabedHeightAt(px, pz, economy) + .04, pz),
           [width, .18, width * (.7 + groundRandom() * .3)], [0, groundRandom() * TAU, 0],
           ['#a59181', '#83a797', '#c49c86', '#b4aa7e'][groundCoverPatches % 4]);
       }
@@ -692,8 +785,8 @@ export function* reefSteps({ economy = false } = {}) {
   // The swimmable reef keeps the exact ~2 m lattice it was sculpted on, so its
   // creases catch the light as before. The basin beyond the boundary, four
   // fifths of the plane and always seen through haze, uses ~7 m cells.
-  const fullX = economy ? 96 : 128, fullZ = economy ? 128 : 172, startX = economy ? 23 : 30, startZ = economy ? 39 : 52;
-  const innerX = fullX - startX * 2, outerX = economy ? 8 : 10, innerZ = economy ? 58 : 76, nearZ = economy ? 9 : 12, farZ = economy ? 10 : 14;
+  const { fullX, fullZ, startX, startZ, innerZ } = economy ? SEABED_LATTICE.economy : SEABED_LATTICE.standard;
+  const innerX = fullX - startX * 2, outerX = economy ? 8 : 10, nearZ = economy ? 9 : 12, farZ = economy ? 10 : 14;
   const lattice = new THREE.PlaneGeometry(250, 340, fullX, fullZ).rotateX(-Math.PI / 2).translate(0, 0, -45), latticePoints = lattice.getAttribute('position');
   const latticeX = Array.from({ length: fullX + 1 }, (_, i) => latticePoints.getX(i)), latticeZ = Array.from({ length: fullZ + 1 }, (_, j) => latticePoints.getZ(j * (fullX + 1)));
   lattice.dispose();
@@ -806,9 +899,9 @@ diffuseColor.rgb *= vSandBroad.y + fineMottle * 0.06 - ridgeLines * 0.055;`);
       const top=floor+1;rocks.add(new THREE.Vector3(px,(base+top)*.5,z),[1.3,Math.max(.6,(top-base)*.5+.3),length],null,'#8092aa');
     }
     for(let n=0;n<12;n++){
-      const a=n*2.4,px=x+Math.cos(a)*(radius+1.2),pz=z+Math.sin(a)*length;
+      const a=n*2.4,px=x+Math.cos(a)*(radius+1.9),pz=z+Math.sin(a)*length;   // just outside the side walls (at +1.2 the fans stood in them)
       glow.add(new THREE.Vector3(px,terrainHeightAt(px,pz)+.35,pz),[.14,.23,.14],null,n%2?'#ba8fe8':'#81ded1');
-      seaFan(new THREE.Vector3(px,terrainHeightAt(px,pz)-.08,pz),.6+n%3*.18,n%2?'#b187af':'#d39975');
+      const fan=.6+n%3*.18;seaFan(new THREE.Vector3(px,seabedHeightAt(px,pz,economy)-.08-fan*.2,pz),fan,n%2?'#b187af':'#d39975');   // its foot on the sand (it stood 0.16 of its size up)
     }
   }
   root.userData.grottoCount=grottoSites.length;

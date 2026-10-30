@@ -44,6 +44,9 @@ function open(x, z, clear = 12, lane = 2.5) {
   return lane <= 0 || (lineDistance(x, z, ROUTE) >= lane && lineDistance(x, z, TOUR) >= lane);
 }
 
+// The sites of the world last built, for what is placed after it (user-corals.js keeps its colonies off them).
+export const lifeSites = [];
+
 export function createLivingWorld(options) { const steps = livingWorldSteps(options); let step; while (!(step = steps.next()).done); return step.value; }
 // The same build, pausing (yielding) between its sections so the page can do it between frames.
 export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = null, economy = false, uniforms = null, seed = 20261013 } = {}) {
@@ -939,5 +942,6 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
     }
   };
   // `under` holds everything below the surface: hand it to the scene's shader warm-up before the first dive.
+  lifeSites.length = 0; lifeSites.push(...sites);
   return { root, under, update, counts, sites, events, debug };
 }

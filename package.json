@@ -8,7 +8,7 @@
     "test:services": "node --test tools/services.test.mjs",
     "test:services:browser": "node tools/sync-services.mjs && node tools/test-services-browser.mjs",
     "test:hud": "node ocean-refined/newqa/dive-hud.mjs",
-    "test:schools": "node ocean-refined/newqa/distributed-ecology.mjs",
+    "test:schools": "node ocean-refined/newqa/distributed-ecology.mjs && node ocean-refined/newqa/school-fish.mjs",
     "test:navigation": "node ocean-refined/newqa/navigation-refined.mjs",
     "test:journey": "node ocean-refined/newqa/journey-refined.mjs",
     "test:crt": "node ocean-refined/newqa/crt-expedition.mjs",
@@ -23,10 +23,11 @@
     "export:creatures": "node ocean-refined/tools/export-creature-set.mjs",
     "test:build": "node tools/build-check.mjs",
     "test:encounter-lifecycle": "node ocean-refined/newqa/creature-lifecycle.mjs",
-    "test:unit": "node --test tools/test-ascent-composition.mjs tools/test-cinematic-route.mjs tools/test-guided-motion.mjs tools/test-navigation-clock.mjs tools/test-settings-escape.mjs ocean-refined/newqa/creature-smoke.mjs ocean-refined/newqa/distributed-ecology.mjs ocean-refined/newqa/diver-rig.mjs ocean-refined/newqa/experience-performance.mjs ocean-refined/newqa/fish-navigation.mjs ocean-refined/newqa/moray-resident.mjs ocean-refined/newqa/movement-profile.mjs ocean-refined/newqa/safety-stop-clock.mjs ocean-refined/newqa/waterline-splash.mjs",
+    "test:unit": "node --test tools/test-ascent-composition.mjs tools/test-cinematic-route.mjs tools/test-guided-motion.mjs tools/test-navigation-clock.mjs tools/test-settings-escape.mjs ocean-refined/newqa/creature-smoke.mjs ocean-refined/newqa/distributed-ecology.mjs ocean-refined/newqa/diver-rig.mjs ocean-refined/newqa/experience-performance.mjs ocean-refined/newqa/fish-navigation.mjs ocean-refined/newqa/moray-resident.mjs ocean-refined/newqa/movement-profile.mjs ocean-refined/newqa/safety-stop-clock.mjs ocean-refined/newqa/school-fish.mjs ocean-refined/newqa/waterline-splash.mjs",
     "smoke": "node tools/smoke.mjs",
     "check": "npm run build && npm run test:build && npm run test:services && npm run test:unit && npm run smoke",
-    "test:layout": "node tools/test-mobile-layout.mjs"
+    "test:layout": "node tools/test-mobile-layout.mjs",
+    "audit:reef": "node tools/audit-reef.mjs"
   },
   "devDependencies": {
     "esbuild": "0.25.10",

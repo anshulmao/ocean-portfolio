@@ -9,10 +9,23 @@ node.className = 'look-there'; node.dataset.show = 'false'; node.setAttribute('a
 node.innerHTML = '<i></i><span></span>';
 document.body.append(node);
 const label = node.querySelector('span'), at = new THREE.Vector3(), local = new THREE.Vector3();
-let shownLabel = '', shown = false, band = null;
+let shownLabel = '', shown = false, band = null, labelWidth = 0;
+// Where the marker is drawn this frame (client px: left, top, right, bottom), so the reef labels can stand aside from it
+// as it moves (world.js keptOut). Kept from the position written here, not read back from the page.
+const box = [0, 0, 0, 0];
+export const markerBox = () => shown ? box : null;
 // The marker keeps to the band between the compass at the top and the guide's card and controls at the bottom, so its
 // name never sits on the HUD. Measured once a size, since the HUD only moves when the window does.
 addEventListener('resize', () => { band = null; });
+// The instruments that sit inside that band at the sides (the reef map, the air gauge and the dive computer on a phone):
+// the marker steps down below any it would cover. Their boxes are read a few times a second, not every frame.
+const HUD = '.reef-map,.air-gauge,.dive-computer,.settings-toggle';
+let hud = [], hudAt = -1;
+function instruments() {
+  const now = performance.now();
+  if (now - hudAt > 500) { hudAt = now; hud = []; for (const el of document.querySelectorAll(HUD)) { const r = el.getBoundingClientRect(); if (r.width && r.height) hud.push(r); } }
+  return hud;
+}
 function safeBand() {
   if (band) return band;
   const compass = document.querySelector('.heading-indicator')?.getBoundingClientRect();
@@ -31,11 +44,16 @@ export function pointAt(camera, subject, text = '') {
   let x = behind ? -at.x : at.x, y = behind ? -at.y : at.y;
   const onScreen = !behind && Math.abs(x) < EDGE_X && Math.abs(y) < EDGE_Y;
   if (!onScreen) { const reach = Math.max(Math.abs(x) / EDGE_X, Math.abs(y) / EDGE_Y, 1e-6); x /= reach; y /= reach; }
-  const [high, low] = safeBand(), left = (x * .5 + .5) * innerWidth, top = Math.min(low, Math.max(high, (-y * .5 + .5) * innerHeight));
+  const [high, low] = safeBand(), left = (x * .5 + .5) * innerWidth;
+  let top = Math.min(low, Math.max(high, (-y * .5 + .5) * innerHeight));
+  node.dataset.edge = String(!onScreen); node.dataset.side = x > .3 ? 'left' : 'right';
+  if (text !== shownLabel) { shownLabel = text; label.textContent = text; labelWidth = label.offsetWidth || 0; }
+  // The ring is 36 px round its point; the name sits 26 px off to one side (journey.css .look-there).
+  const right = node.dataset.side !== 'left', from = right ? left - 24 : left - 32 - labelWidth, to = right ? left + 32 + labelWidth : left + 24;
+  for (const r of instruments()) if (from < r.right && to > r.left && top - 24 < r.bottom && top + 24 > r.top) top = Math.min(low, Math.max(top, r.bottom + 26));
+  box[0] = from; box[1] = top - 24; box[2] = to; box[3] = top + 24;
   node.style.transform = `translate(${left.toFixed(1)}px, ${top.toFixed(1)}px)`;
   node.style.setProperty('--turn', `${(Math.atan2(-y, x) * 180 / Math.PI + 45).toFixed(1)}deg`);
-  node.dataset.edge = String(!onScreen); node.dataset.side = x > .3 ? 'left' : 'right';
-  if (text !== shownLabel) { shownLabel = text; label.textContent = text; }
   if (!shown) { shown = true; node.dataset.show = 'true'; }
   return onScreen;
 }

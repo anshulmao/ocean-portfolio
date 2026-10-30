@@ -3,9 +3,10 @@ import { GLTFLoader } from './vendor/GLTFLoader.js';
 import { clone } from './vendor/SkeletonUtils.js';
 import { floatSkinIndices, turn, modelBytes } from './assets.js';
 import { creatureGeometry, speciesById } from './creature-species.js';
-import { ENCOUNTERS, RESIDENTS, SCHOOLS } from './user-creature-routes.js';
+import { ENCOUNTERS, RESIDENTS, SCHOOLS, WRECK_HEIGHT } from './user-creature-routes.js';
 import { fishNavigator } from './fish-navigation.js';
 import { createMorayDenMotion, updateMorayDenMotion } from './moray-resident.js';
+import { terrainHeightAt as reefTerrain, seabedHeightAt } from './reef.js';
 
 // The creature set at home in the ocean (see user-creature-routes.js for the numbers).
 //
@@ -71,18 +72,46 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   // A one-metre height map of the terrain and every collision box on it, widened and softened, so an animal keeping
   // its height above it rises over a coral head in a curve instead of a step. Built once, a few rows at a time.
   const GX = -64, GZ = -108, GW = 129, GH = 146, hard = new Float32Array(GW * GH), soft = new Float32Array(GW * GH);
-  const floor = (x, z) => { const h = terrainHeightAt(x, z); return Number.isFinite(h) ? Math.max(h, -200) : -60; };
-  async function buildCover() {
-    for (let z = 0; z < GH; z++) { for (let x = 0; x < GW; x++) hard[z * GW + x] = floor(GX + x, GZ + z); if (z % 24 === 23) await turn(); }
-    for (const { box } of collisions?.boxes || []) {
-      const x0 = Math.max(0, Math.floor(box.min.x - GX - .5)), x1 = Math.min(GW - 1, Math.ceil(box.max.x - GX + .5)), z0 = Math.max(0, Math.floor(box.min.z - GZ - .5)), z1 = Math.min(GH - 1, Math.ceil(box.max.z - GZ + .5));
-      for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) { const i = z * GW + x; if (box.max.y > hard[i]) hard[i] = box.max.y; }
+  // The sand as it is drawn (reef.js seabedHeightAt), up to 1.5 m off terrainHeightAt across a crease: what lies on the
+  // bottom lies on this, and swimmers keep clear of both.
+  const drawn = terrainHeightAt === reefTerrain ? (x, z) => seabedHeightAt(x, z, economy) : terrainHeightAt;
+  const floor = (x, z) => { const h = drawn(x, z); return Number.isFinite(h) ? Math.max(h, -200) : -60; };
+  const terrain = (x, z) => { const h = terrainHeightAt(x, z); return Number.isFinite(h) ? Math.max(h, -200) : -60; };
+  const bed = (x, z) => Math.max(floor(x, z), terrain(x, z));
+  const wide = new Float32Array(GW * GH);
+  let covered = -1;
+  // Raise the map under the collision boxes from index `from` on, then widen and soften it: all of it, or with
+  // `local` only the cells in reach of those boxes.
+  function coverBoxes(from, local = false) {
+    let x0 = local ? GW : 0, x1 = local ? -1 : GW - 1, z0 = local ? GH : 0, z1 = local ? -1 : GH - 1;
+    const boxes = collisions?.boxes || [], solids = boxes.slice(from).map(entry => entry.box);
+    // The wreck's collision is two low boxes, bow and stern, leaving the diver a way through amidships and over the
+    // decks. To the animals the whole wreck is solid, decks and masts too (WRECK_HEIGHT): a blacktip cruising low
+    // went through its decks.
+    const hull = boxes.filter(entry => /^ship (bow|stern) hull$/.test(entry.mesh || ''));
+    if (hull.length > 1 && hull.some(entry => boxes.indexOf(entry) >= from)) { const wreck = hull.reduce((sum, entry) => sum.union(entry.box), hull[0].box.clone()); wreck.max.y = wreck.min.y + WRECK_HEIGHT; solids.push(wreck); }
+    for (const box of solids) {
+      const bx0 = Math.max(0, Math.floor(box.min.x - GX - .5)), bx1 = Math.min(GW - 1, Math.ceil(box.max.x - GX + .5)), bz0 = Math.max(0, Math.floor(box.min.z - GZ - .5)), bz1 = Math.min(GH - 1, Math.ceil(box.max.z - GZ + .5));
+      for (let z = bz0; z <= bz1; z++) for (let x = bx0; x <= bx1; x++) { const i = z * GW + x; if (box.max.y > hard[i]) hard[i] = box.max.y; }
+      if (local) { x0 = Math.min(x0, bx0); x1 = Math.max(x1, bx1); z0 = Math.min(z0, bz0); z1 = Math.max(z1, bz1); }
     }
+    covered = boxes.length;
+    if (x0 > x1) return;
+    const span = (lo, hi, pad, size) => [Math.max(0, lo - pad), Math.min(size - 1, hi + pad)];
+    const [wx0, wx1] = span(x0, x1, 1, GW), [wz0, wz1] = span(z0, z1, 1, GH), [sx0, sx1] = span(x0, x1, 3, GW), [sz0, sz1] = span(z0, z1, 3, GH);
+    for (let z = wz0; z <= wz1; z++) for (let x = wx0; x <= wx1; x++) { let top = -1e9; for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) top = Math.max(top, hard[clamp(z + dz, 0, GH - 1) * GW + clamp(x + dx, 0, GW - 1)]); wide[z * GW + x] = top; }
+    for (let z = sz0; z <= sz1; z++) for (let x = sx0; x <= sx1; x++) { let sum = 0; for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) sum += wide[clamp(z + dz, 0, GH - 1) * GW + clamp(x + dx, 0, GW - 1)]; soft[z * GW + x] = Math.max(sum / 25, hard[z * GW + x]); }
+  }
+  async function buildCover() {
+    for (let z = 0; z < GH; z++) { for (let x = 0; x < GW; x++) hard[z * GW + x] = bed(GX + x, GZ + z); if (z % 24 === 23) await turn(); }
     await turn();
-    const wide = new Float32Array(GW * GH);
-    for (let z = 0; z < GH; z++) for (let x = 0; x < GW; x++) { let top = -1e9; for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) top = Math.max(top, hard[clamp(z + dz, 0, GH - 1) * GW + clamp(x + dx, 0, GW - 1)]); wide[z * GW + x] = top; }
-    await turn();
-    for (let z = 0; z < GH; z++) for (let x = 0; x < GW; x++) { let sum = 0; for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) sum += wide[clamp(z + dz, 0, GH - 1) * GW + clamp(x + dx, 0, GW - 1)]; soft[z * GW + x] = Math.max(sum / 25, hard[z * GW + x]); }
+    coverBoxes(0);
+  }
+  // Collision boxes added after the map was built (on a slow connection the landmarks' models can arrive after this
+  // set) are laid into it as they come.
+  function coverLate() {
+    const boxes = collisions?.boxes; if (!boxes || covered < 0 || boxes.length <= covered) return;
+    coverBoxes(covered, true);
   }
   function cover(x, z) {
     const fx = clamp(x - GX, 0, GW - 1.001), fz = clamp(z - GZ, 0, GH - 1.001), ix = fx | 0, iz = fz | 0, tx = fx - ix, tz = fz - iz, i = iz * GW + ix;
@@ -91,12 +120,22 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   const ground = (x, z) => hard[clamp(Math.round(z - GZ), 0, GH - 1) * GW + clamp(Math.round(x - GX), 0, GW - 1)];
   const navigation = fishNavigator(cover);
   const resting = {};
-  const solid = (x, z) => ground(x, z) > floor(x, z) + .25;
+  const solid = (x, z) => ground(x, z) > bed(x, z) + .25;
+  // An animal lying on the sand follows its slope: height, nose-up pitch and roll from the drawn seabed under its
+  // nose, tail and flanks (it used to lie level, its nose or tail in the sand on a slope). Written to LIE.
+  const LIE = { y: 0, pitch: 0, roll: 0 };
+  function lie(x, z, yaw, length, lift) {
+    const half = length * .4, side = length * .22, fx = Math.sin(yaw), fz = Math.cos(yaw);
+    const nose = floor(x + fx * half, z + fz * half), tail = floor(x - fx * half, z - fz * half), left = floor(x + fz * side, z - fx * side), right = floor(x - fz * side, z + fx * side);
+    LIE.pitch = Math.atan2(nose - tail, 2 * half); LIE.roll = Math.atan2(left - right, 2 * side);
+    LIE.y = Math.max(floor(x, z), (nose + tail + left + right) / 4) + lift;
+    return LIE;
+  }
   /** Open, fairly level sand near a wished-for spot: for the animals that lie on the bottom. */
   function sand(x, z, radius = 2) {
     for (let ring = 0; ring <= 16; ring++) for (let k = 0, n = ring ? ring * 6 : 1; k < n; k++) {
       const a = k / n * TAU + ring, px = x + Math.cos(a) * ring, pz = z + Math.sin(a) * ring; let ok = Math.abs(px) < 58 && pz > -100 && pz < 30;
-      for (let s = 0; ok && s < 6; s++) { const qx = px + Math.cos(s * TAU / 6) * radius, qz = pz + Math.sin(s * TAU / 6) * radius; ok = !solid(qx, qz) && Math.abs(floor(qx, qz) - floor(px, pz)) < radius * .45; }
+      for (let s = 0; ok && s < 6; s++) { const qx = px + Math.cos(s * TAU / 6) * radius, qz = pz + Math.sin(s * TAU / 6) * radius; ok = !solid(qx, qz) && Math.abs(terrain(qx, qz) - terrain(px, pz)) < radius * .45; }
       if (ok && !solid(px, pz)) return [px, pz];
     }
     return [x, z];
@@ -179,12 +218,19 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       m.navRadius = Math.max(.16, Math.min(1.5, length * .4));
       const r = m.navRadius, startFloor = Math.max(cover(want.x, want.z), cover(want.x - r, want.z - r), cover(want.x - r, want.z + r), cover(want.x + r, want.z - r), cover(want.x + r, want.z + r));
       m.nav = navigation.create(want.x, Math.max(want.y, startFloor + m.clearance + .25), want.z, spot.yaw);
-      m.navOptions = { speed: g.speed, clearance: m.clearance, radius: m.navRadius };
+      m.navOptions = { speed: g.speed, clearance: m.clearance, radius: m.navRadius, rise: true };
     }
     if (dt > 0) {
       // Keep a nearby point in front of the swimmer rather than steering directly toward its current station.
-      want.x += tx * Math.max(1, g.speed * 1.8); want.z += tz * Math.max(1, g.speed * 1.8);
+      const lead = Math.max(1, g.speed * 1.8);
+      want.x += tx * lead; want.z += tz * lead;
+      // A swimmer that fell behind (round a formation, say) catches up: its station moves on as fast as it swims.
+      const behind = clamp((Math.hypot(want.x - m.nav.x, want.z - m.nav.z) - lead - 2) / 8, 0, 1);
       want.y = g.height(m.nav.x, m.nav.z, t) + m.up + Math.sin(t * m.w2 + m.p2) * m.bob;
+      // One that has lost its station aims for the height of the water there, too: from the foot of a cliff below its
+      // beat it rises as it goes, until the way up is open (keeping to the bottom, it followed the foot of the cliff
+      // away, and herds were found forty metres off their loops).
+      if (behind > 0) want.y = Math.max(want.y, here);
       // Members keep their own lanes while a detour compresses the formation; no forced positional offsets
       // after navigation, which would put a safe fish back inside the obstacle it has just avoided.
       for (const other of g.members) {
@@ -193,11 +239,18 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
         const distance = Math.hypot(dx, dy, dz), room = (m.navLength + other.navLength) * .35;
         if (distance > .01 && distance < room) { const push = Math.min(2, (room - distance) * 1.5) / distance; want.x += dx * push; want.z += dz * push; }
       }
+      // A diver in the way: steer off and quicken, turning harder the closer it is (fish passed within half a metre)
+      let flee = 0;
       if (player) {
         const dx = m.nav.x - player.x, dz = m.nav.z - player.z, distance = Math.hypot(dx, dz), room = 3 + (m.actor?.L || 1) * .4;
-        if (Math.abs(m.nav.y - player.y) < room && distance < room && distance > .01) { want.x += dx / distance * (room - distance) * 2; want.z += dz / distance * (room - distance) * 2; }
+        if (Math.abs(m.nav.y - player.y) < room && distance < room && distance > .01) {
+          flee = 1 - distance / room; want.x += dx / distance * (room - distance) * 4; want.z += dz / distance * (room - distance) * 4;
+          // and over or under the diver, whichever side it is already on (a fast fusilier could not turn wide enough).
+          want.y = m.nav.y + (m.nav.y >= player.y ? 1 : -1) * (room - distance) * 1.5;
+        }
       }
-      m.navOptions.speed = g.speed * (g.pace ?? 1); navigation.step(m.nav, want, dt, m.navOptions);
+      m.navOptions.speed = g.speed * (g.pace ?? 1) * (1 + Math.max(flee * 1.5, behind * .7)); m.navOptions.turnRate = 1.3 + flee * 2.5; if (flee > .25) m.nav.next = 0;
+      navigation.step(m.nav, want, dt, m.navOptions);
     }
     want.set(m.nav.x, m.nav.y, m.nav.z); spot.yaw = m.nav.yaw; spot.pitch = m.nav.pitch;
     return spot;
@@ -242,7 +295,9 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     const range = view ? Math.min(view.range, 130) : 110, R = range + e.length + 12, angle = course?.angle ?? (across ? (Math.random() < .5 ? 1 : -1) * Math.PI / 2 : rr(0, TAU)), sideOf = course?.side ?? (Math.random() < .5 ? 1 : -1);
     const dx = Math.sin(angle), dz = Math.cos(angle), nx = dz * sideOf, nz = -dx * sideOf, pass = course?.pass ?? rr(...e.pass), px = player?.x ?? 0, pz = player?.z ?? -30;
     const cx = across ? px : px + nx * pass, cz = across ? Math.min(pz - pass, e.across) : pz + nz * pass;
-    e.path = { sx: cx - dx * R, sz: cz - dz * R, ex: cx + dx * R, ez: cz + dz * R, nx, nz, len: 2 * R, bulge: rr(-1, 1) * e.bulge * R };
+    // The gentle bow in the line; one swimming across the reef bows out to sea, never in over the shallows.
+    const bow = rr(-1, 1) * e.bulge * R;
+    e.path = { sx: cx - dx * R, sz: cz - dz * R, ex: cx + dx * R, ez: cz + dz * R, nx, nz, len: 2 * R, bulge: across ? -Math.sign(nz) * Math.abs(bow) : bow };
     e.u = course?.ahead === undefined ? 0 : clamp(.5 - course.ahead / e.path.len, 0, .5); e.y0 = course?.y ?? rr(...e.depth); e.next = clock + rr(4, 8);
     for (const c of e.cast) { c.actor.active = true; c.actor.started = false; play(c.actor, 'swim', 0); }
     for (const r of e.riders) { r.actor.active = true; r.actor.started = false; }
@@ -253,25 +308,32 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     for (const c of e.cast) c.actor.active = false; for (const r of e.riders) r.actor.active = false;
     if (e.school) e.school.active = false; e.path = null;
   }
-  // A point on the pass (u: 0 at the far start, 1 at the far end): a straight line with a gentle bow in it.
+  // A point on the pass (u: 0 at the far start, 1 at the far end): a straight line with a gentle bow in it. Before 0
+  // and after 1 it runs on straight along the end's heading, so the animals behind the leader (or the leader, while the
+  // last of its group finishes) keep swimming instead of waiting at the end of the line.
   function onPath(e, u, out, tangent) {
-    const p = e.path, bow = Math.sin(Math.PI * u) * p.bulge, slope = Math.PI * Math.cos(Math.PI * u) * p.bulge;
-    out.x = p.sx + (p.ex - p.sx) * u + p.nx * bow; out.z = p.sz + (p.ez - p.sz) * u + p.nz * bow;
-    tangent.set(p.ex - p.sx + p.nx * slope, 0, p.ez - p.sz + p.nz * slope).normalize();
+    const p = e.path, k = clamp(u, 0, 1), bow = Math.sin(Math.PI * k) * p.bulge, slope = Math.PI * Math.cos(Math.PI * k) * p.bulge;
+    const tx = p.ex - p.sx + p.nx * slope, tz = p.ez - p.sz + p.nz * slope;
+    out.x = p.sx + (p.ex - p.sx) * k + p.nx * bow + tx * (u - k); out.z = p.sz + (p.ez - p.sz) * k + p.nz * bow + tz * (u - k);
+    tangent.set(tx, 0, tz).normalize();
   }
   const T = new THREE.Vector3();
   function bandHeight(e, x, z, phase) {
-    let y = e.low ? Math.min(e.depth[1], cover(x, z) + 3.2) : e.y0 + Math.sin(clock * .11 + phase) * 1.2;
+    // Low over the reef inside the swim area; out beyond it (outside the seabed map) in mid-water at the pass's depth.
+    const out = smoothstep(Math.max(Math.abs(x) - 54, -100 - z, 0), 0, 10);
+    let y = e.low ? THREE.MathUtils.lerp(Math.min(e.depth[1], cover(x, z) + 3.2), e.y0, out) : e.y0 + Math.sin(clock * .11 + phase) * 1.2;
     if (e.porpoise) y = e.y0 + e.porpoise * Math.sin(clock * .95 + phase);
     return Math.min(-1.8, Math.max(y, cover(x, z) + e.clearance));
   }
-  function driveEncounter(e, dt, player) {
+  function driveEncounter(e, dt, player, range = 110) {
     e.u += e.speed * dt / e.path.len;
     const backest = Math.max(0, ...e.cast.map(c => c.back), e.school ? e.school.spread[0] : 0);
-    if (e.u - (backest + e.length) / e.path.len > 1) return false;
+    // Done once the whole group is past the end of the line, and out of sight: a diver who swam along with it would see
+    // it switched off, so it swims on (the line runs on straight) until it is beyond the haze.
+    if (e.u - (backest + e.length) / e.path.len > 1 && (!player || e.cast.every(c => c.actor.pos.distanceTo(player) > range + c.actor.L)) && (!e.school || !player || e.school.centre.distanceTo(player) - e.school.radius > range)) return false;
     for (const c of e.cast) {
       const a = c.actor;
-      onPath(e, clamp(e.u - c.back / e.path.len, 0, 1), want, T);
+      onPath(e, e.u - c.back / e.path.len, want, T);
       want.x += -T.z * c.side; want.z += T.x * c.side;
       // A long body clears the bottom along its whole length.
       const reach = a.L * .45;
@@ -299,14 +361,15 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       if (r.trip > 0) { r.trip -= dt / 7; const u = 1 - Math.max(r.trip, 0), swing = Math.sin(u * Math.PI); ox = Math.sin(u * TAU) * 2.8 * r.side * swing; oy = -.9 * swing; oz = -(1 - Math.cos(u * TAU)) * 2; play(a, 'swim', .5); } else play(a, 'ride', .8);
       C.set(r.home.x + ox + Math.sin(clock * .4 + r.p) * .1, r.home.y + oy + Math.sin(clock * .53 + r.p) * .07, r.home.z + oz + Math.sin(clock * .31 + r.p) * .18);
       C.applyMatrix4(host.wrapper.matrixWorld);
-      a.ease = 6; place(a, C, host.yaw + r.yaw + (r.trip > 0 ? Math.cos((1 - r.trip) * TAU) * .5 * r.side : 0), host.pitch, 0, dt);
+      // Riding it faces as its host does; out on its loop it faces the way it is going (it swam the loop sideways).
+      a.ease = 6; place(a, C, r.trip > 0 && a.started ? Math.atan2(C.x - a.pos.x, C.z - a.pos.z) : host.yaw + r.yaw, host.pitch, 0, dt);
     }
   }
   function direct(dt, player, view) {
     diagnostics.encounters.active.length = 0;
     for (const s of slots) {
       if (s.active) {
-        if (driveEncounter(s.active, dt, player)) { diagnostics.encounters.active.push(s.active.id); continue; }
+        if (driveEncounter(s.active, dt, player, view ? view.range : 110)) { diagnostics.encounters.active.push(s.active.id); continue; }
         end(s.active); s.last = s.active.id; s.active = null; s.wait = rr(...s.config.cooldown) * (economy ? 1.3 : 1);
       } else if ((s.wait -= dt) <= 0) {
         const choices = s.kinds.filter(k => k.id !== s.last), e = choices[Math.floor(Math.random() * choices.length)] || s.kinds[0];
@@ -344,11 +407,11 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     const s = RESIDENTS.bluespots;
     if (gltfs.has(s.species)) for (const [x, z] of s.spots.slice(0, economy ? s.lean : s.spots.length)) {
       const a = actor(s.species, { clip: 'rest' }); if (!a) continue;
-      const [px, pz] = sand(x, z, 1.8); a.pos.set(px, floor(px, pz) + .1, pz); a.yaw = rr(0, TAU); a.started = true;
-      spotted.push({ actor: a, from: a.pos.clone(), to: a.pos.clone(), go: 0, yaw: a.yaw });
+      const [px, pz] = sand(x, z, 1.8); a.yaw = rr(0, TAU); lie(px, pz, a.yaw, a.L, .1); a.pos.set(px, LIE.y, pz); a.pitch = LIE.pitch; a.roll = LIE.roll; a.started = true;
+      spotted.push({ actor: a, from: a.pos.clone(), to: a.pos.clone(), go: 0, yaw: a.yaw, pitch: [a.pitch, a.pitch], roll: [a.roll, a.roll] });
     }
     const n = RESIDENTS.sleeper;
-    if (gltfs.has(n.species)) { const a = actor(n.species, { clip: 'rest' }); if (a) { const [x, z] = sand(...n.near, 3.5); a.pos.set(x, floor(x, z) + .45, z); resting.sleeper = a.pos.toArray(); a.yaw = rr(0, TAU); a.started = true; a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(0, a.yaw, 0, 'YXZ'); } }
+    if (gltfs.has(n.species)) { const a = actor(n.species, { clip: 'rest' }); if (a) { const [x, z] = sand(...n.near, 3.5); a.yaw = rr(0, TAU); lie(x, z, a.yaw, a.L, .45); a.pos.set(x, LIE.y, z); resting.sleeper = a.pos.toArray(); a.started = true; a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(-LIE.pitch, a.yaw, LIE.roll, 'YXZ'); } }
     const g = RESIDENTS.sentinel, wreck = landmark(g.landmark) || { x: 18, y: -23, z: -39 };
     if (gltfs.has(g.species)) { const a = actor(g.species, { clip: 'swim' }); if (a) { sentinel = { actor: a, home: new THREE.Vector3(wreck.x + g.offset[0], wreck.y + g.offset[1], wreck.z + g.offset[2]), drift: rr(0, TAU), dart: 0, calm: 0, away: new THREE.Vector3(), phase: rr(0, TAU), turn: Math.random() < .5 ? 1 : -1, hover: 0, cruise: rr(8, 14) }; a.pos.copy(sentinel.home); a.pos.x += Math.cos(sentinel.phase) * g.patrol[0]; a.pos.z += Math.sin(sentinel.phase) * g.patrol[1]; a.started = true; a.ease = 1.2; } }
     // Dens: at the foot of a formation, looking out from it, the rest of the body inside the rock.
@@ -383,13 +446,15 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       if (s.go > 0) {
         s.go = Math.max(0, s.go - dt / 2.4); const u = 1 - s.go, k = u * u * (3 - 2 * u);
         a.pos.lerpVectors(s.from, s.to, k); a.pos.y += Math.sin(u * Math.PI) * 1.2; a.yaw += turnTo(a.yaw, s.yaw) * ease(dt, 6);
+        // Level in flight, settling to the slope of the new patch as it lands.
+        const settle = Math.max(0, 1 - 4 * Math.min(u, 1 - u)); a.pitch = (u < .5 ? s.pitch[0] : s.pitch[1]) * settle; a.roll = (u < .5 ? s.roll[0] : s.roll[1]) * settle;
         if (s.go === 0) play(a, 'rest', 1);
       } else if (player && a.pos.distanceToSquared(player) < 6 * 6) {
         // Away from the diver, to the first open sand in that direction.
         const base = Math.atan2(a.pos.x - player.x, a.pos.z - player.z);
-        for (const t of [0, .5, -.5, 1, -1, 1.6]) { const yaw = base + t, x = a.pos.x + Math.sin(yaw) * 10, z = a.pos.z + Math.cos(yaw) * 10; if (Math.abs(x) < 58 && z > -100 && z < 30 && !solid(x, z)) { s.from.copy(a.pos); s.to.set(x, floor(x, z) + .1, z); s.yaw = yaw; s.go = 1; play(a, 'fast', .25); break; } }
+        for (const t of [0, .5, -.5, 1, -1, 1.6]) { const yaw = base + t, x = a.pos.x + Math.sin(yaw) * 10, z = a.pos.z + Math.cos(yaw) * 10; if (Math.abs(x) < 58 && z > -100 && z < 30 && !solid(x, z)) { lie(x, z, yaw, a.L, .1); s.from.copy(a.pos); s.to.set(x, LIE.y, z); s.pitch = [a.pitch, LIE.pitch]; s.roll = [a.roll, LIE.roll]; s.yaw = yaw; s.go = 1; play(a, 'fast', .25); break; } }
       }
-      a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(0, a.yaw, 0, 'YXZ');
+      a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(-a.pitch, a.yaw, a.roll, 'YXZ');
     }
     if (sentinel) {
       // A slow oval off the wreck, broken by spells of hanging still the way barracuda hold station. A diver
@@ -448,7 +513,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     const cloud = (species, x, y, z, count, size, extra = {}) => {
       const g = schoolGroup(species, { kind: 'cloud', count, lod: extra.lod, clip: 'idle' }); if (!g) return;
       g.centre.set(x, y, z); g.size = size; g.heading = rr(0, TAU); g.radius = Math.max(...size) + L(species);
-      for (let i = 0; i < count; i++) { const a = rr(0, TAU), r = Math.cbrt(Math.random()), u = rr(-1, 1), s = Math.sqrt(1 - u * u); g.members.push({ hx: Math.cos(a) * s * r * size[0], hy: u * r * size[1], hz: Math.sin(a) * s * r * size[2], scale: rr(.85, 1.1), w1: rr(.35, 1.1), w2: rr(.4, 1.2), w3: rr(.2, .7), p1: rr(0, TAU), p2: rr(0, TAU), p3: rr(0, TAU), beat: rr(0, TAU) }); }
+      for (let i = 0; i < count; i++) { const a = rr(0, TAU), r = Math.cbrt(Math.random()), u = rr(-1, 1), s = Math.sqrt(1 - u * u); g.members.push({ hx: Math.cos(a) * s * r * size[0], hy: u * r * size[1], hz: Math.sin(a) * s * r * size[2], scale: rr(.85, 1.1), w1: rr(.35, 1.1), w2: rr(.4, 1.2), w3: rr(.2, .7), p1: rr(0, TAU), p2: rr(0, TAU), p3: rr(0, TAU), beat: rr(0, TAU), loop: rr(.35, .8), flat: rr(.3, .55), turn: Math.random() < .5 ? 1 : -1 }); }
     };
     const shoal = (species, r, height, speed, count, spread, extra = {}) => {
       const g = schoolGroup(species, { kind: 'shoal', count, lod: extra.lod, pose: extra.pose, spread }); if (!g) return;
@@ -467,7 +532,10 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     const wr = SCHOOLS.wrasse, station = lifeSite(wr.site);
     if (station) cloud(wr.species, station.x, cover(station.x, station.z) + wr.lift, station.z, pair(wr.count), wr.size);
     // Pairs and small parties working the reef close to the bottom.
-    const anchors = near => { const list = near === 'formations' ? all.map(f => ({ x: f.x + f.radius * 1.1, z: f.z })) : patches(); return list.length ? list : all.map(f => ({ x: f.x - f.radius * 1.2, z: f.z + 2 })); };
+    // At a formation, on its reef side (toward the middle of the site): on the +x side, the loops round the eastern
+    // formations ran out to the edge of the world and round the back of them.
+    const inward = f => { const dx = -f.x, dz = -40 - f.z, d = Math.hypot(dx, dz) || 1; return { x: f.x + dx / d * f.radius * 1.1, z: f.z + dz / d * f.radius * 1.1 }; };
+    const anchors = near => { const list = near === 'formations' ? all.map(inward) : patches(); return list.length ? list : all.map(f => ({ x: f.x - f.radius * 1.2, z: f.z + 2 })); };
     for (const id of ['butterflies', 'idols', 'tangs', 'angels']) {
       const s = SCHOOLS[id], list = anchors(s.near);
       for (let i = 0; i < Math.min(pair(s.groups), list.length); i++) { const a = list[(i * 3 + id.length) % list.length]; shoal(s.species, route(a.x, a.z, s.loop, s.loop * .78, { wobble: .2 }), over(s.height, -3), .5 + L(s.species) * .15, s.count, [L(s.species) * 1.2, L(s.species) * .5, .2], { drift: .2, bob: .15 }); }
@@ -499,6 +567,16 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   function write(k, x, y, z, yaw, pitch, roll, scale, beat) {
     const slot = k.drawn++; want.set(x, y, z); E.set(-pitch, yaw, roll, 'YXZ'); M.compose(want, Q.setFromEuler(E), S.setScalar(scale)); k.mesh.setMatrixAt(slot, M); k.beats.array[slot] = beat;
   }
+  // A milling fish's offset from its spot, the way it faces and its speed at time t (written to MILL).
+  const MILL = { x: 0, z: 0, yaw: 0, speed: 0 };
+  function mill(m, heading, t) {
+    const h = heading + Math.sin(t * m.w3 + m.p3) * .3, theta = t * m.w1 * m.turn + m.p1, c = Math.cos(theta), s = Math.sin(theta);
+    const along = c * m.loop, across = s * m.loop * m.flat, vAlong = -s * m.loop * m.w1 * m.turn, vAcross = c * m.loop * m.flat * m.w1 * m.turn;
+    const fx = Math.sin(h), fz = Math.cos(h), rx = Math.cos(h), rz = -Math.sin(h);
+    MILL.x = fx * along + rx * across; MILL.z = fz * along + rz * across;
+    MILL.yaw = Math.atan2(fx * vAlong + rx * vAcross, fz * vAlong + rz * vAcross); MILL.speed = Math.hypot(vAlong, vAcross);
+    return MILL;
+  }
   function paintSchools(dt, player, view) {
     for (const k of kinds.values()) k.drawn = 0;
     const t = clock;
@@ -513,7 +591,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
         for (const m of g.members) reach = Math.max(reach, Math.hypot(m.nav.x - g.centre.x, m.nav.y - g.centre.y, m.nav.z - g.centre.z));
         g.radius = facts.get(g.k.species).lengthMetres + reach;
       }
-      if (g.kind === 'encounter') { const e = casts.get('tuna'); if (!e?.path) continue; onPath(e, clamp(e.u, 0, 1), A, T); g.centre.set(A.x, bandHeight(e, A.x, A.z, 0), A.z); g.radius = g.spread[0] + 6; }
+      if (g.kind === 'encounter') { const e = casts.get('tuna'); if (!e?.path) continue; onPath(e, e.u - g.spread[0] / 2 / e.path.len, A, T); g.centre.set(A.x, bandHeight(e, A.x, A.z, 0), A.z); g.radius = g.spread[0] + 6; }
       g.shown = true;
       if (view) { sphere.center.copy(g.centre); sphere.radius = g.radius; g.shown = view.eye.distanceTo(g.centre) - g.radius < view.range * (g.kind === 'cloud' || g.kind === 'burrows' ? .55 : .8) && view.frustum.intersectsSphere(sphere); }
       // A hidden school continues navigating (without rendering) so re-entering view cannot teleport it up
@@ -528,12 +606,26 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       const k = g.k;
       if (g.kind === 'shoal') for (const m of g.members) { const p = station(g, m, t, dt, player); write(k, want.x, want.y, want.z, p.yaw, p.pitch, clamp(-m.nav.turn * .06, -.15, .15), m.scale, m.beat); }
       else if (g.kind === 'cloud') {
-        // Holding station facing the current, darting a little; they sink into the coral as the diver comes close.
+        // Each fish mills round its own spot on a small loop drawn out along the current, always swimming forward
+        // and banking round the turns; they sink into the coral as the diver comes close.
         let near = 0; if (player) near = 1 - smoothstep(player.distanceTo(g.centre), g.radius + 1, g.radius + 7);
         g.fear += (near - g.fear) * ease(dt, near > g.fear ? 4 : .5);
         const tight = 1 - g.fear * .55, drop = g.fear * g.size[1] * 1.3;
-        for (const m of g.members) write(k, g.centre.x + m.hx * tight + Math.sin(t * m.w1 + m.p1) * .5, g.centre.y - drop + m.hy * tight + Math.sin(t * m.w2 + m.p2) * .3, g.centre.z + m.hz * tight + Math.cos(t * m.w1 * .9 + m.p3) * .5,
-          g.heading + Math.sin(t * m.w3 + m.p3) * .7 + Math.sin(t * m.w1 * 2.3 + m.p1) * .25, Math.sin(t * m.w2 + m.p3) * .18, 0, m.scale, m.beat);
+        for (const m of g.members) {
+          mill(m, g.heading, t); const x = MILL.x, z = MILL.z, yaw = MILL.yaw, speed = MILL.speed;
+          mill(m, g.heading, t + .1); const rate = turnTo(yaw, MILL.yaw) / .1;
+          const climb = .15 * m.w2 * Math.cos(t * m.w2 + m.p2);
+          // Over the coral, never in it: not into a formation's rock when the cloud sinks, nor under a table's plates
+          // (the map's nearest cell, and the sand under the fish, which on a slope can lie above that cell).
+          const fx = g.centre.x + m.hx * tight + x, fz = g.centre.z + m.hz * tight + z;
+          // As the cloud draws in and sinks the fish face the way they are actually going, not only round their loop.
+          const moved = m.at === frame - 1 && dt > 0 ? Math.hypot(fx - m.lx, fz - m.lz) / dt : 0, facing = moved > .05 ? Math.atan2(fx - m.lx, fz - m.lz) : yaw;
+          m.lx = fx; m.lz = fz; m.at = frame;
+          // The whole fish clears the sand, nose and tail as well as middle (on a steep slope its nose dug in).
+          const nx = Math.sin(facing) * m.scale * .35, nz = Math.cos(facing) * m.scale * .35, sand = Math.max(floor(fx, fz), floor(fx + nx, fz + nz), floor(fx - nx, fz - nz));
+          write(k, fx, Math.max(g.centre.y - drop + m.hy * tight + .15 * Math.sin(t * m.w2 + m.p2), ground(fx, fz) + .35, sand + .35), fz,
+            facing, clamp(Math.atan2(climb, speed), -.3, .3), clamp(-rate * .07, -.16, .16), m.scale, m.beat);
+        }
       } else if (g.kind === 'burrows') {
         // Upright in the sand; as the diver comes over they draw back until only their heads show.
         const L = facts.get(g.k.species).lengthMetres; let near = 0; if (player) near = 1 - smoothstep(player.distanceTo(g.centre), 5, 11);
@@ -541,7 +633,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
         for (const m of g.members) write(k, m.x, m.y - L * (.08 + .4 * g.sink) * m.scale, m.z, m.yaw + Math.sin(t * m.w1 + m.p1) * .4, Math.PI / 2 - .12, 0, m.scale, m.beat);
       } else if (g.kind === 'encounter') {
         const e = casts.get('tuna');
-        for (const m of g.members) { onPath(e, clamp(e.u - m.back / e.path.len, 0, 1), A, T); write(k, A.x - T.z * m.side, bandHeight(e, A.x, A.z, 0) + m.up, A.z + T.x * m.side, Math.atan2(T.x, T.z) + Math.sin(t * m.w1 + m.p1) * .05, 0, 0, m.scale, m.beat); }
+        for (const m of g.members) { onPath(e, e.u - m.back / e.path.len, A, T); write(k, A.x - T.z * m.side, bandHeight(e, A.x, A.z, 0) + m.up, A.z + T.x * m.side, Math.atan2(T.x, T.z) + Math.sin(t * m.w1 + m.p1) * .05, 0, 0, m.scale, m.beat); }
       }
     }
     for (const k of kinds.values()) { if (!k.mesh) continue; k.mesh.count = k.drawn; k.mesh.visible = k.drawn > 0; if (k.drawn) { k.mesh.instanceMatrix.needsUpdate = true; k.beats.needsUpdate = true; } }
@@ -579,6 +671,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   /** view: { frustum, eye, range } or null (the orbit viewer: everything resident is drawn). */
   function update(dt = 0, player = null, view = null) {
     const step = Math.min(.1, Math.max(0, dt)); clock += step; frame++; swimTime.value = clock;
+    coverLate();
     if (step > 0) { direct(step, player, view); driveResidents(step, player); }
     for (const a of actors) present(a, step, view);
     paintSchools(step, player, view);
@@ -592,7 +685,13 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   const sitesNow = () => [...actors.filter(a => a.active).map(a => ({ id: a.name, species: a.species, kind: 'animal', position: a.pos.toArray(), length: a.L, seen: a.seen })),
     ...groups.filter(g => g.active).map(g => ({ id: g.name, species: g.k.species, kind: g.kind, position: g.centre.toArray(), length: g.radius, seen: g.shown }))];
   const debug = {
-    swimmers: () => [...herds, ...groups.filter(g => g.kind === 'shoal')].flatMap(g => g.members.filter(m => m.nav).map(m => ({ species: m.actor?.species || g.k.species, x: m.nav.x, y: m.nav.y, z: m.nav.z, yaw: m.nav.yaw, pitch: m.nav.pitch, floor: cover(m.nav.x, m.nav.z), clearance: m.clearance, speed: g.speed, blocked: m.nav.blocked }))),
+    /** The seabed map the swimmers steer by, and the solid tops in it (m). */
+    cover: (x, z) => ({ soft: cover(x, z), hard: ground(x, z), sand: floor(x, z), covered }),
+    /** Every skinned animal as it stands (tools/audit-reef.mjs): pose, clip and clip rate. */
+    actors: () => actors.map(a => ({ name: a.name, species: a.species, active: a.active, seen: a.seen, clip: a.clip, x: a.pos.x, y: a.pos.y, z: a.pos.z, yaw: a.yaw, pitch: a.pitch, roll: a.roll, length: a.L, rate: a.mixer.timeScale })),
+    /** The instanced groups, in the order they are packed into their species' mesh. */
+    groups: () => groups.map(g => ({ name: g.name, kind: g.kind, species: g.k.species, key: g.k.key, active: g.active, shown: g.shown, count: g.members.length, centre: g.centre.toArray(), radius: g.radius, spread: g.spread, size: g.size })),
+    swimmers: () => [...herds, ...groups.filter(g => g.kind === 'shoal')].flatMap((g, group) => g.members.filter(m => m.nav).map(m => ({ group: g.name ? `${g.name} #${groups.indexOf(g)}` : `herd ${group}`, route: [g.route.cx, g.route.cz, g.route.rx, g.route.rz], species: m.actor?.species || g.k.species, x: m.nav.x, y: m.nav.y, z: m.nav.z, yaw: m.nav.yaw, pitch: m.nav.pitch, floor: cover(m.nav.x, m.nav.z), clearance: m.clearance, speed: g.speed, blocked: m.nav.blocked }))),
     /** Bring an encounter in now, wherever the diver is: 'whale', 'whale-shark', 'orcas', 'dolphins', 'blacktips', 'tuna'. */
     spawn(id, player = null, view = null) { const e = casts.get(id); if (!e) return false; const s = slots.find(item => item.slot === e.slot); if (s.active) end(s.active); begin(e, player, view); s.active = e; return true; },
     slots: () => slots.map(s => ({ slot: s.slot, active: s.active?.id || null, wait: Math.round(s.wait), progress: s.active ? +s.active.u.toFixed(3) : null })),

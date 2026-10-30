@@ -54,11 +54,12 @@ let analyticCalls = 0;
 const life = createMarineLife({ economy: true, terrainHeightAt: (x, z) => { analyticCalls++; return cliff(x, z); }, debug: true });
 let before = life.inspect().fish;
 const started = performance.now(), initialCalls = analyticCalls;
+// What is drawn is checked: economy steps a fixed thirtieth of a second, and at 60 Hz draws between its last two steps.
 for (let frame = 1; frame <= 600; frame++) {
   life.update(1 / 60, frame / 60, null);
   const after = life.inspect().fish;
   for (let i = 0; i < after.length; i++) {
-    assert.ok(Math.abs(after[i].position[1] - before[i].position[1]) < .018, 'legacy flock teleported vertically at reef');
+    assert.ok(Math.abs(after[i].drawn[1] - before[i].drawn[1]) < .018, 'legacy flock teleported vertically at reef');
     assert.ok(after[i].position.every(Number.isFinite), 'invalid flock position');
   }
   before = after;
