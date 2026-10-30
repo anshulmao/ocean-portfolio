@@ -18,7 +18,7 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
 | # | Rule |
 |---|------|
 | R1 | **The guide moves the visitor. The visitor moves the camera.** While the guide is swimming, mouse, drag or arrow-key look changes only the view and never the course. |
-| R2 | When the visitor hasn't touched the look for a few seconds, the camera gently pans to the current subject (look-assist). Their own look always wins straight away. |
+| R2 | When the visitor lets go of the look (1.4 s with no look input), the camera sweeps back, eased in and out, to where the guide is looking: the subject at a stop, a fly-by's subject or the way ahead while swimming. Their own look always wins straight away. |
 | R3 | Movement keys or the touch pad take over the dive. The tour holds and offers **Rejoin (G)**. Nothing is lost. |
 | R4 | The tour waits only at the welcome, the three portfolio sites and the ending, and **N** continues from each. Everything else is a **fly-by**: the swim slows and the camera glances, but nothing stops. |
 | R5 | Copy at a stop is small. "This is where you'll find X." No essays and no headline claims. |
@@ -26,7 +26,7 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
 | R7 | Touch, phone and keyboard all get equal treatment, and every key hint has a tap equivalent. |
 | R8 | The visitor can always exit, surface or keep exploring. The safety stop is offered, never forced. |
 
-## The sequence (round 4)
+## The sequence (rounds 4–5)
 
 World coordinates are metres (x, y, z), with y negative below the surface. Entry is about (0, 0, 0), facing −z.
 "Right" is +x. The route itself lives in `ocean-refined/guided-script.js`.
@@ -55,6 +55,8 @@ The welcome shows four key chips: C (dive computer), W A S D (swim), Space/Shift
 
 - The next one to try is lit, and each is ticked once it's tried.
 - The visitor can swim within 5 m of where the welcome began and stay on the tour.
+- On a phone it shows only the stick and rise and sink. The computer and the view are menu items there.
+- Rising stops 2.5 m over where the welcome began.
 - N skips the controls and starts the tour.
 
 ### Act 1: the portfolio, on the way down
@@ -67,24 +69,22 @@ The welcome shows four key chips: C (dive computer), W A S D (swim), Space/Shift
    - **The pillar coral cathedral.**
 4. **Experience: the Wreck** (stop). "This is where you'll find my experience."
 5. Fly-bys down to the treasure:
-   - **Through the arch.** Down the gully from the wreck and under the limestone arch's roof. The lamp is taught here
+   - **Through the arch.** Round the west of the wreck (clear of its masts and the barracuda's beat), down the gully and
+     under the limestone arch's roof. The lamp is taught here
      because it's dark.
    - **The lantern garden.**
 6. **Projects: the Treasure** (stop). "This is where you'll find my projects." The dive computer is taught here, at the
    deepest stop.
 
-### Act 2: the long way up (one swim, no stops)
+### Act 2: the way up (one swim, no stops; round 5)
 
 7. Fly-bys:
-   - **Look up.** Along the deep ledge to the soft coral spire, where the swim slows to a drift for about 9 s while a
-     **whale shark** passes overhead. The camera is taught here.
+   - **Look out to sea.** Along the deep ledge to the soft coral spire. The swim slows to a drift for about 9 s while a
+     **whale shark** passes 22 m out over the deep water and only 7 m above, side-on. The camera is taught here.
    - **Through the bait ball.**
-   - **The wreck, from above.**
-   - **Back over the anchor.**
-   - **The sunlit shallows:** rays on the sand, sergeant majors, the light coming through.
-   - **The grotto**, seen from beside it. Its passage is lower than the diver's capsule and seabed clearance allow.
-8. **The ending**, at about 5 m in the shallows: "This is my reef." V (view) is taught here. The choice is **Keep
-   exploring** or **Surface**.
+8. **The ending**, in open water just seaward of the wreck at about 12 m: the wreck below, and the whole reef rising to
+   the north. "This is my reef." V (view) is taught here, on a desktop. The choice is **Keep exploring** or **Surface**,
+   and from this depth Surface's ascent offers the safety stop.
 
 ### 9. Surface (if chosen)
 
@@ -97,7 +97,11 @@ The welcome shows four key chips: C (dive computer), W A S D (swim), Space/Shift
 - **On screen:** a soft bracket or ring on the subject, with a short label ("Whale shark, above").
 - **Off screen:** an arrow pinned to the screen edge, pointing the way to turn. It follows the subject as it moves.
 - It fades out after the subject has been in view for about 2 s, or when it leaves.
-- During the tour, the whale shark is called in for the "Look up" drift on the ascent (`oceanControls.encounter`, with
+- **Every pass is seen side-on** (round 5): a visitor rises no steeper than 30° over the diver. It swims up to 12 m under
+  its band and, if that is not enough, further out (`user-creatures.js` RISE, DEEPEN).
+- **Between fly-bys the guide turns to a big animal** (whale, whale shark, orcas, dolphins) passing within 40 m, for 5 s,
+  and not to the same one again within 45 s.
+- During the tour, the whale shark is called in for the "Look out to sea" drift on the ascent (`oceanControls.encounter`, with
   its course measured from the drift's point). Natural encounters also get the indicator while the guide is active.
 - *"Look, life above."*
 
@@ -110,8 +114,8 @@ The welcome shows four key chips: C (dive computer), W A S D (swim), Space/Shift
 | E (scooter) | Fly-by across the reef shelf | The guide runs it: the scooter shows in first person, the pace lifts and ⚡ reads as held and rings. "That's the scooter. Hold E to use it yourself, any time." |
 | Q (lamp) | Fly-by through the arch | "It's dark under the arch. Press Q for your lamp." |
 | H (photo) | Whale shark drift | "Press H to take a photo of it." On touch, the deck has a camera key. |
-| C (computer) | Projects | "Press C to check your depth on your dive computer." |
-| V (view) | The ending | "Press V to see yourself against the reef." |
+| C (computer) | Projects (desktop) | "Press C to check your depth on your dive computer." |
+| V (view) | The ending (desktop) | "Press V to see yourself against the reef." |
 | G (rejoin) | First takeover | "You have the controls. G to rejoin." |
 
 - A hint the visitor has already used is skipped. The guide running the scooter doesn't count as the visitor trying it.
@@ -133,6 +137,8 @@ The welcome shows four key chips: C (dive computer), W A S D (swim), Space/Shift
 
 - **Round 4:** about 414 m and roughly **150 s of motion**, fly-bys included, since nothing holds between the sites.
   That's down from about 250 s.
+- **Round 5:** about 410 m and roughly **145 s**. The way up ends above the wreck rather than in the shallows, and the
+  way down is a little longer round the west of the wreck.
 - Reading time is unbounded. The welcome, the three sites and the ending wait for the visitor.
 
 ## Acceptance checks
@@ -162,7 +168,7 @@ The welcome shows four key chips: C (dive computer), W A S D (swim), Space/Shift
 | D2 | Coral tower vs semicircle order | Anchor → **table coral tower** (shallow) → **pillar coral cathedral** (the semicircle) → wreck. |
 | D3 | Bait ball | **Included** in the main route (step 7 is no longer optional). |
 | D4 | Big animal | A **guaranteed whale shark**, scripted for the deep look-up. Its pass must stay in **open water**, over the deep shelf, and never swim in toward the shallows. Natural encounters are also pointed out. |
-| D5 | Camera when idle | **Drift**: the visitor's look holds for 2.5 s after their last input, then eases back to the guide's subject. |
+| D5 | Camera when idle | **Drift**: the visitor's look holds for 2.5 s after their last input, then eases back to the guide's subject. Round 5: 1.4 s, and an eased sweep while swimming too (it used to be a chase there). |
 | D6 | Welcome text | Shown **only on the tour**, inside the At a glance page. A visitor who opens At a glance outside the tour doesn't see it. |
 
 **Round 4 (30 Oct 2026).** These supersede D2 and D3: the tower, the cathedral and the bait ball are now fly-bys, not
@@ -172,7 +178,7 @@ stops.
 |---|----------|----------|
 | E1 | Arch placement | **Act 1, between Experience and Projects:** down the gully from the wreck, under the roof, out over the lantern garden. |
 | E2 | Whale shark | **A slow drift** of about 9 s on the ascent. The camera follows it, and the photo prompt comes here. |
-| E3 | Ending | **The sunlit shallows**, at about 5 m near where the dive began. |
+| E3 | Ending | **The sunlit shallows**, at about 5 m near where the dive began. Round 5: **open water just seaward of the wreck**, at about 12 m, with the reef ahead. |
 | E4 | Phone captions | **Subtitles at the top**, under the depth chip, with no card. The three sites keep the bottom sheet. |
 | E5 | Photo on phones | **A camera key on the touch deck**, in a row of its own over the flashlight. |
 
@@ -333,3 +339,27 @@ stops.
         round, and an unreachable waypoint is left out.
       - The treasure is approached and left over open water to its north.
       - The unit test's stand-in viewpoints are now the live ones.
+- **Round 5: a cinematic camera, side-on big life, a shorter way up** (the owner's notes after trying round 4).
+  - **Camera:**
+    - Under way, the visitor's look holds 1.4 s after they let go, then sweeps back, eased in and out, onto where the guide
+      is looking. Before, it chased back exponentially, and only at stops was it a sweep (`exploration.js` `sweep.back`).
+    - Between fly-bys, a big animal passing near gets the view.
+  - **Framing:** fly-bys pass their subjects 15–22 m off and look at the middle of them. The tower and the cathedral
+    read whole even on a phone held upright, which sees only about 26° across.
+  - **Big life side-on:** see Look-there indicators. The guided whale shark passes 22 m out and 7 m above.
+  - **The wreck and the barracuda:**
+    - The ship's collision volume is only its low hull, so the swim went through its masts and sails.
+    - The sentinel bolts from a diver within 6 m and stops to watch one within 14 m.
+    - Every leg now keeps 2 m from the ship's whole bounds and 8 m from the barracuda's beat, checked over the swim.
+    - The way down goes round the west of the wreck. `oceanDiagnostics.userCreatures.sentinel` gives its position and
+      how often it has bolted.
+  - **The way up** ends in open water above the wreck. The anchor, rays and grotto fly-bys are gone. Surfacing from 12 m
+    brings the safety stop back.
+  - **The welcome:**
+    - Rising stops 2.5 m over where it began (`tether`). It used to carry the visitor out of the welcome and to the
+      surface.
+    - On a phone the welcome asks for the stick and rise and sink only. The computer and the view are menu items there,
+      so they aren't taught on a phone.
+  - **Rejoin** takes up the step in progress. Taking the nearest step could skip the treasure now that the ending is
+    beside the wreck.
+  - `tour_version` is now 5.

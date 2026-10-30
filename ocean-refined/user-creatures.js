@@ -66,7 +66,8 @@ transformed.x += uSwimShape.y * (pow(setAlong, uSwimShape.z) * sin(uSwimShape.w 
 export function createUserCreatures({ terrainHeightAt = () => -40, collisions = null, economy = false, sites = {} } = {}) {
   const root = new THREE.Group(); root.name = 'Creature set';
   const pair = value => Array.isArray(value) ? value[economy ? 1 : 0] : value;
-  const diagnostics = { loading: {}, ready: false, loaded: 0, loadedSpecies: 0, failed: 0, species: 0, errors: [], visitors: 0, visitorCount: 0, schoolFish: 0, schoolCount: 0, schoolDrawCalls: 0, encounters: { active: [], history: [] } };
+  // sentinel: where the wreck's barracuda is, and how often a diver has crowded it into bolting.
+  const diagnostics = { sentinel: { at: null, darts: 0 }, loading: {}, ready: false, loaded: 0, loadedSpecies: 0, failed: 0, species: 0, errors: [], visitors: 0, visitorCount: 0, schoolFish: 0, schoolCount: 0, schoolDrawCalls: 0, encounters: { active: [], history: [] } };
   const gltfs = new Map(), facts = new Map(), actors = [], groups = [], kinds = new Map(), herds = [];
   let clock = 0, frame = 0;
 
@@ -475,14 +476,14 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       const cx = Math.cos(s.phase), sz = Math.sin(s.phase);
       C.set(s.home.x + cx * rx, s.home.y + Math.sin(clock * .21 + s.drift) * .5, s.home.z + sz * rz); C.y = Math.max(C.y, cover(C.x, C.z) + 2.5);
       let yaw = s.hover > 0 ? (d < 24 ? Math.atan2(player.x - a.pos.x, player.z - a.pos.z) : a.yaw) : Math.atan2(-sz * rx * s.turn, cx * rz * s.turn);
-      if (s.dart <= 0 && s.calm <= 0 && d < 6) { s.dart = 1; s.hover = 0; s.away.copy(a.pos).sub(player).setY(0).normalize().multiplyScalar(16).add(a.pos); s.away.y = s.home.y + 2; play(a, 'strike', .15, true, 'fast'); }
+      if (s.dart <= 0 && s.calm <= 0 && d < 6) { diagnostics.sentinel.darts++; s.dart = 1; s.hover = 0; s.away.copy(a.pos).sub(player).setY(0).normalize().multiplyScalar(16).add(a.pos); s.away.y = s.home.y + 2; play(a, 'strike', .15, true, 'fast'); }
       if (s.dart > 0) {
         s.dart -= dt / 6; const out = s.dart > .75;
         if (out) { C.copy(s.away); a.ease = 3; } else a.ease = .8;
         yaw = Math.atan2(C.x - a.pos.x, C.z - a.pos.z);
         if (s.dart <= 0) { s.calm = 6; s.cruise = rr(14, 22); play(a, 'swim', 1.2); a.ease = 1.2; }
       }
-      place(a, C, yaw, 0, 0, dt);
+      place(a, C, yaw, 0, 0, dt); diagnostics.sentinel.at = a.pos;
     }
     for (const d of dens) {
       const a = d.actor; d.rest -= dt;
