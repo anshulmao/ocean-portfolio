@@ -129,6 +129,20 @@ body[data-clear-ui="true"] .look-there{visibility:hidden}
 .tour-card footer [data-tour="exit"]{margin-left:auto;border-color:#0000;background:none}
 .tour-card footer :is([data-tour="rejoin"],[data-tour="surface"],[data-tour="read"]){border-color:var(--signal,var(--holo))}
 .tour-card[data-sheet="collapsed"] footer button{border-color:var(--signal,var(--holo))}
+/* A fly-by's caption (guided-dive.js): a title and a line over the water, with no card, only a scrim that fades out to the
+   right. Top centre under the top bar; on a phone, top left under the depth chip, clear of the compass. */
+.tour-caption{position:fixed;top:calc(var(--o-under-bar) + 8px);left:50%;z-index:var(--o-z-announce);display:grid;gap:3px;box-sizing:border-box;width:max-content;max-width:min(520px,calc(100vw - 2*var(--o-pad)));padding:10px 40px 11px 16px;border-left:2px solid var(--signal,var(--holo));background:linear-gradient(90deg,color-mix(in srgb,var(--holo-tint-solid) 78%,#0000) 55%,#0000);color:var(--holo-ink);font-family:var(--holo-font);text-shadow:var(--holo-text-glow);pointer-events:none;opacity:0;translate:-50% -6px;transition:opacity 400ms var(--journey-out),translate 400ms var(--journey-out)}
+.tour-caption[data-show="true"]{opacity:1;translate:-50% 0;transition:opacity 500ms var(--journey-in),translate 500ms var(--journey-in)}
+.tour-caption b{font-size:19px;font-weight:500;line-height:1.2}
+.tour-caption span{font-size:14px;line-height:1.4;opacity:.86}
+.tour-caption small{margin-top:3px;font-size:12.5px;line-height:1.4;color:var(--signal,var(--holo-strong))}
+.tour-caption small[hidden]{display:none}
+body:is([data-clear-ui="true"],[data-safety-stop="true"]) .tour-caption{visibility:hidden}
+@media (prefers-reduced-motion:reduce){.tour-caption,.tour-caption[data-show="true"]{translate:-50% 0}}
+/* A fly-by teaching a control rings its key on the touch deck; the scooter key reads as held while the guide runs it. */
+body[data-tour-teach="scooter"] .touch-actions [data-swim="KeyE"],body[data-tour-teach="photo"] .touch-actions [data-photo],body[data-tour-teach="lamp"] .touch-actions [data-lamp]{border-color:var(--holo-strong);animation:journey-ping 1.4s var(--journey-out) infinite}
+body[data-guide-scooter="true"] .touch-actions [data-swim="KeyE"]{background:var(--holo-fill-on)}
+@media (prefers-reduced-motion:reduce){body[data-tour-teach] .touch-actions .touch-key{animation:none}}
 .tour-fade{position:fixed;inset:0;z-index:var(--o-z-labels);pointer-events:none;background:#04303f;opacity:0;transition:opacity var(--journey-standard) var(--journey-ease)}
 .tour-fade[data-on="true"]{opacity:1;transition:opacity 200ms var(--journey-out)}
 /* The tour narrates each landmark itself, so the generic prompt to click in stays out of its way. */
@@ -148,6 +162,14 @@ html[data-input="touch"] .tour-card footer kbd{display:none}
   .zone-card small{font-size:9px;letter-spacing:.16em}
   .zone-card strong{font-size:24px}
   .zone-card b{width:104px}
+  /* The fly-by caption under the depth chip, left, short of the compass; and while the tour leads, Back to the surface
+     gives its place up (the tour's own Exit and Surface stay), so the top of the water is the caption's. */
+  .tour-caption{left:var(--o-pad);max-width:calc(100vw - 2*var(--o-pad) - 112px);padding:8px 28px 9px 12px;translate:0 -6px}
+  .tour-caption[data-show="true"]{translate:0 0}
+  .tour-caption b{font-size:16px}
+  .tour-caption span{font-size:13px;line-height:1.35}
+  .tour-caption small{font-size:12px}
+  body:is([data-tour="intro"],[data-tour="travel"],[data-tour="dwell"])[data-submerged="true"] .dive-button{visibility:hidden}
   section.tour-card,body[data-computer-open="true"][data-camera="third"] section.tour-card{left:var(--o-pad);right:var(--o-pad);bottom:var(--o-sheet-bottom);width:auto;max-height:var(--o-sheet-max);padding:0 8px 0 18px;column-gap:8px}
   section.tour-card[data-sheet="expanded"]{padding:0 14px 10px 18px}
   .tour-head{min-height:var(--o-tap)}

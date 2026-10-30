@@ -23,6 +23,7 @@ const touchInput = () => document.documentElement.dataset.input === 'touch';
 const dialog = document.createElement('dialog'); dialog.className = 'expedition-dialog'; dialog.setAttribute('aria-labelledby', 'expedition-title');
 document.body.append(dock, notice, prompt, dialog);
 const score = dock.querySelector('[data-score]'), photoButton = dock.querySelector('[data-photo]'), stopButton = dock.querySelector('[data-stop]');
+const deckPhoto = document.querySelector('.touch-deck [data-photo]');
 const offerFill = stopButton.querySelector('i'), offerTime = stopButton.querySelector('output');
 let offerLeft=0, offerUsed=false, offerSecond=-1,returnOffer=false;
 function offerAvailable() { return offerLeft>0&&!dialog.open&&!ui.dialog&&!ui.panel&&!window.oceanControls?.nav?.suspended&&(window.oceanControls?.nav.returnPhase==='offer'||(!window.oceanDiagnostics?.nearbyLandmark&&!nearest)); }
@@ -209,6 +210,7 @@ onTick(dt=> {
   const underwater = Boolean(state.submerged);
   if (underwater !== lastSubmerged) { lastSubmerged = underwater; dock.hidden = !underwater; }
   photoButton.disabled = state.cameraMode !== 'first' || Boolean(controls.getTransition());
+  deckPhoto?.setAttribute('aria-disabled', String(photoButton.disabled));
   const reading = toDisplayDepth(-controls.getPlayerPosition().y);
   const returning=controls.nav.returnPhase;
   // The offer's hint follows the input in use: the button itself is the action on touch.
@@ -255,6 +257,8 @@ onTick(dt=> {
 dock.querySelector('[data-stop]').addEventListener('click',openStop);
 prompt.addEventListener('click',collect);
 dock.querySelector('[data-photo]').addEventListener('click',takePhoto);
+// On touch there is no H: the deck's camera key takes the photo (index.html).
+deckPhoto?.addEventListener('click',takePhoto);
 dock.querySelector('[data-inventory]').addEventListener('click',openInventory);
 addEventListener('keydown',event=> {
   if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.target.closest?.('input,textarea,select,[contenteditable="true"]')) return;

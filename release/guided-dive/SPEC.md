@@ -7,7 +7,8 @@ The source of truth for how the guided dive should feel and behave. The raw brie
 
 The guided dive is the main way a first-time visitor meets the portfolio. It should:
 
-1. Show the whole reef in about **two minutes of actual movement**, plus as long as the visitor wants to read.
+1. Show the whole reef in about **two and a half minutes of actual movement**, plus as long as the visitor wants to read.
+   It goes down through the portfolio first, then takes the long way back up.
 2. Signpost the portfolio. It says where About, Experience and Projects live, not what's in them.
 3. Teach the controls a few at a time, at the moment each one is useful.
 4. Leave the visitor free at every point. They can look anywhere, take over, rejoin, or surface.
@@ -19,96 +20,73 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
 | R1 | **The guide moves the visitor. The visitor moves the camera.** While the guide is swimming, mouse, drag or arrow-key look changes only the view and never the course. |
 | R2 | When the visitor hasn't touched the look for a few seconds, the camera gently pans to the current subject (look-assist). Their own look always wins straight away. |
 | R3 | Movement keys or the touch pad take over the dive. The tour holds and offers **Rejoin (G)**. Nothing is lost. |
-| R4 | **N** continues at every stop. Nothing advances on a timer while there's text to read. |
+| R4 | The tour waits only at the welcome, the three portfolio sites and the ending, and **N** continues from each. Everything else is a **fly-by**: the swim slows and the camera glances, but nothing stops. |
 | R5 | Copy at a stop is small. "This is where you'll find X." No essays and no headline claims. |
 | R6 | Reduced motion: legs become fades between stops, there's no auto-pan, and look indicators stay. |
 | R7 | Touch, phone and keyboard all get equal treatment, and every key hint has a tap equivalent. |
 | R8 | The visitor can always exit, surface or keep exploring. The safety stop is offered, never forced. |
 
-## The sequence
+## The sequence (round 4)
 
 World coordinates are metres (x, y, z), with y negative below the surface. Entry is about (0, 0, 0), facing −z.
-"Right" is +x.
+"Right" is +x. The route itself lives in `ocean-refined/guided-script.js`.
+
+Only five moments wait for the visitor: the welcome, **About**, **Experience**, **Projects** and the ending.
+Everything between them is a **fly-by**:
+
+- The swim slows (to about half its cruise, unless the fly-by says otherwise).
+- The camera glances at the subject with the same eased turn as a pan.
+- A caption names it, and any control it teaches.
+- The swim carries on.
+
+The visitor's own look always wins (R1, D5).
 
 ### 0. Entry: "Show me around" (surface → underwater)
 
-1. The visitor clicks **Show me around** while bobbing at the surface.
-2. **Beat (~1 s):** nothing moves. Then the hero text, CTAs and links fade out.
-3. The camera dollies in on the diver (third person) until the diver is centred.
-4. The diver dives in, and the camera blends into **first person** during the descent.
-5. The diver levels out at shallow depth, facing the anchor.
-6. **Look around (~6–8 s):** a slow pan across the reef so the visitor sees where they are. They can grab the look at any time.
-7. A splash title appears ("Guided dive"), then the bottom sheet: *"Welcome to the guided dive."*
+1. The visitor clicks **Show me around** while bobbing at the surface. The hero text, CTAs and links fade out.
+2. The camera eases in on the diver until the diver is centred.
+3. The diver dives in, and the view goes to **first person** during the descent.
+4. The diver levels out at shallow depth, facing the anchor, and the camera looks slowly around the reef.
+5. The title card shows ("Guided dive"), then the welcome sheet.
 
-### 1. Controls primer
+### 1. Welcome and controls primer
 
-The sheet shows the core controls. Each one ticks when the visitor tries it, and none is required.
+The welcome shows four key chips: C (dive computer), W A S D (swim), Space/Shift (up and down) and V (view).
 
-| Key | Touch | Does |
-|-----|-------|------|
-| C | Computer button | Dive computer |
-| F | Interact button | Interact (read a site, collect a find) |
-| E (hold) | Scooter button | Scooter (also speeds up the guide's swim) |
-| Q | Lamp button | Flashlight |
-| V | View button | First / third person |
-| N | Continue | Continue the tour |
+- The next one to try is lit, and each is ticked once it's tried.
+- The visitor can swim within 5 m of where the welcome began and stay on the tour.
+- N skips the controls and starts the tour.
 
-Then: *"You can go anywhere. There's a lot of life down here. Press N to continue."*
+### Act 1: the portfolio, on the way down
 
-### 2. The Anchor: About (−12, −8, −15)
+2. **About: the Anchor** (stop). "This anchor is me." Read it (F) opens At a glance, which carries the welcome (D6).
+3. Fly-bys on the way to the wreck:
+   - **The nurse shark**, asleep where it settled behind the anchor.
+   - **Scooter on.** The guide runs the scooter across the reef shelf, so the visitor sees it.
+   - **The table coral tower.**
+   - **The pillar coral cathedral.**
+4. **Experience: the Wreck** (stop). "This is where you'll find my experience."
+5. Fly-bys down to the treasure:
+   - **Through the arch.** Down the gully from the wreck and under the limestone arch's roof. The lamp is taught here
+     because it's dark.
+   - **The lantern garden.**
+6. **Projects: the Treasure** (stop). "This is where you'll find my projects." The dive computer is taught here, at the
+   deepest stop.
 
-- Swim to the anchor, which is directly ahead.
-- Sheet: *"This anchor is me. Press F to open my portfolio."*
-- F opens the archive's existing **At a glance** page with a welcome. The welcome says this is Anshul, this is a
-  dive world built for exploring the portfolio, the visitor is free to roam, and they can continue the guided dive
-  from here.
-- Closing the archive returns to the tour. **N** continues.
+### Act 2: the long way up (one swim, no stops)
 
-### 3. Life by the anchor → out across the reef
+7. Fly-bys:
+   - **Look up.** Along the deep ledge to the soft coral spire, where the swim slows to a drift for about 9 s while a
+     **whale shark** passes overhead. The camera is taught here.
+   - **Through the bait ball.**
+   - **The wreck, from above.**
+   - **Back over the anchor.**
+   - **The sunlit shallows:** rays on the sand, sergeant majors, the light coming through.
+   - **The grotto**, seen from beside it. Its passage is lower than the diver's capsule and seabed clearance allow.
+8. **The ending**, at about 5 m in the shallows: "This is my reef." V (view) is taught here. The choice is **Keep
+   exploring** or **Surface**.
 
-- Pan over the **nurse shark** resting near the anchor (about −21, −24).
-- Swing **right** across the shallow reef, past the sergeant majors and the fusilier ribbon.
-- Glance at the deep blue without going there yet: *"The deep end comes later."*
-
-### 4. Table coral tower (38, −8), shallow, right
-
-- Approach and pan. Free look. Teach **H (photo)** here.
-
-### 5. Pillar coral cathedral (48, −28): the semicircle
-
-- Go **down** to the horseshoe of organ-pipe columns and swim into the open side. Pan it.
-- Free look is the point of this beat.
-
-### 6. The Wreck: Experience (18, −23, −39)
-
-- Swim **left** and down to the ship. *"Here's the wreck."*
-- Go in close and pan. The barracuda sentinel patrols here and there's plenty of fish life. Teach **Q (lamp)**.
-- Sheet: *"This is where you'll find my experience. Press F to open it."*
-- Pan the wreck again and show more life. **N** continues.
-
-### 7. Optional: the bait ball (about 48, −67, over the soft coral spire)
-
-- Swim **through** the bait ball (it opens a tunnel around the diver), with trevally hunting round it. Teach **E (scooter)** on the way.
-
-### 8. Deeper: look up
-
-- Drop below the ledge (about 0, −40, −66) and turn to **look up** at the reef top and the light.
-- Teach **C (computer)**: *"Check your depth. We're about N m down."*
-- If a big animal is around, point to it (see *Look-there indicators*).
-
-### 9. The Treasure: Projects (−18, −45, −82)
-
-- Move slowly across to the deep ledge.
-- Sheet: *"This is where you'll find my projects. Press F to open them."* Free look.
-
-### 10. Rise to the overview (left edge, about −45, −12, −40)
-
-- Ascend **slowly** along the left side, past the kelp grove and the barracuda wheel, to a point where the whole reef is in view.
-- Teach **V (view)** for a third-person look at the diver against the reef.
-- Sheet: *"This is my reef and my portfolio. Dive around on your own and look at the life."*
-- Choice: **Explore** (free) or **Surface**.
-
-### 11. Surface (if chosen)
+### 9. Surface (if chosen)
 
 - Play the existing ascent: rise, offer the **safety stop** (hold, or skip with Esc), surface.
 - Back at the surface, the tour is complete.
@@ -119,48 +97,58 @@ Then: *"You can go anywhere. There's a lot of life down here. Press N to continu
 - **On screen:** a soft bracket or ring on the subject, with a short label ("Whale shark, above").
 - **Off screen:** an arrow pinned to the screen edge, pointing the way to turn. It follows the subject as it moves.
 - It fades out after the subject has been in view for about 2 s, or when it leaves.
-- During the tour, at least one giant encounter (the whale shark by default) is brought in at the "look up" or
-  overview beat, using the existing `debug.spawn` path through a public API. Natural encounters also get the
-  indicator while the guide is active.
+- During the tour, the whale shark is called in for the "Look up" drift on the ascent (`oceanControls.encounter`, with
+  its course measured from the drift's point). Natural encounters also get the indicator while the guide is active.
 - *"Look, life above."*
 
 ## Teaching schedule (each control taught once)
 
-| Control | Where | Line |
-|---------|-------|------|
-| C, F, E, Q, V | Primer | Listed and tickable |
-| F | Anchor, Wreck, Projects | "Press F to open it" |
-| H (photo) | Table coral tower | "Press H to take a photo" |
-| Q (lamp) | Wreck | "It's darker in here. Q for your lamp." |
-| E (scooter) | Long leg to the bait ball / deep | "Hold E to scooter. The guide speeds up too." |
-| C (computer) | Deep look-up | "Check your depth on your computer: C." |
-| V (view) | Overview | "Press V to see yourself against the reef." |
+| Control | Where | How |
+|---------|-------|-----|
+| C, W A S D, Space/Shift, V | Welcome | Key chips, one prompt at a time, each ticked once it's tried |
+| F | About, Experience, Projects | "Press F to open it" |
+| E (scooter) | Fly-by across the reef shelf | The guide runs it: the scooter shows in first person, the pace lifts and ⚡ reads as held and rings. "That's the scooter. Hold E to use it yourself, any time." |
+| Q (lamp) | Fly-by through the arch | "It's dark under the arch. Press Q for your lamp." |
+| H (photo) | Whale shark drift | "Press H to take a photo of it." On touch, the deck has a camera key. |
+| C (computer) | Projects | "Press C to check your depth on your dive computer." |
+| V (view) | The ending | "Press V to see yourself against the reef." |
 | G (rejoin) | First takeover | "You have the controls. G to rejoin." |
 
-A hint the visitor has already used is skipped.
+- A hint the visitor has already used is skipped. The guide running the scooter doesn't count as the visitor trying it.
+- On touch, the deck key a fly-by teaches rings while its tip shows.
 
 ## Copy rules
 
 - One short line per beat, two at most. Use second person and present tense.
 - Signpost: "This is where you'll find…". Don't summarise the portfolio in the tour.
 - Key hints follow the input in hand (keys on desktop, buttons on touch).
+- **Fly-by captions** are a title and one line over the water, with no card. They sit top centre on a desktop, and top
+  left under the depth chip on a phone, clear of the compass. While the tour leads on a phone, Back to the surface
+  makes way for them.
+- **At a stop on a phone**, the camera aims a little below the landmark, so the landmark sits above the middle of the
+  screen, clear of the sheet.
 - The existing long `lines`/`short` copy on stops is retired from the tour. It stays in the archive.
 
 ## Timing budget
 
-- Route length is about 300 m. At a cinematic cruise of about 4 m/s that's about 75 s of travel, plus about 45 s
-  of pans, so roughly **2 minutes of motion**.
-- Reading time is unbounded, and stops wait for **N**.
+- **Round 4:** about 414 m and roughly **150 s of motion**, fly-bys included, since nothing holds between the sites.
+  That's down from about 250 s.
+- Reading time is unbounded. The welcome, the three sites and the ending wait for the visitor.
 
 ## Acceptance checks
 
 - Mouse look during a guided leg never changes the course and never ends the tour.
-- WASD or the touch pad takes over. G rejoins at the nearest remaining beat.
-- Every leg plans a collision-clear route (unit test over the whole script).
+- A fly-by's glance turns only the view. The course and the body hold.
+- WASD or the touch pad takes over. G rejoins at the nearest remaining step, through the scenic waypoints still ahead.
+- Every leg plans a collision-clear scenic route at both quality levels and seabed clearances up to 2.2 m. This is a
+  unit test over the whole script.
+- The leg to the treasure passes under the arch's roof, even after a stall, a pause or a takeover and rejoin partway.
+- Every fly-by shows once, in order. Each lasts its hold, or is cut short (after 2.5 s at least) by the next one coming
+  into reach.
 - The whole tour completes with N only, on desktop and on a phone layout.
-- With reduced motion on, every leg is a cut and there's no auto-pan.
-- At least one big animal is pointed out during the tour.
-- Surface from the overview runs the existing ascent and safety-stop offer.
+- With reduced motion on, every leg is a fade, and there are no pans, fly-bys or called-in animals.
+- The whale shark's line stays over open water (D4).
+- Surface from the ending runs the existing ascent and safety-stop offer.
 - No regression in atlas travel, start-at-site, or free swimming.
 
 ## Decisions (29 Oct 2026)
@@ -173,6 +161,17 @@ A hint the visitor has already used is skipped.
 | D4 | Big animal | A **guaranteed whale shark**, scripted for the deep look-up. Its pass must stay in **open water**, over the deep shelf, and never swim in toward the shallows. Natural encounters are also pointed out. |
 | D5 | Camera when idle | **Drift**: the visitor's look holds for 2.5 s after their last input, then eases back to the guide's subject. |
 | D6 | Welcome text | Shown **only on the tour**, inside the At a glance page. A visitor who opens At a glance outside the tour doesn't see it. |
+
+**Round 4 (30 Oct 2026).** These supersede D2 and D3: the tower, the cathedral and the bait ball are now fly-bys, not
+stops.
+
+| # | Question | Decision |
+|---|----------|----------|
+| E1 | Arch placement | **Act 1, between Experience and Projects:** down the gully from the wreck, under the roof, out over the lantern garden. |
+| E2 | Whale shark | **A slow drift** of about 9 s on the ascent. The camera follows it, and the photo prompt comes here. |
+| E3 | Ending | **The sunlit shallows**, at about 5 m near where the dive began. |
+| E4 | Phone captions | **Subtitles at the top**, under the depth chip, with no card. The three sites keep the bottom sheet. |
+| E5 | Photo on phones | **A camera key on the touch deck**, in a row of its own over the flashlight. |
 
 ## Build log
 
@@ -296,3 +295,28 @@ A hint the visitor has already used is skipped.
     offer comes up within 0.6 m of the stop, at a drift. The test checks there's no overrun and no wait.
   - **#15 merged in** (a shorter waterline hold on slow devices; the tour's assets start loading at the Show me
     around click).
+- **Round 4: portfolio first, then the long way up** ([ROUND_4_PLAN.md](ROUND_4_PLAN.md) has the owner's notes and the
+  findings).
+  - **The arch fix.** A stall partway through a leg used to replan without the scenic waypoints. On the cliff edge
+    below the wreck, that sent the swim 6–7 m over the arch's roof. A detour, Resume and Rejoin now keep the waypoints
+    still ahead, measured along the scenic line from the step before.
+  - **Fly-bys** (`exploration.js`):
+    - `glance` turns the view to a subject while a leg swims on. The course and the body hold.
+    - `pacing` eases the cruise to a fraction of itself.
+    - `guideScooter` runs the scooter for the visitor to see.
+    - A leg's end or any takeover clears all three.
+    - `guided-dive.js` drives them from the scenic waypoints that carry a caption. It drops fly-bys the swim has
+      already passed, and lets the next one cut a running one short.
+  - **The route.** Three stops, 12 fly-bys, about 414 m and 151 s of motion, checked at 30, 60 and 120 Hz on the real
+    reef.
+  - **The whale shark** is called 26 m before its drift, on a course measured from the drift's point (`course.from` in
+    `user-creatures.js`), not from wherever the diver is.
+  - **Phones:**
+    - Fly-by captions sit under the depth chip.
+    - Back to the surface steps aside while the tour leads.
+    - The landmark is framed above the sheet at a stop.
+    - The deck gains a camera key, and the taught key rings.
+  - **Analytics:** the tour's events carry `tour_version: 4`, so the funnel never mixes the round 4 steps with the 13
+    that came before.
+  - **Reduced motion:** there are no fly-bys, so the tour calls no animal in. `big-life.js` still brings a big animal by
+    on every dive.

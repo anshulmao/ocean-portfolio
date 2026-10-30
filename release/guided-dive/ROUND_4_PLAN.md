@@ -1,6 +1,7 @@
 # Guided dive, round 4: portfolio first, then the long way up
 
-A plan, agreed 30 Oct 2026 (see Decisions); being built in this branch. It amends [SPEC.md](SPEC.md). Once we agree on it, the SPEC's sequence, teaching
+A plan, agreed 30 Oct 2026 (see Decisions) and built in PR #30. [SPEC.md](SPEC.md) is the source of truth from here; this
+file keeps the owner's notes and the findings that led to it. It amends [SPEC.md](SPEC.md). Once we agree on it, the SPEC's sequence, teaching
 schedule and decisions get rewritten to match, and this file is folded into the build log.
 
 ## The owner's notes (30 Oct 2026)
@@ -125,4 +126,4 @@ Tips live in the subtitle or the stop sheet, never in a folded row.
 | E2 | Whale shark | **A slow drift of about 8 s** on the ascent. The camera follows it, and the photo prompt comes here. |
 | E3 | Ending | **The sunlit shallows**, at about 5 m near where the dive began, after the grotto, the rays and the flying fish. |
 | E4 | Phone captions | **Subtitles at the top**, under the depth chip, with no card. The three portfolio stops keep the bottom sheet. |
-| E5 | Photo on phones | Default: a camera button on the touch deck next to the lamp and the scooter (not yet confirmed by the owner). |
+| E5 | Photo on phones | A camera key on the touch deck, in a row of its own over the flashlight. |

@@ -255,6 +255,9 @@ let captionShown = '';
 function paintCaption(fingers) {
   const id = sight?.teach, on = status === 'travel' && Boolean(sight) && !paused, tip = on && id && !used.has(id) ? CONTROLS[id]?.tip?.[fingers ? 1 : 0] ?? '' : '';
   const key = on ? `${sight.key}:${tip}` : '';
+  // The deck key it teaches calls the thumb to it, and the scooter key reads as held while the guide runs the scooter.
+  if (tip) document.body.dataset.tourTeach = id; else delete document.body.dataset.tourTeach;
+  if (on && sight.scooter) document.body.dataset.guideScooter = 'true'; else delete document.body.dataset.guideScooter;
   if (key === captionShown) return tip;
   captionShown = key; caption.dataset.show = String(on);
   if (!on) return tip;
