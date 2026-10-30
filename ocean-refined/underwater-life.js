@@ -20,7 +20,6 @@ export function* underwaterLifeSteps({ economy = false, terrainHeightAt = () => 
   // Eyes, oral arms and urchins are a few centimetres to a hand across: they
   // do not need the turtle shell's tessellation.
   const bead = new THREE.SphereGeometry(1, 8, 6), blob = new THREE.SphereGeometry(1, 10, 6), round = new THREE.SphereGeometry(1, 12, 8);
-  const skin = mat('#8eaa87');
   const shellMat = mat('#667d5b');
   // Fine seams provide the characteristic shell plates without extra geometry.
   shellMat.onBeforeCompile = shader => {
@@ -65,7 +64,8 @@ export function* underwaterLifeSteps({ economy = false, terrainHeightAt = () => 
   paddle.quadraticCurveTo(1.24, -.10, 1.05, .04); paddle.quadraticCurveTo(.45, .27, 0, .10);
   const paddleGeometry = new THREE.ExtrudeGeometry(paddle, { depth: .055, bevelEnabled: true, bevelSize: .025, bevelThickness: .025, bevelSegments: 1, steps: 1, curveSegments: economy ? 5 : 8 });
   paddleGeometry.rotateX(Math.PI / 2);
-  const flippers = batch('Turtle flippers', paddleGeometry, skin, turtleCount * 4);
+  // White vertex colours on a material of the skin's colour: the flippers draw with the bodies' program, one fewer to build.
+  const flippers = batch('Turtle flippers', paint(paddleGeometry, '#ffffff'), mat('#8eaa87', { vertexColors: true }), turtleCount * 4);
   const turtleMeshes = batches.slice();
 
   yield;

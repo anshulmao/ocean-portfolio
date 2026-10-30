@@ -220,13 +220,15 @@ transformed.z += cos(heroWave * .77 + aSway.z) * aSway.x * .55;`);
 }
 const standard = options => new THREE.MeshStandardMaterial({ color: '#ffffff', vertexColors: true, roughness: .72, ...options });
 // Emissive follows the vertex colour, so one material carries every glow hue.
-function glowMaterial(time, sways) {
+function glowMaterial(time) {
   const material = standard({ color: '#9aa3a3', roughness: .5, emissive: '#ffffff', emissiveIntensity: .6, side: THREE.DoubleSide });
+  // The still glow (the clam's mantle) runs the swaying program too: its geometry has no sway weights, which read as
+  // zero, so nothing moves, and one program fewer is built.
   material.onBeforeCompile = shader => {
-    if (sways) swayPatch(shader, time);
+    swayPatch(shader, time);
     shader.fragmentShader = shader.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= vColor.rgb;');
   };
-  material.customProgramCacheKey = () => `hero-glow-${sways ? 'sway' : 'still'}-v1`;
+  material.customProgramCacheKey = () => 'hero-glow-sway-v1';
   return stylize(material, { toon: 0, rim: .2, caustics: 0 });
 }
 
@@ -257,7 +259,7 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
   // One set of buffers per formation. The faceted stone carries its face
   // normals in its vertices, so it shares the coral's buffer and material.
   let rocks, corals, brains, swayers, glows;
-  const glowSway = glowMaterial(time, true);
+  const glowSway = glowMaterial(time);
   const swayMaterial = standard({ side: THREE.DoubleSide, roughness: .66 });
   swayMaterial.onBeforeCompile = shader => swayPatch(shader, time);
   swayMaterial.customProgramCacheKey = () => 'hero-sway-v1';
@@ -420,7 +422,7 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
     const g = begin('Giant clam', cx, cz, 3.5, 2.6), size = 3.6, restAngle = .1;
     const shell = standard({ side: THREE.DoubleSide, roughness: .8 });
     const valves = new THREE.InstancedMesh(valveGeometry(economy ? 26 : 44, economy ? 6 : 9), shell, 2); valves.name = 'Giant clam valves';
-    const mantleMaterial = glowMaterial(time, false);
+    const mantleMaterial = glowMaterial(time);
     const mantle = new THREE.Mesh(mantleGeometry(economy ? 28 : 48, economy ? 6 : 10, restAngle), mantleMaterial); mantle.name = 'Giant clam mantle';
     const origin = new THREE.Vector3(cx, g - .3, cz);
     mantle.position.copy(origin); mantle.rotation.y = yaw; mantle.scale.setScalar(size);
