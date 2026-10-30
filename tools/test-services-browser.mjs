@@ -38,9 +38,8 @@ await page.route('http://127.0.0.1:4190/**',async route=>{
 try{
   await page.goto('http://127.0.0.1:4190/test-fixture');
   await page.waitForFunction(()=>window.oceanExpedition);
-  assert.equal(analytics.length,0,'Analytics must make no requests before consent');
-  await page.locator('[data-analytics-toggle]').click();
-  await page.waitForFunction(()=>window.localStorage.getItem('ocean-analytics-consent-v1')==='yes');
+  // Analytics are on by default (no stored choice): the SDK loads once the page is idle.
+  await page.waitForFunction(()=>document.querySelector('[data-analytics-toggle]')?.textContent.startsWith('Analytics on'));
   await page.waitForTimeout(1200);
   await page.evaluate(()=>oceanExpedition.openStop());
   await page.getByRole('radio',{name:'5 out of 5',exact:true}).check();
@@ -63,10 +62,10 @@ try{
   assert.equal(submissions.filter(item=>item.kind==='photo').length,1);
   if(!analytics.some(url=>url.includes('/e/')))await page.waitForRequest(request=>request.url().includes('us.i.posthog.com')&&request.url().includes('/e/'),{timeout:10000});
   await page.waitForTimeout(100);
-  assert.ok(analytics.some(url=>url.includes('/e/')),'Real PostHog SDK should send consented events');
-  await page.locator('[data-analytics-toggle]').click();await page.waitForTimeout(500);const before=analytics.length;
+  assert.ok(analytics.some(url=>url.includes('/e/')),'Real PostHog SDK should send events by default');
+  await page.locator('[data-analytics-toggle]').click();await page.waitForFunction(()=>window.localStorage.getItem('ocean-analytics-consent-v1')==='no');await page.waitForTimeout(500);const before=analytics.length;
   await page.evaluate(()=>{document.body.dataset.submerged='true'});await page.waitForTimeout(500);assert.equal(analytics.length,before,'Turning analytics off must stop capture');
   assert.deepEqual(errors,[]);
   await page.screenshot({path:path.join(root,'release/services-browser-qa.png')});
-  console.log('Browser checks passed: real SDK consent gate, feedback failure/retry, contact opt-in, explicit photo sharing, analytics opt-out.');
+  console.log('Browser checks passed: real SDK on by default, feedback failure/retry, contact opt-in, explicit photo sharing, analytics opt-out.');
 }finally{await browser.close();}

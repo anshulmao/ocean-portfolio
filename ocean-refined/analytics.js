@@ -2,8 +2,10 @@ import {services} from './services-config.js';
 import {eventProperties, sanitizeEvent} from './analytics-privacy.js';
 
 const CONSENT_KEY = 'ocean-analytics-consent-v1';
-let enabled = false, client = null, loading = null;
-try { enabled = localStorage.getItem(CONSENT_KEY) === 'yes'; } catch {}
+// On by default; a visitor who turns it off in Settings stays off ('no' is remembered), and a browser that sends
+// Do Not Track or Global Privacy Control is never tracked.
+let enabled = true, client = null, loading = null;
+try { enabled = localStorage.getItem(CONSENT_KEY) !== 'no'; } catch {}
 if (navigator.globalPrivacyControl === true || navigator.doNotTrack === '1') enabled = false;
 const configured = /^phc_/.test(services.posthogToken) && /^https:\/\//.test(services.posthogHost);
 export function track(event, properties = {}) {
@@ -62,4 +64,7 @@ new MutationObserver(()=> {
   const next = document.body.dataset.submerged === 'true';
   if (next !== submerged) { track(next?'dive_started':'dive_completed'); submerged=next; }
 }).observe(document.body,{attributes:true,attributeFilter:['data-submerged']});
-paint();void start();
+// The SDK waits for the page to finish loading and for an idle moment, so it never competes with the ocean's first build.
+paint();
+const idle = () => (window.requestIdleCallback ? requestIdleCallback(() => void start(), { timeout: 4000 }) : setTimeout(() => void start(), 1500));
+if (document.readyState === 'complete') idle(); else addEventListener('load', idle, { once: true });
