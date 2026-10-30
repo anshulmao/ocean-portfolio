@@ -62,6 +62,8 @@ function environment(hz, { reducedMotion = false, unavailable = false, collision
     guide: (...args) => nav.setGuided(...args), travelPath: (...args) => unavailable ? false : nav.travelPath(...args),
     cancelTravel: (...args) => nav.cancelTravel(...args), place: (...args) => { placed++; nav.place(...args); }, lookAt: (point, follow) => nav.lookAt(point, follow), residentAt: id => residents[id] ?? null,
     glance: point => nav.glance(point), pacing: scale => nav.pacing(scale), guideScooter: on => nav.guideScooter(on), tether: top => nav.tether(top),
+    // The bait ball as living-world.js places it (its home over the spire, 3.6 m across), here off home by its full wander.
+    baitBall: () => [50.5, -27.8, -66, 3.6],
   };
   const samples = [];
   function tick(seconds = 1 / hz) {
@@ -270,7 +272,7 @@ for (const hz of [30, 60, 120]) {
       record.frames++; shown.set(key, record);
       if (record.frames > hz * 1.5) record.slowest = Math.min(record.slowest, env.nav.state.velocity.length());
       if (record.frames > hz * 1.5) record.scooter = Math.max(record.scooter, env.nav.state.scooter);
-      const subject = sight.look?.visitor ? (env.whaleFrom && [whaleAt(env.whaleFrom, env.clock)].map(w => [w.x, w.y, w.z])[0]) : sight.look?.resident ? sleeper : sight.look;
+      const subject = sight.look?.visitor ? (env.whaleFrom && [whaleAt(env.whaleFrom, env.clock)].map(w => [w.x, w.y, w.z])[0]) : sight.look?.resident ? sleeper : sight.look?.bait ? [50.5, -27.8, -66] : sight.look;
       if (subject && record.frames > hz * 2.5) record.nearest = Math.min(record.nearest, aimAt(subject));
     }
     const leg = env.samples.slice(before);
@@ -296,6 +298,9 @@ for (const hz of [30, 60, 120]) {
     }
     // The way up ends in open water just seaward of the wreck, well above the seabed, with the reef rising to the north.
     if (step.key === 'open-water') {
+      // Through the middle of the bait ball where it has wandered to, not past its edge.
+      const middle = Math.min(...leg.map(p => distance(p, [50.5, -27.8, -66])));
+      assert.ok(middle < 1.5, `straight through the bait ball (${middle.toFixed(2)} m from its middle)`);
       const [x, y, z] = env.state.playerPosition;
       assert.ok(y - terrainHeightAt(x, z) > 20 && z < WRECK.max[2] - 8, `in open water seaward of the wreck (${env.state.playerPosition.map(v => v.toFixed(1))})`);
     }

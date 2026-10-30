@@ -81,7 +81,10 @@ The welcome shows four key chips: C (dive computer), W A S D (swim), Space/Shift
 7. Fly-bys:
    - **Look out to sea.** Along the deep ledge to the soft coral spire. The swim slows to a drift for about 9 s while a
      **whale shark** passes 22 m out over the deep water and only 7 m above, side-on. The camera is taught here.
-   - **Through the bait ball.**
+   - **A bait ball, ahead.** Up to its depth, the swim slows and the camera turns to the ball: "We'll swim straight
+     through it."
+   - **Through the bait ball**, along a straight line through its middle as it is now. It wanders a few metres round its
+     home over the spire.
 8. **The ending**, in open water just seaward of the wreck at about 8 m (shown depth): the wreck below, and the whole reef rising to
    the north. "This is my reef." V (view) is taught here, on a desktop. The choice is **Keep exploring** or **Surface**,
    and from this depth Surface's ascent offers the safety stop.
@@ -363,3 +366,16 @@ stops.
   - **Rejoin** takes up the step in progress. Taking the nearest step could skip the treasure now that the ending is
     beside the wreck.
   - `tour_version` is now 5.
+- **Round 5, the bait ball** (the owner's note):
+  - The swim went past the ball's edge, not through it, for two reasons:
+    - The ball wanders up to 2.5 m round its home and tightens to about 2.9 m across as a diver comes near.
+    - The planned route turned for the wreck right at the ball's home.
+  - Now a fly-by first looks across at the ball and says the swim will go through it. As that fly-by begins, the swim
+    lines up on the ball where it is now (`oceanControls.baitBall()`, from `living-world.js`): in short of it, through
+    its middle, out the far side, then on. The test checks the swim passes within 1.5 m of the ball's middle, with the
+    ball off its home by its full wander.
+  - **A latent bug, found on the way:**
+    - A route launched mid-frame (any detour, or this line) was judged against the old route's remaining length.
+    - A longer new route never beat that figure, so it registered as a stall after 5 s and was replaced by the static
+      route.
+    - The stall check now skips the frames before the new route takes effect.

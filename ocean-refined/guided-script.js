@@ -15,7 +15,10 @@ import { toDisplayDepth } from './depth-metrics.js';
 //   via      the leg's scenic route, used when the tour arrives from the step before. A point is [x, y, z]; a fly-by is
 //            { at, key, title, line, ... } and is a point of the route too:
 //              look     what the camera glances at as it passes: a point, { visitor: id } (an animal, followed as it
-//                       swims) or { resident: id, near } (an animal where it settled, near standing in until it loads).
+//                       swims), { resident: id, near } (an animal where it settled, near standing in until it loads) or
+//                       { bait: true } (the bait ball, which wanders slowly round its home; followed too).
+//              through  the swim from here goes straight through the bait ball's middle as it is now, and out the far side,
+//                       then on: the next fly-by is the swim through it.
 //                       Without one the view stays on the course.
 //              hold     seconds the fly-by lasts (default FLYBY), cut short (after BRIEF at least) by the next one
 //                       coming into reach; slow: the pace through it, a fraction of the cruise.
@@ -86,9 +89,11 @@ export const STEPS = [
       { at: [36, -45, -79], key: 'whale-shark', title: 'Look out to sea', line: 'A whale shark, passing over the deep water.',
         look: { visitor: 'whale-shark' }, teach: 'photo', hold: 9, slow: .12, reach: 7,
         encounter: { id: 'whale-shark', cue: 26, course: { angle: Math.PI / 2, side: 1, pass: 22, y: -38, ahead: 14 } } },
-      [44, -38, -72],
-      { at: [48, -28, -67], key: 'bait-ball', title: 'Through the bait ball', line: 'Thousands of fry turning as one. They open a tunnel around you.',
-        slow: .6, reach: 7 },
+      // Up to the bait ball's depth, a look across at it, then straight through its middle and out the far side.
+      { at: [38, -31, -78], key: 'bait-ahead', title: 'A bait ball, ahead', line: 'Thousands of fry turning as one. We’ll swim straight through it.',
+        look: { bait: true }, through: true, hold: 5, slow: .35, reach: 8 },
+      { at: [48, -28, -67], key: 'bait-ball', title: 'Through the bait ball', line: 'They open a tunnel around you.',
+        slow: .6, hold: 4, reach: 6 },
       [38, -18, -62],
     ],
     // The wreck below, the reef rising beyond it to the shallows, and the tower off to the right.

@@ -92,7 +92,7 @@ let open = null, more = false, shownFor = '';
 // status: off · starting (waiting for the dive) · intro (the welcome) · travel (a leg, fly-bys and all) · dwell (a portfolio
 // site; waits for Continue) · free (visitor has the controls) · done (the ending)
 let status = 'off', index = 0, arrived = -1, legTime = 0, paused = false, inputs = 0;
-let best = Infinity, stall = 0, waited = 0, cut = null, cutTime = 0, barShown = -1;
+let best = Infinity, stall = 0, settle = 0, waited = 0, cut = null, cutTime = 0, barShown = -1;
 let detours = 0, routeIssue = false, panIndex = 0, panTime = 0, prelude = -1, reveal = 0;
 // Seconds since the tour's title card went up, or -1: it goes up as the camera goes under, not once the dive settles.
 let titled = -1;
@@ -303,6 +303,7 @@ function pan(dt) {
 function subjectOf(look) {
   if (!look || Array.isArray(look)) return look ?? null;
   if (look.visitor) return visitorAt(look.visitor);
+  if (look.bait) return controls()?.baitBall?.()?.slice(0, 3) ?? null;
   return controls()?.residentAt?.(look.resident) ?? look.near ?? null;
 }
 // Fly-bys, while a leg swims on. The next one ahead begins as the diver comes within its reach: the swim slows, the view
@@ -322,7 +323,7 @@ function flyBy(dt, at) {
   const next = sights[0], due = next && probe.fromArray(at).distanceTo(to.fromArray(next.at)) <= (next.reach ?? REACH);
   if (sight) {
     sightTime += dt;
-    if (sight.look?.visitor) { const point = subjectOf(sight.look); if (point) api?.glance(point); }
+    if (sight.look?.visitor || sight.look?.bait) { const point = subjectOf(sight.look); if (point) api?.glance(point); }
     if (sightTime >= (sight.hold ?? FLYBY) || (due && sightTime >= BRIEF)) endSight();
     if (sight || !due) return;
   }
@@ -330,7 +331,20 @@ function flyBy(dt, at) {
   if (spotted) { spotted = null; api?.glance(null); }
   sights.shift(); passed.add(next.key); sight = next; sightTime = 0; if (next.look?.visitor) spottedAt.set(next.look.visitor, tourTime);
   api?.pacing(next.slow ?? SLOW); api?.glance(subjectOf(next.look)); api?.guideScooter(Boolean(next.scooter));
+  if (next.through) throughBall(at);
   paint();
+}
+// The bait ball wanders a few metres round its home, and a corner of the planned route clipped its edge rather than going
+// through it. From here the swim lines up on the ball as it is now: in short of it, through its middle and out the far side,
+// then on along the rest of the scenic route.
+function throughBall(at) {
+  const ball = controls()?.baitBall?.(); if (!ball) return;
+  const centre = ball.slice(0, 3), [x, y, z] = centre, dx = x - at[0], dy = y - at[1], dz = z - at[2], length = Math.hypot(dx, dy, dz) || 1;
+  const along = k => [x + dx / length * k, y + dy / length * k, z + dz / length * k];
+  const step = STEPS[index], rest = onward(step, at), after = rest.findIndex(item => item.key === 'bait-ball');
+  if (after < 0) return;
+  // A route that cannot be made through the ball keeps the one under way.
+  if (route(probe.fromArray(at).toArray(), step, [along(-6), { ...rest[after], at: centre }, along(8), ...rest.slice(after + 1)])) launch();
 }
 // Between fly-bys, a big animal passing near (a whale, the whale shark, orcas, dolphins) is worth turning for: the view
 // follows it for SPOT_HOLD s while the swim carries on, and the look-there marker names it.
@@ -360,7 +374,7 @@ function lineUp(at) {
 function launch() {
   const api = controls();
   api.guide(true, true, true);
-  inputs = api.nav.inputs; best = Infinity; stall = 0; legTime = 0;
+  inputs = api.nav.inputs; best = Infinity; stall = 0; legTime = 0; settle = 2;
   if (!api.travelPath(leg, look, STEPS[index].speed ?? SPEED)) blockRoute();
   else lineUp(window.oceanDiagnostics.playerPosition);
 }
@@ -495,7 +509,10 @@ function update(dt, api, state, diving) {
   // A scenic route can initially swim away from its destination. Its remaining
   // path length, rather than straight-line distance, measures forward progress.
   const remaining = Number.isFinite(nav.travelRemaining) ? nav.travelRemaining : distance;
-  if (remaining < best - .25) { best = remaining; stall = 0; } else stall += dt;
+  // A route launched this frame (a detour, or the line through the bait ball) still reads the old route's remaining length
+  // until the swim has run a frame on the new one: those readings are not progress, and a longer new route never beat them.
+  if (settle > 0) { settle--; best = Infinity; stall = 0; }
+  else if (remaining < best - .25) { best = remaining; stall = 0; } else stall += dt;
   if (legTime > 1 && (stall > 5 || !nav.travelling || nav.travelBlocked)) {
     if (detours++ < 2 && route(here.fromArray(state.playerPosition).toArray(), STEPS[index])) { launch(); paint(); }
     else blockRoute();
