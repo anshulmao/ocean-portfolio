@@ -320,3 +320,13 @@ stops.
     that came before.
   - **Reduced motion:** there are no fly-bys, so the tour calls no animal in. `big-life.js` still brings a big animal by
     on every dive.
+  - **Checked in the live app** (headless Chromium, phone viewport):
+    - The treasure's viewpoint, once its model settles, is just north of the chest. The wreck's is 17 m north of the
+      hull.
+    - The stretches into and out of the treasure cut through the chest, and the planner dropped both scenic legs
+      whole. That was the arch on the way down and the entire ascent.
+    - Three fixes:
+      - The planner now goes stretch by stretch when the whole route is blocked. A blocked stretch finds its own way
+        round, and an unreachable waypoint is left out.
+      - The treasure is approached and left over open water to its north.
+      - The unit test's stand-in viewpoints are now the live ones.

@@ -47,10 +47,11 @@ function environment(hz, { reducedMotion = false, unavailable = false, collision
   const state = window.oceanDiagnostics = { ready: true, landmarksReady: true, reducedMotion, playerPosition: [0, -8, 0] };
   let atSurface = surface, clock = 0, whaleFrom = null, asked = null; const calls = [];
   if (!surface) nav.startDive();
-  // Placed model viewpoints: model-scene.js's own, before a model's bounds refine them, with the real seabed beneath.
-  const approach = { about: [5.2, 5.3], experience: [6, 4.4], projects: [6, 4.3] };
-  const landmarks = LANDMARKS.map(item => { const [x, , z] = item.position, floor = terrainHeightAt(x, z), [dx, up] = approach[item.id];
-    return { ...item, position: [x, floor + 1.4, z], interactionPosition: [x + dx, floor + up, z] }; });
+  // Placed model viewpoints as the live app has them once the models' bounds refine them (read from oceanControls.landmarks):
+  // [x, height over the seabed, z] from the charted spot. The wreck's is well north of its hull, the treasure's just north.
+  const approach = { about: [5.8, 2.8, 0], experience: [0, 5.4, 17.2], projects: [0, 2.8, 4] };
+  const landmarks = LANDMARKS.map(item => { const [x, , z] = item.position, floor = terrainHeightAt(x, z), [dx, up, dz] = approach[item.id];
+    return { ...item, position: [x, floor + 1.4, z], interactionPosition: [x + dx, floor + up, z + dz] }; });
   const api = window.oceanControls = {
     nav: nav.state, settings, landmarks, reef: { userData: { collisions: collision } }, getMode: () => atSurface ? 'surface' : nav.state.mode,
     frameDiver: value => calls.push(['frameDiver', value]),
@@ -484,7 +485,19 @@ for (const hz of [30, 60, 120]) {
 const bow = planGuidedRoute([0, -10, 0], [30, -10, 0], { floor: () => -30, clear: () => true });
 assert.ok(Math.max(...bow.map(point => Math.abs(point[2]))) > 3, 'a visible gentle curve');
 assert.deepEqual(planGuidedRoute([0, -10, 0], [30, -10, 0], { floor: () => -30, clear: () => false }), []);
-console.log('PASS: rejected routes hold, explicit Skip and reduced motion fade, scenic curve checked.');
+// A scenic route with one waypoint walled in keeps the rest: the stretches round it are planned on their own and the
+// waypoint is left out, rather than the whole route falling back to a straight line.
+{
+  const wall = new CollisionWorld();
+  wall.addBox(new THREE.Box3(new THREE.Vector3(18, -14, -4), new THREE.Vector3(22, -6, 4)));
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), clear = (p, q) => wall.segmentClear(a.fromArray(p), b.fromArray(q), .85);
+  const route = planGuidedRoute([0, -10, 0], [40, -10, 0], { via: [[10, -10, 12], [20, -10, 0], [30, -10, -12]], floor: () => -30, clear });
+  const near = point => Math.min(...route.map(p => distance(p, point)));
+  assert.ok(route.length && distance(route.at(-1), [40, -10, 0]) < .01, 'still reaches the goal');
+  assert.ok(near([10, -10, 12]) < .5 && near([30, -10, -12]) < .5, `through the reachable waypoints (${near([10, -10, 12]).toFixed(2)}, ${near([30, -10, -12]).toFixed(2)})`);
+  for (let i = 1; i < route.length; i++) assert.ok(clear(route[i - 1], route[i]), 'every stretch clear of the wall');
+}
+console.log('PASS: rejected routes hold, explicit Skip and reduced motion fade, scenic curve checked, a walled-in waypoint is left out.');
 
 // A leg replanned partway (a stall's detour, Resume after Pause, or Rejoin after a takeover) keeps the scenic waypoints
 // still ahead. It used to drop them, so a stall going over the cliff edge below the wreck sent the swim in a straight

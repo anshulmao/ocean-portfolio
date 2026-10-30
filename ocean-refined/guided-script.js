@@ -46,7 +46,7 @@ export const STEPS = [
   { key: 'experience', kind: 'stop', landmark: 'experience', place: `Experience · The Wreck · ${depth(-21)}`, signal: '#ffcf7a',
     title: 'Here’s the wreck', line: 'This is where you’ll find my experience.',
     via: [
-      { at: [-10, -9.5, -24], key: 'nurse', title: 'A nurse shark, asleep', line: 'Nurse sharks rest on the sand by day. Let it be.',
+      { at: [-10, -8.5, -24], key: 'nurse', title: 'A nurse shark, asleep', line: 'Nurse sharks rest on the sand by day. Let it be.',
         look: { resident: 'sleeper', near: [-19, -12.6, -22] }, reach: 11 },
       { at: [2, -12, -20], key: 'scooter', title: 'Scooter on', line: 'Across the reef shelf. The deep end is out there; we’ll get to it.',
         scooter: true, teach: 'scooter', hold: 4, slow: .7 },
@@ -69,7 +69,8 @@ export const STEPS = [
       [20, -49, -66], [20, -51, -70], [20, -51.6, -79],
       { at: [12, -51, -87], key: 'lanterns', title: 'The lantern garden', line: 'Soft lights on the deep ledge.',
         look: [8, -55, -86] },
-      [1, -50, -93],
+      // The treasure's viewpoint is just north of the chest: round to it over open water, never across the chest.
+      [1, -50, -90], [-8, -46, -77],
     ] },
   // Act 2, the long way up: along the deep ledge to the soft coral spire, where the swim drifts while a whale shark passes
   // overhead, up through the bait ball, over the wreck and the anchor, and past the grotto into the sunlit shallows.
@@ -77,7 +78,7 @@ export const STEPS = [
     title: 'This is my reef', line: 'My portfolio lives here. Dive around on your own and look at the life, or head up when you’re ready.',
     short: 'My portfolio lives here. Explore on your own, or head up.',
     via: [
-      [0, -47, -88], [24, -47, -84],
+      [-6, -46, -79], [8, -47, -86], [24, -47, -84],
       { at: [36, -45, -79], key: 'whale-shark', title: 'Look up', line: 'A whale shark, passing over the deep shelf.',
         look: { visitor: 'whale-shark' }, teach: 'photo', hold: 9, slow: .12, reach: 7,
         encounter: { id: 'whale-shark', cue: 26, course: { angle: Math.PI / 2, side: -1, pass: 10, y: -28, ahead: 14 } } },
