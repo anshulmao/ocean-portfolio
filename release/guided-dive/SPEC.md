@@ -148,7 +148,9 @@ The welcome shows four key chips: C (dive computer), W A S D (swim), Space/Shift
 - The whole tour completes with N only, on desktop and on a phone layout.
 - With reduced motion on, every leg is a fade, and there are no pans, fly-bys or called-in animals.
 - The whale shark's line stays over open water (D4).
-- Surface from the ending runs the existing ascent and safety-stop offer.
+- Surface from the ending runs the existing ascent and safety-stop offer. The ending sits at about 3 m (shown depth), inside
+  the stop's 3–5 m band, so the free-standing offer holds off while the ending sheet is up and comes back once the
+  visitor keeps exploring.
 - No regression in atlas travel, start-at-site, or free swimming.
 
 ## Decisions (29 Oct 2026)

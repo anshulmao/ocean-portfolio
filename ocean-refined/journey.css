@@ -162,14 +162,14 @@ html[data-input="touch"] .tour-card footer kbd{display:none}
   .zone-card small{font-size:9px;letter-spacing:.16em}
   .zone-card strong{font-size:24px}
   .zone-card b{width:104px}
-  /* The fly-by caption under the depth chip, left, short of the compass; and while the tour leads, Back to the surface
-     gives its place up (the tour's own Exit and Surface stay), so the top of the water is the caption's. */
+  /* The fly-by caption under the depth chip, left, short of the compass; and while the tour leads or its ending is up,
+     Back to the surface gives its place up (the tour's own Exit and Surface stay), so the top of the water is the caption's. */
   .tour-caption{left:var(--o-pad);max-width:calc(100vw - 2*var(--o-pad) - 112px);padding:8px 28px 9px 12px;translate:0 -6px}
   .tour-caption[data-show="true"]{translate:0 0}
   .tour-caption b{font-size:16px}
   .tour-caption span{font-size:13px;line-height:1.35}
   .tour-caption small{font-size:12px}
-  body:is([data-tour="intro"],[data-tour="travel"],[data-tour="dwell"])[data-submerged="true"] .dive-button{visibility:hidden}
+  body:is([data-tour="intro"],[data-tour="travel"],[data-tour="dwell"],[data-tour="done"])[data-submerged="true"] .dive-button{visibility:hidden}
   section.tour-card,body[data-computer-open="true"][data-camera="third"] section.tour-card{left:var(--o-pad);right:var(--o-pad);bottom:var(--o-sheet-bottom);width:auto;max-height:var(--o-sheet-max);padding:0 8px 0 18px;column-gap:8px}
   section.tour-card[data-sheet="expanded"]{padding:0 14px 10px 18px}
   .tour-head{min-height:var(--o-tap)}

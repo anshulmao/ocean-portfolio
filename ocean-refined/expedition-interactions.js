@@ -216,9 +216,10 @@ onTick(dt=> {
   // The offer's hint follows the input in use: the button itself is the action on touch.
   const offerKey=`${returning==='offer'}|${touchInput()}`;
   if(returnOffer!==offerKey){returnOffer=offerKey;stopButton.querySelector('small').innerHTML=touchInput()?(returning==='offer'?'Hold at 3–5 m · tap to stop':'Hold at 3–5 m · tap to begin'):returning==='offer'?'Hold at 3–5 m · <kbd>F</kbd> to stop · <kbd>Esc</kbd> to surface':'Hold at 3–5 m · Press <kbd>F</kbd>';}
-  // The guided dive passes through 3–5 m on purpose (the anchor and the shallow reef): no offer to stop while it leads.
-  // An ascent's own offer (returning === 'offer') still comes up, from the overview's Surface or anywhere else.
-  const guiding=['intro','travel','dwell'].includes(window.oceanTour?.status);
+  // The guided dive passes through 3–5 m on purpose (the anchor and the shallows) and ends there: no offer to stop while it
+  // leads or while its ending sheet is up, whose Surface brings the ascent's own offer (returning === 'offer'). Keep
+  // exploring ends the tour, and the offer is back.
+  const guiding=['intro','travel','dwell','done'].includes(window.oceanTour?.status);
   const inRange=underwater&&inSafetyStopRange(reading)&&(returning==='offer'||(!returning&&!guiding));
   // A small dead band avoids retriggering on idle bobbing, while a route that
   // passes above the stop zone can offer the invitation again on its final hold.
