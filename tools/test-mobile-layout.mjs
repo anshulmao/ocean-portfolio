@@ -139,6 +139,15 @@ async function run(profileName) {
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => !oceanProfile.isOpen, null, {timeout: 5000});
   });
+  // After a dive, its summary (dive-plan.js) opens from the hero's links, clear of the hero.
+  await step('surface-summary', async () => {
+    await page.evaluate(() => dispatchEvent(new CustomEvent('oceandiveend', {detail: {time: 134, maxDepth: 18.4, found: 2}})));
+    await press(page.locator('.dive-summary-toggle'));
+    await page.waitForFunction(() => document.querySelector('#dive-summary').dataset.show === 'true', null, {timeout: 5000});
+    await state('surface-summary');
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => document.querySelector('#dive-summary').dataset.show !== 'true' && !document.body.dataset.menu, null, {timeout: 5000});
+  });
   await step('reading-glance', async () => { await page.evaluate(() => oceanArchive.open('glance')); await state('reading-glance'); });
   await step('reading-project', async () => { await page.evaluate(() => oceanArchive.open('projects', 'rae')); await state('reading-project'); await page.evaluate(() => oceanArchive.close()); });
   await step('dive', async () => {

@@ -18,7 +18,10 @@ const ARRIVE_RADIUS = 1.6, PAN_BEAT = 3, INTRO_BEAT = 4.5, HOLD_SIGNAL = '#8ff4f
 // The opening from the surface (SPEC step 0): a held beat while the surface copy fades, the camera eases in on the diver
 // (world.js frameDiver), and the dive starts in first person. Underwater, the title card shows before the welcome sheet.
 // REVEAL outlasts the title card (announce.js holds a short one about 2.5 s, then fades), so the two never overlap.
-const PRELUDE_HOLD = 1, PRELUDE_DIVE = 2.4, REVEAL = 3.2;
+// The opening from the surface: the camera starts in on the diver at once (PRELUDE_HOLD, a beat for the hero to start
+// fading) and the dive starts as that move ends (world.js PRELUDE, 1.4 s). It used to hold a full second first, which read
+// as the button doing nothing.
+const PRELUDE_HOLD = .2, PRELUDE_DIVE = 1.6, REVEAL = 3.2;
 // The controls the tour teaches (SPEC: teaching schedule). The welcome asks for PRIMER one at a time, ticks each as it is
 // done and moves to the next; N skips them all and starts the tour. A later beat names its `teach` control once, and not at
 // all if it has been tried. Use is read from what changed (the lamp, the view, the scooter, the computer, a photo, the
@@ -73,6 +76,8 @@ let open = null, more = false, shownFor = '';
 let status = 'off', index = 0, arrived = -1, legTime = 0, paused = false, inputs = 0;
 let best = Infinity, stall = 0, waited = 0, cut = null, cutTime = 0, barShown = -1;
 let detours = 0, routeIssue = false, panIndex = 0, panTime = 0, stepTime = 0, prelude = -1, reveal = 0, called = true;
+// Seconds since the tour's title card went up, or -1: it goes up as the camera goes under, not once the dive settles.
+let titled = -1;
 // cheer: the control just done in the welcome, shown ticked for CHEER seconds before the next is asked for.
 let cheer = null, cheerFor = 0, keysShown = '';
 // roaming: the visitor has taken the controls in the welcome, inside ROAM of `start`. starting: Start pressed, waiting on the assets.
@@ -294,7 +299,9 @@ function advance() { if (index < STEPS.length - 1) go(index + 1); }
 function begin() {
   const api = controls(); index = 0; arrived = 0; status = 'intro'; paused = false; inputs = api.nav.inputs;
   roaming = starting = false; introFor = 0; start.fromArray(window.oceanDiagnostics.playerPosition);
-  endPrelude(); splash('Guided dive', 'Welcome to the reef'); reveal = REVEAL; note('tour_step');
+  // The welcome sheet follows the title card by REVEAL, counted from when the card went up during the descent.
+  if (titled < 0) { titled = 0; splash('Guided dive', 'Welcome to the reef'); }
+  endPrelude(); reveal = Math.max(.4, REVEAL - titled); titled = -1; note('tour_step');
   api.guide(true, true, true); startPan(); paint();
 }
 function endPrelude() { prelude = -1; delete document.body.dataset.prelude; controls()?.frameDiver?.(false); }
@@ -321,16 +328,16 @@ export function startTour() {
   if (!api || !window.oceanDiagnostics?.ready || status !== 'off') return false;
   if (api.getMode() !== 'surface' && api.getMode() !== 'diver') return false;
   // From the surface the opening plays first; under water the tour starts where the diver is.
-  // The ocean starts on what the dive will wait for now, not when the prelude ends 2.4 s from here (world.js expectDive).
+  // The ocean starts on what the dive will wait for now, not when the prelude ends 1.6 s from here (world.js expectDive).
   if (api.getMode() === 'surface') { prelude = 0; document.body.dataset.prelude = 'on'; api.expectDive?.(); }
   track('tour_started', { from: prelude === 0 ? 'surface' : 'underwater' });
-  status = 'starting'; index = 0; arrived = -1; waited = 0; paused = false; framed.clear(); used.clear(); seen = null; cheer = null; cheerFor = 0; paint();
+  status = 'starting'; index = 0; arrived = -1; waited = 0; paused = false; titled = -1; framed.clear(); used.clear(); seen = null; cheer = null; cheerFor = 0; paint();
   return true;
 }
 export const tourStatus = () => status;
 // Swimming and scenic time only. Reading at the welcome and the sites has no countdown or automatic advance: the
 // visitor chooses Continue after reading as much as they want.
-export const DIVE_IN = 6.5;
+export const DIVE_IN = 4.2;
 export function tourPlan() {
   let distance = 0, seconds = DIVE_IN; const point = [0, 0, 0], subject = [0, 0, 0]; let last = [0, -6, -2];
   for (const item of STEPS) {
@@ -353,6 +360,9 @@ function update(dt, api, state, diving) {
       if (prelude >= PRELUDE_DIVE) { prelude = -1; waited = 0; if (!api.startDive({ capture: false, perspective: 'first' })) stop('The ocean is still getting ready. Try again in a moment.', 'failed'); }
       return;
     }
+    // The title card goes up as the camera goes under, so the descent is not a wait with nothing to read.
+    if (titled < 0 && state.submerged) { titled = 0; splash('Guided dive', 'Welcome to the reef'); }
+    else if (titled >= 0) titled += dt;
     // Navigation started during the entry animation is overwritten by startDive.
     // Landmarks also move while models load: wait for their final viewpoints.
     if (diving && !api.getTransition() && (state.landmarksReady || state.landmarksSettled)) begin();

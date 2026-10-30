@@ -64,6 +64,16 @@ html body:not([data-submerged="true"]):not([data-exploring="true"]) .portfolio-l
 .portfolio-links .hero-link:hover{text-decoration-color:currentColor}
 .portfolio-links .hero-link:focus-visible{outline:2px solid currentColor;outline-offset:4px;border-radius:3px}
 
+/* The last dive's summary (dive-plan.js): its toggle is a link in the row above; the card opens in the open sky under the
+   masthead on the right, clear of the hero on the left and the diver lower down. Narrower screens have no room beside the
+   hero, so the hero steps aside while it is open (as it does for the profile card); the two cards never share the screen. */
+html body .portfolio-links .dive-summary-toggle{position:relative;left:auto;top:auto;z-index:auto;min-height:40px}
+.portfolio-links .dive-summary-toggle[aria-expanded="true"]{text-decoration-color:currentColor}
+html body aside.dive-summary{left:auto;right:var(--pad,24px);top:calc(var(--o-under-bar,92px) + 8px);bottom:auto;width:min(300px,calc(100vw - 32px));max-height:calc(100dvh - var(--o-under-bar,92px) - 80px);overflow:auto}
+body[data-profile="open"] aside.dive-summary{visibility:hidden;pointer-events:none}
+@media(max-width:900px){body[data-summary="true"]:not([data-submerged="true"]) .hero{opacity:0;visibility:hidden;pointer-events:none}}
+@media(max-width:600px){html body aside.dive-summary{left:16px;right:16px;width:auto}}
+
 /* Availability never waits for motion: the actions and navigation lift into place
    without starting transparent, including the replay when the world becomes ready. */
 @keyframes surface-lift{from{translate:0 10px}}

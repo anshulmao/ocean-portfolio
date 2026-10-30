@@ -150,8 +150,12 @@ const setHidden=(node,value)=>{if(node&&node.hidden!==value)node.hidden=value;};
 const setAttribute=(node,name,value)=>{if(node&&node.getAttribute(name)!==value)node.setAttribute(name,value);};
 const setStyle=(selector,name,value)=>{const key=selector+name;if(hudStyles.get(key)!==value){hudStyles.set(key,value);hud(selector)?.style.setProperty(name,value);}};
 function getPlayerPosition(){return exploration.getPlayerPosition(new THREE.Vector3()).clone();}
-function getMode(){return exploration.state.transition||Math.abs(dive-diveTarget)>.002?'transition':exploration.state.mode;}
-function getTransition(){return exploration.state.transition||Math.abs(dive-diveTarget)>.002;}
+// The dive eases out exponentially, so its last seconds move the view by about a millimetre: it counts as done, and snaps
+// to its end, within DIVE_SETTLE of it (at 1 - DIVE_SETTLE the eased value is already 99.9 % of the way). At .002 the
+// tail held the controls and the guided dive for about 2.4 s more (a settle took 6.5 s at the default response).
+const DIVE_SETTLE=.02;
+function getMode(){return exploration.state.transition||Math.abs(dive-diveTarget)>DIVE_SETTLE?'transition':exploration.state.mode;}
+function getTransition(){return exploration.state.transition||Math.abs(dive-diveTarget)>DIVE_SETTLE;}
 function syncControlSuspension(){
   movementPanelOpen=Boolean($('#movement-panel')?.open);
   exploration.setInterfaceOpen(interfaceOpen||movementPanelOpen||settingsMenuOpen);wake();
@@ -843,7 +847,7 @@ function updateWorld(dt,clockDt=dt){
   night=skySystem.getNightFactor?skySystem.getNightFactor(phase):THREE.MathUtils.smoothstep(-Math.cos(phase),-.15,.3);
   // The preset name only changes around dawn and dusk, and finding it costs two more ephemeris evaluations: look twice a second.
   if(phaseTarget===null&&++presetTick>=30){presetTick=0;const altitude=skySystem.getState(phase).sunAltitude;const rising=skySystem.getState(phase+.0001).sunAltitude>altitude;const preset=altitude>-6&&altitude<8?(rising?'dawn':'dusk'):night>.5?'night':'day';if(diagnostic.skyPreset!==preset)paintTheme(night>.5,preset);}
-  dive=THREE.MathUtils.lerp(dive,diveTarget,1-Math.exp(-dt*settings.diveResponse));if(Math.abs(dive-diveTarget)<.002)dive=diveTarget;
+  dive=THREE.MathUtils.lerp(dive,diveTarget,1-Math.exp(-dt*settings.diveResponse));if(Math.abs(dive-diveTarget)<=DIVE_SETTLE)dive=diveTarget;
   // A dive asked for before the world under the water is ready waits in the first tenth of the transition, the camera
   // still above the surface, while the rest is built with most of every frame's time (see afterFrame); the status line
   // says so if that takes more than a moment. The first draws get up to two and a half seconds of it as well (of the

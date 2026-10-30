@@ -124,11 +124,13 @@ prompt.setAttribute('aria-labelledby', 'dive-prompt-title');
 const summary = node('aside', 'dive-summary holo holo--reading', '<header><p class="holo-label">Dive summary</p><button type="button" class="summary-close" aria-label="Dismiss the dive summary">×</button></header><dl><div><dt>Sites found</dt><dd class="sum-found"></dd></div><div><dt>Max depth</dt><dd class="sum-depth"></dd></div><div><dt>Dive time</dt><dd class="sum-time"></dd></div></dl><p class="sum-note" role="status"></p><button type="button" class="holo-chip sum-log">Open the logbook <span aria-hidden="true">→</span></button>');
 summary.id = 'dive-summary';
 summary.setAttribute('aria-label', 'Dive summary'); summary.dataset.show = 'false'; summary.inert = true;
-const summaryToggle = node('button', 'dive-summary-toggle holo-chip', 'Show dive summary');
+// After a dive the way back to its summary is one of the hero's links (index.html .portfolio-links), not a chip over the hero.
+const summaryToggle = node('button', 'dive-summary-toggle hero-link', 'Last dive');
 summaryToggle.type = 'button'; summaryToggle.hidden = true;
 summaryToggle.setAttribute('aria-controls', summary.id);
 summaryToggle.setAttribute('aria-expanded', 'false');
-document.body.append(plan, prompt, summaryToggle, summary);
+document.body.append(plan, prompt, summary);
+($('.portfolio-links') || document.body).append(summaryToggle);
 const marks = plan.querySelector('.plan-marks'), info = plan.querySelector('.plan-info');
 let charted = false, opener = null, pending = null, linkHandled = false, linkAction = null, held = false;
 // The scene's controls are suspended while a dialog is up. Releasing is done in step with the action that follows,
@@ -272,12 +274,12 @@ addEventListener('hashchange', readLink);
 // Keep the surface quiet: the last dive's details are available on demand.
 function hideSummary() {
   summary.dataset.show = 'false'; summary.inert = true; delete document.body.dataset.summary;
-  summaryToggle.setAttribute('aria-expanded', 'false'); summaryToggle.textContent = 'Show dive summary';
+  summaryToggle.setAttribute('aria-expanded', 'false');
 }
 summaryToggle.addEventListener('click', () => {
   if (summary.dataset.show === 'true') { hideSummary(); return; }
   summary.dataset.show = 'true'; summary.inert = false; document.body.dataset.summary = 'true';
-  summaryToggle.setAttribute('aria-expanded', 'true'); summaryToggle.textContent = 'Hide dive summary';
+  summaryToggle.setAttribute('aria-expanded', 'true');
 });
 addEventListener('oceandiveend', event => {
   const { time, maxDepth, found } = event.detail;
