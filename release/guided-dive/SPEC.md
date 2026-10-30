@@ -82,7 +82,7 @@ The welcome shows four key chips: C (dive computer), W A S D (swim), Space/Shift
    - **Look out to sea.** Along the deep ledge to the soft coral spire. The swim slows to a drift for about 9 s while a
      **whale shark** passes 22 m out over the deep water and only 7 m above, side-on. The camera is taught here.
    - **Through the bait ball.**
-8. **The ending**, in open water just seaward of the wreck at about 12 m: the wreck below, and the whole reef rising to
+8. **The ending**, in open water just seaward of the wreck at about 8 m (shown depth): the wreck below, and the whole reef rising to
    the north. "This is my reef." V (view) is taught here, on a desktop. The choice is **Keep exploring** or **Surface**,
    and from this depth Surface's ascent offers the safety stop.
 
@@ -178,7 +178,7 @@ stops.
 |---|----------|----------|
 | E1 | Arch placement | **Act 1, between Experience and Projects:** down the gully from the wreck, under the roof, out over the lantern garden. |
 | E2 | Whale shark | **A slow drift** of about 9 s on the ascent. The camera follows it, and the photo prompt comes here. |
-| E3 | Ending | **The sunlit shallows**, at about 5 m near where the dive began. Round 5: **open water just seaward of the wreck**, at about 12 m, with the reef ahead. |
+| E3 | Ending | **The sunlit shallows**, at about 5 m near where the dive began. Round 5: **open water just seaward of the wreck**, at about 8 m shown, with the reef ahead. |
 | E4 | Phone captions | **Subtitles at the top**, under the depth chip, with no card. The three sites keep the bottom sheet. |
 | E5 | Photo on phones | **A camera key on the touch deck**, in a row of its own over the flashlight. |
 
@@ -353,7 +353,7 @@ stops.
     - Every leg now keeps 2 m from the ship's whole bounds and 8 m from the barracuda's beat, checked over the swim.
     - The way down goes round the west of the wreck. `oceanDiagnostics.userCreatures.sentinel` gives its position and
       how often it has bolted.
-  - **The way up** ends in open water above the wreck. The anchor, rays and grotto fly-bys are gone. Surfacing from 12 m
+  - **The way up** ends in open water above the wreck. The anchor, rays and grotto fly-bys are gone. Surfacing from 8 m
     brings the safety stop back.
   - **The welcome:**
     - Rising stops 2.5 m over where it began (`tether`). It used to carry the visitor out of the welcome and to the
