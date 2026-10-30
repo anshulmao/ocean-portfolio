@@ -1,6 +1,6 @@
 # Guided dive, round 4: portfolio first, then the long way up
 
-A plan for review, not yet built. It amends [SPEC.md](SPEC.md). Once we agree on it, the SPEC's sequence, teaching
+A plan, agreed 30 Oct 2026 (see Decisions); being built in this branch. It amends [SPEC.md](SPEC.md). Once we agree on it, the SPEC's sequence, teaching
 schedule and decisions get rewritten to match, and this file is folded into the build log.
 
 ## The owner's notes (30 Oct 2026)
@@ -117,14 +117,12 @@ Tips live in the subtitle or the stop sheet, never in a folded row.
 - **The two runs behind these findings were in software rendering at about 3 fps.** The stall recovery that drops the
   arch is in the code regardless of frame rate. The stall itself gets confirmed on a real device as part of the fix.
 
-## Questions for the owner
+## Decisions (30 Oct 2026)
 
-1. **Arch placement.** Act 1, between Experience and Projects? That's the natural gully route, and recommended. Or on
-   the ascent?
-2. **Whale shark.** A slow drift of about 8 s with the camera on it (recommended), or a pure fly-by at speed?
-3. **Ending.** In the sunlit shallows near where the dive started (recommended), or the current overview off the left
-   edge?
-4. **Photo on phones.** Add a camera button to the touch deck next to the lamp and the scooter (recommended), or only
-   in the dive computer?
-5. **Phone captions.** Subtitles at the top under the depth chip (recommended), or film-style at the bottom above the
-   controls?
+| # | Question | Decision |
+|---|----------|----------|
+| E1 | Arch placement | **Act 1, between Experience and Projects:** down the gully from the wreck, under the roof, out over the lantern garden. |
+| E2 | Whale shark | **A slow drift of about 8 s** on the ascent. The camera follows it, and the photo prompt comes here. |
+| E3 | Ending | **The sunlit shallows**, at about 5 m near where the dive began, after the grotto, the rays and the flying fish. |
+| E4 | Phone captions | **Subtitles at the top**, under the depth chip, with no card. The three portfolio stops keep the bottom sheet. |
+| E5 | Photo on phones | Default: a camera button on the touch deck next to the lamp and the scooter (not yet confirmed by the owner). |
