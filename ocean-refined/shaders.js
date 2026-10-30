@@ -317,11 +317,13 @@ void main(){
     vec3 reflected=reflect(-view,normal);
     reflected.y=max(reflected.y,.002);
     reflected=normalize(reflected);
-    vec3 base=mix(vec3(.008,.145,.18),vec3(.004,.027,.064),uNight);
-    // Under cloud the sea loses its teal and turns slate.
-    base=mix(base,mix(vec3(.019,.060,.072),vec3(.004,.014,.026),uNight),over*.88);
+    vec3 base=mix(vec3(.005,.098,.205),vec3(.004,.024,.068),uNight);
+    // Under cloud the sea loses its blue and turns slate.
+    base=mix(base,mix(vec3(.018,.054,.078),vec3(.004,.014,.026),uNight),over*.88);
+    // The swell's faces vary the colour as well as the light: some lift toward a lighter, greener blue.
     float undulation=.5+.5*sin(vWorld.x*.38+vWorld.z*.20+uSeaTime*.65);
-    base+=mix(vec3(.0,.021,.026),vec3(.001,.004,.009),uNight)*undulation*(1.0-over*.6);
+    float swellTint=.5+.5*sin(vWorld.x*.071-vWorld.z*.053+uSeaTime*.09);
+    base+=mix(mix(vec3(.0,.014,.030),vec3(.0,.030,.026),swellTint),vec3(.001,.004,.009),uNight)*undulation*(1.0-over*.6);
     vec3 sky=skyBase(reflected);
     color=mix(base,sky,fresnel*.57);
     // A single rough-surface highlight; solar disk is not reflected twice.
@@ -343,7 +345,7 @@ void main(){
     float level=vWorld.y*.45/(uSea.x*.35+uSea.y*.1+uSea.z);
     float grain=log2(max(footprint*4.0,1.0));
     float crest=smoothstep(.22,.42,level)*(.4+.6*valueNoise(vWorld.xz*2.0,grain));
-    color+=mix(vec3(.14,.24,.22),vec3(.025,.049,.067),uNight)*crest*.19;
+    color+=mix(vec3(.13,.23,.25),vec3(.025,.049,.067),uNight)*crest*.19;
     // Fine broken froth only on the highest nearby wave crests; wind spreads it into whitecaps.
     float froth=smoothstep(.345-.19*foam,.43-.10*foam,level)*smoothstep(.54-.22*foam,.78+.1*foam,valueNoise(vWorld.xz*4.2+vec2(uSeaTime*.08,-uSeaTime*.06),grain+1.0));
     vec3 white=mix(vec3(.66,.80,.78),vec3(.10,.18,.24),uNight)*mix(1.0,.74,over);
@@ -382,20 +384,20 @@ void main(){
       float turbulence=textureLod(uNoiseMap,(surfaceUv*.55+vec2(uTime*.22,-uTime*.17))*.03125,log2(max(footprint*8.8,1.0))).r;
       // A storm sea churns across far more of its underside.
       float churn=smoothstep(.58-.13*storm,.76-.11*storm,turbulence+length(normal.xz)*.7);
-      vec3 underside=mix(vec3(.018,.19,.23),vec3(.075,.39,.39),caustic*.55*(1.0-over*.5)+mottling*.17+fresnel*.16);
-      underside+=vec3(.018,.046,.045)*pow(caustic,2.0)*(1.0-over*.7);
+      vec3 underside=mix(vec3(.015,.16,.25),vec3(.07,.35,.42),caustic*.55*(1.0-over*.5)+mottling*.17+fresnel*.16);
+      underside+=vec3(.017,.042,.050)*pow(caustic,2.0)*(1.0-over*.7);
       // Snell's window shows the baked sky and the sun's disc; outside it nothing is transmitted.
       vec3 transmitted=refract(-view,-normal,1.333);
       if(dot(transmitted,transmitted)>=.01){
         transmitted=normalize(transmitted+vec3(0.,.0001,0.));
         underside=mix(underside,skySun(skyBase(transmitted),transmitted),.56);
       }
-      underside+=vec3(.19,.29,.27)*churn*.65;
+      underside+=vec3(.18,.28,.30)*churn*.65;
       #ifdef WATER_WEATHER
       if(rain>.01){
         // Each drop dimples the skin of the water: a dark pit inside a bright ring.
         float rings=rainRings(vWorld.xz*1.7,uTime*1.4)+rainRings(vWorld.xz*1.05+5.3,uTime*1.1);
-        underside=underside*(1.0-rings*rain*.3)+vec3(.13,.21,.21)*rings*rain;
+        underside=underside*(1.0-rings*rain*.3)+vec3(.12,.20,.23)*rings*rain;
       }
       #endif
       underside*=(.16+.84*smoothstep(0.0,.75,uSurfaceLight))*mix(1.0,.36,uDepth);
@@ -475,6 +477,6 @@ void main(){
   streak=mix(streak,.55,uWeather.w*.7);
   float fade=smoothstep(0.0,.12,1.0-vUv.y)*pow(vUv.y,1.6);
   float shimmer=.8+.2*sin(vUv.y*6.0-uTime*.5);
-  gl_FragColor=vec4(.55,.92,.86,edge*streak*fade*shimmer*uDive*min(uSurfaceLight,1.2)*(1.0-uWeather.w*.6)*.22);
+  gl_FragColor=vec4(.55,.89,.92,edge*streak*fade*shimmer*uDive*min(uSurfaceLight,1.2)*(1.0-uWeather.w*.6)*.22);
 }
 `;

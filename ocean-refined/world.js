@@ -96,12 +96,12 @@ const cameraYaw=[0,0],cameraPitch=[0,0];
 function followAngle(state,goal,frequency,dt){const gap=Math.atan2(Math.sin(state[0]-goal),Math.cos(state[0]-goal)),lead=state[1]+frequency*gap,decay=Math.exp(-frequency*dt);state[0]=goal+(gap+lead*dt)*decay;state[1]=(state[1]-frequency*lead*dt)*decay;}
 const cameraGoal=new THREE.Vector3(),swimDirection=new THREE.Vector3();
 const poseYaw=new THREE.Quaternion(),posePitch=new THREE.Quaternion(),axisY=new THREE.Vector3(0,1,0),axisX=new THREE.Vector3(1,0,0);
-const fogDay=new THREE.Color('#accdd5'),fogNight=new THREE.Color('#152740'),fogDeep=new THREE.Color('#075361'),fogAbyss=new THREE.Color('#022532');
+const fogDay=new THREE.Color('#accdd5'),fogNight=new THREE.Color('#152740'),fogDeep=new THREE.Color('#064a6c'),fogAbyss=new THREE.Color('#02213c');
 const lightDay=new THREE.Color('#ffe6bf'),lightNight=new THREE.Color('#97bded'),skyFillNight=new THREE.Color('#7493bd');
 const cloudDay=new THREE.Color('#ffffff'),cloudNight=new THREE.Color('#526a8b');
 // Per-frame temporaries: the update loop allocates nothing.
 const scratchA=new THREE.Vector3(),scratchB=new THREE.Vector3(),scratchC=new THREE.Vector3(),scratchQ=new THREE.Quaternion(),downLight=new THREE.Vector3(),beamAim=new THREE.Quaternion();
-const diverGlow=new THREE.Color(0,0,0),halfTurn=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),Math.PI),ambientDay=new THREE.Color('#c8e7e6'),depthTint=new THREE.Color('#72cbd1'),goldenCloud=new THREE.Color('#ffab79'),goldenSun=new THREE.Color('#ffb57c');
+const diverGlow=new THREE.Color(0,0,0),halfTurn=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),Math.PI),ambientDay=new THREE.Color('#c8e7e6'),depthTint=new THREE.Color('#70bcdb'),goldenCloud=new THREE.Color('#ffab79'),goldenSun=new THREE.Color('#ffb57c');
 const wrapBeam=(v,c)=>c+((v-c+36)%72+72)%72-36;
 // What the camera can see this frame: its frustum and the distance at which the haze has absorbed a surface.
 const view={frustum:new THREE.Frustum(),eye:new THREE.Vector3(),range:Infinity},viewProjection=new THREE.Matrix4();
