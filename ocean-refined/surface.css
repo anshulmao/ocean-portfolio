@@ -27,12 +27,12 @@ body:is([data-submerged="true"],[data-exploring="true"],[data-safety-stop="true"
 html body:not([data-submerged="true"]) .scene-shade{background:var(--o-wash),linear-gradient(180deg,#ffffff0d,transparent 32%,transparent 70%,#022f455e)}
 
 /* Hero: left-aligned, with the sun and horizon as part of the composition */
-html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{left:clamp(24px,6.7vw,96px);right:auto;top:clamp(140px,20.5vh,196px);width:min(760px,58vw);max-height:none;overflow:visible;padding:0;transform:none;text-align:left;display:flex;flex-wrap:wrap;align-items:center;column-gap:26px}
+html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{left:var(--pad);right:auto;top:clamp(140px,20.5vh,196px);width:min(760px,58vw);max-height:none;overflow:visible;padding:0;transform:none;text-align:left;display:flex;flex-wrap:wrap;align-items:center;column-gap:26px}
 html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero>:is(.surface-copy,.portfolio-actions){flex-basis:100%}
 html body:not([data-submerged="true"]) .hero .surface-copy .eyebrow{justify-content:flex-start;gap:14px;margin:0 0 26px;font:500 12px/1.4 var(--o-display);letter-spacing:.18em;color:var(--o-ink-2)}
-.hero .surface-copy .eyebrow span{width:36px;opacity:.8}
 .hero .surface-copy h1{font-family:var(--o-display);font-weight:var(--o-weight-display);font-size:clamp(36px,5.4vw,78px);line-height:1;letter-spacing:-.045em;color:var(--o-ink)}
-.hero .surface-copy h1 em{display:block;padding-bottom:.1em;background:linear-gradient(180deg,var(--o-ink) 12%,var(--o-sunlit) 60%,var(--o-sunlit-2) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+/* One ink for the whole headline: near black by day, near white by night (tokens.css --o-ink). */
+.hero .surface-copy h1 em{display:block;padding-bottom:.1em;color:var(--o-ink)}
 html body:not([data-submerged="true"]) .hero .surface-copy .lede{max-width:520px;margin:22px 0 0;font:400 clamp(17px,1.55vw,22px)/1.45 var(--o-display);color:var(--o-ink-2)}
 
 /* The hero's ways in, in two tiers. First the two ways into the water, side by side: the solid dive button and the
@@ -81,7 +81,10 @@ html body :is(.portfolio-actions .dive-button,.portfolio-actions .guided-button,
 
 /* The look pad sits bottom right and stays quiet until wanted */
 
-html body:not([data-submerged="true"]) .view-controls{left:auto;right:var(--pad);bottom:64px;opacity:.5;transition:opacity 200ms var(--ease)}
+/* The surface's bottom row: the location, the hint and the look pad on one line, as far from the bottom edge as the
+   masthead is from the top, and at the same gutters (--pad) as the wordmark, the hero and the settings button. */
+html body:not([data-submerged="true"]) .scene-footer{bottom:var(--hud-top);min-height:42px}
+html body:not([data-submerged="true"]) .view-controls{left:auto;right:var(--pad);bottom:calc(var(--hud-top) + 2px);opacity:.5;transition:opacity 200ms var(--ease)}
 html body:not([data-submerged="true"]) .view-controls:is(:hover,:focus-within){opacity:1}
 
 
@@ -90,14 +93,16 @@ html body:not([data-submerged="true"]) .view-controls:is(:hover,:focus-within){o
 @media(max-width:900px){
   .surface-nav{display:none}
   html body:not([data-submerged="true"]) .view-controls{display:none}
-  html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{width:calc(100vw - 2*clamp(24px,6.7vw,96px))}
+  html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{width:calc(100vw - 2*var(--pad))}
 }
 /* Phones. The surface diver floats in the lower right of the frame (world.js), so everything here stays in one
    left-aligned column above it: the two ways into the water at full width, then the links, wrapping if they must. */
 @media(max-width:600px){
-  html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{left:calc(var(--o-safe-l) + var(--o-pad) + 10px);right:calc(var(--o-safe-r) + var(--o-pad) + 10px);top:calc(var(--o-under-bar) + 36px);width:auto}
+  /* At the surface the masthead and the hero share a roomier gutter than the dive HUD's 12 px, so the full-width
+     buttons do not run to the screen's edge. */
+  html body:not([data-submerged="true"]) .masthead{padding-left:calc(var(--o-safe-l) + 20px);padding-right:calc(var(--o-safe-r) + 20px)}
+  html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{left:calc(var(--o-safe-l) + 20px);right:calc(var(--o-safe-r) + 20px);top:calc(var(--o-under-bar) + 36px);width:auto}
   html body:not([data-submerged="true"]) .hero .surface-copy .eyebrow{font-size:10.5px;letter-spacing:.16em;margin-bottom:12px}
-  .hero .surface-copy .eyebrow span{width:22px}
   .hero .surface-copy h1{font-size:clamp(32px,8vw,48px)}
   html body:not([data-submerged="true"]) .hero .surface-copy .lede{font-size:16.5px;margin-top:12px}
   html body:not([data-submerged="true"]) .portfolio-actions{flex-direction:column;align-items:stretch;gap:10px;margin-top:20px}
@@ -112,7 +117,8 @@ html body:not([data-submerged="true"]) .view-controls:is(:hover,:focus-within){o
    in the left part of the frame (the diver is on the right). Smaller type, the two buttons side by side and the
    links on one row under them. */
 @media(pointer:coarse) and (max-height:499px){
-  html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{left:calc(var(--o-safe-l) + var(--o-pad) + 12px);top:var(--o-under-bar);width:min(560px,62vw);column-gap:20px}
+  html body:not([data-submerged="true"]) .masthead{padding-left:calc(var(--o-safe-l) + 20px);padding-right:calc(var(--o-safe-r) + 20px)}
+  html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{left:calc(var(--o-safe-l) + 20px);top:var(--o-under-bar);width:min(560px,62vw);column-gap:20px}
   html body:not([data-submerged="true"]) .hero .surface-copy .eyebrow{margin-bottom:8px;font-size:10.5px}
   .hero .surface-copy h1{font-size:clamp(30px,7vh,42px)}
   html body:not([data-submerged="true"]) .hero .surface-copy .lede{margin-top:8px;font-size:15px;line-height:1.4}
