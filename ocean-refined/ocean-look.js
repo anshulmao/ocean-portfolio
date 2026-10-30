@@ -136,7 +136,7 @@ float lookScatter = 1.0 - exp(-lookHazeRange * mix(.021, .034, uLookDepth));
 vLookAbsorb = vec4(exp(-lookHazeRange * vec3(.038, .014, .0075)) * (1.0 - lookScatter), exp(min(lookWorld.y, 0.0) * .04));
 // The water toward a point takes that point's depth (green-tinged over the sand shallows, blue down the drop-off) and
 // the eye's once fully hazed, where it meets the backdrop the dome paints.
-float lookBlue = mix(max(uLookDepth, smoothstep(-8.0, -38.0, lookWorld.y)), uLookDepth, lookScatter * lookScatter);
+float lookBlue = mix(max(uLookDepth, smoothstep(8.0, 38.0, -lookWorld.y)), uLookDepth, lookScatter * lookScatter);
 vLookHaze = oceanWater(lookRay / max(lookRange, .0001), uLookSun, uLookLight, uLookDepth, lookBlue) * lookScatter;
 // z: how wet the point is; the underwater look fades in across the surface.
 vLookCausticUv = vec3((lookWorld.xz - uLookSun.xz * (lookWorld.y / max(uLookSun.y, .35))) * .11, uLookUnder * (1.0 - smoothstep(-.2, .6, lookWorld.y)));${glow === 'vertex' ? `
