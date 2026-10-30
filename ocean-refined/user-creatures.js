@@ -287,13 +287,14 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     }
   }
   // course (the guided dive's own call): angle and side fix the line of the pass, pass its distance from the diver, y its
-  // depth, and ahead starts it that many metres short of its closest approach instead of out beyond the haze.
+  // depth, and ahead starts it that many metres short of its closest approach instead of out beyond the haze. from, when given,
+  // is the point the pass is measured from (a fly-by's spot on the route) rather than where the diver is when it is called.
   function begin(e, player, view, course = null) {
     // A kind with `across` swims parallel to the reef, across its face (the reef deepens towards -z, so that is east or west),
     // its line kept out over the deep shelf at z `across` or deeper, never in over the shallows.
     const across = !course && e.across !== undefined;
     const range = view ? Math.min(view.range, 130) : 110, R = range + e.length + 12, angle = course?.angle ?? (across ? (Math.random() < .5 ? 1 : -1) * Math.PI / 2 : rr(0, TAU)), sideOf = course?.side ?? (Math.random() < .5 ? 1 : -1);
-    const dx = Math.sin(angle), dz = Math.cos(angle), nx = dz * sideOf, nz = -dx * sideOf, pass = course?.pass ?? rr(...e.pass), px = player?.x ?? 0, pz = player?.z ?? -30;
+    const dx = Math.sin(angle), dz = Math.cos(angle), nx = dz * sideOf, nz = -dx * sideOf, pass = course?.pass ?? rr(...e.pass), px = course?.from?.[0] ?? player?.x ?? 0, pz = course?.from?.[2] ?? player?.z ?? -30;
     const cx = across ? px : px + nx * pass, cz = across ? Math.min(pz - pass, e.across) : pz + nz * pass;
     // The gentle bow in the line; one swimming across the reef bows out to sea, never in over the shallows.
     const bow = rr(-1, 1) * e.bulge * R;

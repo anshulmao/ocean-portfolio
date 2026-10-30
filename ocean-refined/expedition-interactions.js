@@ -216,7 +216,7 @@ onTick(dt=> {
   if(returnOffer!==offerKey){returnOffer=offerKey;stopButton.querySelector('small').innerHTML=touchInput()?(returning==='offer'?'Hold at 3–5 m · tap to stop':'Hold at 3–5 m · tap to begin'):returning==='offer'?'Hold at 3–5 m · <kbd>F</kbd> to stop · <kbd>Esc</kbd> to surface':'Hold at 3–5 m · Press <kbd>F</kbd>';}
   // The guided dive passes through 3–5 m on purpose (the anchor and the shallow reef): no offer to stop while it leads.
   // An ascent's own offer (returning === 'offer') still comes up, from the overview's Surface or anywhere else.
-  const guiding=['intro','travel','look','dwell'].includes(window.oceanTour?.status);
+  const guiding=['intro','travel','dwell'].includes(window.oceanTour?.status);
   const inRange=underwater&&inSafetyStopRange(reading)&&(returning==='offer'||(!returning&&!guiding));
   // A small dead band avoids retriggering on idle bobbing, while a route that
   // passes above the stop zone can offer the invitation again on its final hold.
