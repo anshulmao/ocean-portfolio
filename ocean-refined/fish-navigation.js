@@ -26,7 +26,9 @@ export function fishNavigator(heightAt) {
     return { x, y, z, yaw, pitch: 0, turn: 0, vx: 0, vy: 0, vz: 0, next: 0, course: yaw, side: 1, blocked: false };
   }
 
-  function step(s, target, dt, { speed = 1, clearance = .5, radius = .25, ceiling = -1.2, turnRate = 1.3, climb = .3 } = {}) {
+  // rise: a swimmer that finds every way on blocked rises (no higher than the ceiling) until one opens, instead of
+  // waiting at the foot of the wall. Off by default: a schooling fish should turn along a wall, not climb it.
+  function step(s, target, dt, { speed = 1, clearance = .5, radius = .25, ceiling = -1.2, turnRate = 1.3, climb = .3, rise = false } = {}) {
     if (!(dt > 0)) return s;
     dt = Math.min(dt, .1);
     const horizontal = Math.hypot(target.x - s.x, target.z - s.z), desired = horizontal > .02 ? Math.atan2(target.x - s.x, target.z - s.z) : s.yaw;
@@ -61,7 +63,9 @@ export function fishNavigator(heightAt) {
     s.yaw += s.yawRate * dt;
     // Slowing into a turn prevents lateral skating. The final swept test handles the curved approach while
     // the slower fan refresh keeps hundreds of fish inexpensive. No analytic terrain or collision raycasts.
-    const pace = s.blocked ? 0 : speed * Math.max(.15, Math.cos(angle(s.course - s.yaw)));
+    // A blocked swimmer that may rise keeps a little way on as it pulls up (the swept test below still stops it short
+    // of the wall), rather than stopping dead and lifting straight up.
+    const pace = s.blocked ? (rise ? speed * .25 : 0) : speed * Math.max(.15, Math.cos(angle(s.course - s.yaw)));
     s.pace = (s.pace ?? pace) + (pace - (s.pace ?? pace)) * ease(3.5);
     let travel = s.pace * dt;
     if (s.blocked) s.next = 0;
@@ -78,7 +82,9 @@ export function fishNavigator(heightAt) {
     const recover = floor > s.y + 1e-5 && floor <= ceiling;
     if (recover) targetY = Math.min(ceiling, Math.max(targetY, floor + .05));
     // Climbing out of the floor footprint answers at once; ordinary depth changes ease like the pace does.
-    const vyWant = travel > 0 || recover ? clamp((targetY - s.y) * 1.2, -speed * climb, speed * climb) : 0;
+    // (A blocked swimmer's pace eases toward zero but never quite reaches it, so `rise` is tested first.)
+    // (Nor while a step ahead is refused as it turns toward a clear course: it pulls up instead of stopping dead.)
+    const vyWant = rise && (s.blocked || travel === 0) && !recover ? clamp((ceiling - s.y) * 1.2, 0, speed * climb) : travel > 0 || recover ? clamp((targetY - s.y) * 1.2, -speed * climb, speed * climb) : 0;
     const vy = recover ? vyWant : (s.vy ?? 0) + (vyWant - (s.vy ?? 0)) * ease(3);
     s.vx = (x - s.x) / dt; s.vz = (z - s.z) / dt; s.vy = vy;
     s.x = x; s.z = z; s.y += vy * dt;

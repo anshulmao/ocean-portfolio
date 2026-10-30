@@ -20,7 +20,6 @@ export function* underwaterLifeSteps({ economy = false, terrainHeightAt = () => 
   // Eyes, oral arms and urchins are a few centimetres to a hand across: they
   // do not need the turtle shell's tessellation.
   const bead = new THREE.SphereGeometry(1, 8, 6), blob = new THREE.SphereGeometry(1, 10, 6), round = new THREE.SphereGeometry(1, 12, 8);
-  const skin = mat('#8eaa87');
   const shellMat = mat('#667d5b');
   // Fine seams provide the characteristic shell plates without extra geometry.
   shellMat.onBeforeCompile = shader => {
@@ -56,6 +55,7 @@ export function* underwaterLifeSteps({ economy = false, terrainHeightAt = () => 
   const torsoParts = [posed(round, '#c5c5a0', 0, -.10, .03, .56, .11, .74), posed(round, '#8eaa87', 0, 0, -.87, .13, .12, .30), posed(round, '#8eaa87', 0, .02, -1.12, .19, .15, .23),
     posed(bead, '#293d38', -.163, .075, -1.20, .028, .028, .028), posed(bead, '#293d38', .163, .075, -1.20, .028, .028, .028),
     posed(new THREE.ConeGeometry(.07, .32, 7), '#8eaa87', 0, -.06, .92, 1, 1, 1, Math.PI / 2)];
+  yield;
   const torso = batch('Turtle bodies', mergeGeometries(torsoParts, false), mat('#ffffff', { vertexColors: true }), turtleCount);
   torsoParts.forEach(geometry => geometry.dispose());
   yield;
@@ -64,7 +64,8 @@ export function* underwaterLifeSteps({ economy = false, terrainHeightAt = () => 
   paddle.quadraticCurveTo(1.24, -.10, 1.05, .04); paddle.quadraticCurveTo(.45, .27, 0, .10);
   const paddleGeometry = new THREE.ExtrudeGeometry(paddle, { depth: .055, bevelEnabled: true, bevelSize: .025, bevelThickness: .025, bevelSegments: 1, steps: 1, curveSegments: economy ? 5 : 8 });
   paddleGeometry.rotateX(Math.PI / 2);
-  const flippers = batch('Turtle flippers', paddleGeometry, skin, turtleCount * 4);
+  // White vertex colours on a material of the skin's colour: the flippers draw with the bodies' program, one fewer to build.
+  const flippers = batch('Turtle flippers', paint(paddleGeometry, '#ffffff'), mat('#8eaa87', { vertexColors: true }), turtleCount * 4);
   const turtleMeshes = batches.slice();
 
   yield;
@@ -102,13 +103,16 @@ export function* underwaterLifeSteps({ economy = false, terrainHeightAt = () => 
     direction.set(Math.cos(a) * Math.cos(elevation), Math.sin(elevation), Math.sin(a) * Math.cos(elevation));
     rotation.setFromUnitVectors(UP, direction);
     urchinParts.push(paint(new THREE.ConeGeometry(.053, 1.15, 4, 1, true).applyQuaternion(rotation).translate(direction.x * 1.15, direction.y * 1.15, direction.z * 1.15), '#706477'));
+    if (j % 6 === 5) yield;
   }
   const urchinGeometry = mergeGeometries(urchinParts, false).toNonIndexed();
   urchinParts.forEach(geometry => geometry.dispose());
   yield;
   const statics = [], residents = new Map(), residentMaterial = mat('#ffffff', { vertexColors: true });
-  function scatter(geometry, items) {
+  function* scatter(geometry, items) {
+    let placed = 0;
     for (const [x, y, z, sx, sy, sz, turn] of items) {
+      if (++placed % 4 === 0) yield;
       const key = Math.floor((z + 105) / 36);
       part.position.set(x, y, z); part.scale.set(sx, sy, sz); part.rotation.set(0, turn, 0); part.updateMatrix();
       if (!residents.has(key)) residents.set(key, []);
@@ -137,7 +141,7 @@ export function* underwaterLifeSteps({ economy = false, terrainHeightAt = () => 
     const s = .20 + (i % 3) * .025;
     urchinItems.push([x, floorAt(x,z) + .15, z, s, s, s, 0]);
   }
-  scatter(starGeometry, starItems); yield; scatter(urchinGeometry, urchinItems);
+  yield* scatter(starGeometry, starItems); yield; yield* scatter(urchinGeometry, urchinItems);
   for (const pieces of residents.values()) {
     yield;
     const mesh = shareLater(new THREE.Mesh(mergeGeometries(pieces, false), residentMaterial)); mesh.name = 'Seabed starfish and urchins';
@@ -159,8 +163,10 @@ export function* underwaterLifeSteps({ economy = false, terrainHeightAt = () => 
     const band=Math.floor((z+130)/32), scale=.7+(i%5)*.2;
     part.position.set(x,y-.025,z);part.scale.set(scale,scale,scale);part.rotation.set(0,i*1.7,0);part.updateMatrix();
     if(!glowBands.has(band))glowBands.set(band,[]);glowBands.get(band).push(seaPen.clone().applyMatrix4(part.matrix));
+    if(i%22===21)yield;
   }
   for(const pieces of glowBands.values()){
+    yield;
     const mesh=shareLater(new THREE.Mesh(mergeGeometries(pieces,false),glowMaterial));mesh.name='Deep luminous sea pens';mesh.matrixAutoUpdate=false;mesh.geometry.computeBoundingSphere();root.add(mesh);statics.push(mesh);pieces.forEach(g=>g.dispose());
   }
   seaPen.dispose();stem.dispose();crown.dispose();

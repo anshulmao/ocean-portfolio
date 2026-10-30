@@ -1,9 +1,11 @@
 import * as THREE from './vendor/three.module.min.js';
-import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 import { fishNavigator } from './fish-navigation.js';
+import { SCHOOL_SPECIES, schoolMesh, loadSchoolLooks } from './school-fish.js';
 
 const TAU = Math.PI * 2;
 const UP = new THREE.Vector3(0, 1, 0);
+const { clamp } = THREE.MathUtils;
+const ease = (dt, rate) => 1 - Math.exp(-dt * rate);
 
 function seededRandom(seed) {
   let value = seed >>> 0;
@@ -13,111 +15,24 @@ function seededRandom(seed) {
   };
 }
 
-function bodyGeometry(kind, economy) {
-  const profile = kind === 'clown'
-    ? [[-.72,.018,.018],[-.58,.095,.075],[-.38,.18,.13],[-.05,.235,.17],[.25,.205,.145],[.48,.13,.1],[.61,.07,.06],[.68,.008,.008]]
-    : kind === 'tang'
-      ? [[-.72,.012,.012],[-.56,.12,.07],[-.35,.205,.115],[-.04,.245,.145],[.25,.20,.12],[.47,.12,.075],[.60,.055,.042],[.68,.006,.006]]
-      : [[-.72,.01,.01],[-.56,.08,.052],[-.34,.145,.09],[-.04,.18,.105],[.26,.15,.09],[.49,.09,.06],[.61,.045,.03],[.68,.005,.005]];
-  const radialSegments = 10;
-  const positions = [], indices = [];
-  profile.forEach(([x, ry, rz]) => {
-    for (let j = 0; j <= radialSegments; j++) {
-      const angle = j / radialSegments * TAU;
-      positions.push(x, Math.cos(angle) * ry, Math.sin(angle) * rz);
-    }
-  });
-  const ring = radialSegments + 1;
-  for (let i = 0; i < profile.length - 1; i++) {
-    for (let j = 0; j < radialSegments; j++) {
-      const a = i * ring + j, b = a + ring;
-      indices.push(a, a + 1, b, a + 1, b + 1, b);
-    }
-  }
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geometry.setIndex(indices);
-  geometry.computeVertexNormals();
-  return geometry;
-}
+// Who lives where. Each habitat is one of three roles, and the role and the depth of the seabed under it pick the
+// species: fusiliers stream over the reef at every depth, powder blue tangs graze the shallow and middle reef (the
+// deep slope's grazers are more fusiliers), and the residents that hold close to the coral are sergeant majors in the
+// shallows and anthias down the slope. Four species, one draw call each. The reef's total stays within what it was
+// (478 fish, 231 in economy detail, against 490 and 245); the fusiliers' schools are the big ones.
+const ROLES = {
+  open: { count: [14, 7], species: () => 'fusilier' },
+  grazer: { count: [8, 4], species: floor => floor > -32 ? 'powder-blue-tang' : 'fusilier' },
+  resident: { count: [7, 3], species: floor => floor > -22 ? 'sergeant-major' : 'anthias' }
+};
+// The size of a fish of each species, as a share of its site length (creature-species.js), so the schools stay about a
+// metre long, as they were.
+const SCALE = { fusilier: .68, 'powder-blue-tang': .78, 'sergeant-major': .86, anthias: 1 };
 
-function finGeometry(kind) {
-  const shape = new THREE.Shape();
-  if (kind === 'tail') {
-    shape.moveTo(0, 0); shape.quadraticCurveTo(-.21, .12, -.48, .28);
-    shape.quadraticCurveTo(-.40, .03, -.46, 0);
-    shape.quadraticCurveTo(-.40, -.03, -.48, -.28);
-    shape.quadraticCurveTo(-.21, -.12, 0, 0);
-  } else if (kind === 'dorsal') {
-    shape.moveTo(-.37, .15); shape.quadraticCurveTo(-.12, .34, .22, .16);
-    shape.quadraticCurveTo(.04, .13, -.21, .12);
-  } else {
-    shape.moveTo(-.18, -.015); shape.quadraticCurveTo(.01, -.22, .25, -.14);
-    shape.quadraticCurveTo(.12, -.015, -.18, -.015);
-  }
-  const geometry = new THREE.ShapeGeometry(shape, kind === 'tail' ? 6 : 4);
-  geometry.computeVertexNormals();
-  return geometry;
-}
-
-// Every body flexes from the shoulders back, faster as the fish travels, so
-// a school reads as swimming rather than sliding. Patterns are painted in the
-// shader: a pale lateral line, clownfish bands, and a tang's mask and tail.
-function bodyMaterial(type) {
-  const mat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: type === 'silver' ? .34 : .42, metalness: type === 'silver' ? .1 : 0, side: THREE.DoubleSide });
-  const pattern = type === 'silver'
-    ? `float lateralStripe = 1.0 - smoothstep(0.018, 0.055, abs(vFishY - 0.035));
-diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.86, 0.95, 0.94), lateralStripe * 0.55);
-diffuseColor.rgb *= mix(.72, 1.0, smoothstep(-.02, .09, -vFishY + .06));`
-    : type === 'clown'
-      ? `float bandDistance = min(abs(vFishX + 0.38), min(abs(vFishX - 0.015), abs(vFishX - 0.36)));
-float bandEdge = 1.0 - smoothstep(0.05, 0.082, bandDistance);
-float bandWhite = 1.0 - smoothstep(0.025, 0.043, bandDistance);
-diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.12, 0.20, 0.21), bandEdge * 0.84);
-diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.95, 0.96, 0.88), bandWhite);`
-      : `float mask = 1.0 - smoothstep(0.03, 0.07, abs(vFishX - 0.4 + vFishY * .5));
-diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.07, 0.13, 0.24), mask * .8);
-diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.98, 0.83, 0.33), 1.0 - smoothstep(-0.52, -0.40, vFishX));
-diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.06, 0.12, 0.25), (1.0 - smoothstep(0.012, 0.04, abs(abs(vFishY) - 0.2))) * .45);`;
-  mat.onBeforeCompile = shader => {
-    shader.uniforms.uSwimTime = swimTime;
-    shader.vertexShader = `uniform float uSwimTime;
-varying float vFishX;
-varying float vFishY;
-${shader.vertexShader}`
-      .replace('#include <begin_vertex>', `#include <begin_vertex>
-vFishX = position.x; vFishY = position.y;
-#ifdef USE_INSTANCING
-float swimPhase = dot(instanceMatrix[3].xyz, vec3(3.1, 1.7, 2.3));
-transformed.z += sin(position.x * 4.2 - uSwimTime * 5.5 + swimPhase) * .085 * (1.0 - smoothstep(-.72, .45, position.x));
-#endif`);
-    shader.fragmentShader = `varying float vFishX;
-varying float vFishY;
-${shader.fragmentShader}`
-      .replace('#include <color_fragment>', `#include <color_fragment>
-${pattern}`);
-  };
-  mat.customProgramCacheKey = () => `marine-fish-body-${type}-v2`;
-  return mat;
-}
-const swimTime = { value: 0 };
-
-// The dorsal fin, pectoral fin and both eyes ride on the body transform, so
-// they are one mesh with painted eyes: one matrix per fish instead of four.
-function trimGeometry() {
-  const paint = (geometry, hex) => {
-    const color = new THREE.Color(hex), count = geometry.getAttribute('position').count, data = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) color.toArray(data, i * 3);
-    geometry.setAttribute('color', new THREE.BufferAttribute(data, 3));
-    return geometry;
-  };
-  const parts = [paint(finGeometry('dorsal'), '#ffffff'), paint(finGeometry('pectoral').translate(-.02, -.02, .12), '#ffffff'),
-    paint(new THREE.SphereGeometry(.022, 4, 2).translate(.37, .045, -.087), '#102a35'),
-    paint(new THREE.SphereGeometry(.022, 4, 2).translate(.37, .045, .087), '#102a35')];
-  const geometry = mergeGeometries(parts, false);
-  parts.forEach(part => part.dispose());
-  return geometry;
-}
+// How the swim stroke follows the fish (see school-fish.js for the wave itself). A fish moves about 0.62 of its length
+// a beat, so the beat rate is its speed in lengths a second over that, never slower than a hovering flutter. The stroke
+// widens with speed and in a burst. A turn bends the body along the arc it swims and banks it into the turn.
+const STRIDE = .62, HOVER_HZ = .8, MAX_HZ = 5.2;
 
 export function createMarineLife(options) { const steps = marineLifeSteps(options); let step; while (!(step = steps.next()).done); return step.value; }
 // The same build, pausing (yielding) between its parts so the page can do it between frames.
@@ -131,65 +46,51 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
     const index = row * 7 + column;
     const x = [-73, -49, -25, 0, 25, 49, 73][column];
     const z = row===2&&column===3 ? -12 : [43, 20, -3, -26, -51, -78, -116][row] + (column % 2 ? -1 : 1);
-    const type = ['silver', 'tang', 'clown'][index % 3];
-    const resident = type === 'clown';
+    const role = ['open', 'grazer', 'resident'][index % 3];
+    const resident = role === 'resident';
     const floor = terrainHeightAt(x, z);
     const clearance = Math.max(resident ? 3.1 : 4.5 + index % 3 * .8, (resident ? -53 : -49) - floor);
     const center = new THREE.Vector3(x, Math.min(-2.5, floor + clearance), z);
-    schools.push({ center, color: type,
-      count: economy ? 5 : 10, resident, clearance,
+    schools.push({ center, role, species: ROLES[role].species(floor),
+      count: ROLES[role].count[economy ? 1 : 0], resident, clearance,
       spread: resident ? 2.3 : 4.4, radius: resident ? 3.4 : 7.5, members: [],
       fear: 0, away: new THREE.Vector3(), travel: new THREE.Vector3(), target: center.clone(),
-      near: true, shown: true, dt: 0, idle: 0, wake: 0 });
+      near: true, shown: true, dt: 0, last: 1, idle: 0, wake: 0 });
   }
   const count = schools.reduce((sum, school) => sum + school.count, 0);
-  const familyCounts = { silver: 0, tang: 0, clown: 0 };
-  schools.forEach(school => { familyCounts[school.color] += school.count; });
-  const material = (color, options = {}) => new THREE.MeshStandardMaterial({ color, roughness: .48, metalness: 0, side: THREE.DoubleSide, ...options });
-  const palettes = {
-    silver: ['#c4dfe2', '#dcebe6', '#a2c9d6'],
-    tang: ['#3f8fd6', '#55a8e0', '#3a74c4'],
-    clown: ['#ff8a4a', '#ffa25a', '#f2783f']
-  };
-  // Five draw calls for every fish on the reef: a body mesh per species, one
-  // mesh of tails and one of fins and eyes shared by all of them.
-  const families = {}, meshes = [], white = new THREE.Color('#ffffff');
-  const moving = (mesh, name) => {
-    mesh.name = name; mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    // Schools are culled one by one in draw(); the mesh itself spans the reef.
-    for (let i = 0; i < mesh.count; i++) mesh.setColorAt(i, white);
-    mesh.frustumCulled = false; root.add(mesh); meshes.push(mesh); return mesh;
-  };
-  for (const type of Object.keys(familyCounts)) {
+  const capacity = {};
+  for (const school of schools) capacity[school.species] = (capacity[school.species] || 0) + school.count;
+  // One mesh a species (school-fish.js). They draw nothing until loadLooks() has given them their shape and skin.
+  const looks = {}, meshes = [];
+  for (const id of Object.keys(capacity)) {
     yield;
-    families[type] = { bodies: moving(new THREE.InstancedMesh(bodyGeometry(type, economy), bodyMaterial(type), familyCounts[type]), `${type} fish bodies`), drawn: 0 };
+    const look = looks[id] = schoolMesh(id, capacity[id]);
+    look.drawn = 0; root.add(look.mesh); meshes.push(look.mesh);
   }
-  yield;
-  const tails = moving(new THREE.InstancedMesh(finGeometry('tail'), material('#ffffff', { roughness: .52 }), count), 'Fish tails');
-  const trim = moving(new THREE.InstancedMesh(trimGeometry(), material('#ffffff', { roughness: .52, vertexColors: true }), count), 'Fish fins and eyes');
 
   yield;
   const fish = [];
   for (let school = 0; school < schools.length; school++) {
-    const habitat = schools[school];
+    const habitat = schools[school], length = SCHOOL_SPECIES[habitat.species].length;
     for (let member = 0; member < habitat.count; member++) {
       const angle = random() * TAU, radial = Math.sqrt(random()) * habitat.spread;
+      const scale = SCALE[habitat.species] * (.88 + random() * .24);
       const f = {
         position: habitat.center.clone().add(new THREE.Vector3(Math.cos(angle) * radial, (random() - .5) * 1.5, Math.sin(angle) * radial)),
         velocity: new THREE.Vector3(.65 + random() * .35, (random() - .5) * .08, (random() - .5) * .2),
-        acceleration: new THREE.Vector3(), school, type: habitat.color, fear: 0,
+        acceleration: new THREE.Vector3(), school, species: habitat.species, fear: 0,
         side: Math.cos(angle) >= 0 ? 1 : -1,
-        size: (habitat.color === 'silver' ? .64 : habitat.color === 'clown' ? .55 : .84) * (.88 + random() * .24) * (.9 + school % 4 * .1),
-        phase: random() * TAU,
-        tint: palettes[habitat.color][Math.floor(random() * palettes[habitat.color].length)]
+        // size is the fish's length in metres (scale times its species' length).
+        scale, size: scale * length,
+        // The stroke: phase (radians), beat rate (Hz), amplitude; the bend of the body (1/m, model metres) and its bank.
+        phase: random() * TAU, beat: 1, amp: .6, bend: 0, roll: 0,
+        // Where it was before its last step, to draw it between the two.
+        px: 0, py: 0, pz: 0, pyaw: 0, ppitch: 0,
+        // As last drawn: x, y, z, yaw, pitch.
+        pose: new Float64Array(5)
       };
       f.position.y = Math.max(f.position.y, terrainHeightAt(f.position.x, f.position.z) + 1.7);
       fish.push(f); habitat.members.push(f);
-      f.bodyColor = new THREE.Color(f.tint);
-      f.tailColor = habitat.color === 'tang'
-        ? new THREE.Color('#e6c66f').offsetHSL((random() - .5) * .015, 0, (random() - .5) * .05)
-        : f.bodyColor.clone().multiplyScalar(.84);
-      f.trimColor = f.bodyColor.clone().multiplyScalar(.81);
     }
   }
 
@@ -197,7 +98,7 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
   // replaces two analytic terrain evaluations per fish per step.
   yield;
   const GRID_X = -86, GRID_Z = -130, GRID_STEP = 2, GRID_W = 87, GRID_H = 95, floorGrid = new Float32Array(GRID_W * GRID_H);
-  for (let gz = 0; gz < GRID_H; gz++) for (let gx = 0; gx < GRID_W; gx++) floorGrid[gz * GRID_W + gx] = terrainHeightAt(GRID_X + gx * GRID_STEP, GRID_Z + gz * GRID_STEP);
+  for (let gz = 0; gz < GRID_H; gz++) { for (let gx = 0; gx < GRID_W; gx++) floorGrid[gz * GRID_W + gx] = terrainHeightAt(GRID_X + gx * GRID_STEP, GRID_Z + gz * GRID_STEP); if (gz % 12 === 11) yield; }
   for (const { box } of collisions?.boxes || []) {
     const x0 = Math.max(0, Math.floor((box.min.x - GRID_X) / GRID_STEP)), x1 = Math.min(GRID_W - 1, Math.ceil((box.max.x - GRID_X) / GRID_STEP));
     const z0 = Math.max(0, Math.floor((box.min.z - GRID_Z) / GRID_STEP)), z1 = Math.min(GRID_H - 1, Math.ceil((box.max.z - GRID_Z) / GRID_STEP));
@@ -210,38 +111,50 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
   }
   const navigation = fishNavigator(floorAt), swimTarget = { x: 0, y: 0, z: 0 };
   for (const f of fish) {
-    const { x, z } = f.position, r = f.size * .45;
+    const { x, z } = f.position, r = f.size * .3;
     const startFloor = Math.max(floorAt(x, z), floorAt(x - r, z - r), floorAt(x - r, z + r), floorAt(x + r, z - r), floorAt(x + r, z + r));
     f.position.y = Math.max(f.position.y, startFloor + 1.95);
     f.nav = navigation.create(f.position.x, f.position.y, f.position.z, Math.atan2(f.velocity.x, f.velocity.z));
-    f.navOptions = { speed: 1, clearance: 1.7, radius: f.size * .45, ceiling: -1.6 };
+    f.navOptions = { speed: 1, clearance: 1.7, radius: f.size * .3, ceiling: -1.6, turnRate: 1.3 };
+    f.px = f.nav.x; f.py = f.nav.y; f.pz = f.nav.z; f.pyaw = f.nav.yaw; f.ppitch = f.nav.pitch;
   }
 
-  const dummy = new THREE.Object3D(), orientation = new THREE.Quaternion();
-  const heading = new THREE.Euler(0, 0, 0, 'YZX');
-  const tailWag = new THREE.Quaternion(), bounds3 = new THREE.Sphere();
-  const direction = new THREE.Vector3();
+  const matrix = new THREE.Matrix4(), orientation = new THREE.Quaternion(), turn = new THREE.Euler(0, 0, 0, 'YXZ');
+  const scale3 = new THREE.Vector3(), bounds3 = new THREE.Sphere();
   const offset = new THREE.Vector3(), steering = new THREE.Vector3();
   const swimmerPrevious = new THREE.Vector3(), swimmerVelocity = new THREE.Vector3();
   const swimmerAhead = new THREE.Vector3(), swimmerSegment = new THREE.Vector3(), closest = new THREE.Vector3();
   const tangent = new THREE.Vector3(), avoidance = new THREE.Vector3();
-  let hadSwimmer = false, frame = 0, painted = true;
-  // Which schools were drawn last frame: the instance colours are written again only when that changes.
-  const wasShown = new Uint8Array(schools.length);
-  const bounds = { x: [-84, 84], y: [-85, -1.6], z: [-128, 56] };
+  // rest: time gathered toward the next fixed step; clock: the time of the last one (the schools keep their own).
+  let hadSwimmer = false, frame = 0, nudges = 0, rest = 0, clock = 0;
+  const at = new THREE.Vector3();
+  const bounds = { x: [-84, 84], y: [-85, -1.6], z: [-128, 56] }, EDGE = 7;
   // Beyond this distance from the diver a school cannot feel them (its
   // members stay within ~20 m of the roaming target; avoidance reaches 13 m).
   const NEAR_SQ = 40 * 40, FINE_STEP = economy ? 1 / 30 : 1 / 60;
 
+  // The stroke follows the fish: its beat from its speed, its bend and bank from its turn. dt is the frame's own time,
+  // so the beat is the same at 30, 60 or 120 frames a second, and stands still when the world is paused (dt 0).
+  function stroke(f, dt) {
+    const n = f.nav, flat = Math.hypot(n.vx, n.vz), speed = Math.hypot(flat, n.vy), lengths = speed / f.size;
+    const beat = clamp(lengths / STRIDE, HOVER_HZ, MAX_HZ);
+    const amp = clamp(.42 + .32 * lengths, .42, 1.15) + f.fear * .18;
+    // Curvature of the path (1/m) in the model's own metres; at most 1/length, which moves the tail an eighth of a length.
+    const rate = n.yawRate ?? 0, reach = 1 / SCHOOL_SPECIES[f.species].length;
+    const bend = clamp(rate / Math.max(flat, .35) * f.scale, -reach, reach);
+    const roll = clamp(-.2 * rate * Math.max(flat, .4), -.42, .42);
+    const k = ease(dt, 5);
+    f.beat += (beat - f.beat) * k; f.amp += (amp - f.amp) * k; f.bend += (bend - f.bend) * ease(dt, 7); f.roll += (roll - f.roll) * ease(dt, 4);
+    f.phase = (f.phase + TAU * f.beat * dt) % TAU;
+  }
+
   // view: { frustum, eye, range }. Only schools in view and within the haze
   // are written, packed to the front of each mesh, so the instance count (and
   // the vertex work) follows what can be seen rather than the whole reef.
-  function draw(elapsed, view) {
-    swimTime.value = elapsed;
-    let total = 0, changed = painted; painted = false;
-    for (const type in families) families[type].drawn = 0;
+  function draw(dt, view) {
+    for (const id in looks) looks[id].drawn = 0;
     for (let s = 0; s < schools.length; s++) {
-      const home = schools[s], members = home.members;
+      const home = schools[s], members = home.members, look = looks[home.species];
       home.shown = true;
       if (view) {
         let cx = 0, cy = 0, cz = 0, reach = 0;
@@ -249,48 +162,46 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
         bounds3.center.set(cx / members.length, cy / members.length, cz / members.length);
         for (let m = 0; m < members.length; m++) reach = Math.max(reach, bounds3.center.distanceToSquared(members[m].position));
         bounds3.radius = Math.sqrt(reach) + 1.2;
-        // A half-metre fish is lost in the haze well before the range itself.
+        // A metre-long fish is lost in the haze well before the range itself.
         home.shown = view.eye.distanceTo(bounds3.center) - bounds3.radius < view.range * .75 && view.frustum.intersectsSphere(bounds3);
       }
-      if (wasShown[s] !== +home.shown) { wasShown[s] = +home.shown; changed = true; }
-    }
-    // Instance colours only move when the set of visible schools changes.
-    const repaint = changed;
-    for (let s = 0; s < schools.length; s++) {
-      const home = schools[s], members = home.members;
       if (!home.shown) continue;
-      const family = families[home.color], bodies = family.bodies;
+      // A school is drawn between its last two steps, by the time gathered since the last one (one step behind).
+      const k = Math.min(1, rest / home.last), mesh = look.mesh, swim = look.swim.array;
       for (let m = 0; m < members.length; m++) {
-        const f = members[m], slot = family.drawn++, index = total++;
+        const f = members[m], n = f.nav, pose = f.pose;
+        stroke(f, dt);
+        pose[0] = f.px + (n.x - f.px) * k; pose[1] = f.py + (n.y - f.py) * k; pose[2] = f.pz + (n.z - f.pz) * k;
         // Face along the navigator's eased yaw and pitch, not the raw velocity: the velocity is zero whenever a fish
         // pauses at a wall, and normalising it would turn the fish to face +X for that frame.
-        const n = f.nav;
-        if (n) direction.set(Math.sin(n.yaw) * Math.cos(n.pitch), Math.sin(n.pitch), Math.cos(n.yaw) * Math.cos(n.pitch));
-        else direction.copy(f.velocity).normalize();
-        heading.set(0, Math.atan2(-direction.z, direction.x), Math.atan2(direction.y, Math.hypot(direction.x, direction.z)), 'YZX');
-        orientation.setFromEuler(heading);
-        dummy.position.copy(f.position); dummy.quaternion.copy(orientation); dummy.scale.setScalar(f.size); dummy.updateMatrix();
-        bodies.setMatrixAt(slot, dummy.matrix); trim.setMatrixAt(index, dummy.matrix);
-        tailWag.setFromAxisAngle(UP, Math.sin(elapsed * 6.3 + f.phase) * .11);
-        dummy.position.addScaledVector(direction, -.63 * f.size);
-        dummy.quaternion.multiply(tailWag); dummy.updateMatrix();
-        tails.setMatrixAt(index, dummy.matrix);
-        if (repaint) { bodies.setColorAt(slot, f.bodyColor); tails.setColorAt(index, f.tailColor); trim.setColorAt(index, f.trimColor); }
+        pose[3] = f.pyaw + Math.atan2(Math.sin(n.yaw - f.pyaw), Math.cos(n.yaw - f.pyaw)) * k; pose[4] = f.ppitch + (n.pitch - f.ppitch) * k;
+        if (!look.ready) continue;
+        const slot = look.drawn++;
+        turn.set(-pose[4], pose[3], f.roll, 'YXZ');
+        matrix.compose(at.fromArray(pose), orientation.setFromEuler(turn), scale3.setScalar(f.scale));
+        mesh.setMatrixAt(slot, matrix);
+        swim[slot * 3] = f.phase; swim[slot * 3 + 1] = f.amp; swim[slot * 3 + 2] = f.bend;
       }
     }
-    for (const type in families) { const bodies = families[type].bodies; bodies.count = families[type].drawn; bodies.visible = bodies.count > 0; }
-    tails.count = trim.count = total; tails.visible = trim.visible = total > 0;
-    for (const mesh of meshes) { mesh.instanceMatrix.needsUpdate = true; if (repaint) mesh.instanceColor.needsUpdate = true; }
+    for (const id in looks) {
+      const look = looks[id], mesh = look.mesh;
+      mesh.count = look.drawn;
+      // Until its look has loaded a mesh stays in the scene drawing nothing, so the world can compile its program.
+      mesh.visible = !look.ready || look.drawn > 0;
+      if (look.drawn) { mesh.instanceMatrix.needsUpdate = true; look.swim.needsUpdate = true; }
+    }
   }
 
+  // elapsed is not used: the schools keep their own clock, which a paused world (dt 0) stops.
   function update(dt, elapsed, swimmerPosition, view = null) {
-    elapsed = Number.isFinite(elapsed) ? elapsed : 0;
     const frameDelta = Math.min(Math.max(dt || 0, 0), .1);
-    // Economy detail draws 30 frames a second, and a sixtieth-of-a-second step made each near school's flocking and
-    // navigation run twice a frame (six times on a slow phone at 10 fps). There a step of a thirtieth keeps one per
-    // frame drawn; the diver's swept clearance is tested on every step either way.
-    const steps = frameDelta > 0 ? Math.ceil(frameDelta / FINE_STEP - 1e-9) : 0;
-    const step = steps ? frameDelta / steps : 0;
+    // Schools near the diver take a fixed step, whatever the frame rate: time gathers toward the next step and the
+    // fish are drawn between their last two (draw), so 30, 60 and 120 frames a second swim the same course. Economy
+    // detail draws 30 frames a second and steps a thirtieth (one step a frame drawn); otherwise a sixtieth. The
+    // diver's swept clearance is tested on every step either way.
+    rest += frameDelta;
+    const steps = Math.min(Math.floor(rest / FINE_STEP + 1e-6), Math.ceil(.1 / FINE_STEP - 1e-6));
+    rest = Math.min(Math.max(rest - steps * FINE_STEP, 0), FINE_STEP * .999);
     const hasSwimmer = !!swimmerPosition?.isVector3;
     if (hasSwimmer) {
       swimmerVelocity.set(0, 0, 0);
@@ -298,27 +209,24 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
       swimmerAhead.copy(swimmerPosition).addScaledVector(swimmerVelocity, .55);
       swimmerSegment.copy(swimmerVelocity).multiplyScalar(-frameDelta);
     }
+    // Schools near the diver keep the fine fixed step, so parting around them is unchanged. A distant school takes
+    // one step a frame that steps, of the time gathered since its last; one that is also out of sight, every fourth.
+    if (steps > 0) frame++;
+    for (let index = 0; index < schools.length; index++) {
+      const home = schools[index];
+      home.near = !hasSwimmer || home.target.distanceToSquared(swimmerPosition) < NEAR_SQ;
+      home.wake = 0; home.idle = home.near ? 0 : home.idle + frameDelta;
+      if (steps > 0 && !home.near && (home.shown || (frame + index) % 4 === 0)) { home.wake = Math.min(home.idle, .1); home.idle = 0; }
+    }
     if (steps > 0) {
-      frame++;
-      // Schools near the diver keep the fine fixed step, so parting around
-      // them is unchanged. A distant school takes one step per frame, and one
-      // that is also out of sight catches up every fourth frame.
-      for (let index = 0; index < schools.length; index++) {
-        const home = schools[index];
-        home.near = !hasSwimmer || home.target.distanceToSquared(swimmerPosition) < NEAR_SQ;
-        home.wake = 0;
-        if (!home.near) {
-          if (home.shown) home.wake = frameDelta;
-          else { home.idle += frameDelta; if ((frame + index) % 4 === 0) { home.wake = Math.min(home.idle, .1); home.idle = 0; } }
-        }
-      }
       for (let substep = 0; substep < steps; substep++) {
         const last = substep === steps - 1;
         for (let index = 0; index < schools.length; index++) {
-          const home = schools[index], h = home.near ? step : last ? home.wake : 0;
+          const home = schools[index], h = home.near ? FINE_STEP : last ? home.wake : 0;
           home.dt = h;
           if (!h) continue;
-          const drift = (home.near ? elapsed - frameDelta + step * (substep + 1) : elapsed) * (home.resident ? .16 : .095) + index * 1.35;
+          home.last = h;
+          const drift = (clock + FINE_STEP * (home.near ? substep + 1 : steps)) * (home.resident ? .16 : .095) + index * 1.35;
           const roam = home.resident ? 1.2 : 9;
           home.target.set(home.center.x + Math.sin(drift) * roam, home.center.y, home.center.z + Math.cos(drift) * roam * .75);
           home.target.y = Math.min(-2.5, terrainHeightAt(home.target.x, home.target.z) + home.clearance + Math.sin(drift * .72) * .35);
@@ -360,6 +268,9 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
           offset.subVectors(p, home.target); offset.y = 0;
           const radialDistance = offset.length();
           if (radialDistance > margin) a.addScaledVector(offset.normalize(), -Math.min(1, (radialDistance - margin) * .18));
+          // The edge of the world turns a fish in good time, instead of the clamp below sliding it along the wall.
+          if (p.x < bounds.x[0] + EDGE) a.x += (bounds.x[0] + EDGE - p.x) * .5; else if (p.x > bounds.x[1] - EDGE) a.x -= (p.x - bounds.x[1] + EDGE) * .5;
+          if (p.z < bounds.z[0] + EDGE) a.z += (bounds.z[0] + EDGE - p.z) * .5; else if (p.z > bounds.z[1] - EDGE) a.z -= (p.z - bounds.z[1] + EDGE) * .5;
           let pressure = 0;
           if (hasSwimmer && home.near) {
             offset.subVectors(p, swimmerAhead);
@@ -389,6 +300,7 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
           const f = fish[i], home = schools[f.school], h = home.dt;
           if (!h) continue;
           const p = f.position, v = f.velocity;
+          f.px = p.x; f.py = p.y; f.pz = p.z; f.pyaw = f.nav.yaw; f.ppitch = f.nav.pitch;
           v.addScaledVector(f.acceleration, h);
           const speed = v.length();
           const minSpeed = home.resident ? .24 : .85;
@@ -396,14 +308,16 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
           if (speed < .00001) v.copy(home.travel).multiplyScalar(minSpeed);
           else if (speed < minSpeed) v.setLength(minSpeed);
           else if (speed > maxSpeed) v.setLength(maxSpeed);
-          // Flocking supplies the desired direction; cached look-ahead steering supplies a swimmable route.
-          // The former integration moved straight through the reef and then snapped p.y up to its new floor.
+          // Flocking supplies the desired direction; cached look-ahead steering supplies a swimmable route. The fish
+          // always travels the way it faces (the navigator moves it along its own heading), and a frightened fish
+          // turns faster: the burst is a quick turn away and a sprint, not a slide.
           swimTarget.x = p.x + v.x * 3; swimTarget.y = p.y + v.y; swimTarget.z = p.z + v.z * 3;
           const nav = f.nav; nav.x = p.x; nav.y = p.y; nav.z = p.z;
-          f.navOptions.speed = Math.hypot(v.x, v.z); navigation.step(nav, swimTarget, h, f.navOptions);
+          f.navOptions.speed = Math.hypot(v.x, v.z); f.navOptions.turnRate = 1.3 + f.fear * 2.6;
+          navigation.step(nav, swimTarget, h, f.navOptions);
           p.set(nav.x, nav.y, nav.z); v.set(nav.vx, nav.vy, nav.vz);
           if (hasSwimmer && home.near) {
-            // Swept-body clearance catches an advancing diver between frames.
+            // Swept-body clearance catches an advancing diver between frames: the last resort, rarely reached.
             closest.copy(swimmerPosition);
             const segmentLengthSq = swimmerSegment.lengthSq();
             if (segmentLengthSq > .00001) {
@@ -411,13 +325,14 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
               closest.addScaledVector(swimmerSegment, THREE.MathUtils.clamp(offset.dot(swimmerSegment) / segmentLengthSq, 0, 1));
             }
             offset.subVectors(p, closest);
-            const clearance = 1.65 + f.size * .75, distance = offset.length();
+            const clearance = 1.65 + f.size * .45, distance = offset.length();
             if (distance < clearance) {
               if (distance < .0001) offset.copy(home.travel).cross(UP).multiplyScalar(f.side);
               offset.normalize();
               p.copy(closest).addScaledVector(offset, clearance);
               const inwardSpeed = v.dot(offset);
               if (inwardSpeed < 0) v.addScaledVector(offset, -inwardSpeed);
+              nudges++;
             }
           }
           if (p.x < bounds.x[0] || p.x > bounds.x[1]) { p.x = THREE.MathUtils.clamp(p.x, bounds.x[0], bounds.x[1]); v.x *= -.45; }
@@ -426,15 +341,28 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
         }
       }
     }
+    clock += steps * FINE_STEP;
     if (hasSwimmer) swimmerPrevious.copy(swimmerPosition);
     hadSwimmer = hasSwimmer;
-    draw(elapsed || 0, view);
+    draw(frameDelta, view);
   }
+
+  // Shapes and skins for the schools (school-fish.js), asked for by the world once the first dive's own files are in.
+  let loading = null;
+  const looksState = root.userData.looks = { ready: false, loaded: [], failed: [] };
+  function loadLooks() {
+    return loading ??= loadSchoolLooks(Object.values(looks), { lod: economy ? 2 : 1 }).then(result => {
+      Object.assign(looksState, result, { ready: true });
+      return looksState;
+    });
+  }
+
   update(0, 0);
-  const api = { root, update, count, schoolCount: schools.length, drawCalls: meshes.length };
+  const api = { root, update, loadLooks, looks: looksState, count, schoolCount: schools.length, drawCalls: meshes.length, species: { ...capacity } };
   if (debug) api.inspect = () => ({
-    schools: schools.map(s => ({ center: s.center.toArray(), target: s.target.toArray(), resident: s.resident, count: s.count, fear: s.fear, near: s.near, shown: s.shown })),
-    fish: fish.map(f => ({ position: f.position.toArray(), velocity: f.velocity.toArray(), school: f.school, size: f.size, fear: f.fear }))
+    nudges,
+    schools: schools.map(s => ({ center: s.center.toArray(), target: s.target.toArray(), resident: s.resident, species: s.species, count: s.count, fear: s.fear, near: s.near, shown: s.shown })),
+    fish: fish.map(f => ({ position: f.position.toArray(), velocity: f.velocity.toArray(), yaw: f.nav.yaw, pitch: f.nav.pitch, roll: f.roll, drawn: [...f.pose], school: f.school, size: f.size, fear: f.fear, phase: f.phase, beat: f.beat, amp: f.amp, bend: f.bend }))
   });
   return api;
 }

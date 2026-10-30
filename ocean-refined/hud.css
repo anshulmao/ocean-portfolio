@@ -537,7 +537,7 @@ body[data-menu="open"] .hero *{pointer-events:none}
 html[data-input="touch"] .interact-prompt{position:fixed;left:auto;right:max(12px,var(--o-safe-r));bottom:calc(var(--keys-top) + var(--o-gap));z-index:var(--o-z-controls);min-height:var(--o-tap);max-width:calc(100vw - var(--o-pad) - min(176px,40vw + 12px));padding:8px 16px;transform:none;border-color:var(--holo-mint);font-size:14px;white-space:normal;text-align:left}
 html[data-input="touch"] .interact-prompt kbd{display:none}
 /* On a guided dive the tour's card carries the same action, so it stays the only one. */
-html[data-input="touch"] body:is([data-tour="travel"],[data-tour="dwell"]) .interact-prompt{visibility:hidden}
+html[data-input="touch"] body:is([data-tour="intro"],[data-tour="travel"],[data-tour="look"],[data-tour="dwell"]) .interact-prompt{visibility:hidden}
 html[data-input="touch"] :is(.capture-hint,.look-hint){display:none!important}
 
 /* 14. Phones: the layout contract (release/MOBILE_OVERHAUL.md; zones and layers in tokens.css). The top bar holds the

@@ -41,7 +41,7 @@ async function hashPack(directory){for(const entry of (await fs.readdir(director
 await hashPack(packRoot);for(const file of ['creature-kit.js','creature-species.js'])packHash.update(await fs.readFile(path.join(out,file)));
 const packVersion='v-'+packHash.digest('hex').slice(0,16),packParent=path.join(out,'assets/models/user-sets',packVersion);
 await fs.mkdir(packParent,{recursive:true});await fs.rename(packRoot,path.join(packParent,'sets'));
-for(const file of ['user-creatures.js','user-corals.js']){const target=path.join(out,file);await fs.writeFile(target,(await fs.readFile(target,'utf8')).replaceAll('assets/models/user-sets/sets/',`assets/models/user-sets/${packVersion}/sets/`));}
+for(const file of ['user-creatures.js','user-corals.js','school-fish.js']){const target=path.join(out,file);await fs.writeFile(target,(await fs.readFile(target,'utf8')).replaceAll('assets/models/user-sets/sets/',`assets/models/user-sets/${packVersion}/sets/`));}
 for(const f of ['full.json','economy.json','full-webp.glb','economy-webp.glb'])await copy('assets/models/prepared-corals/'+f);
 // A static host compresses text but sends model/gltf-binary as it is. Every model the page loads gets a gzipped copy
 // beside it (the creature set 8.8 -> 3.2 MB; the landmarks and the prepared corals, which a dive waits for, about 2 MB
@@ -65,6 +65,14 @@ const contentPath=path.join(out,'portfolio-content.js');let content=await fs.rea
 // esbuild is a devDependency: an install without it (npm install --omit=dev) publishes the scripts as they are.
 let esbuild=null;try{esbuild=await import('esbuild');}catch{console.warn('esbuild not installed: scripts are published unminified');}
 if(esbuild){for(const rel of written){if(!rel.endsWith('.js')||rel.endsWith('.min.js'))continue;const file=path.join(out,rel),code=await fs.readFile(file,'utf8');await fs.writeFile(file,(await esbuild.transform(code,{format:'esm',target:'es2022',minifyWhitespace:true,minifySyntax:true,legalComments:'inline',charset:'utf8'})).code);}}
+// The prepared bathymetry charts (ocean-refined/tools/prepare-charts.mjs) name the scripts they were drawn from by
+// SHA-256, and the page draws the charts live when one differs (prepared-charts.js). It checks the published scripts,
+// which esbuild has just rewritten: when the sources still match the charts, the manifest is pointed at the published
+// scripts; when one has changed since, it is left as it is (the charts are drawn live) and the build says so.
+{const file=path.join(out,'assets/prepared/charts/manifest.json'),manifest=JSON.parse(await fs.readFile(file,'utf8'));
+ const stale=[];for(const name of Object.keys(manifest.sources))if(hash(await fs.readFile(path.join(source,name)))!==manifest.sources[name])stale.push(name);
+ if(stale.length)console.warn(`Prepared charts are stale (${stale.join(', ')} changed): the page draws them live. Run node ocean-refined/tools/prepare-charts.mjs`);
+ else{for(const name of Object.keys(manifest.sources))manifest.sources[name]=hash(await fs.readFile(path.join(out,name)));await fs.writeFile(file,JSON.stringify(manifest));}}
 const assetHeaders=[];
 for(const variant of ['full','economy']){const file=path.join(out,'assets/models/prepared-corals/'+variant+'.json'),meta=JSON.parse(await fs.readFile(file));for(const entry of meta.sources)entry.sha256=hash(await fs.readFile(path.join(out,entry.file)));for(const entry of meta.assets){if(hash(await fs.readFile(path.join(out,'assets/models',entry.file)))!==entry.sha256)throw Error('Stale prepared coral input '+entry.file);if(variant==='full')assetHeaders.push({source:'/assets/models/'+entry.file,headers:[{key:'X-Asset-SHA256',value:entry.sha256}]});}await fs.writeFile(file,JSON.stringify(meta));}
 // The published page's head (ocean-refined/index.html keeps its separate files, which is how they are edited):

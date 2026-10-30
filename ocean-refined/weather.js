@@ -31,6 +31,15 @@ const SEA = { gain: .5, chop: .9, swell: .4, speed: .45 };
 // Lightning: only above this storm intensity, one soft pulse every few seconds.
 const LIGHTNING = { above: .55, gap: [7, 18], rise: .09, decay: .32 };
 const RAIN = { box: [34, 20, 34], fall: 13, streaks: 2400 };
+// Cloud variety (see cloudClimate and skyDetail in shaders.js). Each visit draws its own cumulus pattern (a turn, an
+// offset and a scale), cirrus streak direction and opening coverage. Through the visit the coverage and the cirrus ease
+// toward new targets every few minutes, and the coverage field drifts on its own, slower than the cloud and partly
+// across the wind, so clouds gather into banks and thin out again as they pass.
+// scale: repeats of the cumulus texture per unit of the cloud plane (higher, smaller clouds; .025 before this varied);
+// cirrus: amount (1 before); bias: coverage, -.14 fair to .16
+// banked; wander: seconds between targets; ease: seconds to settle on one; climate: drift of the coverage field
+// relative to the cloud's own [along, across] the wind.
+const CLOUDS = { scale: [.018, .034], cirrus: [.25, 1.5], bias: [-.14, .16], wander: [90, 240], ease: 50, climate: [.5, .35] };
 const { clamp, lerp, smoothstep } = THREE.MathUtils;
 
 const rainVertex = /* glsl */ `
@@ -98,6 +107,15 @@ export function createWeather({ uniforms, scene, economy = false, onChange } = {
   const span = ([low, high]) => low + Math.random() * (high - low);
   let dwell = span(FIRST);
 
+  const visit = uniforms.cloudVisit.value, cloudShape = uniforms.uCloudShape.value, climate = uniforms.uCloudClimate.value;
+  const cumulus = uniforms.uCumulus.value, cirrus = uniforms.uCirrus.value, cloudShift = uniforms.uCloudShift.value;
+  visit.turn = Math.random() * Math.PI * 2; visit.offset.set(Math.random() * 16, Math.random() * 16); visit.scale = span(CLOUDS.scale);
+  visit.streak = Math.random() * Math.PI * 2; visit.cirrusOffset.set(Math.random() * 64, Math.random() * 64);
+  climate.set(Math.random(), Math.random());
+  cloudShape.set(0, span(CLOUDS.cirrus), span(CLOUDS.bias), 0);
+  const skyTarget = { cirrus: span(CLOUDS.cirrus), bias: span(CLOUDS.bias) };
+  let skyWander = span(CLOUDS.wander);
+
   let stored = null; try { stored = localStorage.getItem('ocean-weather'); } catch {}
   if (WEATHER_STATES.includes(stored)) { target = stored; locked = true; Object.assign(intensity, LEVELS[stored]); }
   else Object.assign(intensity, LEVELS.clear);
@@ -161,6 +179,25 @@ export function createWeather({ uniforms, scene, economy = false, onChange } = {
     const speed = 3 + 14 * w.wind, gust = 1 + .16 * Math.sin(elapsed * .31) * Math.sin(elapsed * .17 + 1);
     cloudOffset.addScaledVector(wind, speed * dt);
     uniforms.uCloudDrift.value.copy(cloudOffset).multiplyScalar(-.004);
+    // The cloud fields' texture coordinates are a fixed linear map of the ray's projection for the frame (see skyDetail):
+    // the cumulus field turned and scaled, carried by the drift; the cirrus streaked along its own direction, at a
+    // higher layer that crosses the sky at .55 of the speed. Worked out here once rather than for every sky pixel.
+    const drift = uniforms.uCloudDrift.value, s = visit.scale, c = Math.cos(visit.turn) * s * 2.4, n = Math.sin(visit.turn) * s * 2.4;
+    cumulus.set(c, n, -n, c); cloudShape.x = Math.log2(s * 40);
+    const dx = Math.cos(visit.streak), dy = Math.sin(visit.streak), hx = drift.x * .55 + visit.cirrusOffset.x, hy = drift.y * .55 + visit.cirrusOffset.y;
+    const r0x = .12 * dx - .06 * dy, r0y = .12 * dy + .06 * dx, r1x = -2.3 * dy, r1y = 2.3 * dx;
+    cirrus.set(r0x * .06, r1x * .06, r0y * .06, r1y * .06);
+    // The drift is turned with the pattern (c, n carry the 2.4 * s scale), so the cumulus moves with the wind whatever the turn.
+    cloudShift.set((c * drift.x - n * drift.y) / 2.4 + visit.offset.x, (n * drift.x + c * drift.y) / 2.4 + visit.offset.y, (r0x * hx + r0y * hy) * .03125, (r1x * hx + r1y * hy) * .03125);
+    // The coverage field moves in its own units (.008 of the cloud's, see cloudClimate), at a share of the cloud's speed.
+    const climateStep = -speed * dt * .004 * .008;
+    climate.x += climateStep * (CLOUDS.climate[0] * wind.x - CLOUDS.climate[1] * wind.y);
+    climate.y += climateStep * (CLOUDS.climate[0] * wind.y + CLOUDS.climate[1] * wind.x);
+    if (dt > 0) {
+      if ((skyWander -= dt) <= 0) { skyWander = span(CLOUDS.wander); skyTarget.cirrus = span(CLOUDS.cirrus); skyTarget.bias = span(CLOUDS.bias); }
+      const ease = 1 - Math.exp(-dt / CLOUDS.ease);
+      cloudShape.y += (skyTarget.cirrus - cloudShape.y) * ease; cloudShape.z += (skyTarget.bias - cloudShape.z) * ease;
+    }
     const push = (2 + 9 * w.wind) * gust;
     rainOffset.x += dt * RAIN.fall; rainOffset.y += dt * push * wind.x; rainOffset.z += dt * push * wind.y;
     rainSlant.copy(wind).multiplyScalar(push / RAIN.fall);

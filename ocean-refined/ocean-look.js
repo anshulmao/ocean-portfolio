@@ -10,22 +10,33 @@ export const look = {
   uLookLight: { value: 1 },
   uLookDepth: { value: 0 },
   uLookBrightness: { value: 0 },
+  // Water clarity (settings: waterClarity / 100): the haze is worked out over the distance divided by it, so 1.25 sees 25% further.
+  uLookClarity: { value: 1 },
   uLookSun: { value: new THREE.Vector3(0, 1, 0) }
 };
 
 // Colour of open water along a view ray. Shared with the sky dome and the
 // underside of the surface so distant silhouettes dissolve into it exactly.
+// blue (0..1): how deep the water around reads. Deep water and the drop-off are
+// a clear ocean blue; the sunlit sand shallows keep a touch of green, as does a
+// low sun. oceanBackdrop takes it from the eye's depth alone.
 export const backdropGLSL = /* glsl */ `
-vec3 oceanBackdrop(vec3 ray, vec3 sun, float light, float depth) {
+vec3 oceanWater(vec3 ray, vec3 sun, float light, float depth, float blue) {
   float h = ray.y;
-  vec3 color = mix(vec3(.020,.235,.330), vec3(.085,.560,.600), smoothstep(-.05, .85, h));
-  color = mix(color, vec3(.006,.050,.115), 1.0 - smoothstep(-.80, .08, h));
+  blue = (.6 + .4 * blue) * (.65 + .35 * smoothstep(.15, .9, light));
+  vec3 below = mix(vec3(.020,.215,.330), vec3(.008,.112,.330), blue);
+  vec3 above = mix(vec3(.082,.535,.610), vec3(.060,.395,.645), blue);
+  vec3 color = mix(below, above, smoothstep(-.05, .85, h));
+  color = mix(color, vec3(.005,.038,.122), 1.0 - smoothstep(-.80, .08, h));
   vec3 toward = normalize(vec3(sun.x * .55, max(sun.y, .3), sun.z * .55));
   float glow = pow(max(dot(ray, toward), 0.0), 3.0);
-  color += vec3(.10,.26,.21) * glow;
+  color += vec3(.10,.25,.25) * glow;
   color *= .16 + .84 * smoothstep(0.0, .75, light);
   color *= mix(1.0, .36, depth);
   return color;
+}
+vec3 oceanBackdrop(vec3 ray, vec3 sun, float light, float depth) {
+  return oceanWater(ray, sun, light, depth, depth);
 }
 `;
 
@@ -101,7 +112,7 @@ export function lookGlowAt(point, target) {
 }
 
 const lookShared = glow => /* glsl */ `
-uniform float uLookTime; uniform float uLookUnder; uniform float uLookLight; uniform float uLookDepth; uniform float uLookBrightness; uniform vec3 uLookSun;
+uniform float uLookTime; uniform float uLookUnder; uniform float uLookLight; uniform float uLookDepth; uniform float uLookBrightness; uniform float uLookClarity; uniform vec3 uLookSun;
 varying vec4 vLookAbsorb; varying vec3 vLookHaze; varying vec3 vLookCausticUv;${glow === 'vertex' ? ' varying vec3 vLookGlow;' : ''}`;
 
 // Water colour changes slowly across a surface, so absorption, haze and the
@@ -120,10 +131,13 @@ lookWorldPosition = instanceMatrix * lookWorldPosition;
 #endif
 vec3 lookWorld = (modelMatrix * lookWorldPosition).xyz;
 vec3 lookRay = lookWorld - cameraPosition;
-float lookRange = length(lookRay);
-float lookScatter = 1.0 - exp(-lookRange * mix(.021, .034, uLookDepth));
-vLookAbsorb = vec4(exp(-lookRange * vec3(.038, .011, .008)) * (1.0 - lookScatter), exp(min(lookWorld.y, 0.0) * .04));
-vLookHaze = oceanBackdrop(lookRay / max(lookRange, .0001), uLookSun, uLookLight, uLookDepth) * lookScatter;
+float lookRange = length(lookRay), lookHazeRange = lookRange / max(uLookClarity, .25);
+float lookScatter = 1.0 - exp(-lookHazeRange * mix(.021, .034, uLookDepth));
+vLookAbsorb = vec4(exp(-lookHazeRange * vec3(.038, .014, .0075)) * (1.0 - lookScatter), exp(min(lookWorld.y, 0.0) * .04));
+// The water toward a point takes that point's depth (green-tinged over the sand shallows, blue down the drop-off) and
+// the eye's once fully hazed, where it meets the backdrop the dome paints.
+float lookBlue = mix(max(uLookDepth, smoothstep(8.0, 38.0, -lookWorld.y)), uLookDepth, lookScatter * lookScatter);
+vLookHaze = oceanWater(lookRay / max(lookRange, .0001), uLookSun, uLookLight, uLookDepth, lookBlue) * lookScatter;
 // z: how wet the point is; the underwater look fades in across the surface.
 vLookCausticUv = vec3((lookWorld.xz - uLookSun.xz * (lookWorld.y / max(uLookSun.y, .35))) * .11, uLookUnder * (1.0 - smoothstep(-.2, .6, lookWorld.y)));${glow === 'vertex' ? `
 vec3 lookGlowN = inverseTransformDirection(transformedNormal, viewMatrix);
@@ -153,15 +167,15 @@ float lookLuma = dot(outgoingLight, vec3(.2126, .7152, .0722));
 float lookBand = lookLuma * 5.0;
 float lookStepped = (floor(lookBand) + smoothstep(.28, .72, fract(lookBand))) / 5.0;
 outgoingLight *= mix(1.0, lookStepped / max(lookLuma, .0001), uLookToon);
-outgoingLight += mix(vec3(.60,.80,.86), vec3(.30,.78,.80), lookWet) * (lookEdge * lookEdge * lookEdge) * uLookRim
+outgoingLight += mix(vec3(.60,.80,.86), vec3(.30,.70,.84), lookWet) * (lookEdge * lookEdge * lookEdge) * uLookRim
   * (.2 + .8 * min(uLookLight, 1.0)) * (.4 + .6 * clamp(lookUp * .5 + .5, 0.0, 1.0));
 if (lookWet > .001) {
   // Neutral fill illuminates the material's own diffuse color. It does not
   // recolor the water, change gamma, exposure or distance absorption.
   outgoingLight += diffuseColor.rgb * uLookBrightness * .36 * lookWet;
   outgoingLight *= 1.0 + uLookBrightness * .20 * lookWet;
-  // Scattered light from the water itself lifts shadows toward teal.
-  outgoingLight += diffuseColor.rgb * vec3(.17, .27, .27) * (.72 + .28 * lookUp) * min(uLookLight, 1.0) * lookWet;
+  // Scattered light from the water itself lifts shadows toward its blue, bluer still with depth.
+  outgoingLight += diffuseColor.rgb * mix(vec3(.17, .27, .28), vec3(.14, .24, .30), uLookDepth) * (.72 + .28 * lookUp) * min(uLookLight, 1.0) * lookWet;
   float lookMask = smoothstep(.1, .7, lookUp) * vLookAbsorb.w * min(uLookLight, 1.2) * uLookCaustic * lookWet;
   if (lookMask > .03) outgoingLight += (diffuseColor.rgb * .8 + .06) * vec3(.9, 1.0, .88) * lookCaustic(vLookCausticUv.xy, uLookTime) * lookMask * 1.5;
   outgoingLight = mix(outgoingLight, outgoingLight * vLookAbsorb.rgb + vLookHaze, lookWet);
@@ -259,7 +273,7 @@ ${causticGLSL}`)
       .replace('#include <lights_physical_fragment>', fragmentMatte).replace('#include <lights_fragment_begin>', '')
       .replace('#include <lights_fragment_maps>', '').replace('#include <lights_fragment_end>', '');
   };
-  material.customProgramCacheKey = () => `${previousKey ? previousKey.call(material) : ''}|ocean-look-v9${matte ? 'm' : 'g'}${glows ? glows[0] : ''}`;
+  material.customProgramCacheKey = () => `${previousKey ? previousKey.call(material) : ''}|ocean-look-v10${matte ? 'm' : 'g'}${glows ? glows[0] : ''}`;
   material.needsUpdate = true;
   return material;
 }

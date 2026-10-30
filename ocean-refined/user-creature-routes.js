@@ -6,15 +6,18 @@
 // leaves the same way, then is gone until a later moment of the dive. Two slots run independently: the giants (one
 // at a time, rarely) and the smaller pelagics (one at a time, more often).
 //   pass: the closest the line of travel comes to the diver; depth: the band it swims in; speed: metres a second.
+//   across: swims parallel to the reef, across its face, on a line at this z or deeper (over the deep shelf). Every kind
+//   has one: south of z -25 the shelf is 26 m deep or more, so no visitor ever comes in over the shallows.
+//   Visitors also cost nothing until seen; big-life.js makes sure every dive meets at least one of the great ones.
 export const ENCOUNTERS = {
   giant: {
     first: [35, 70], cooldown: [80, 170],
     kinds: [
       // The whale keeps its distance: a shape crossing the blue at the edge of sight.
-      { id: 'whale', pass: [56, 76], depth: [-16, -10], clearance: 5, speed: 2.4, bulge: .12, cast: [{ species: 'right-whale' }] },
-      { id: 'whale-shark', pass: [16, 26], depth: [-13, -7], clearance: 3.5, speed: 1.5, bulge: .2, cast: [{ species: 'whale-shark' }], riders: [3, 2] },
+      { id: 'whale', pass: [56, 76], depth: [-16, -10], clearance: 5, speed: 2.4, bulge: .12, across: -55, cast: [{ species: 'right-whale' }] },
+      { id: 'whale-shark', pass: [16, 26], depth: [-13, -7], clearance: 3.5, speed: 1.5, bulge: .2, across: -50, cast: [{ species: 'whale-shark' }], riders: [3, 2] },
       // An orca family keeps together: the bull out in front, a cow behind and her calf tucked at her flank.
-      { id: 'orcas', pass: [20, 34], depth: [-15, -9], clearance: 3.5, speed: 3.2, bulge: .25, cast: [
+      { id: 'orcas', pass: [20, 34], depth: [-15, -9], clearance: 3.5, speed: 3.2, bulge: .25, across: -45, cast: [
         { species: 'orca', side: 3, back: 0 }, { species: 'orca-cow', side: -5, back: 10 }, { species: 'orca-cow', side: -10, back: 12, scale: .55, name: 'orca calf' }] }
     ]
   },
@@ -22,13 +25,13 @@ export const ENCOUNTERS = {
     first: [14, 26], cooldown: [35, 80],
     kinds: [
       // Dolphins ride a swell of their own near the light, and one sometimes spins.
-      { id: 'dolphins', pass: [10, 20], depth: [-6, -2.6], clearance: 2.5, speed: 4.6, bulge: .3, porpoise: 2.2, cast: [
+      { id: 'dolphins', pass: [10, 20], depth: [-6, -2.6], clearance: 2.5, speed: 4.6, bulge: .3, porpoise: 2.2, across: -35, cast: [
         { species: 'bottlenose-dolphin', side: 0, back: 0 }, { species: 'bottlenose-dolphin', side: 4, back: 4 }, { species: 'bottlenose-dolphin', side: -4.5, back: 6 },
         { species: 'bottlenose-dolphin', side: 1.5, back: 11, lean: true }] },
-      { id: 'blacktips', pass: [7, 15], depth: [-18, -4], clearance: 3, speed: 1.6, bulge: .35, low: true, cast: [
+      { id: 'blacktips', pass: [7, 15], depth: [-18, -4], clearance: 3, speed: 1.6, bulge: .35, low: true, across: -30, cast: [
         { species: 'blacktip-reef-shark', side: 0, back: 0 }, { species: 'blacktip-reef-shark', side: 9, back: 14, scale: .9 }] },
       // A tuna school tears past, fast and in a loose wedge.
-      { id: 'tuna', pass: [14, 26], depth: [-18, -10], clearance: 3, speed: 5.2, bulge: .15, school: { species: 'yellowfin-tuna', count: [8, 5], spread: [14, 5, 2.5] } }
+      { id: 'tuna', pass: [14, 26], depth: [-18, -10], clearance: 3, speed: 5.2, bulge: .15, across: -40, school: { species: 'yellowfin-tuna', count: [8, 5], spread: [14, 5, 2.5] } }
     ]
   }
 };
@@ -37,7 +40,10 @@ export const ENCOUNTERS = {
 export const RESIDENTS = {
   // Bumpheads travel as a herd over the middle reef and stop together to bite at it.
   bumpheads: { species: 'bumphead-parrotfish', count: [3, 2], loop: [22, -18, 16, 11], height: 3, speed: .9 },
-  whipray: { species: 'pink-whipray', loop: [-4, -30, 17, 12], height: 1.4, speed: 1.1 },
+  // The whipray glides low over the open sand west of the cleaning reef (22-28 m, nowhere steeper than 1 in 3). Its first
+  // loop crossed the 15 m drop off the About pad's rim, which a ray 1.4 m off the bottom cannot climb: it slid down
+  // the slope and ended stuck at the foot of the deep ledge.
+  whipray: { species: 'pink-whipray', loop: [-41, -16, 8, 5], height: 1.4, speed: 1.1 },
   // Bluespotted rays lie on open sand and scoot away when crowded.
   bluespots: { species: 'bluespotted-ray', spots: [[8, 6], [-16, 2], [26, -14]], lean: 2 },
   sleeper: { species: 'nurse-shark', near: [-21, -24] },
@@ -51,6 +57,9 @@ export const RESIDENTS = {
     { species: 'ribbon-eel', formation: 'Table coral tower', angle: 3.6 }
   ]
 };
+
+// How tall the wreck stands off the sand, masts and all (m): the animals keep above or round it.
+export const WRECK_HEIGHT = 9.5;
 
 // Fish in numbers, drawn as instances: one draw call a species. Small reef fish stay by the coral.
 //   over / near: 'formations' are the tall hero formations, 'patches' the coral gardens.
