@@ -21,7 +21,7 @@ const T90 = 3.89, VERTICAL = .8;
 const AUTO_RESPONSE = 10, AUTO_ACCEL = 3.5, AUTO_BRAKE = 3.5, COURSE_RATE = 4, FOCUS_RANGE = 5;
 const LOOK_AUTO = 4, LOOK_GUIDED = 3.2, SWEEP_AUTO = 2.2, SWEEP_GUIDED = 1.4;
 // Free look under the guide: the visitor's own look holds this long (s) after their last aim before the guide's drifts back. BODY_TURN: the body's turn onto the course (1/s).
-const LOOK_HOLD = 2.5, BODY_TURN = 3, BACKING = 2;
+const LOOK_HOLD = 1.4, BODY_TURN = 3, BACKING = 2;
 // The return's arrival at the safety stop: how hard it brakes into it (m/s²) and how near counts as there (m).
 // The swim answers a new pace HOLD_LAG seconds late (ASCENT_RESPONSE), so the braking looks that far ahead.
 const HOLD_BRAKE = 1.6, ARRIVE_HOLD = .6, HOLD_LAG = .6;
@@ -67,7 +67,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   const state={offset,yaw:0,pitch:0,perspective:initialPerspective,moving:false,exploring:false,speed:0,atBoundary:false,colliding:false,contacts:0,mode:'surface',transition:false,ascentProgress:0,ascentDepth:0,ascentLaunch:0,travelling:false,travelBlocked:false,manualInput:false,pointerLocked:false,scooter:0,lamp:true,inputs:0,guided:false,freeLook:false,bodyYaw:0,bodyPitch:0,suspended:false,velocity,turnRate:0,roll:0,pitchLead:0,lean:0,float:drift,idle:0,device:'keys'};
   // look: where the diver faces. spin: its turn rate (rad/s). spinPush: the rate's own derivative while the keys drive it.
   // pend: aim input summed since the last update (rad). lag: aim not yet shown, when smoothing is on.
-  const look={yaw:0,pitch:0},body={yaw:0,pitch:0},sweep={on:false,t:0,length:0,yaw:0,pitch:0,turn:0,tilt:0,goal:0},spin={yaw:0,pitch:0},spinPush={yaw:0,pitch:0},pend={yaw:0,pitch:0},lag={yaw:0,pitch:0},bank={roll:0,lead:0},bankRate={roll:0,lead:0};
+  const look={yaw:0,pitch:0},body={yaw:0,pitch:0},sweep={on:false,back:false,t:0,length:0,yaw:0,pitch:0,turn:0,tilt:0,goal:0},spin={yaw:0,pitch:0},spinPush={yaw:0,pitch:0},pend={yaw:0,pitch:0},lag={yaw:0,pitch:0},bank={roll:0,lead:0},bankRate={roll:0,lead:0};
   // The touch thumb-stick and the gamepad write here; update() reads them. x is right, y is forward (or up, for a look).
   const stick={x:0,y:0,active:false},pad={active:false,x:0,y:0,lookX:0,lookY:0,rise:0,sink:0,scooter:false};
   const moveOptions={radius:.55,length:2,yaw:0,pitch:0,padding:.08,step:.2,iterations:4},lastPointer={x:0,y:0,set:false};
@@ -82,7 +82,10 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   // hasDest: swimming to `dest`. docking: inside the arrival distance, settling onto the point. coursed: `course` holds a bearing to turn from.
   // Fly-bys (the guided dive): glance turns the view to a subject beside the route while a leg swims on, pacing eases the cruise
   // to a fraction of itself, and guideScoot runs the scooter for the visitor to see. A leg's end or any takeover clears all three.
-  let glanceOn=false,glanceWeight=0,paceScale=1,paceGoal=1,guideScoot=false;const glancePoint=new THREE.Vector3();
+  let glanceOn=false,glanceWeight=0,paceScale=1,paceGoal=1,guideScoot=false,wasLeading=false;const glancePoint=new THREE.Vector3();
+  // tetherTop: a ceiling (world y) the swim may not rise above, set by the guided dive while its welcome lets the visitor try
+  // the controls, so rising cannot carry them out of it and up to the surface. Infinity is no tether.
+  let tetherTop=Infinity;
   let hasDest=false,hasFocus=false,docking=false,dockTime=0,coursed=false,pace=0,travelSpeed=0,guided=false,freeControl=false,freeLook=false,settling=false,slack=0,boost=0,spool=0,coast=1,pendingDive=null;
   const coordinate=value=>Array.isArray(value)?value:[value.x,value.y,value.z];
   let suspended=false,captureRequired=true,touchId=null,skipMove=false,blockedTime=0,ascent=null,lastSubmerged=false,surfaceLocked=true,intentionalUnlock=false,pathCheckAt=0,pathIsClear=true;
@@ -225,6 +228,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   function pacing(scale=1){paceGoal=clamp(Number(scale)||1,.05,1);wake();}
   function guideScooter(on){guideScoot=state.guideScooter=Boolean(on);wake();}
   function endFlyBy(){glanceOn=guideScoot=state.guideScooter=false;paceGoal=1;}
+  function tether(top){tetherTop=Number.isFinite(top)?top:Infinity;wake();}
   function lookAt(point,follow=false){if(follow&&point&&hasFocus){const at=coordinate(point);focus.set(at[0],at[1],at[2]);return;}sweep.on=false;if(!point){hasFocus=false;wake();return;}const at=coordinate(point);focus.set(at[0],at[1],at[2]);hasFocus=true;wake();}
   function prepareDive(options){pendingDive=options||null;}
   const travelClear=(a,b)=>!collisions||!settings.collisionEnabled||collisions.segmentClear(scratchA.fromArray(a),scratchB.fromArray(b),Math.max(settings.collisionRadius+.25,.85));
@@ -485,11 +489,13 @@ export function createExploration(canvas, wake, settings=savedSettings) {
       // --- the view ---
       // Under freeLook the visitor's look wins while they are using it and for LOOK_HOLD after; then the guide's look eases back in.
       if(freeLook&&(yawAsk||pitchAsk))lookIdle=0;
-      const leading=autoLook&&!(freeLook&&lookIdle<LOOK_HOLD);
+      const leading=autoLook&&!(freeLook&&lookIdle<LOOK_HOLD),handBack=leading&&!wasLeading&&freeLook&&guided;wasLeading=leading;
       // Held still by the guide, a new subject (or the view coming back after the visitor's own look) is a sweep, not a chase.
-      if(!leading||!guided||hasDest||instant)sweep.on=false;
-      else if(!sweep.on&&Math.abs(wrap(goalYaw-look.yaw))+Math.abs(goalPitch-look.pitch)>PAN_START){
-        sweep.on=true;sweep.t=0;sweep.yaw=look.yaw;sweep.pitch=look.pitch;sweep.goal=goalYaw;sweep.turn=wrap(goalYaw-look.yaw);sweep.tilt=goalPitch-look.pitch;
+      // Under way, the hand back after the visitor's own look is a sweep too (sweep.back), eased in and out onto where the guide
+      // is looking, which may be moving; otherwise the view follows the course as it bends.
+      if(!leading||!guided||instant||(hasDest&&!sweep.back&&!handBack)){sweep.on=sweep.back=false;}
+      else if(!sweep.on&&(!hasDest||handBack)&&Math.abs(wrap(goalYaw-look.yaw))+Math.abs(goalPitch-look.pitch)>PAN_START){
+        sweep.on=true;sweep.back=hasDest;sweep.t=0;sweep.yaw=look.yaw;sweep.pitch=look.pitch;sweep.goal=goalYaw;sweep.turn=wrap(goalYaw-look.yaw);sweep.tilt=goalPitch-look.pitch;
         sweep.length=clamp(PAN_BASE+(Math.abs(sweep.turn)+Math.abs(sweep.tilt))*PAN_PER_RADIAN,PAN_MIN,PAN_MAX);
       }
       if(sweep.on){
@@ -497,7 +503,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
         sweep.t+=dt;const eased=easeInOut(sweep.t/sweep.length);
         look.yaw=sweep.yaw+(sweep.turn+wrap(goalYaw-sweep.goal))*eased;look.pitch=sweep.pitch+(goalPitch-sweep.pitch)*eased;
         spin.yaw=spin.pitch=spinPush.yaw=spinPush.pitch=lag.yaw=lag.pitch=pend.yaw=pend.pitch=0;
-        if(sweep.t>=sweep.length)sweep.on=false;
+        if(sweep.t>=sweep.length)sweep.on=sweep.back=false;
       }else if(leading){
         // A guided camera turns slowly enough to read as a sweep rather than a snap, and a long turn is held to a steady rate.
         const frequency=guided?LOOK_GUIDED:LOOK_AUTO,reach=(guided?SWEEP_GUIDED:SWEEP_AUTO)*Math.E/frequency,turn=wrap(goalYaw-look.yaw);
@@ -535,7 +541,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
       if(floorStale)measureFloor();
       // Limits ask for a slower approach the closer they are, so the diver arrives at them instead of hitting them.
       // The seabed is also read where the swim will be in half a second: the diver has to be over that ground by the time it gets there, which lifts it up a slope at the slope's own rate.
-      const ceiling=8-Math.min(1,settings.ascentThreshold*.6),floorAhead=afloat?terrain(base.x+velocity.x*LOOK_AHEAD,base.z+velocity.z*LOOK_AHEAD)+settings.floorClearance+8:-Infinity;
+      const ceiling=Math.min(8-Math.min(1,settings.ascentThreshold*.6),tetherTop+8),floorAhead=afloat?terrain(base.x+velocity.x*LOOK_AHEAD,base.z+velocity.z*LOOK_AHEAD)+settings.floorClearance+8:-Infinity;
       if(afloat){
         desired.x=clamp(desired.x,(-bounds.x-base.x)*SOFT_RATE,(bounds.x-base.x)*SOFT_RATE);desired.z=clamp(desired.z,(bounds.zMin-base.z)*SOFT_RATE,(bounds.zMax-base.z)*SOFT_RATE);
         desired.y=Math.min(Math.max(desired.y,(floorY-base.y)*SOFT_RATE,(floorAhead-base.y)/LOOK_AHEAD),Math.max(0,ceiling-base.y)*SOFT_RATE);
@@ -607,5 +613,5 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   }
   // QA hook: scripted aim (pixels) and a scripted thumb-stick, for checks where no pointer can be captured.
   window.oceanInput={aim:(dx,dy)=>aim(dx,dy),axis(x=0,y=0){stick.x=clamp(x,-1,1);stick.y=clamp(y,-1,1);stick.active=Boolean(x||y);if(stick.active&&state.mode==='diver'&&!suspended){captureRequired=false;state.exploring=true;}wake();},pad,stick,get gamepad(){return gamepad.connected;}};
-  return {state,update,reset,returnToSurface,startDive,prepareDive,travel,travelPath,cancelTravel,stopTravel:cancelTravel,place,lookAt,glance,pacing,guideScooter,setGuided,setLamp,frameSky,setTerrain,setCollisions,suspend,setInterfaceOpen,beginAscent,holdSafetyStop,skipSafetyStop,togglePerspective,toggleFreeCam,setFreeCam:value=>toggleFreeCam(value),recapture,getPlayerPosition,getCameraPose:()=>({perspective:state.perspective}),bounds,destroy(){cleanup.forEach(fn=>fn());}};
+  return {state,update,reset,returnToSurface,startDive,prepareDive,travel,travelPath,cancelTravel,stopTravel:cancelTravel,place,lookAt,glance,pacing,guideScooter,tether,setGuided,setLamp,frameSky,setTerrain,setCollisions,suspend,setInterfaceOpen,beginAscent,holdSafetyStop,skipSafetyStop,togglePerspective,toggleFreeCam,setFreeCam:value=>toggleFreeCam(value),recapture,getPlayerPosition,getCameraPose:()=>({perspective:state.perspective}),bounds,destroy(){cleanup.forEach(fn=>fn());}};
 }

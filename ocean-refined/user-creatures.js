@@ -41,6 +41,8 @@ const TAU = Math.PI * 2, { clamp, smoothstep } = THREE.MathUtils;
 const turnTo = (from, to) => Math.atan2(Math.sin(to - from), Math.cos(to - from));
 const ease = (dt, rate) => 1 - Math.exp(-dt * rate);
 const rr = (a, b) => a + Math.random() * (b - a);
+// A passing visitor rises no steeper than 30° over the diver (tan 30°), swimming up to DEEPEN m under its band to keep to it.
+const RISE = Math.tan(Math.PI / 6), DEEPEN = 12;
 const swimTime = { value: 0 };
 
 // A species drawn as instances bends from the shoulders back, each fish on its own beat (aBeat). The shape of the
@@ -294,12 +296,17 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     // its line kept out over the deep shelf at z `across` or deeper, never in over the shallows.
     const across = !course && e.across !== undefined;
     const range = view ? Math.min(view.range, 130) : 110, R = range + e.length + 12, angle = course?.angle ?? (across ? (Math.random() < .5 ? 1 : -1) * Math.PI / 2 : rr(0, TAU)), sideOf = course?.side ?? (Math.random() < .5 ? 1 : -1);
-    const dx = Math.sin(angle), dz = Math.cos(angle), nx = dz * sideOf, nz = -dx * sideOf, pass = course?.pass ?? rr(...e.pass), px = course?.from?.[0] ?? player?.x ?? 0, pz = course?.from?.[2] ?? player?.z ?? -30;
+    const dx = Math.sin(angle), dz = Math.cos(angle), nx = dz * sideOf, nz = -dx * sideOf, px = course?.from?.[0] ?? player?.x ?? 0, pz = course?.from?.[2] ?? player?.z ?? -30;
+    // Seen from straight below, a great animal is only its belly. A pass rises no steeper than RISE over the diver: the animal
+    // swims up to DEEPEN metres under its band and, if that is not enough, its line runs further out. The guided dive's own
+    // course sets both itself.
+    let pass = course?.pass ?? rr(...e.pass), y0 = course?.y ?? rr(...e.depth);
+    if (!course && player && y0 - player.y > pass * RISE) { y0 = Math.max(player.y + pass * RISE, y0 - DEEPEN); pass = Math.max(pass, (y0 - player.y) / RISE); }
     const cx = across ? px : px + nx * pass, cz = across ? Math.min(pz - pass, e.across) : pz + nz * pass;
     // The gentle bow in the line; one swimming across the reef bows out to sea, never in over the shallows.
     const bow = rr(-1, 1) * e.bulge * R;
     e.path = { sx: cx - dx * R, sz: cz - dz * R, ex: cx + dx * R, ez: cz + dz * R, nx, nz, len: 2 * R, bulge: across ? -Math.sign(nz) * Math.abs(bow) : bow };
-    e.u = course?.ahead === undefined ? 0 : clamp(.5 - course.ahead / e.path.len, 0, .5); e.y0 = course?.y ?? rr(...e.depth); e.next = clock + rr(4, 8);
+    e.u = course?.ahead === undefined ? 0 : clamp(.5 - course.ahead / e.path.len, 0, .5); e.y0 = y0; e.next = clock + rr(4, 8);
     for (const c of e.cast) { c.actor.active = true; c.actor.started = false; play(c.actor, 'swim', 0); }
     for (const r of e.riders) { r.actor.active = true; r.actor.started = false; }
     if (e.school) e.school.active = true;

@@ -139,7 +139,8 @@ The welcome shows four key chips: C (dive computer), W A S D (swim), Space/Shift
 
 - Mouse look during a guided leg never changes the course and never ends the tour.
 - A fly-by's glance turns only the view. The course and the body hold.
-- WASD or the touch pad takes over. G rejoins at the nearest remaining step, through the scenic waypoints still ahead.
+- WASD or the touch pad takes over. G rejoins the step the tour was on, through the scenic waypoints still ahead (round 5:
+  never the nearest step, which could skip a site).
 - Every leg plans a collision-clear scenic route at both quality levels and seabed clearances up to 2.2 m. This is a
   unit test over the whole script.
 - The leg to the treasure passes under the arch's roof, even after a stall, a pause or a takeover and rejoin partway.

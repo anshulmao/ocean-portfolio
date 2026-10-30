@@ -61,7 +61,7 @@ function environment(hz, { reducedMotion = false, unavailable = false, collision
     visitors: () => whaleFrom ? [whaleAt(whaleFrom, clock)] : [], startDive: options => { calls.push(['startDive', options]); nav.startDive(); atSurface = false; return true; }, getTransition: () => transition,
     guide: (...args) => nav.setGuided(...args), travelPath: (...args) => unavailable ? false : nav.travelPath(...args),
     cancelTravel: (...args) => nav.cancelTravel(...args), place: (...args) => { placed++; nav.place(...args); }, lookAt: (point, follow) => nav.lookAt(point, follow), residentAt: id => residents[id] ?? null,
-    glance: point => nav.glance(point), pacing: scale => nav.pacing(scale), guideScooter: on => nav.guideScooter(on),
+    glance: point => nav.glance(point), pacing: scale => nav.pacing(scale), guideScooter: on => nav.guideScooter(on), tether: top => nav.tether(top),
   };
   const samples = [];
   function tick(seconds = 1 / hz) {
@@ -234,6 +234,10 @@ const keyup = code => window.dispatchEvent({ type: 'keyup', code, target: { clos
 // Build the production procedural reef and its collision geometry. Only the
 // decorative canvas texture is stubbed; navigation uses the real solid reef.
 const reefCollision = createReef({ economy: true }).userData.collisions;
+// The wreck as the live app places it, masts and sails included, and the sentinel barracuda's beat (user-creature-routes.js:
+// an oval 7 x 4.5 m round the wreck's live position plus [9, 7, 4]): the nearest a point comes to either.
+const WRECK = { min: [11.4, -26, -43.6], max: [24.6, -16.4, -34.4] };
+const beat = p => { let nearest = Infinity; for (let k = 0; k < 64; k++) { const a = k / 64 * Math.PI * 2; nearest = Math.min(nearest, Math.hypot(p[0] - 27 - Math.cos(a) * 7, p[1] + 14.2, p[2] + 35 - Math.sin(a) * 4.5)); } return nearest; };
 for (const hz of [30, 60, 120]) {
   // The nurse shark settles on level sand behind the anchor in the app; a stand-in spot there exercises the framing.
   const sleeper = [-17, terrainHeightAt(-17, -19) + .45, -19];
@@ -290,12 +294,14 @@ for (const hz of [30, 60, 120]) {
       const roof = terrainHeightAt(20, -72) + 9.6 - .6, under = leg.filter(p => Math.abs(p[2] + 72) < 1.5);
       assert.ok(under.length && under.every(p => Math.abs(p[0] - 20) < 3.5 && p[1] < roof), `through the arch, under its roof (${JSON.stringify(under[0])})`);
     }
-    // The way up ends in the shallows, close beside the grotto (reef.js grottoSites: 7, 18; ribs 4 m out from its axis).
-    if (step.key === 'shallows') {
-      const beside = leg.filter(p => Math.abs(p[2] - 18) < 1);
-      assert.ok(beside.length && beside.every(p => Math.abs(p[0] - 7) > 4.5 && Math.abs(p[0] - 7) < 8 && p[1] > -10), `beside the grotto (${JSON.stringify(beside[0])})`);
-      assert.ok(Math.max(...leg.map(p => p[2])) > 25 && env.state.playerPosition[1] > -6, 'into the sunlit shallows');
+    // The way up ends in open water just seaward of the wreck, well above the seabed, with the reef rising to the north.
+    if (step.key === 'open-water') {
+      const [x, y, z] = env.state.playerPosition;
+      assert.ok(y - terrainHeightAt(x, z) > 20 && z < WRECK.max[2] - 8, `in open water seaward of the wreck (${env.state.playerPosition.map(v => v.toFixed(1))})`);
     }
+    // No leg swims through the wreck (its masts and sails have no collision volume) or crowds the barracuda off it.
+    const wreck = Math.min(...leg.map(p => Math.hypot(...[0, 1, 2].map(k => Math.max(WRECK.min[k] - p[k], 0, p[k] - WRECK.max[k]))))), cuda = Math.min(...leg.map(beat));
+    assert.ok(wreck > 2 && cuda > 8, `${step.key}: clear of the wreck (${wreck.toFixed(1)} m) and the barracuda's beat (${cuda.toFixed(1)} m)`);
     for (let j = 1; j < leg.length; j++) { const d = distance(leg[j - 1], leg[j]); maxStep = Math.max(maxStep, d); totalDistance += d; }
     if (step.kind === 'stop') {
       assert.equal(window.oceanTour.opens(step.landmark), step.opens ?? null, `${step.key}: Read it opens ${step.opens ?? 'its own section'}`);
@@ -305,11 +311,13 @@ for (const hz of [30, 60, 120]) {
       window.oceanTour.next();
     }
   }
-  assert.equal(tourStatus(), 'done', 'the tour ends in the shallows');
+  assert.equal(tourStatus(), 'done', 'the tour ends in open water');
   // The whale shark is called in at the deep beat, on a course that stays over open water (SPEC D4): along its whole
   // line across the reef the seabed is deep, and it swims well clear of it.
   const called = env.calls.filter(call => call[0] === 'encounter');
   assert.deepEqual(called.map(call => call[1]), ['whale-shark'], 'one guaranteed whale shark, even when it was not ready at first');
+  // Side-on, not overhead: from the drift, its line rises no steeper than 30°.
+  { const { course, at } = env.whaleFrom; assert.ok((course.y - at[1]) / course.pass < Math.tan(Math.PI / 6), `the whale shark passes side-on (${course.y - at[1]} m up, ${course.pass} m out)`); }
   for (let x = -62; x <= 62; x += 2) {
     const { course, at } = env.whaleFrom, along = (x - at[0]) / Math.sin(course.angle), z = at[2] - Math.sin(course.angle) * course.side * course.pass + Math.cos(course.angle) * along;
     assert.ok(terrainHeightAt(x, z) < -38 && course.y - terrainHeightAt(x, z) > 10, `open water under the whale shark at x ${x} (seabed ${terrainHeightAt(x, z).toFixed(1)})`);
@@ -317,9 +325,9 @@ for (const hz of [30, 60, 120]) {
   assert.equal(env.placed, 0, 'full-motion tour never places the player, even when OS reduced motion is enabled');
   assert.ok(maxStep < 7 / hz, `bounded continuous body steps (${maxStep})`);
   assert.ok(totalDistance > 250, `the player crossed the whole reef (${totalDistance})`);
-  // Round 4: nothing holds between the sites, so about two and a half to three minutes of motion (SPEC: timing budget);
-  // the reading is on top and at the visitor's pace.
-  assert.ok(moving > 130 && moving < 200, `a portfolio-first pace (${moving.toFixed(0)} s of motion)`);
+  // Round 5: nothing holds between the sites and the way up ends above the wreck, so about two minutes of motion (SPEC:
+  // timing budget); the reading is on top and at the visitor's pace.
+  assert.ok(moving > 100 && moving < 170, `a portfolio-first pace (${moving.toFixed(0)} s of motion)`);
   const plan = tourPlan();
   assert.ok(Math.abs(plan.seconds - moving) < 40, `the planner's estimate is close (${plan.seconds.toFixed(0)} s planned)`);
   // Swimming off from the ending simply ends the tour.
@@ -462,8 +470,8 @@ for (const hz of [30, 60, 120]) {
   key('KeyW'); env.tick(.2); keyup('KeyW');
   const steps = tracked.filter(([event]) => event === 'tour_step').map(([, p]) => p.index);
   assert.deepEqual(steps, STEPS.map((step, i) => i), 'a tour_step for every step, in order');
-  assert.deepEqual(tracked[0], ['tour_started', { from: 'underwater', tour_version: 4 }]);
-  assert.deepEqual(tracked.at(-1), ['tour_ended', { step: 'shallows', index: STEPS.length - 1, how: 'swam_off', tour_version: 4 }]);
+  assert.deepEqual(tracked[0], ['tour_started', { from: 'underwater', tour_version: 5 }]);
+  assert.deepEqual(tracked.at(-1), ['tour_ended', { step: 'open-water', index: STEPS.length - 1, how: 'swam_off', tour_version: 5 }]);
   for (const [event, properties] of tracked) assert.deepEqual(eventProperties(event, properties), properties, `${event} passes the privacy allowlist whole`);
   env.nav.destroy();
   console.log(`PASS: reduced motion runs the tour on fades with no pans; ${tracked.length} analytics events, all allowed.`);
@@ -498,6 +506,63 @@ assert.deepEqual(planGuidedRoute([0, -10, 0], [30, -10, 0], { floor: () => -30, 
   for (let i = 1; i < route.length; i++) assert.ok(clear(route[i - 1], route[i]), 'every stretch clear of the wall');
 }
 console.log('PASS: rejected routes hold, explicit Skip and reduced motion fade, scenic curve checked, a walled-in waypoint is left out.');
+
+// On a phone the computer and the view are in the menu, not on the deck: the welcome asks only for the stick and rising and
+// sinking, and no later beat teaches either of the two.
+{
+  document.documentElement.dataset.input = 'touch';
+  const env = environment(60);
+  startTour(); env.tick(.5);
+  assert.equal(env.state.tour.tip, 'Try it, 1 of 2: Swim with the stick. The tour waits for you here.');
+  window.oceanTour.next(); env.tick(.5);
+  for (let i = 0; i < 60 * 400 && !(env.state.tour.key === 'projects' && tourStatus() === 'dwell'); i++) { env.tick(); if (tourStatus() === 'dwell') window.oceanTour.next(); }
+  assert.equal(env.state.tour.tip, '', 'no computer tip at the treasure on a phone');
+  window.oceanTour.stop(); env.nav.destroy(); delete document.documentElement.dataset.input;
+  console.log('PASS: on a phone the welcome asks for what the deck has, and the menu-only controls are not taught.');
+}
+
+// In the welcome, rising stops 2.5 m over where it began: it cannot carry the visitor out of it and up to the surface.
+// Leaving the welcome lets the ceiling go.
+{
+  const env = environment(60);
+  startTour(); env.tick(.5);
+  const from = env.state.playerPosition[1];
+  key('Space'); env.tick(6); keyup('Space'); env.tick(1);
+  const rose = env.state.playerPosition[1] - from;
+  assert.equal(tourStatus(), 'intro', 'still in the welcome');
+  assert.ok(rose > 1.5 && rose < 2.8, `rose to the welcome's ceiling and no further (${rose.toFixed(2)} m)`);
+  window.oceanTour.next(); env.tick(.5); window.oceanTour.stop();
+  key('Space'); env.tick(3); keyup('Space'); env.tick(.5);
+  assert.ok(env.state.playerPosition[1] - from > 3.5, 'with the tour over, rising is the visitor’s own again');
+  env.nav.destroy();
+  console.log(`PASS: the welcome holds rising to ${rose.toFixed(1)} m; the ceiling goes with it.`);
+}
+
+// Under way, the visitor's own look holds for a moment once they let go, then the view eases back onto where the guide is
+// looking: slowly away, fastest midway, slowly onto it, not a snap or a chase. It ends where a visitor who never looked
+// would be looking.
+{
+  const run = looking => {
+    const env = environment(120); toTravel(env);
+    for (let i = 0; i < 120 * 60 && tourStatus() !== 'dwell'; i++) env.tick();
+    window.oceanTour.next(); env.tick(4);
+    if (looking) window.oceanInput.aim(500, 0);
+    env.tick(.1);
+    const away = env.nav.state.yaw; env.tick(1.2);
+    const held = Math.abs(env.nav.state.yaw - away), rates = []; let last = env.nav.state.yaw;
+    for (let i = 0; i < 120 * 4.5; i++) { env.tick(1 / 120); const yaw = env.nav.state.yaw; rates.push(Math.abs(Math.atan2(Math.sin(yaw - last), Math.cos(yaw - last))) * 120); last = yaw; }
+    const yaw = env.nav.state.yaw; window.oceanTour.stop(); env.nav.destroy();
+    return { held, rates, yaw };
+  };
+  const looked = run(true), still = run(false);
+  assert.ok(looked.held < .02, 'the visitor’s look holds while they may still be using it');
+  const { rates } = looked, moving = rates.findLastIndex(rate => rate > .05) + 1, peak = Math.max(...rates.slice(0, moving)), peakAt = rates.indexOf(peak) / moving;
+  assert.ok(rates[2] < peak * .4, `it eases away (${rates[2].toFixed(2)} of ${peak.toFixed(2)} rad/s)`);
+  assert.ok(peakAt > .2 && peakAt < .8, `fastest partway through the turn back (${peakAt.toFixed(2)})`);
+  const off = Math.abs(Math.atan2(Math.sin(looked.yaw - still.yaw), Math.cos(looked.yaw - still.yaw)));
+  assert.ok(off < .1, `and it ends where the guide is looking (${off.toFixed(3)} rad off)`);
+  console.log(`PASS: under way, the view holds, then eases back in ${(moving / 120).toFixed(1)} s, fastest at ${Math.round(peakAt * 100)}%.`);
+}
 
 // A leg replanned partway (a stall's detour, Resume after Pause, or Rejoin after a takeover) keeps the scenic waypoints
 // still ahead. It used to drop them, so a stall going over the cliff edge below the wreck sent the swim in a straight
