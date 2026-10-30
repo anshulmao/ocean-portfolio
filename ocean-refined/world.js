@@ -5,7 +5,7 @@ import { toDisplayDepth, DISPLAY_MAX_DEPTH } from './depth-metrics.js';
 import {createDiveScooter} from './scooter.js';
 import {OrbitControls} from './vendor/OrbitControls.js';
 import { createExpeditionUI, drawReefChart } from './expedition-ui.js';
-import { drawPreparedChart } from './prepared-charts.js';
+import { drawPreparedChart, preparedChartsReady } from './prepared-charts.js';
 import * as THREE from './vendor/three.module.min.js';
 import { createClouds, seededRandom, shareSteps, setPacer } from './assets.js';
 import { createDiver } from './diver.js';
@@ -623,10 +623,12 @@ function makeLandmarkMarks(){
 // The chart samples the seabed 160,000 times. The heights are worked out a few rows a step and handed to
 // drawReefChart() in the order it asks for them; a sample it asks for anywhere else is simply computed.
 function* chartSteps(){
+  // The prepared chart is checked against its sources as the page loads (prepared-charts.js): wait for that to settle.
+  yield preparedChartsReady;
   if(drawPreparedChart('hud',document.querySelector('#reef-bathymetry'))){diagnostic.preparedChart=true;return;}
   const size=400,span=240,half=span/2,centreZ=-35,xs=new Float64Array(size),zs=new Float64Array(size),heights=new Float64Array(size*size);
   for(let i=0;i<size;i++){xs[i]=(i+.5)/size*span-half;zs[i]=(i+.5)/size*span-half+centreZ;}
-  for(let y=0;y<size;y++){for(let x=0;x<size;x++)heights[y*size+x]=terrainHeightAt(xs[x],zs[y]);if(y%16===15)yield;}
+  for(let y=0;y<size;y++){for(let x=0;x<size;x++)heights[y*size+x]=terrainHeightAt(xs[x],zs[y]);if(y%4===3)yield;}
   let next=0;yield 30;
   drawReefChart((x,z)=>{const i=next++;return i<heights.length&&x===xs[i%size]&&z===zs[(i/size)|0]?heights[i]:terrainHeightAt(x,z);});
 }

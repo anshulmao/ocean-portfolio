@@ -158,7 +158,7 @@ function* bakeCell(list, layer, lod, portable) {
   const index = vertices > 65535 ? new Uint32Array(corners) : new Uint16Array(corners);
   let v = 0, k = 0, steady = -1, paused = 0;
   for (const { family, entry } of list) {
-    if (v - paused > 5000) { paused = v; yield; }
+    if (v - paused > 600) { paused = v; yield; }
     if (lod && family.brief && steady < 0) steady = k;
     const geometry = lod && family.distant || family.geometry, e = entry.matrix.elements, m = bakeNormal.getNormalMatrix(entry.matrix).elements;
     const p = geometry.getAttribute('position').array, n = geometry.getAttribute('normal').array, c = geometry.getAttribute('color')?.array, t = geometry.getAttribute('uv')?.array;

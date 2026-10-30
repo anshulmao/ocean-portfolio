@@ -98,7 +98,7 @@ export function* marineLifeSteps({ economy = false, terrainHeightAt = () => -54,
   // replaces two analytic terrain evaluations per fish per step.
   yield;
   const GRID_X = -86, GRID_Z = -130, GRID_STEP = 2, GRID_W = 87, GRID_H = 95, floorGrid = new Float32Array(GRID_W * GRID_H);
-  for (let gz = 0; gz < GRID_H; gz++) for (let gx = 0; gx < GRID_W; gx++) floorGrid[gz * GRID_W + gx] = terrainHeightAt(GRID_X + gx * GRID_STEP, GRID_Z + gz * GRID_STEP);
+  for (let gz = 0; gz < GRID_H; gz++) { for (let gx = 0; gx < GRID_W; gx++) floorGrid[gz * GRID_W + gx] = terrainHeightAt(GRID_X + gx * GRID_STEP, GRID_Z + gz * GRID_STEP); if (gz % 12 === 11) yield; }
   for (const { box } of collisions?.boxes || []) {
     const x0 = Math.max(0, Math.floor((box.min.x - GRID_X) / GRID_STEP)), x1 = Math.min(GRID_W - 1, Math.ceil((box.max.x - GRID_X) / GRID_STEP));
     const z0 = Math.max(0, Math.floor((box.min.z - GRID_Z) / GRID_STEP)), z1 = Math.min(GRID_H - 1, Math.ceil((box.max.z - GRID_Z) / GRID_STEP));
