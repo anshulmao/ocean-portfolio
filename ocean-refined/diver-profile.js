@@ -3,6 +3,7 @@
 // materials already have (ocean-look.js: the rim and the flat glow), so no shader is rebuilt for it.
 import * as THREE from './vendor/three.module.min.js';
 import { PORTFOLIO_CONTENT, PORTFOLIO_MEDIA } from './portfolio-content.js';
+import { track } from './analytics.js';
 
 // How much rim light and lift the highlight adds at full strength, and how fast it comes and goes (1/s).
 const RIM_LIFT = 1.15, GLOW_LIFT = new THREE.Color(.1, .2, .21), EASE = 9;
@@ -12,8 +13,14 @@ const RIM_LIFT = 1.15, GLOW_LIFT = new THREE.Color(.1, .2, .21), EASE = 9;
 const PAD = .1, BELOW_WATER = .08;
 // The card keeps this far from the screen's edges and this far above the diver's head (px).
 const EDGE = 12, LIFT = 18;
+// A touch screen has no hover, so there the diver invites a tap: a ring pulses from the head every PULSE seconds and the
+// rim light breathes with it, from INVITE_AFTER seconds into the surface until the card has been opened once (MET, kept).
+const PULSE = 2.2, INVITE_AFTER = 1.5, MET = 'ocean-diver-met';
+// The head and mask, in the rig's units, from the top of its bounds down (diver.js).
+const HEAD = .5;
+const touchInput = () => document.documentElement.dataset.input === 'touch' || (!document.documentElement.dataset.input && matchMedia('(pointer: coarse)').matches);
 
-export function createDiverProfile({ diver, camera, canvas, glow, available, setInterfaceOpen, open: openSection, reducedMotion, wake }) {
+export function createDiverProfile({ diver, camera, canvas, glow, available, setInterfaceOpen, open: openSection, reducedMotion, wake, keepLooking, recapture }) {
   const about = PORTFOLIO_CONTENT.about.entries.find(entry => entry.id === 'overview') || {};
   const portrait = PORTFOLIO_MEDIA.overview || {};
   const fullName = portrait.caption || about.name || 'Anshul';
@@ -44,7 +51,12 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
   const hint = document.createElement('div');
   hint.className = 'diver-profile-hint'; hint.hidden = true; hint.setAttribute('aria-hidden', 'true');
   hint.textContent = 'Say hi to Anshul';
-  document.body.append(card, hint);
+  const ping = document.createElement('div');
+  ping.className = 'diver-profile-ping'; ping.hidden = true; ping.setAttribute('aria-hidden', 'true');
+  ping.style.setProperty('--pulse', `${PULSE}s`);
+  document.body.append(card, hint, ping);
+  let met = false;
+  try { met = localStorage.getItem(MET) === '1'; } catch {}
 
   // The materials whose rim and glow carry the highlight, with the rim each started with.
   const lit = new Map();
@@ -79,7 +91,7 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
     return hit.applyMatrix4(diver.root.matrixWorld).y > diver.root.position.y - BELOW_WATER;
   }
 
-  let ceiling = EDGE, pointer = null, hovered = false, shown = false, amount = 0, lifted = false, time = 0, returnFocus = null;
+  let clearCheck = 0, fromCrosshair = false, inviting = false, availableFor = 0, ceiling = EDGE, pointer = null, hovered = false, shown = false, amount = 0, lifted = false, time = 0, returnFocus = null;
   const locked = () => document.pointerLockElement === canvas;
   const centre = () => { const rect = canvas.getBoundingClientRect(); return [rect.left + rect.width / 2, rect.top + rect.height / 2]; };
   // The hit test runs in update(): with the ocean paused the frames stop, so a move or a leave asks for one.
@@ -105,33 +117,43 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
   });
   // A press anywhere else closes it; so does Escape.
   document.addEventListener('pointerdown', event => { if (shown && !card.contains(event.target) && event.target !== canvas) close(false); }, { capture: true });
-  canvas.addEventListener('pointerdown', () => { if (shown) close(false); });
+  // A press on the ocean closes the card; one that came from the crosshair takes the mouse straight back (a press may).
+  canvas.addEventListener('pointerdown', () => { if (shown) close(false, 'press'); });
   // Ahead of every other Escape (hud.js opens Settings on one, exploration.js asks for a recapture): this one only closes the card.
   addEventListener('keydown', event => { if (shown && event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); close(); } }, { capture: true });
-  card.querySelector('.diver-profile-close').addEventListener('click', () => close());
+  card.querySelector('.diver-profile-close').addEventListener('click', () => close(true, 'press'));
   for (const button of card.querySelectorAll('[data-section]')) button.addEventListener('click', () => { close(false); openSection(button.dataset.section); });
 
   function open() {
     if (shown) return true;
     if (!available()) return false;
+    track('profile_opened', { input: touchInput() ? 'touch' : locked() ? 'crosshair' : 'mouse' });
+    if (!met) { met = true; try { localStorage.setItem(MET, '1'); } catch {} }
     const img = card.querySelector('img');
     if (!img.getAttribute('src') && portrait.src) { img.src = portrait.src; img.alt = portrait.alt || ''; }
     returnFocus = document.activeElement;
+    // Opened from the crosshair (looking around with the mouse taken): the visit stays a look around, so the hero does not
+    // come back behind the card, and closing it goes back to the crosshair.
+    fromCrosshair = locked();
     // Under the masthead where there is room for it there (it stays over the diver's head otherwise).
     ceiling = Math.max(EDGE, (document.querySelector('.masthead')?.getBoundingClientRect().bottom ?? 0) + 8);
     shown = true; card.hidden = false; hint.hidden = true;
     document.body.dataset.profile = 'open';
     setInterfaceOpen(true);
+    if (fromCrosshair) keepLooking?.(true);
     place();
     card.focus({ preventScroll: true });
     wake();
     return true;
   }
-  function close(restore = true) {
+  // how: 'press' when a click or tap closed it, which may take the mouse again; Escape and the rest may not (a browser
+  // grants no pointer lock on Escape), so they leave the look around waiting for the next click on the ocean.
+  function close(restore = true, how = 'key') {
     if (!shown) return;
     shown = false; card.hidden = true;
     delete document.body.dataset.profile;
     setInterfaceOpen(false);
+    if (fromCrosshair) { fromCrosshair = false; if (how === 'press') { keepLooking?.(false); recapture?.(); restore = false; } }
     if (restore && returnFocus?.isConnected && returnFocus !== document.body) returnFocus.focus({ preventScroll: true });
     else if (restore) canvas.focus({ preventScroll: true });
     returnFocus = null;
@@ -139,8 +161,10 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
   }
 
   // A point on the diver's centre line, on screen: by default just over the head; share 0 is the bottom of the rig.
-  function anchor(share = 1) {
-    head.set((bounds.min.x + bounds.max.x) / 2, THREE.MathUtils.lerp(bounds.min.y, bounds.max.y, share), (bounds.min.z + bounds.max.z) / 2).applyMatrix4(diver.root.matrixWorld);
+  function anchor(share = 1) { return local(THREE.MathUtils.lerp(bounds.min.y, bounds.max.y, share)); }
+  // The same at a height in the rig's own units.
+  function local(y) {
+    head.set((bounds.min.x + bounds.max.x) / 2, y, (bounds.min.z + bounds.max.z) / 2).applyMatrix4(diver.root.matrixWorld);
     ndc.copy(head).project(camera);
     const rect = canvas.getBoundingClientRect();
     return { x: rect.left + (ndc.x + 1) / 2 * rect.width, y: rect.top + (1 - ndc.y) / 2 * rect.height, behind: ndc.z > 1 };
@@ -167,26 +191,49 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
     if (pointed !== hovered) {
       hovered = pointed;
       canvas.style.cursor = hovered && !locked() ? 'pointer' : '';
-      hint.hidden = !hovered;
+      hint.hidden = !(hovered || inviting);
       // Placed once as it appears, like the card: neither rides the swell with the diver.
       if (hovered) { const { x, y } = anchor(); hint.style.translate = `${Math.round(x)}px ${Math.round(y - 10)}px`; }
       if (diagnostics) diagnostics.hovered = hovered;
+    }
+    // The invitation, on a touch screen that has not met the diver yet: placed once as it appears, like the card.
+    availableFor = can && !shown ? availableFor + dt : 0;
+    const invite = !met && availableFor > INVITE_AFTER && touchInput();
+    if (invite !== inviting) {
+      inviting = invite; ping.hidden = !invite; ping.dataset.still = String(reducedMotion());
+      hint.textContent = invite ? 'Tap to say hi' : 'Say hi to Anshul';
+      hint.hidden = !(invite || hovered);
+    }
+    // Unlike the card, the invitation rides with the head: it marks what to tap, and the surface view is still settling
+    // (the diver drifts some 40 px down the screen) in the first seconds it shows.
+    if (inviting) {
+      const top = anchor(), middle = local(bounds.max.y - HEAD / 2), chin = local(bounds.max.y - HEAD), size = Math.max(56, Math.abs(chin.y - top.y) * 1.9);
+      ping.style.translate = `${Math.round(middle.x)}px ${Math.round(middle.y)}px`; ping.style.setProperty('--size', `${Math.round(size)}px`);
+      hint.style.translate = `${Math.round(top.x)}px ${Math.round(top.y - 10)}px`;
+      // On a short screen the label can reach the hero's links: then the ring says it alone (checked a few times a second).
+      if ((clearCheck -= dt) <= 0) {
+        clearCheck = .3; hint.hidden = false;
+        const label = hint.getBoundingClientRect();
+        hint.hidden = [...document.querySelectorAll('.hero :is(a,button)')].some(el => { const r = el.getBoundingClientRect(); return r.width && label.left < r.right && label.right > r.left && label.top < r.bottom + 6 && label.bottom > r.top - 6; });
+      }
     }
     const goal = hovered || shown ? 1 : 0;
     // Eased in a moving scene; at once in a paused one, whose frames stop before an ease could finish.
     if (amount !== goal) { amount = reducedMotion() ? goal : amount + (goal - amount) * (1 - Math.exp(-dt * EASE)); if (Math.abs(goal - amount) < .005) amount = goal; }
     // The glow is worked out afresh every frame (world.js: lookGlowAt), so the lift is added on top each time.
-    if (amount > 0 || lifted) {
+    // While inviting, the light swells with each ring (in step with the CSS animation's period) and fades between them.
+    const swell = inviting && !reducedMotion() ? .55 * Math.sin(Math.PI * ((time % PULSE) / PULSE)) ** 2 : 0, lift = Math.max(amount, swell);
+    if (lift > 0 || lifted) {
       const breathe = reducedMotion() ? 1 : .85 + .15 * Math.sin(time * 3.2);
-      for (const [own, base] of lit) own.uLookRim.value = base + amount * RIM_LIFT * breathe;
-      glow?.add(scratch.copy(GLOW_LIFT).multiplyScalar(amount));
-      lifted = amount > 0;
+      for (const [own, base] of lit) own.uLookRim.value = base + lift * RIM_LIFT * breathe;
+      glow?.add(scratch.copy(GLOW_LIFT).multiplyScalar(lift));
+      lifted = lift > 0;
     }
   }
   // The card stays where it opened while the diver bobs under it; only a new size of window moves it.
   addEventListener('resize', () => { if (shown) place(); });
   const scratch = new THREE.Color();
-  const diagnostics = { hovered: false };
+  const diagnostics = { hovered: false, get inviting() { return inviting; } };
 
   return {
     update, open, close, diagnostics,

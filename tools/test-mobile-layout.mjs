@@ -139,6 +139,20 @@ async function run(profileName) {
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => !oceanProfile.isOpen, null, {timeout: 5000});
   });
+  // From the crosshair (desktop): the card opens over the look around without bringing the hero back; Escape closes it and
+  // keeps the look around for the next click; a second Escape brings the hero back.
+  if (!phone) await step('surface-profile-crosshair', async () => {
+    const looking = () => page.evaluate(() => document.body.dataset.exploring === 'true');
+    await page.mouse.click(200, profile.viewport.height - 140);
+    if (!await page.waitForFunction(() => document.pointerLockElement, null, {timeout: 3000}).then(() => true, () => false)) return;
+    await page.evaluate(() => oceanProfile.open());
+    await page.waitForTimeout(1200);
+    if (!await looking()) throw Error('the hero came back behind the card opened from the crosshair');
+    await page.keyboard.press('Escape'); await page.waitForTimeout(800);
+    if (await page.evaluate(() => oceanProfile.isOpen) || !await looking()) throw Error('Escape should close the card and keep the look around');
+    await page.keyboard.press('Escape'); await page.waitForTimeout(800);
+    if (await looking()) throw Error('a second Escape should bring the hero back');
+  });
   // After a dive, its summary (dive-plan.js) opens from the hero's links, clear of the hero.
   await step('surface-summary', async () => {
     await page.evaluate(() => dispatchEvent(new CustomEvent('oceandiveend', {detail: {time: 134, maxDepth: 18.4, found: 2}})));

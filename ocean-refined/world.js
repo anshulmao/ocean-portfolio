@@ -75,6 +75,9 @@ let skyClockMinute=NaN,skyClockText='';const skyClock=date=>{const minute=Math.f
 let night=selectedNight?1:0,diveTarget=0,dive=0,frameCount=0,perfDuration=0,perfSamples=0;
 let mobile=innerWidth<600,quality=mobile||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<5)?'economy':'standard';
 let nextBubble=0,bubbleCursor=0,bubbleClock=-1,exploring=false,mapDestination=null;
+// The look around held on screen without the mouse: while the profile card opened from the crosshair is up, and after an
+// Escape closes it, until the next click on the ocean takes the mouse again or a second Escape ends the look (diver-profile.js).
+let lookHeld=false;
 let mapCollapsed=mobile;
 let previousMode='surface',surfaceX=0,surfaceZ=0,surfaceFramingYaw=0,expeditionUI=null;
 // The guided dive's opening (release/guided-dive/SPEC.md, step 0): at the surface the camera eases in on the diver and
@@ -561,6 +564,7 @@ $('#motion')?.addEventListener('click',()=>{
   updateMotionUI();hudForce=true;wake();
 });
 function setExploring(value){
+  if(!value)lookHeld=false;
   exploring=value;exploration.state.exploring=value;document.body.dataset.exploring=String(value);
   wake();
 }
@@ -572,6 +576,10 @@ function paintAtlas(){
 // Looking around at the surface folds the hero down to the dive button; Back unfolds it (Escape does too, with a mouse).
 $('#explore')?.addEventListener('click',()=>{exploration.setInterfaceOpen(false);setExploring(false);});
 $('#map-toggle').addEventListener('click',()=>{mapCollapsed=!mapCollapsed;paintAtlas();});
+canvas.addEventListener('pointerdown',()=>{lookHeld=false;},{capture:true});
+// Ahead of hud.js, which opens Settings on an Escape when nothing is being looked at: a held look ends first, as one with
+// the mouse taken does.
+addEventListener('keydown',event=>{if(event.key==='Escape'&&lookHeld&&!diverProfile?.isOpen){lookHeld=false;event.preventDefault();event.stopImmediatePropagation();wake();}},{capture:true});
 // A visitor reaching for a way into the water (Dive in, Guided dive, Choose a dive site): the first draws go one a
 // frame from here on, since what is not drawn by the time the camera goes under is all paid in one frame there. A touch
 // screen has no hover, so a finger landing on one counts too. (Delegated, so it covers whichever of them is on screen.)
@@ -866,7 +874,7 @@ function updateWorld(dt,clockDt=dt){
   previousMode=nav.mode;
   if(nav.mode==='diver'&&easedDive>.75)beginModels();
   if(mapDestination&&!nav.travelling){$('#map-caption').textContent=nav.travelBlocked?'Coral ahead. Steer around it to continue.':nav.manualInput?'Free swimming. Choose a marker to explore.':`${mapDestination.title} reef · A home for this part of the portfolio.`;mapDestination=null;}
-  if(nav.exploring!==exploring)setExploring(nav.exploring);
+  const looking=nav.exploring||lookHeld&&nav.mode==='surface'&&diveTarget===0;if(looking!==exploring)setExploring(looking);
   const bob=paused?0:Math.sin(elapsed*settings.bobFrequency)*settings.bobAmplitude;
   playerPosition.set(nav.offset.x,-8+nav.offset.y,nav.offset.z);
   const ascentLanding=ascentComposition.update(nav,Math.max(0,-playerPosition.y));
@@ -1215,6 +1223,7 @@ async function boot(){
   diver=createDiver();diverAnimator=createDiverAnimator(diver);diagnostic.diverAnimation=diverAnimator.diagnostics;stylizeTree(diver.root,{toon:.45,rim:.4,caustics:.6,glow:'flat',glowColor:diverGlow});for(const material of Object.values(diver.materials))stylize(material,{toon:.45,rim:.4,caustics:.6,glow:'flat',glowColor:diverGlow});scene.add(diver.root);
   // Pointing at the diver at the surface lights them up; a click opens Anshul's profile over their head (diver-profile.js).
   diverProfile=createDiverProfile({diver,camera,canvas,glow:diverGlow,reducedMotion:()=>reducedMotion,wake,setInterfaceOpen,
+    keepLooking:value=>{lookHeld=value;wake();},recapture:()=>exploration.recapture(),
     open:section=>window.oceanArchive?.open(section),
     available:()=>diagnostic.ready&&!viewerOrbit&&diveTarget===0&&!getTransition()&&exploration.state.mode==='surface'&&diver.root.visible&&!document.querySelector('dialog[open]')&&!document.body.dataset.menu&&document.body.dataset.clearUi!=='true'&&(window.oceanTour?.status??'off')==='off'});
   window.oceanProfile=diverProfile;

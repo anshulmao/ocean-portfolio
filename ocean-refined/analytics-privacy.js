@@ -4,6 +4,8 @@ export const EVENT_PROPERTIES = {
   project_link_clicked:['destination'], resume_clicked:['action'], contact_clicked:['channel'],
   dive_started:[], dive_completed:[], feedback_started:[], feedback_saved:['rating'],
   reef_photo_downloaded:[], reef_photo_shared:[], artifact_collected:['artifact_id'],
+  // The profile card on the surface diver (diver-profile.js), and how it was reached.
+  profile_opened:['input'],
   // The guided dive (guided-dive.js): a funnel by step, and how each tour ended.
   tour_started:['from'], tour_step:['step','index'], tour_taken_over:['step','index'], tour_rejoined:['step','index'],
   tour_ended:['step','index','how'],
