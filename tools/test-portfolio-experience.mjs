@@ -65,7 +65,6 @@ try {
   await world.setViewportSize({width:1440,height:900});
   await world.waitForFunction(()=>window.oceanDiagnostics?.ready&&oceanDiagnostics.landmarksReady,null,{timeout:120000});
   await world.screenshot({path:shot('surface'),animations:'disabled'});
-  await world.locator('#portfolio-options summary').click();
   await world.locator('#guided-dive').click();
   await world.waitForFunction(()=>oceanDiagnostics.submerged&&!oceanControls.getTransition(),null,{timeout:120000});
   // (In economy detail the optional packs wait for a dive: see world.js.)

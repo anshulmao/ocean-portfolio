@@ -26,6 +26,7 @@
   <link rel="stylesheet" href="./quiet-ui.css">
   <link rel="stylesheet" href="./portfolio-entry.css">
   <link rel="stylesheet" href="./surface.css">
+  <link rel="stylesheet" href="./diver-profile.css">
   <link rel="stylesheet" href="./dive-calm.css">
   <link rel="stylesheet" media="screen" href="./logbook.css">
   <!-- The four faces the first view is set in: requested with the stylesheets, not after the first layout. -->
@@ -167,9 +168,9 @@
       <h2>A little<br><em>closer to calm.</em></h2>
       <p class="lede">A reef full of stories. Take your time exploring.</p>
     </div>
-    <div class="portfolio-actions"><button class="dive-button" id="dive" type="button" disabled><i class="dive-flag" aria-hidden="true"></i><span id="dive-label">Preparing the ocean</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15m-6-6 6 6 6-6"/></svg></button></div>
-    <details id="portfolio-options" class="portfolio-options"><summary>Take a guided dive or explore the reef <span aria-hidden="true">+</span></summary><div id="dive-options"><button class="explore-button" id="explore" type="button" aria-pressed="false">Look around <span>↗</span></button></div></details>
-    <nav class="portfolio-links" aria-label="Reading view"><span>Prefer to read?</span><a href="./profile.html">Browse the portfolio <span aria-hidden="true">→</span></a></nav>
+    <!-- Two ways into the water, then the quieter ways to the work: every choice is on screen, none behind a toggle. -->
+    <div class="portfolio-actions"><button class="dive-button" id="dive" type="button" disabled><i class="dive-flag" aria-hidden="true"></i><span id="dive-label">Preparing the ocean</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15m-6-6 6 6 6-6"/></svg></button><button class="guided-button" id="guided-dive" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2.2 4.8-4.8 2.2 2.2-4.8z"/></svg><span>Guided dive</span><small>2 min</small></button><button class="explore-back" id="explore" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg>Back</button></div>
+    <nav class="portfolio-links" aria-label="More ways in"><button id="logbook-link" class="hero-link" type="button">See the work</button><button id="plan-dive" class="hero-link" type="button" aria-haspopup="dialog">Choose a dive site</button><a class="hero-link" href="./profile.html">Read as a page</a></nav>
   </main>
   <div id="sky-labels" aria-hidden="true"></div>
   <div id="reef-labels"></div>

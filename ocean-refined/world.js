@@ -10,6 +10,7 @@ import * as THREE from './vendor/three.module.min.js';
 import { createClouds, seededRandom, shareSteps, setPacer } from './assets.js';
 import { createDiver } from './diver.js';
 import { createDiverAnimator } from './diver-animation.js';
+import { createDiverProfile } from './diver-profile.js';
 import { createWristComputer } from './wrist-computer.js';
 import { reefSteps, LANDMARKS, terrainHeightAt } from './reef.js';
 import { marineLifeSteps } from './marine-life.js';
@@ -51,7 +52,7 @@ if(requestedMotion==='full'||requestedMotion==='reduced'){
 // A fresh visit starts with the ocean moving. The in-page control can pause it,
 // and an explicit saved/query preference still wins; OS changes are honored below.
 let reducedMotion=motionPreference?motionPreference==='reduced':false,paused=reducedMotion;
-let renderer,scene,camera,water,waterCalm,waterRough,waterFine,waterCoarse,diver,reef,skySystem,marine,clouds,sunlight,ambient,beamGroup,motes,bubbleMesh,diveLamp;
+let diverProfile,renderer,scene,camera,water,waterCalm,waterRough,waterFine,waterCoarse,diver,reef,skySystem,marine,clouds,sunlight,ambient,beamGroup,motes,bubbleMesh,diveLamp;
 let viewerOrbit=null,scooterModel=null;
 let diverAnimator=null;
 const diverAnimationState={};
@@ -149,8 +150,12 @@ const setHidden=(node,value)=>{if(node&&node.hidden!==value)node.hidden=value;};
 const setAttribute=(node,name,value)=>{if(node&&node.getAttribute(name)!==value)node.setAttribute(name,value);};
 const setStyle=(selector,name,value)=>{const key=selector+name;if(hudStyles.get(key)!==value){hudStyles.set(key,value);hud(selector)?.style.setProperty(name,value);}};
 function getPlayerPosition(){return exploration.getPlayerPosition(new THREE.Vector3()).clone();}
-function getMode(){return exploration.state.transition||Math.abs(dive-diveTarget)>.002?'transition':exploration.state.mode;}
-function getTransition(){return exploration.state.transition||Math.abs(dive-diveTarget)>.002;}
+// The dive eases out exponentially, so its last seconds move the view by about a millimetre: it counts as done, and snaps
+// to its end, within DIVE_SETTLE of it (at 1 - DIVE_SETTLE the eased value is already 99.9 % of the way). At .002 the
+// tail held the controls and the guided dive for about 2.4 s more (a settle took 6.5 s at the default response).
+const DIVE_SETTLE=.02;
+function getMode(){return exploration.state.transition||Math.abs(dive-diveTarget)>DIVE_SETTLE?'transition':exploration.state.mode;}
+function getTransition(){return exploration.state.transition||Math.abs(dive-diveTarget)>DIVE_SETTLE;}
 function syncControlSuspension(){
   movementPanelOpen=Boolean($('#movement-panel')?.open);
   exploration.setInterfaceOpen(interfaceOpen||movementPanelOpen||settingsMenuOpen);wake();
@@ -557,18 +562,19 @@ $('#motion')?.addEventListener('click',()=>{
 });
 function setExploring(value){
   exploring=value;exploration.state.exploring=value;document.body.dataset.exploring=String(value);
-  $('#explore').setAttribute('aria-pressed',String(value));$('#explore').innerHTML=value?'Release mouse <span>↙</span>':'Look around <span>↗</span>';wake();
+  wake();
 }
 $('#day').addEventListener('click',()=>setTheme(false));$('#night').addEventListener('click',()=>setTheme(true));
 $('#dawn').addEventListener('click',()=>setSkyPreset('dawn'));$('#dusk').addEventListener('click',()=>setSkyPreset('dusk'));
-$('#explore').addEventListener('click',()=>{if(exploring){exploration.setInterfaceOpen(false);setExploring(false);}else{exploration.recapture();setExploring(true);}});
 function paintAtlas(){
   $('.reef-map').dataset.collapsed=String(mapCollapsed);$('#map-toggle').setAttribute('aria-expanded',String(!mapCollapsed));$('#map-toggle').setAttribute('aria-label',mapCollapsed?'Expand reef atlas':'Collapse reef atlas');$('#map-toggle').textContent=mapCollapsed?'＋':'−';
 }
+// Looking around at the surface folds the hero down to the dive button; Back unfolds it (Escape does too, with a mouse).
+$('#explore')?.addEventListener('click',()=>{exploration.setInterfaceOpen(false);setExploring(false);});
 $('#map-toggle').addEventListener('click',()=>{mapCollapsed=!mapCollapsed;paintAtlas();});
-// A visitor reaching for a way into the water (Dive in, Show me around, Choose a destination): the first draws go one a
+// A visitor reaching for a way into the water (Dive in, Guided dive, Choose a dive site): the first draws go one a
 // frame from here on, since what is not drawn by the time the camera goes under is all paid in one frame there. A touch
-// screen has no hover, so a finger landing on one counts too. (Delegated: the guided dive's buttons are added by dive-plan.js.)
+// screen has no hover, so a finger landing on one counts too. (Delegated, so it covers whichever of them is on screen.)
 const DIVE_WAYS='#dive,#guided-dive,#plan-dive';
 for(const type of ['pointerover','pointerdown','focusin'])document.addEventListener(type,event=>{if(hurry<1&&event.target.closest?.(DIVE_WAYS)){hurry=1;wake();}},{passive:true,capture:true});
 $('#camera-toggle')?.addEventListener('click',toggleCamera);
@@ -841,7 +847,7 @@ function updateWorld(dt,clockDt=dt){
   night=skySystem.getNightFactor?skySystem.getNightFactor(phase):THREE.MathUtils.smoothstep(-Math.cos(phase),-.15,.3);
   // The preset name only changes around dawn and dusk, and finding it costs two more ephemeris evaluations: look twice a second.
   if(phaseTarget===null&&++presetTick>=30){presetTick=0;const altitude=skySystem.getState(phase).sunAltitude;const rising=skySystem.getState(phase+.0001).sunAltitude>altitude;const preset=altitude>-6&&altitude<8?(rising?'dawn':'dusk'):night>.5?'night':'day';if(diagnostic.skyPreset!==preset)paintTheme(night>.5,preset);}
-  dive=THREE.MathUtils.lerp(dive,diveTarget,1-Math.exp(-dt*settings.diveResponse));if(Math.abs(dive-diveTarget)<.002)dive=diveTarget;
+  dive=THREE.MathUtils.lerp(dive,diveTarget,1-Math.exp(-dt*settings.diveResponse));if(Math.abs(dive-diveTarget)<=DIVE_SETTLE)dive=diveTarget;
   // A dive asked for before the world under the water is ready waits in the first tenth of the transition, the camera
   // still above the surface, while the rest is built with most of every frame's time (see afterFrame); the status line
   // says so if that takes more than a moment. The first draws get up to two and a half seconds of it as well (of the
@@ -1058,6 +1064,7 @@ function updateWorld(dt,clockDt=dt){
   const clock=performance.now(),paint=hudForce||paused||clock-hudPainted>=80;
   if(paint||phaseTarget!==null||expeditionUI?.isScrubbing())expeditionUI?.update(skyState);
   if(paint){hudPainted=clock;hudForce=false;paintHud(nav,submerged,depth,edge,skyState);}
+  diverProfile?.update(dt);
   if(viewerOrbit)window.oceanControls.viewer.applyLayers?.();
 }
 // The pixel ratio at render scale 1: the display's own, capped by a pixel budget.
@@ -1206,6 +1213,11 @@ async function boot(){
   await stage('renderer');
   // The diver first: its programs are the largest of the surface's, and they compile while the sky and the sea are built.
   diver=createDiver();diverAnimator=createDiverAnimator(diver);diagnostic.diverAnimation=diverAnimator.diagnostics;stylizeTree(diver.root,{toon:.45,rim:.4,caustics:.6,glow:'flat',glowColor:diverGlow});for(const material of Object.values(diver.materials))stylize(material,{toon:.45,rim:.4,caustics:.6,glow:'flat',glowColor:diverGlow});scene.add(diver.root);
+  // Pointing at the diver at the surface lights them up; a click opens Anshul's profile over their head (diver-profile.js).
+  diverProfile=createDiverProfile({diver,camera,canvas,glow:diverGlow,reducedMotion:()=>reducedMotion,wake,setInterfaceOpen,
+    open:section=>window.oceanArchive?.open(section),
+    available:()=>diagnostic.ready&&!viewerOrbit&&diveTarget===0&&!getTransition()&&exploration.state.mode==='surface'&&diver.root.visible&&!document.querySelector('dialog[open]')&&!document.body.dataset.menu&&document.body.dataset.clearUi!=='true'&&(window.oceanTour?.status??'off')==='off'});
+  window.oceanProfile=diverProfile;
   early(diver.root);
   await stage('diver');
   skySystem=createSkySystem(uniforms,rng);scene.add(skySystem.root);expeditionUI=createExpeditionUI({sky:skySystem,getPhase:()=>phase,setPhase:value=>{phase=value;phaseTarget=null;wake();},frameSurface});
@@ -1234,7 +1246,7 @@ async function boot(){
   early(scene);if(linking.size){await programsLinked(linking);if(diagnostic.error)return;}
   markAt=performance.now();drawFrame();mark('firstDraw');
   if(diagnostic.error)return;
-  experienceMetrics.mark('surfaceReady');started=true;diagnostic.ready=true;diagnostic.readyAt=Math.round(performance.now());document.body.dataset.ready='true';$('#dive').disabled=false;$('#dive-label').textContent='Dive in';status.textContent='';preloadModels();
+  experienceMetrics.mark('surfaceReady');started=true;diagnostic.ready=true;diagnostic.readyAt=Math.round(performance.now());document.body.dataset.ready='true';$('#dive').disabled=false;$('#guided-dive').disabled=false;$('#dive-label').textContent='Dive in';status.textContent='';preloadModels();
   // The build starts with the first frame: its steps are paced around the frames (see afterFrame), and a visitor who
   // dives within the first seconds should find as much of it done as possible.
   if(!built)startUnderwater();

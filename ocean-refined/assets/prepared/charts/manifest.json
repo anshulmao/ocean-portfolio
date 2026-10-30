@@ -2,7 +2,7 @@
  "sources": {
   "reef.js": "cc11e727a63a7b0b4fae410570e42032218af001bb51afba7b066f7951912776",
   "expedition-ui.js": "4687a9d9c08e4b66ed6a660e71f526286819226854452177e8352ef7e8d0a26c",
-  "dive-plan.js": "4339a5df288c44e03d909f81172b96cef0695c0d527218a340464acef5194f99",
+  "dive-plan.js": "67781bc3f2b50297f3be454243d56b4e8803f86a9e773623a04f7bc7b3c955fe",
   "depth-metrics.js": "a1e9348e3da8f3e419dd6dce32c5db65f1d063c93abde4499fafb9c1364a2f07"
  },
  "charts": {

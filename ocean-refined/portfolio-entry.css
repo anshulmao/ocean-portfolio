@@ -5,28 +5,8 @@ html:is([data-sky-preset="dawn"],[data-sky-preset="dusk"]) .surface-copy{color:v
 .surface-invitation{margin:0 0 24px;font-size:10px;line-height:1.6;letter-spacing:.03em;color:var(--muted)}
 .portfolio-actions{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;pointer-events:auto}
 .portfolio-actions .dive-button{margin:0!important;gap:13px;min-height:48px;white-space:nowrap}
-.portfolio-actions .logbook-link{display:flex;margin:0;min-height:48px;padding:13px 20px;border:1px solid var(--line);border-radius:100px;background:var(--glass);color:var(--ink);opacity:1;text-decoration:none;transition:translate 180ms var(--ease),background-color 120ms ease}
-.portfolio-actions .logbook-link:hover{translate:0 -2px;background:var(--active)}
-.portfolio-actions .logbook-link:active{translate:0 1px}
-.portfolio-options{position:relative;pointer-events:auto;max-width:420px;margin:14px auto 0}
-.portfolio-options summary{display:flex;justify-content:center;align-items:center;gap:12px;min-height:40px;padding:8px 0;cursor:pointer;list-style:none;font-size:10px;letter-spacing:.045em;color:var(--muted)}
-.portfolio-options summary::-webkit-details-marker{display:none}
-.portfolio-options summary span{font-size:17px;line-height:1;transition:rotate 180ms var(--ease)}
-.portfolio-options[open] summary span{rotate:45deg}
-.portfolio-options summary:focus-visible,.portfolio-links a:focus-visible{outline:2px solid currentColor;outline-offset:4px;border-radius:3px}
-#dive-options{display:flex;flex-direction:column;align-items:center;padding:0 0 4px}
-#dive-options .dive-entry{justify-content:center;gap:8px;margin:0;animation:none;visibility:visible}
-#dive-options .dive-entry .holo-chip{min-height:42px;font-size:10px;letter-spacing:.035em;color:var(--ink);background:var(--glass);border-color:var(--line);text-shadow:none;box-shadow:none}
-.route-note{flex-basis:100%;max-width:300px;margin:3px auto 0;font-size:10px;line-height:1.6;color:var(--muted);text-align:center}
-#dive-options .explore-button{margin:3px auto 0;min-height:36px;font-size:10px}
-.portfolio-links{pointer-events:auto;display:flex;justify-content:center;gap:26px;margin-top:2px}
-.portfolio-links a{display:inline-flex;align-items:center;gap:7px;min-height:40px;color:var(--ink);font-size:10px;text-decoration-color:var(--line);text-underline-offset:5px}
-.portfolio-links a:hover{text-decoration-color:currentColor}
-body:is([data-submerged="true"],[data-exploring="true"]) .portfolio-options,body:is([data-submerged="true"],[data-exploring="true"]) .portfolio-links{display:none}
 body:is([data-submerged="true"],[data-exploring="true"]) .portfolio-actions{justify-content:flex-start}
-body:is([data-submerged="true"],[data-exploring="true"]) .portfolio-actions .logbook-link{display:none}
 @media(min-width:901px){body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{width:min(540px,45vw);top:18%;left:50%}}
 @media(min-width:601px) and (max-width:900px){body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{left:50%;top:18%;width:min(540px,78vw);transform:translateX(-50%);text-align:center}.hero .surface-copy .eyebrow{justify-content:center}.surface-copy .lede{margin-left:auto;margin-right:auto}}
-@media(max-width:600px){body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{top:clamp(125px,19vh,165px);width:calc(100vw - 36px)}.hero h1{font-size:clamp(54px,14vw,72px)}.surface-copy .eyebrow{margin-bottom:17px}.hero .surface-copy .lede{max-width:345px;margin:17px auto 8px;font-size:12px;line-height:1.65}.surface-invitation{max-width:290px;margin:0 auto 17px;font-size:9px}.portfolio-actions{gap:8px}.portfolio-actions .dive-button{font-size:11px;padding:12px 16px;gap:10px}.portfolio-actions .logbook-link{font-size:11px;padding:12px 16px}.portfolio-options{margin-top:7px}.portfolio-links{gap:24px}}
-@media(max-height:720px){body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{top:112px;max-height:calc(100dvh - 170px);overflow-y:auto;scrollbar-width:thin;padding:3px 6px 8px}.hero h1{font-size:48px}.surface-copy .eyebrow{margin-bottom:12px}.hero .surface-copy .lede{margin-top:13px;margin-bottom:5px;font-size:11px}.surface-invitation{margin-bottom:12px}.portfolio-options{margin-top:5px}}
-@media(prefers-reduced-motion:reduce){.portfolio-actions .logbook-link,.portfolio-options summary span{transition:none}.portfolio-actions .logbook-link:hover{translate:0}}
+@media(max-width:600px){body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{top:clamp(125px,19vh,165px);width:calc(100vw - 36px)}.hero h1{font-size:clamp(54px,14vw,72px)}.surface-copy .eyebrow{margin-bottom:17px}.hero .surface-copy .lede{max-width:345px;margin:17px auto 8px;font-size:12px;line-height:1.65}.surface-invitation{max-width:290px;margin:0 auto 17px;font-size:9px}.portfolio-actions{gap:8px}.portfolio-actions .dive-button{font-size:11px;padding:12px 16px;gap:10px}}
+@media(max-height:720px){body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{top:112px;max-height:calc(100dvh - 170px);overflow-y:auto;scrollbar-width:thin;padding:3px 6px 8px}.hero h1{font-size:48px}.surface-copy .eyebrow{margin-bottom:12px}.hero .surface-copy .lede{margin-top:13px;margin-bottom:5px;font-size:11px}.surface-invitation{margin-bottom:12px}}

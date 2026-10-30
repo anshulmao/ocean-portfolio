@@ -70,7 +70,7 @@ try {
       const {page, problems} = await open('./profile.html', viewport);
       assert.equal(await page.locator('h1').count(), 1, 'profile has no heading');
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `profile scrolls sideways at ${viewport.width}px`);
-      projects = await page.locator('a[href*="projects/"]').evaluateAll(links => [...new Set(links.map(link => link.href).filter(href => /\/projects\/[^/]+\/$/.test(href)))]);
+      projects = await page.locator('a[href*="projects/"]').evaluateAll(links => [...new Set(links.map(link => link.href).filter(href => /\/projects\/[^/]+\/(?:index\.html)?$/.test(href)))]);
       assert.deepEqual(problems, []);
       await page.close();
     }
@@ -81,6 +81,9 @@ try {
     for (const url of projects) {
       const {page, problems} = await open(url);
       assert.equal(await page.locator('h1').count(), 1, `${url} has no heading`);
+      // Pictures below the fold load lazily: ask for every one now, so "not loaded yet" is not read as broken.
+      await page.locator('img').evaluateAll(images => images.forEach(image => { image.loading = 'eager'; }));
+      await page.waitForFunction(() => [...document.images].every(image => image.complete), null, {timeout: 20000}).catch(() => {});
       assert.deepEqual(await page.locator('img').evaluateAll(images => images.filter(image => !image.complete || !image.naturalWidth).map(image => image.src)), [], `${url} has broken images`);
       assert.deepEqual(problems, [], url);
       await page.close();

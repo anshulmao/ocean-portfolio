@@ -86,20 +86,20 @@ function toTravel(env) {
   assert.equal(tourStatus(), 'travel');
 }
 
-// From the surface: a held beat while the copy fades, the camera's move in on the diver, then the dive in first person;
-// under water the title card comes before the welcome sheet.
+// From the surface: only a beat while the copy starts to fade (no second of nothing after the click), the camera's move in
+// on the diver, then the dive in first person; under water the title card comes before the welcome sheet.
 {
   const env = environment(60, { surface: true });
   globalThis.splashes = [];
   assert.equal(startTour(), true);
   assert.equal(document.body.dataset.prelude, 'on', 'the surface copy steps aside');
-  env.tick(.8);
-  assert.deepEqual(env.calls, [], 'a held beat first');
-  env.tick(.4);
-  assert.deepEqual(env.calls, [['frameDiver', true]], 'then the camera moves in on the diver');
-  env.tick(1);
+  env.tick(.1);
+  assert.deepEqual(env.calls, [], 'a short beat first');
+  env.tick(.2);
+  assert.deepEqual(env.calls, [['frameDiver', true]], 'then, within a third of a second, the camera moves in on the diver');
+  env.tick(1.1);
   assert.equal(env.calls.length, 1, 'the dive waits for the move to finish');
-  env.tick(.4);
+  env.tick(.3);
   assert.deepEqual(env.calls[1], ['startDive', { capture: false, perspective: 'first' }], 'and the dive starts in first person');
   env.tick(.2);
   assert.equal(tourStatus(), 'intro');
@@ -107,7 +107,7 @@ function toTravel(env) {
   assert.deepEqual(globalThis.splashes, [['Guided dive', 'Welcome to the reef']], 'the title card');
   assert.deepEqual(env.calls.at(-1), ['frameDiver', false]);
   window.oceanTour.stop(); env.nav.destroy();
-  console.log('PASS: the opening holds, moves in on the diver and dives in first person.');
+  console.log('PASS: the opening moves in on the diver at once and dives in first person.');
 }
 
 // A solid coral outcrop blocks the first approach. The production planner and

@@ -25,12 +25,12 @@ try {
   await page.keyboard.press('Escape');
   await page.waitForFunction(()=>!document.querySelector('#landmark-dialog').open);
   assert.equal(await page.evaluate(()=>document.activeElement.id),'logbook-link');
-  await page.locator('#portfolio-options summary').focus();await page.keyboard.press('Enter');
+  // Every way in is on screen at once (no disclosure): the guided dive and the site map are a Tab away.
   assert.equal(await page.locator('#guided-dive').isVisible(),true);
   assert.equal(await page.locator('#plan-dive').isVisible(),true);
   await page.keyboard.press('Tab');
-  assert.ok(['guided-dive','plan-dive','explore'].includes(await page.evaluate(()=>document.activeElement.id)));
-  report.checks.push('Keyboard opens Projects, Escape returns focus, and the route disclosure exposes existing controls.');
+  assert.ok(['plan-dive'].includes(await page.evaluate(()=>document.activeElement.id)));
+  report.checks.push('Keyboard opens Projects, Escape returns focus, and the guided dive and site map are visible beside it.');
 
   await page.locator('#dive').click();
   await page.waitForFunction(()=>oceanDiagnostics.landmarksReady&&oceanDiagnostics.submerged&&!oceanControls.getTransition(),null,{timeout:120000});

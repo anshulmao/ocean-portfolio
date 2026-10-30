@@ -60,13 +60,8 @@ function interact() {
 // here avoids depending on which key listener runs first.
 window.oceanLandmarks = { interactNearby() { if (!eligible) return false; interact(); return panel.open; } };
 
-// A quiet way in for visitors who would rather read than dive. Appended to the
-// hero so it never depends on which buttons its siblings are.
-const logbookLink = document.createElement('button');
-logbookLink.type = 'button'; logbookLink.id = 'logbook-link'; logbookLink.className = 'logbook-link';
-logbookLink.append(icon('resume'), document.createTextNode('See the work'));
-logbookLink.addEventListener('click', () => openArchive('projects'));
-document.querySelector('.portfolio-actions')?.append(logbookLink);
+// A quiet way in for visitors who would rather read than dive (index.html: the hero's links).
+document.getElementById('logbook-link')?.addEventListener('click', () => openArchive('projects'));
 
 window.oceanArchive = {
   // open('log', 'product-manager'): section ids or their hash names; the entry is optional.
