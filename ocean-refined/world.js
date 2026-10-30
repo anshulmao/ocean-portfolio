@@ -180,9 +180,10 @@ const prepared=new WeakSet();
 // drawn, when the graphics process has finished the last one, and rest for a few frames after one that stalled it.
 // A visitor waiting on the work (a dive asked for before the world is ready) gets most of every interval instead.
 const GPU=Symbol('gpu'),jobs=[],buildName='the world under the water',work=diagnostic.work={pending:0,steps:0,ms:0,longest:0,longestName:'',over8:0,over16:0,gpuSteps:0,turns:0,long:[]};
-let jobDebt=0,jobsStarved=0,jobsAt=-1e9,jobsQuietAt=-1e9,jobFrameAt=0,jobGap=0,jobFrameDrew=false,jobPosted=false,pumpQueued=false,gpuRest=0,gpuRan=false,hurry=0,ticking=false;
-function later(name,task,{gpu=false,cost=1,tally=null}={}){
-  return new Promise((resolve,reject)=>{jobs.push({name,task,steps:null,resolve,reject,gpu,cost,tally,waiting:false});work.pending=jobs.length;pump();wake();});
+let jobDebt=0,jobsStarved=0,jobsAt=-1e9,jobsQuietAt=-1e9,jobFrameAt=0,jobGap=0,jobFrameDrew=false,jobPosted=false,pumpQueued=false,gpuRest=0,gpuRan=false,paceGap=16.7,hurry=0,ticking=false;
+// urgent: ahead of everything queued (what a held dive waits on, the landmarks, goes before the first draws of the rest).
+function later(name,task,{gpu=false,cost=1,tally=null,urgent=false}={}){
+  return new Promise((resolve,reject)=>{const job={name,task,steps:null,resolve,reject,gpu,cost,tally,waiting:false};if(urgent)jobs.unshift(job);else jobs.push(job);work.pending=jobs.length;pump();wake();});
 }
 // One step of a job; true when the job has finished.
 function stepJob(job){
@@ -207,7 +208,7 @@ function runJobs(budget,kind){
     if(job.waiting||kind!=='all'&&(kind==='gpu')!==job.gpu){i++;continue;}
     if(ran&&(kind==='gpu'||performance.now()-start+job.cost>budget))break;
     // A turn for the model pipelines (see setPacer below): they take what is left of this slice, so it is the last thing in it.
-    if(job.turn){jobs.splice(i,1);const left=Math.max(2,budget-(performance.now()-start));turnEnd=performance.now()+left;work.turns++;ran++;job.turn(left);break;}
+    if(job.turn){jobs.splice(i,1);const left=Math.max(2,budget-(performance.now()-start));turnEnd=performance.now()+left;turnCallbacks=callbacks;work.turns++;ran++;job.turn(left);break;}
     ran++;if(job.gpu)work.gpuSteps++;
     if(stepJob(job))jobs.splice(i,1);
     if(performance.now()-start>=budget)break;
@@ -217,10 +218,12 @@ function runJobs(budget,kind){
   return ran;
 }
 // The model pipelines are async functions that work in slices (see assets.js): each slice is a turn in this queue, as
-// long as what is left of the budget when its turn comes, and time one of them runs past its slice is paid back like any other.
-let turnEnd=0;
+// long as what is left of the budget when its turn comes, and time one of them runs past its slice is paid back like any
+// other: when no frame callback came in between (one that did means the pipeline had let go of the thread, waiting on a
+// download or a decode, and comes back owing nothing).
+let turnEnd=0,turnCallbacks=0,callbacks=0;
 setPacer(()=>new Promise(resolve=>{
-  const now=performance.now();if(turnEnd&&now>turnEnd&&hurry<2)jobDebt+=Math.min(now-turnEnd,60);turnEnd=0;
+  const now=performance.now();if(turnEnd&&now>turnEnd&&callbacks===turnCallbacks&&hurry<2)jobDebt+=Math.min(now-turnEnd,60);turnEnd=0;
   jobs.push({name:'model work',turn:resolve,gpu:false,cost:2,waiting:false});work.pending=jobs.length;pump();wake();
 }));
 // After a frame: the steps of this thread, in a task that starts once the browser has the frame.
@@ -238,8 +241,28 @@ function afterFrame(){
   let budget=waiting?workBudget(Math.max(interval,jobGap),ticking?0:used,Math.min(50,Math.max(14,jobGap/2)),jobsStarved):workBudget(interval,ticking?0:used,jobFrameDrew&&diagnostic.renderBudget==='full'?(hurry?6:4):9,jobsStarved);
   if(waiting)budget=Math.max(budget,9);
   else if(jobDebt>0){jobDebt-=Math.max(budget,2);budget=0;}
-  if(budget<=0){jobsStarved++;return;}
+  if(budget<=0){jobsStarved++;idleSlices();return;}
   jobsStarved=0;runJobs(budget,'cpu');
+  idleSlices();
+}
+// The time between the callbacks that this thread would otherwise spend idle. Where the frames are not this thread's to
+// pace (a weak GPU, or SwiftShader in perf-hold.mjs, busy building shader variants: callbacks then come a tenth of a
+// second apart while this thread works for a fraction of each; frames drawn every other callback) the work goes on in
+// slices of its own, each in a task of its own and ending a few ms before the next callback is due (by the pace the
+// callbacks have kept: paceGap), so the frames still come when they would have, up to 30 ms each. Only once a dive is
+// wanted (hurry: a pointer or a finger on the way in, the guided prelude): before that, slices like these, however short,
+// made the surface's frames late and its tasks long against how it was (frame gaps over 50 ms and long tasks measured
+// with tools/perf-hold.mjs), so the surface keeps what the frames leave (afterFrame). While a dive is held and the
+// visitor is waiting on the work, the slices go on whatever the pace, up to 30 ms each, and the frames fit between them.
+let callbackAt=0,slicePosted=false;
+const slicePort=new MessageChannel();
+slicePort.port1.onmessage=()=>{slicePosted=false;idleSlice();};
+function idleSlices(){if(!slicePosted&&!ticking&&hurry&&diagnostic.ready&&jobs.some(job=>!job.waiting&&!job.gpu)){slicePosted=true;slicePort.port2.postMessage(0);}}
+function idleSlice(){
+  if(!running||diagnostic.error)return;
+  const room=hurry>1?30:hurry?Math.min(30,callbackAt+paceGap-performance.now()-4):0;
+  if(room<2)return;
+  if(runJobs(room,'cpu'))idleSlices();
 }
 // When no frame is being drawn (a hidden tab, a paused scene at rest) the queue runs in tasks of its own.
 function pump(){
@@ -272,6 +295,13 @@ const programsLinked=materials=>new Promise(resolve=>{
 // What a first draw costs (buffers, textures and, most of all, the shader variant the graphics driver only builds
 // when a program is first used) was a stall of a second or more in the first frames of the descent; here it is paid
 // one program at a time while the visitor is still at the surface. A dive that goes under first drops what is left.
+// The graphics process builds that variant after the draw has been handed to it, and this thread would wait for it at
+// the next call that asks the graphics process anything (the next new program's first use): a tenth to a third of a
+// second each in SwiftShader. A fence goes in behind each new program's draw, and the next step waits until it has been
+// passed, without blocking: this thread goes on with frames and the build meanwhile. (Not as each part is built: a
+// program drawn right after its compile was handed over is linked on this thread, at its first use, a tenth of a second
+// or so each; by the end of the build the browser has linked them on its own.)
+const warmedGeometry=new WeakSet(),geometryBytes=geometry=>{let n=geometry?.index?.array.byteLength||0;for(const attribute of Object.values(geometry?.attributes||{}))n+=attribute.array?.byteLength||0;return n;};
 const warmQueue=[],warmed=new WeakSet(),warmCamera=new THREE.PerspectiveCamera(120,1,.5,4000);
 let warmTarget=null,warming=false,warmListed=false;
 warmCamera.position.set(0,170,-35);warmCamera.lookAt(0,-30,-35);warmCamera.layers.set(1);
@@ -280,17 +310,33 @@ function warmLater(...roots){
   for(const root of roots){const visit=node=>{if(node.isMesh||node.isPoints||node.isLine)warmQueue.push({node,root});for(const child of node.children)if(child.visible)visit(child);};if(root)visit(root);}
   warmSoon();
 }
+// Settles once the graphics process has passed the fence (polled: asking does not wait).
+const fencePassed=fence=>new Promise(resolve=>{const gl=renderer.getContext(),poll=()=>{if(!diagnostic.error&&gl.clientWaitSync(fence,0,0)===gl.TIMEOUT_EXPIRED){setTimeout(poll,8);return;}gl.deleteSync(fence);resolve();};poll();});
+// Settles once the graphics process has done everything asked of it so far. While nobody has asked for a dive, a step
+// that would wait for it (a program's first use waits for its link, an upload for what is queued ahead of it) waits for
+// this first, so it never holds up the frame it goes ahead of: the surface stays as smooth as it was before the world
+// was prepared this early. Once a dive is wanted (hurry) the steps go ahead at once.
+const caughtUp=()=>{const gl=renderer.getContext(),fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);if(!fence)return Promise.resolve();gl.flush();return fencePassed(fence);};
+const freshNext=()=>{const material=warmQueue[0]&&[warmQueue[0].node.material].flat()[0];return Boolean(material&&!warmed.has(material));};
 function warmSoon(){
   if(warming||!warmQueue.length)return;warming=true;
   later('first draws',function*(){
-    while(warmQueue.length){if(uniforms.uDive.value>0){warmQueue.length=0;break;}yield GPU;if(warmQueue.length&&uniforms.uDive.value===0)warmStep();}
+    while(warmQueue.length){if(uniforms.uDive.value>0){warmQueue.length=0;break;}if(!hurry&&freshNext())yield caughtUp();yield GPU;if(warmQueue.length&&uniforms.uDive.value===0&&warmStep()){const gl=renderer.getContext(),fence=gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE,0);gl.flush();if(fence)yield fencePassed(fence);}}
     warming=false;if(warmListed)startup.warmedAt??=Math.round(performance.now());
   }).catch(error=>{warming=false;console.warn('First draws stopped:',error);});
 }
 function warmStep(){
-  // Up to 32 draws whose programs have been used before, or exactly one that uses a new one.
-  const batch=[],hidden=[];
-  while(warmQueue.length&&batch.length<32){const item=warmQueue.shift(),material=[item.node.material].flat()[0];batch.push(item);if(material&&!warmed.has(material)){warmed.add(material);break;}}
+  // Up to 96 draws whose programs have been used before, or exactly one that uses a new one. True when there was one.
+  const batch=[],hidden=[];let fresh=false;
+  // A draw also uploads its geometry the first time: while nobody has asked for a dive a step takes about a megabyte of
+  // that at most (the copy waits for room in the graphics process's transfer buffer, and the reef alone is twelve).
+  let bytes=0;const room=hurry?Infinity:1e6;
+  while(warmQueue.length&&batch.length<96){
+    const item=warmQueue[0],geometry=item.geometry||item.node.geometry,size=warmedGeometry.has(geometry)?0:geometryBytes(geometry);
+    if(batch.length&&bytes+size>room)break;
+    warmQueue.shift();bytes+=size;warmedGeometry.add(geometry);
+    const material=[item.node.material].flat()[0];batch.push(item);if(material&&!warmed.has(material)){warmed.add(material);fresh=true;break;}
+  }
   for(const item of batch){
     for(let node=item.root;node&&node!==scene;node=node.parent)if(!node.visible){node.visible=true;hidden.push(node);}
     if(item.geometry){item.usual=item.node.geometry;item.node.geometry=item.geometry;}
@@ -301,6 +347,7 @@ function warmStep(){
   const target=renderer.getRenderTarget();renderer.setRenderTarget(warmTarget);renderer.render(scene,warmCamera);renderer.setRenderTarget(target);
   for(const item of batch){item.node.layers.disable(1);if(item.geometry)item.node.geometry=item.usual;}
   for(const node of hidden)node.visible=false;
+  return fresh;
 }
 // Anti-aliasing. Multisampling is close to free on a discrete GPU and on a phone's tile renderer, and a fifth of the
 // frame on a laptop's integrated one (3 to 5 ms of 17 under water at 1280x800). There the scene is drawn once per pixel
@@ -340,11 +387,11 @@ async function showWhenReady(nodes){
   for(const node of nodes)node.userData.waiting=false;
   if(uniforms.uDive.value===0)warmLater(...nodes);wake();
 }
-async function prepare(root){
+async function prepare(root,urgent=false){
   const textures=new Set();
   root.traverse(node=>{for(const material of [node.material].flat())if(material)for(const key of ['map','emissiveMap','alphaMap'])if(material[key]?.image)textures.add(material[key]);});
-  try{await later('model shaders',()=>compileSteps(root));}catch{}
-  for(const texture of textures)try{await later('texture upload',()=>{renderer.initTexture(texture);},{gpu:true});}catch{}
+  try{await later('model shaders',()=>compileSteps(root),{urgent});}catch{}
+  for(const texture of textures)try{await later('texture upload',function*(){if(!hurry)yield caughtUp();renderer.initTexture(texture);},{gpu:true,urgent});}catch{}
   if(uniforms.uDive.value===0)warmLater(root);
   prepared.add(root);wake();
 }
@@ -358,15 +405,17 @@ function preloadModels(){
   const button=$('#dive');
   const start=()=>{if(!diagnostic.ready)return;modelsWanted=true;startUnderwater();beginModels();wake();};
   button.addEventListener('pointerenter',start,{once:true});button.addEventListener('focus',start,{once:true});
-  diagnostic.prewarm='scheduled';
-  setTimeout(()=>{diagnostic.prewarm='loading';startup.prewarmAt=Math.round(performance.now());start();},450);
+  diagnostic.prewarm='loading';startup.prewarmAt=Math.round(performance.now());start();
 }
 
 let diveAskedNow=null;const diveAsked=new Promise(resolve=>{diveAskedNow=resolve;});
 // Downloads ahead of the work that needs them. The landmark files go first, as soon as the build starts: the dive waits
-// on them. The creature set's follow once those are in (they share the connection), as soon as the build starts in
-// standard detail, which loads the set right after the landmarks anyway, and in economy once a dive is asked for
-// (Dive in, Show me around): the guided dive shows those animals, and it should not reach one still in transit.
+// on them. The creature set's follow once those are in (they share the connection), as soon as the build starts: in
+// standard detail, which loads the set right after the landmarks anyway, and in economy too, where only its files come
+// then (3.2 MB) and its parsing and uploads wait for a dive to be asked for (Dive in, Show me around): the guided dive
+// shows those animals, it should not reach one still in transit, and a first dive that waited for their download as
+// well spent its descent on them. Not on a connection that says it is 2G (economy), and nothing with Save-Data on.
+const slowConnection=()=>/(^|-)2g$/.test(navigator.connection?.effectiveType||'');
 let filesFetched=null,enrichmentFetched=false;
 const prefetchFiles=()=>filesFetched??=import('./model-scene.js').then(({prefetchLandmarks})=>prefetchLandmarks(quality==='economy')).catch(()=>{});
 function prefetchEnrichment(){
@@ -378,15 +427,21 @@ diveAsked.then(prefetchEnrichment);
 // settled (loaded or failed; either way nothing more is coming). oceanControls.world.whenEnriched, oceanDiagnostics.enriched.
 let enrichedDone=null;const enriched=new Promise(resolve=>{enrichedDone=()=>{diagnostic.enriched=true;startup.enrichedAt??=Math.round(performance.now());resolve();};});
 function beginModels(){
-  // The models stand on the reef: asked for sooner, they start the moment it is built.
-  if(!built){modelsWanted=true;return;}
+  // The models stand on the reef: asked for sooner, they start the moment it exists, part way through the build (see
+  // buildUnderwater), and are grounded and prepared while the rest of it is built. What they add to the collision world
+  // waits for the end of the build (deferred below), so the parts built after the reef find that world exactly as they
+  // did when the landmarks came after them, and the props laid out around them wait for the set pieces.
+  if(!reef){modelsWanted=true;return;}
   if(modelsLoading||modelScene)return;modelsLoading=true;
+  const deferred=[],collisions=reef.userData.collisions&&{addBox:(...box)=>{if(built)reef.userData.collisions.addBox(...box);else deferred.push(box);}};
   // Three pipelines parse, bake and compile for a few seconds; the frame-rate windows wait for all of them (see frame()).
   const busy=promise=>{modelsBusy++;return promise.finally(()=>{modelsBusy--;scaler.state.settling=1;});};
   const landmarksLoad=busy(import('./model-scene.js').then(({createModelScene})=>{
-    if(!reef)return;modelScene=createModelScene({reef,terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy',onStatus:value=>{if(value.status==='loading')diagnostic.modelLoading=true;diagnostic.modelsLoaded=value.loaded??diagnostic.modelsLoaded??0;diagnostic.modelsFailed=value.failed??diagnostic.modelsFailed??0;if(value.status==='fallback'&&value.message&&!exploration.state.transition)status.textContent='Some optional ocean models could not load.';}});
+    if(!reef)return;modelScene=createModelScene({reef,terrainHeightAt:reef.userData.terrainHeightAt,collisions,economy:quality==='economy',onStatus:value=>{if(value.status==='loading')diagnostic.modelLoading=true;diagnostic.modelsLoaded=value.loaded??diagnostic.modelsLoaded??0;diagnostic.modelsFailed=value.failed??diagnostic.modelsFailed??0;if(value.status==='fallback'&&value.message&&!exploration.state.transition)status.textContent='Some optional ocean models could not load.';}});
     scene.add(modelScene.root);interactionTargets=modelScene.landmarks||[];
-    return modelScene.load().then(async result=>{stylizeImported(modelScene.root,{glow:'near'});if(setPieces)await later('landmark props',()=>{const props=setPieces.place(modelScene.landmarks)||[];stylizeTree(setPieces.root);diagnostic.setPieces=setPieces.counts;for(const mesh of props){mesh.userData.waiting=true;mesh.visible=false;}showWhenReady(props);},{cost:20});modelScene.update(0,elapsed,playerPosition,night);diagnostic.modelLoading=false;diagnostic.modelsLoaded=result.loaded;diagnostic.modelsFailed=result.failed;for(const item of reefLabels){const placed=modelScene.landmarks.find(p=>p.id===item.landmark.id);if(placed){item.anchor.fromArray(placed.position).add(new THREE.Vector3(0,1.2,0));const marker=document.querySelector(`[data-landmark="${placed.id}"]`);if(marker){marker.style.left=`${(placed.position[0]+62)/124*100}%`;marker.style.top=`${(placed.position[2]+105)/140*100}%`;}item.label.querySelector("span").textContent=`Seafloor landmark · ${Math.round(toDisplayDepth(-placed.position[1]))} m`;}}diagnostic.reefFishCount=result.reefFishCount;diagnostic.reefFishGroups=result.reefFishGroups;return prepare(modelScene.root).then(()=>{diagnostic.landmarksReady=true;startup.landmarksReadyAt=Math.round(performance.now());experienceMetrics.mark('landmarksReady');});});
+    return modelScene.load().then(async result=>{stylizeImported(modelScene.root,{glow:'near'});const ready=prepare(modelScene.root,true);
+      await worldBuilt;for(const box of deferred)reef.userData.collisions.addBox(...box);deferred.length=0;
+      if(setPieces)await later('landmark props',()=>{const props=setPieces.place(modelScene.landmarks)||[];stylizeTree(setPieces.root);diagnostic.setPieces=setPieces.counts;for(const mesh of props){mesh.userData.waiting=true;mesh.visible=false;}showWhenReady(props);},{cost:20});modelScene.update(0,elapsed,playerPosition,night);diagnostic.modelLoading=false;diagnostic.modelsLoaded=result.loaded;diagnostic.modelsFailed=result.failed;for(const item of reefLabels){const placed=modelScene.landmarks.find(p=>p.id===item.landmark.id);if(placed){item.anchor.fromArray(placed.position).add(new THREE.Vector3(0,1.2,0));const marker=document.querySelector(`[data-landmark="${placed.id}"]`);if(marker){marker.style.left=`${(placed.position[0]+62)/124*100}%`;marker.style.top=`${(placed.position[2]+105)/140*100}%`;}item.label.querySelector("span").textContent=`Seafloor landmark · ${Math.round(toDisplayDepth(-placed.position[1]))} m`;}}diagnostic.reefFishCount=result.reefFishCount;diagnostic.reefFishGroups=result.reefFishGroups;return ready.then(()=>{diagnostic.landmarksReady=true;startup.landmarksReadyAt=Math.round(performance.now());experienceMetrics.mark('landmarksReady');});});
   }).catch(error=>{console.warn('Optional landmark models could not load:',error);diagnostic.modelLoading=false;}).finally(()=>{modelsLoading=false;diagnostic.landmarksSettled=true;wake();}));
   // Keep the first dive's essential destinations ahead of optional model parsing and texture uploads.
   // Existing generated schools/coral are already part of the reef; optional packs enrich them afterward.
@@ -395,7 +450,7 @@ function beginModels(){
   // In economy detail (phones, small machines) they also wait for a dive to be asked for: a visit that only reads the
   // portfolio at the surface is spared their 9 MB and the seconds of parsing and baking, and a dive gets them a few
   // seconds into its descent, as the enrichment they are (nothing waits on them).
-  landmarksLoad.then(()=>{if(quality!=='economy'||diveTarget===1||viewerOrbit)return;diagnostic.optionalModels='waiting-for-dive';return diveAsked;}).then(()=>nextTask()).then(()=>{
+  landmarksLoad.then(()=>worldBuilt).then(()=>{if(quality!=='economy'||diveTarget===1||viewerOrbit)return;diagnostic.optionalModels='waiting-for-dive';return diveAsked;}).then(()=>nextTask()).then(()=>{
     if(diagnostic.error||optionalModelsStarted)return;optionalModelsStarted=true;
     diagnostic.optionalModels='loading';startup.optionalModelsAt=Math.round(performance.now());
   // The creature set (user-creatures.js): residents on the reef, schools by the coral, and big animals that come and go.
@@ -587,7 +642,7 @@ function* buildUnderwater(linking){
   buildStage='spares';yield* compileSteps(scene,linking);
   buildStage='reef';yield;
   reef=yield* reefSteps({economy});reef.visible=false;scene.add(reef);
-  exploration.setCollisions(reef.userData.collisions);
+  exploration.setCollisions(reef.userData.collisions);if(modelsWanted)beginModels();
   diagnostic.collisionPieces=reef.userData.collisions?.count??0;diagnostic.habitats=reef.userData.habitatCounts;
   yield;stylizeTree(reef,{glow:'near'});yield* compileSteps(reef,linking);
   buildStage='chart';yield* chartSteps();
@@ -629,16 +684,18 @@ function* buildUnderwater(linking){
   yield* compileSteps(shafts,linking);yield* compileSteps(air,linking);yield* compileSteps(dust,linking);
   // Meshes built with unshared vertices are shared now, a few thousand vertices a step (see assets.js), before anything of theirs is uploaded.
   buildStage='sharing';yield* shareSteps();
-  built=true;diagnostic.underwater='built';
+  built=true;diagnostic.underwater='built';builtDone();
 }
-let worldLinking=null,worldReadyDone=null;
+let worldLinking=null,worldReadyDone=null,builtDone=null;
+const worldBuilt=new Promise(resolve=>{builtDone=resolve;});
 const worldReady=new Promise(resolve=>{worldReadyDone=resolve;});
 // Queues the build, then waits for the browser to link its shaders: from then a dive goes under without compiling anything.
 function startUnderwater(){
   if(buildSteps)return;
   worldLinking=new Set();buildSteps=buildUnderwater(worldLinking);diagnostic.underwater='building';
-  // The landmarks are placed on the finished reef (beginModels), but their files can be on their way meanwhile.
-  prefetchFiles();if(quality!=='economy')prefetchEnrichment();
+  // The landmarks are placed once the reef exists (beginModels), but their files can be on their way and parsed meanwhile.
+  // (Not with Save-Data on: the files then come with the dive, see preloadModels.)
+  if(!navigator.connection?.saveData){prefetchFiles();if(quality!=='economy'||!slowConnection())prefetchEnrichment();}
   const tally=ms=>{startup.under[buildStage]=+((startup.under[buildStage]||0)+ms).toFixed(1);};
   const queued=later(buildName,()=>buildSteps,{tally});
   queued.then(()=>{startup.builtAt=Math.round(performance.now());if(modelsWanted)beginModels();return programsLinked(worldLinking);})
@@ -769,8 +826,9 @@ function updateWorld(dt,clockDt=dt){
   dive=THREE.MathUtils.lerp(dive,diveTarget,1-Math.exp(-dt*settings.diveResponse));if(Math.abs(dive-diveTarget)<.002)dive=diveTarget;
   // A dive asked for before the world under the water is ready waits in the first tenth of the transition, the camera
   // still above the surface, while the rest is built with most of every frame's time (see afterFrame); the status line
-  // says so if that takes more than a moment. The first draws get up to two and a half seconds of it as well.
-  if(diveTarget===1&&(!underReady||!diagnostic.landmarksSettled||warmQueue.length&&diveHeldFor>0&&diveHeldFor<2.5)){if(!diveHeldFor)startup.heldFrom=Math.round(performance.now());if(!buildSteps)startUnderwater();modelsWanted=true;if(built)beginModels();dive=Math.min(dive,DIVE_HOLD);diveHeldFor+=Math.max(dt,1e-4);hurry=2;if(diveHeldFor>.7&&(!underReady||!diagnostic.landmarksSettled)&&!holdNoted){holdNoted=true;status.textContent=HOLD_NOTE;}}
+  // says so if that takes more than a moment. The first draws get up to two and a half seconds of it as well (of the
+  // page's clock as well as the scene's: on a slow device frames come so far apart that the scene's ran at half speed).
+  if(diveTarget===1&&(!underReady||!diagnostic.landmarksSettled||warmQueue.length&&diveHeldFor>0&&diveHeldFor<2.5&&performance.now()-startup.heldFrom<2500)){if(!diveHeldFor)startup.heldFrom=Math.round(performance.now());if(!buildSteps)startUnderwater();modelsWanted=true;if(built)beginModels();dive=Math.min(dive,DIVE_HOLD);diveHeldFor+=Math.max(dt,1e-4);hurry=2;if(diveHeldFor>.7&&(!underReady||!diagnostic.landmarksSettled)&&!holdNoted){holdNoted=true;status.textContent=HOLD_NOTE;}}
   else if(diveHeldFor){diveHeldFor=0;hurry=1;startup.heldMs=Math.round(performance.now())-startup.heldFrom;if(holdNoted){holdNoted=false;if(status.textContent===HOLD_NOTE)status.textContent='';}if(reducedMotion&&diveTarget===1)dive=diveTarget;}
   let easedDive=THREE.MathUtils.smoothstep(dive,0,1);let underwater=THREE.MathUtils.smoothstep(easedDive,.13,.27);
   uniforms.uTime.value=elapsed;uniforms.uNight.value=night;uniforms.uDive.value=underwater;
@@ -1043,6 +1101,7 @@ function renderBudget(){
 }
 function frame(now){
   if(!focused||!renderer){running=false;return;}
+  callbacks++;callbackAt=performance.now();
   const raw=lastFrame?Math.min((now-lastFrame)/1000,1):1/60;lastFrame=now;
   // The refresh rate is read from the callback gaps and a frame is drawn every stride-th callback (see frame-pacing.js).
   // A new reading of the rate (the first one, or the window moved to another display) starts the frame-rate windows afresh.
@@ -1052,10 +1111,17 @@ function frame(now){
   stride=drawStride(displayHz,full?(quality==='economy'?30:60):budget==='held'?(quality==='economy'?15:30):BUDGET_FPS[budget]);diagnostic.displayHz=Math.round(displayHz);
   const draw=++sinceDraw>=stride||full&&(paused||diagnostic.transition);
   // One step of graphics work goes ahead of the frame (see later()): the graphics process has had a whole interval to
-  // finish the last frame, so a call that has to wait for it waits least here. A step that made this callback late rests a few frames.
-  // While a dive is held, the callbacks that draw nothing take one as well: the first draws and uploads are what it waits on.
-  if(gpuRan){gpuRan=false;gpuRest=raw*1000>1500/displayHz?4:1;}
-  if((draw||budget==='held')&&jobs.length&&diagnostic.ready){if(gpuRest>0&&!hurry)gpuRest--;else gpuRan=runJobs(0,'gpu')>0;}
+  // finish the last frame, so a call that has to wait for it waits least here. Callbacks that draw nothing take one as
+  // well (a held dive, economy's every other callback): the first draws and uploads are what a dive waits on.
+  // A step stalled the frame when the gap after it is well over the usual one: half as long again as the display's
+  // interval, or as the gaps this device keeps between callbacks anyway (paceGap; on a slow phone that is often two or
+  // three intervals, and every step read as a stall, so the queue rested four frames after each and took three steps a
+  // second). After a stall one frame is drawn clean before the next step; after a step that cost nothing visible the
+  // next goes ahead of the next callback.
+  if(gpuRan){gpuRan=false;gpuRest=raw*1000>Math.max(1500/displayHz,paceGap*1.5)?1:0;}
+  else if(raw<.25)paceGap+=(raw*1000-paceGap)*.1;
+  // Steps that cost next to nothing (draws of programs already built, small uploads) follow one another for up to 3 ms.
+  if(jobs.length&&diagnostic.ready){if(gpuRest>0&&!hurry){if(draw||budget==='held')gpuRest--;}else{const begun=performance.now();while(runJobs(0,'gpu')>0){gpuRan=true;if(performance.now()-begun>3||!jobs.length)break;}}}
   // The world moves once per drawn frame, by the time that has passed since the last one. (It used to move on every
   // callback at full pace, drawn or not: with a stride of 2, an economy 30 fps or a fast display, that doubled the
   // simulation per frame seen, on machines whose main thread is already the limit.)
@@ -1090,6 +1156,9 @@ paintTheme(selectedNight);updateMotionUI();
 // under the water is built behind that frame (see buildUnderwater); the dive button works from the start (see updateWorld).
 async function boot(){
   mark('setup');
+  // The landmark and prepared coral files, which a first dive waits for, start downloading now (not parsed until the
+  // surface is up, see startUnderwater): on a slow connection they are the longest wait. Not with Save-Data on.
+  if(!navigator.connection?.saveData)import('./model-scene.js').then(({fetchLandmarkFiles})=>fetchLandmarkFiles(quality==='economy')).catch(()=>{});
   // The scene is GPU-bound; on a laptop with two GPUs the default hint picks the weak one. It changes nothing on a single integrated GPU.
   // The GPU is named before the canvas gets its context, since multisampling is fixed at that moment: a throwaway context asks, and is given back at once.
   // The page's first WebGL context costs a fifth of a second wherever it is made, so index.html asks from a worker while the
@@ -1148,8 +1217,9 @@ async function boot(){
   markAt=performance.now();drawFrame();mark('firstDraw');
   if(diagnostic.error)return;
   experienceMetrics.mark('surfaceReady');started=true;diagnostic.ready=true;diagnostic.readyAt=Math.round(performance.now());document.body.dataset.ready='true';$('#dive').disabled=false;$('#dive-label').textContent='Dive in';status.textContent='';preloadModels();
-  // The interface is arriving in these first moments: the build starts just behind it (and at once if a dive is asked for).
-  if(!built)setTimeout(startUnderwater,350);
+  // The build starts with the first frame: its steps are paced around the frames (see afterFrame), and a visitor who
+  // dives within the first seconds should find as much of it done as possible.
+  if(!built)startUnderwater();
   wake();
 }
 // In a task of its own: the scripts this one imports have only just been evaluated in this one.
