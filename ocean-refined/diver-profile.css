@@ -39,7 +39,17 @@
    so it fits under the top bar. */
 @media(pointer:coarse){.diver-profile-close{width:44px;height:44px;top:4px;right:4px}.diver-profile-links a{min-height:44px;min-width:44px;justify-content:center}.diver-profile-links{margin-top:-4px}}
 @media(max-height:499px){.diver-profile{padding:14px 16px 10px}.diver-profile-head img{width:56px;height:56px}.diver-profile-body{margin-top:10px;font-size:13.5px}.diver-profile-note{display:none}.diver-profile-actions{margin-top:10px}.diver-profile-links{display:none}}
+.diver-profile-ping{position:fixed;left:0;top:0;z-index:18;width:var(--size,64px);height:var(--size,64px);margin:calc(var(--size,64px) / -2) 0 0 calc(var(--size,64px) / -2);border-radius:50%;pointer-events:none}
+.diver-profile-ping[hidden]{display:none}
+.diver-profile-ping::before,.diver-profile-ping::after{content:"";position:absolute;inset:0;border:2px solid color-mix(in srgb,var(--o-surface-0) 85%,transparent);border-radius:50%;box-shadow:0 0 12px color-mix(in srgb,var(--o-sunlit) 45%,transparent);opacity:0;animation:profile-ping var(--pulse,2.2s) cubic-bezier(.2,.6,.3,1) infinite}
+.diver-profile-ping::after{animation-delay:calc(var(--pulse,2.2s) / 2)}
+@keyframes profile-ping{0%{scale:.55;opacity:0}15%{opacity:.9}100%{scale:1.35;opacity:0}}
+.diver-profile-ping[data-still="true"]::before{animation:none;opacity:.8;scale:1}.diver-profile-ping[data-still="true"]::after{display:none}
+/* The tap invitation is part of the surface: gone with the hero's other overlays. */
+body:is([data-menu="open"],[data-profile="open"],[data-summary="true"],[data-exploring="true"]) .diver-profile-ping{display:none}
+/* The sky's and the reef's floating labels step aside while the card is up, so none sits behind or over it. */
+body[data-profile="open"] :is(#sky-labels,#reef-labels){visibility:hidden}
 /* On a narrow screen the card and the hero would share the frame: the hero steps aside while the card is up. */
 @media(max-width:900px){body[data-profile="open"] .hero{opacity:0;visibility:hidden;pointer-events:none}}
-body:is([data-submerged="true"],[data-clear-ui="true"]) :is(.diver-profile,.diver-profile-hint){display:none}
-@media(prefers-reduced-motion:reduce){.diver-profile,.diver-profile-hint{animation:none}.diver-profile-actions button:hover{translate:none}}
+body:is([data-submerged="true"],[data-clear-ui="true"]) :is(.diver-profile,.diver-profile-hint,.diver-profile-ping){display:none}
+@media(prefers-reduced-motion:reduce){.diver-profile,.diver-profile-hint,.diver-profile-ping::before,.diver-profile-ping::after{animation:none}.diver-profile-ping::before{opacity:.8;scale:1}.diver-profile-ping::after{display:none}.diver-profile-actions button:hover{translate:none}}
