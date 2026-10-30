@@ -188,7 +188,11 @@ async function run(profileName) {
     await page.waitForTimeout(2500); await state('guided-travel', true);
     await page.waitForFunction(() => oceanTour.status === 'dwell', null, {timeout: 120000});
     await state('guided-stop', true);
-    // On to the overview, the tour's last sheet (keep exploring or surface): each Continue skips a swim or a beat.
+    // A fly-by on the way to the wreck: its caption over the water, clear of the instruments, the sheet and the deck.
+    await page.evaluate(() => oceanTour.next());
+    await page.waitForFunction(() => oceanDiagnostics.tour?.sight && document.querySelector('.tour-caption')?.dataset.show === 'true', null, {timeout: 120000});
+    await page.waitForTimeout(800); await state('guided-flyby', true);
+    // On to the ending, the tour's last sheet (keep exploring or surface): each Continue skips a swim.
     await page.evaluate(async () => { for (let i = 0; i < 60 && oceanTour.status !== 'done'; i++) { if (oceanTour.status !== 'free') oceanTour.next(); await new Promise(resolve => setTimeout(resolve, 500)); } });
     await page.waitForFunction(() => oceanTour.status === 'done', null, {timeout: 60000});
     await page.waitForTimeout(800); await state('guided-end', true);
