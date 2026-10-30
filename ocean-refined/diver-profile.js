@@ -82,8 +82,9 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
   let ceiling = EDGE, pointer = null, hovered = false, shown = false, amount = 0, lifted = false, time = 0, returnFocus = null;
   const locked = () => document.pointerLockElement === canvas;
   const centre = () => { const rect = canvas.getBoundingClientRect(); return [rect.left + rect.width / 2, rect.top + rect.height / 2]; };
-  canvas.addEventListener('pointermove', event => { pointer = event.pointerType === 'mouse' && !locked() ? [event.clientX, event.clientY] : null; }, { passive: true });
-  canvas.addEventListener('pointerleave', () => { pointer = null; }, { passive: true });
+  // The hit test runs in update(): with the ocean paused the frames stop, so a move or a leave asks for one.
+  canvas.addEventListener('pointermove', event => { pointer = event.pointerType === 'mouse' && !locked() ? [event.clientX, event.clientY] : null; wake(); }, { passive: true });
+  canvas.addEventListener('pointerleave', () => { pointer = null; wake(); }, { passive: true });
   // Ahead of exploration.js's own pointerdown on the canvas (which takes the mouse to look around, or starts a look drag
   // on touch): a press on the diver is kept from it, and the click that ends the press opens the card. Opening on the
   // press itself put the card under a finger whose click was still to come, and that click landed on the card.
@@ -170,7 +171,8 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
       if (diagnostics) diagnostics.hovered = hovered;
     }
     const goal = hovered || shown ? 1 : 0;
-    if (amount !== goal) { amount += (goal - amount) * (1 - Math.exp(-dt * EASE)); if (Math.abs(goal - amount) < .005) amount = goal; }
+    // Eased in a moving scene; at once in a paused one, whose frames stop before an ease could finish.
+    if (amount !== goal) { amount = reducedMotion() ? goal : amount + (goal - amount) * (1 - Math.exp(-dt * EASE)); if (Math.abs(goal - amount) < .005) amount = goal; }
     // The glow is worked out afresh every frame (world.js: lookGlowAt), so the lift is added on top each time.
     if (amount > 0 || lifted) {
       const breathe = reducedMotion() ? 1 : .85 + .15 * Math.sin(time * 3.2);
