@@ -35,35 +35,39 @@ html body:not([data-submerged="true"]) .hero .surface-copy .eyebrow{justify-cont
 .hero .surface-copy h1 em{display:block;padding-bottom:.1em;background:linear-gradient(180deg,var(--o-ink) 12%,var(--o-sunlit) 60%,var(--o-sunlit-2) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
 html body:not([data-submerged="true"]) .hero .surface-copy .lede{max-width:520px;margin:22px 0 0;font:400 clamp(17px,1.55vw,22px)/1.45 var(--o-display);color:var(--o-ink-2)}
 
-/* Two actions, in their original look: the solid dive button and the pale work link */
+/* The hero's ways in, in two tiers. First the two ways into the water, side by side: the solid dive button and the
+   pale guided dive. Then one quiet row of text links to the work: the portfolio over the ocean, the site map, and the
+   page without 3D. Nothing is folded away, so nothing unfolds off screen. */
 html body:not([data-submerged="true"]) .portfolio-actions{justify-content:flex-start;gap:12px;margin-top:36px}
-html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.logbook-link){min-height:56px;padding:0 26px;gap:12px;font:500 16px/1 var(--o-display);letter-spacing:0;transition:translate 180ms var(--ease),background-color 160ms var(--ease),box-shadow 200ms var(--ease)}
-
+html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.guided-button){min-height:56px;padding:0 26px;gap:12px;font:500 16px/1 var(--o-display);letter-spacing:0;transition:translate 180ms var(--ease),background-color 160ms var(--ease),box-shadow 200ms var(--ease),opacity 200ms var(--ease)}
 html body:not([data-submerged="true"]) .portfolio-actions .dive-button svg{width:18px;height:18px}
 html body:not([data-submerged="true"]) .portfolio-actions .dive-button .dive-flag{margin-right:2px}
-html body:not([data-submerged="true"]) .portfolio-actions .dive-button:disabled{opacity:.78}
-html body:not([data-submerged="true"]) .portfolio-actions .logbook-link{align-items:center}
-html body:not([data-submerged="true"]) .portfolio-actions .logbook-link svg{width:18px;height:18px}
-html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.logbook-link):hover{translate:0 -2px}
+html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.guided-button):disabled{opacity:.78;cursor:default}
+.guided-button{pointer-events:auto;display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:100px;background:var(--glass);color:var(--ink);cursor:pointer;white-space:nowrap}
+.guided-button svg{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.guided-button small{margin-left:2px;padding:4px 8px;border-radius:100px;background:color-mix(in srgb,currentColor 9%,transparent);font:500 11.5px/1 var(--o-display);letter-spacing:.02em;color:var(--o-ink-2)}
+html body:not([data-submerged="true"]) .portfolio-actions .guided-button:not(:disabled):hover{background:var(--active)}
+html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.guided-button):not(:disabled):hover{translate:0 -2px}
+html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.guided-button):not(:disabled):active{translate:0 1px}
+html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.guided-button):focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+body:is([data-submerged="true"],[data-exploring="true"]) :is(.guided-button,.portfolio-links){display:none}
+/* Back to the full hero after looking around at the surface (a touch drag on the water leaves no Escape to press). */
+.explore-back{display:none;pointer-events:auto;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid var(--line);border-radius:100px;background:var(--glass);color:var(--ink);font:500 14px/1 var(--o-display);cursor:pointer}
+.explore-back svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+body[data-exploring="true"]:not([data-submerged="true"]) .explore-back{display:inline-flex}
 
-html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.logbook-link):active{translate:0 1px}
-html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.logbook-link):focus-visible{outline:2px solid var(--ink);outline-offset:3px}
-
-/* One quiet row: the guided route and the reading view */
-html body:not([data-submerged="true"]):not([data-exploring="true"]) :is(.portfolio-options,.portfolio-links){margin:24px 0 0;max-width:none}
-html body:not([data-submerged="true"]) .portfolio-options summary{justify-content:flex-start;min-height:40px;padding:8px 0;font:400 15px/1.3 var(--o-display);letter-spacing:0;color:var(--o-ink-2)}
-html body:not([data-submerged="true"]) .portfolio-options[open]{flex-basis:100%;order:5}
-html body:not([data-submerged="true"]) #dive-options{align-items:flex-start}
-html body:not([data-submerged="true"]) #dive-options .dive-entry{justify-content:flex-start}
-
-html body:not([data-submerged="true"]) .route-note{margin-left:0;text-align:left;color:var(--o-ink-2)}
-html body:not([data-submerged="true"]) .portfolio-links{justify-content:flex-start;align-items:center;gap:10px;font:400 15px/1.3 var(--o-display);color:var(--o-ink-2)}
-html body:not([data-submerged="true"]) .portfolio-links a{min-height:40px;font-size:15px;color:var(--o-ink);text-decoration:underline;text-decoration-color:currentColor;text-decoration-thickness:1px;text-underline-offset:5px}
+html body:not([data-submerged="true"]):not([data-exploring="true"]) .portfolio-links{display:flex;flex-wrap:wrap;align-items:center;gap:0;margin:22px 0 0;max-width:none;pointer-events:auto}
+.portfolio-links .hero-link{display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border:0;background:none;color:var(--o-ink);font:400 15px/1.3 var(--o-display);letter-spacing:0;cursor:pointer;text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);text-decoration-thickness:1px;text-underline-offset:5px;transition:text-decoration-color 160ms var(--ease)}
+.portfolio-links .hero-link:first-child{padding-left:0}
+.portfolio-links .hero-link{position:relative}
+.portfolio-links .hero-link+.hero-link::before{content:"";position:absolute;left:0;top:50%;height:18px;margin-top:-9px;border-left:1px solid color-mix(in srgb,var(--o-ink) 22%,transparent)}
+.portfolio-links .hero-link:hover{text-decoration-color:currentColor}
+.portfolio-links .hero-link:focus-visible{outline:2px solid currentColor;outline-offset:4px;border-radius:3px}
 
 /* Availability never waits for motion: the actions and navigation lift into place
    without starting transparent, including the replay when the world becomes ready. */
 @keyframes surface-lift{from{translate:0 10px}}
-html body :is(.portfolio-actions .dive-button,.portfolio-actions .logbook-link,.surface-nav,.settings-toggle,.portfolio-options,.portfolio-links){animation:surface-lift var(--journey-standard,.6s) var(--journey-in,cubic-bezier(.2,.7,.2,1)) var(--arrive,0ms) backwards}
+html body :is(.portfolio-actions .dive-button,.portfolio-actions .guided-button,.surface-nav,.settings-toggle,.portfolio-links){animation:surface-lift var(--journey-standard,.6s) var(--journey-in,cubic-bezier(.2,.7,.2,1)) var(--arrive,0ms) backwards}
 
 /* The look pad sits bottom right and stays quiet until wanted */
 
@@ -79,8 +83,7 @@ html body:not([data-submerged="true"]) .view-controls:is(:hover,:focus-within){o
   html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{width:calc(100vw - 2*clamp(24px,6.7vw,96px))}
 }
 /* Phones. The surface diver floats in the lower right of the frame (world.js), so everything here stays in one
-   left-aligned column above and beside it: the two buttons, then the no-3D reading link straight under "See the
-   work" (the other way to read), then the guided-route disclosure, whose choices stack in a narrow column. */
+   left-aligned column above it: the two ways into the water at full width, then the links, wrapping if they must. */
 @media(max-width:600px){
   html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{left:calc(var(--o-safe-l) + var(--o-pad) + 10px);right:calc(var(--o-safe-r) + var(--o-pad) + 10px);top:calc(var(--o-under-bar) + 36px);width:auto}
   html body:not([data-submerged="true"]) .hero .surface-copy .eyebrow{font-size:10.5px;letter-spacing:.16em;margin-bottom:12px}
@@ -88,51 +91,35 @@ html body:not([data-submerged="true"]) .view-controls:is(:hover,:focus-within){o
   .hero .surface-copy h1{font-size:clamp(32px,8vw,48px)}
   html body:not([data-submerged="true"]) .hero .surface-copy .lede{font-size:16.5px;margin-top:12px}
   html body:not([data-submerged="true"]) .portfolio-actions{flex-direction:column;align-items:stretch;gap:10px;margin-top:20px}
-  html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.logbook-link){justify-content:flex-start;min-height:54px;font-size:17px;padding:0 22px}
+  html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.guided-button){justify-content:flex-start;min-height:54px;font-size:17px;padding:0 22px}
   html body:not([data-submerged="true"]) .portfolio-actions .dive-button>svg{margin-left:auto}
-  html body:not([data-submerged="true"]) .portfolio-actions .logbook-link::after{content:"→";margin-left:auto}
-  html body:not([data-submerged="true"]):not([data-exploring="true"]) :is(.portfolio-options,.portfolio-links){flex-basis:100%;margin-top:4px}
-  html body:not([data-submerged="true"]):not([data-exploring="true"]) .portfolio-links{order:3;margin-top:8px}
-  html body:not([data-submerged="true"]):not([data-exploring="true"]) .portfolio-options,html body:not([data-submerged="true"]) .portfolio-options[open]{order:4}
-  html body:not([data-submerged="true"]) :is(.portfolio-options summary,.portfolio-links,.portfolio-links a){font-size:14px}
-  html body:not([data-submerged="true"]) :is(.portfolio-options summary,.portfolio-links a){min-height:44px}
-  html body:not([data-submerged="true"]) .portfolio-options summary{width:fit-content}
-  html body:not([data-submerged="true"]) #dive-options{max-width:min(100%,250px)}
-  html body:not([data-submerged="true"]) #dive-options .dive-entry{flex-direction:column;align-items:stretch;gap:8px}
-  html body:not([data-submerged="true"]) #dive-options .dive-entry .holo-chip{justify-content:flex-start}
-  html body:not([data-submerged="true"]) #dive-options .dive-entry .holo-chip>span{margin-left:auto}
-  html body:not([data-submerged="true"]) #dive-options .route-note{max-width:none;margin-top:2px}
-  html body:not([data-submerged="true"]) #dive-options .explore-button{min-height:44px;margin:4px 0 0;padding:0 2px;font-size:12px}
+  html body:not([data-submerged="true"]) .portfolio-actions .guided-button small{margin-left:auto}
+  html body:not([data-submerged="true"]):not([data-exploring="true"]) .portfolio-links{margin-top:10px;column-gap:18px}
+  .portfolio-links .hero-link{min-height:44px;padding:0;font-size:14px}
+  .portfolio-links .hero-link+.hero-link::before{display:none}
 }
-/* Phones held sideways: under 400px of height the hero has to fit between the top bar and the scene footer,
-   in the left part of the frame (the diver is on the right). Smaller type, the two buttons side by side, and
-   the reading link and the guided route on one row. While the route choices are open, the eyebrow, the lede
-   and the reading link step aside for them. */
+/* Phones held sideways: under 500px of height the hero has to fit between the top bar and the scene footer,
+   in the left part of the frame (the diver is on the right). Smaller type, the two buttons side by side and the
+   links on one row under them. */
 @media(pointer:coarse) and (max-height:499px){
   html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{left:calc(var(--o-safe-l) + var(--o-pad) + 12px);top:var(--o-under-bar);width:min(560px,62vw);column-gap:20px}
   html body:not([data-submerged="true"]) .hero .surface-copy .eyebrow{margin-bottom:8px;font-size:10.5px}
   .hero .surface-copy h1{font-size:clamp(30px,7vh,42px)}
   html body:not([data-submerged="true"]) .hero .surface-copy .lede{margin-top:8px;font-size:15px;line-height:1.4}
   html body:not([data-submerged="true"]) .portfolio-actions{margin-top:14px;gap:10px}
-  html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.logbook-link){min-height:44px;padding:0 18px;font-size:15px}
-  html body:not([data-submerged="true"]):not([data-exploring="true"]) :is(.portfolio-options,.portfolio-links){margin-top:4px}
-  html body:not([data-submerged="true"]):not([data-exploring="true"]) .portfolio-links{order:3}
-  html body:not([data-submerged="true"]):not([data-exploring="true"]) .portfolio-options{order:4}
-  html body:not([data-submerged="true"]) :is(.portfolio-options summary,.portfolio-links,.portfolio-links a){min-height:44px;font-size:14px}
-  html body:not([data-submerged="true"]) .hero:has(.portfolio-options[open]) :is(.surface-copy :is(.eyebrow,.lede),.portfolio-links){display:none}
-  html body:not([data-submerged="true"]) #dive-options{flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px}
-  html body:not([data-submerged="true"]) #dive-options .dive-entry{margin:0}
-  html body:not([data-submerged="true"]) #dive-options .route-note{display:none}
-  html body:not([data-submerged="true"]) #dive-options .explore-button{min-height:44px;margin:0;padding:0 6px;font-size:12px}
+  html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.guided-button){min-height:44px;padding:0 18px;font-size:15px}
+  html body:not([data-submerged="true"]) .portfolio-actions .guided-button small{display:none}
+  html body:not([data-submerged="true"]):not([data-exploring="true"]) .portfolio-links{margin-top:4px}
+  .portfolio-links .hero-link{min-height:44px;font-size:14px;padding:0 12px}
 }
 @media(max-height:760px) and (min-width:601px) and (min-height:500px),(max-height:760px) and (min-width:601px) and (pointer:fine){
   html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{top:118px}
   .hero .surface-copy h1{font-size:clamp(36px,5.4vw,78px)}
   .hero .surface-copy .eyebrow{margin-bottom:16px}
   html body:not([data-submerged="true"]) .portfolio-actions{margin-top:24px}
-  html body:not([data-submerged="true"]):not([data-exploring="true"]) :is(.portfolio-options,.portfolio-links){margin-top:12px}
+  html body:not([data-submerged="true"]):not([data-exploring="true"]) .portfolio-links{margin-top:12px}
 }
 @media(prefers-reduced-motion:reduce){
-  html body :is(.portfolio-actions .dive-button,.portfolio-actions .logbook-link,.surface-nav,.settings-toggle,.portfolio-options,.portfolio-links){animation:none}
-  html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.logbook-link):hover{translate:none}
+  html body :is(.portfolio-actions .dive-button,.portfolio-actions .guided-button,.surface-nav,.settings-toggle,.portfolio-links){animation:none}
+  html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.guided-button):hover{translate:none}
 }

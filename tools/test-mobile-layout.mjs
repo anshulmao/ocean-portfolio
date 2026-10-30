@@ -129,7 +129,16 @@ async function run(profileName) {
   await state('surface');
   // On a phone the summary is tapped: a click is a mouse event, and the page would rightly switch back to mouse input.
   const press = locator => phone ? locator.tap({timeout: 5000}) : locator.click({timeout: 5000});
-  await step('surface-options', async () => { await press(page.locator('#portfolio-options summary')); await state('surface-options'); await press(page.locator('#portfolio-options summary')); });
+  // The diver's profile card (diver-profile.js), opened the way a visitor does: a tap or a click on the diver.
+  await step('surface-profile', async () => {
+    const [x, y] = await page.evaluate(() => oceanProfile.screenPoint());
+    await (phone ? page.touchscreen.tap(x, y) : page.mouse.click(x, y));
+    await page.waitForFunction(() => oceanProfile.isOpen, null, {timeout: 5000});
+    await state('surface-profile');
+    if (await page.evaluate(() => oceanArchive.isOpen)) throw Error('the press that opened the card also pressed a button on it');
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !oceanProfile.isOpen, null, {timeout: 5000});
+  });
   await step('reading-glance', async () => { await page.evaluate(() => oceanArchive.open('glance')); await state('reading-glance'); });
   await step('reading-project', async () => { await page.evaluate(() => oceanArchive.open('projects', 'rae')); await state('reading-project'); await page.evaluate(() => oceanArchive.close()); });
   await step('dive', async () => {

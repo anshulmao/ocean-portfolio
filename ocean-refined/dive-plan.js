@@ -103,10 +103,7 @@ function about(seconds) {
 }
 const metres = value => value < 20 ? Math.max(1, Math.round(value)) : Math.round(value / 5) * 5;
 
-// Optional routes live in a native disclosure. The primary choices remain
-// exploring the world or reading the work; every existing route hook survives.
-const entry = node('div', 'dive-entry', '<button type="button" id="guided-dive" class="holo-chip">Show me around <span aria-hidden="true">→</span></button><button type="button" id="plan-dive" class="holo-chip" aria-haspopup="dialog">Choose a destination <span aria-hidden="true">→</span></button><p class="route-note">Three stories. Read at your own pace, or swim off whenever you like.</p>');
-$('#dive-options')?.prepend(entry);
+// The guided dive and the site map are started from the hero (index.html: #guided-dive, #plan-dive).
 
 // The site map: a signboard on two posts carrying the reef chart.
 const plan = node('dialog', 'dive-plan holo-deep', `<div class="plan-wrap">

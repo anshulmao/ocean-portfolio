@@ -1,0 +1,45 @@
+/* The profile card over the surface diver (diver-profile.js), in the hero's palette: a pale card in the day, a deep
+   one at night (tokens.css). It is placed with translate from the top left, every frame while open, so it rides the
+   swell with the diver. No backdrop blur over the moving scene. */
+.diver-profile{position:fixed;left:0;top:0;z-index:20;width:min(340px,calc(100vw - 24px));padding:18px 18px 16px;border:1px solid color-mix(in srgb,var(--o-ink) 12%,transparent);border-radius:18px;background:color-mix(in srgb,var(--o-surface-0) 94%,transparent);color:var(--o-ink);font-family:var(--o-display);box-shadow:0 1px 0 #ffffff80 inset,0 24px 50px -22px #052c3a73,0 4px 14px -6px #052c3a33;pointer-events:auto;outline:none;transform-origin:var(--tail,50%) 100%;animation:profile-in 260ms var(--ease,cubic-bezier(.2,.7,.2,1)) both}
+.diver-profile[hidden]{display:none}
+@keyframes profile-in{from{opacity:0;scale:.96}}
+.diver-profile-close{position:absolute;top:8px;right:8px;display:grid;place-items:center;width:36px;height:36px;border:0;border-radius:50%;background:none;color:var(--o-ink-2);cursor:pointer}
+.diver-profile-close:hover{background:color-mix(in srgb,var(--o-ink) 7%,transparent);color:var(--o-ink)}
+.diver-profile-close svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.diver-profile-head{display:flex;align-items:center;gap:14px;padding-right:28px}
+.diver-profile-head img{flex:none;width:72px;height:72px;border-radius:50%;object-fit:cover;object-position:50% 22%;background:var(--o-surface-2);box-shadow:0 0 0 3px var(--o-surface-0),0 0 0 4px color-mix(in srgb,var(--o-sunlit) 55%,transparent)}
+.diver-profile-kicker{margin:0;font-size:12px;line-height:1.2;color:var(--o-ink-2)}
+.diver-profile h2{margin:2px 0 4px;font:500 21px/1.15 var(--o-display);letter-spacing:-.015em;color:var(--o-ink)}
+.diver-profile-role{margin:0;font-size:12.5px;line-height:1.4;color:var(--o-ink-2)}
+.diver-profile-base{display:flex;align-items:center;gap:6px;margin:5px 0 0;font-size:12px;line-height:1.2;color:var(--o-ink-2)}
+.diver-profile-base::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--o-sunlit)}
+.diver-profile-base:empty{display:none}
+.diver-profile-body{margin:14px 0 0;font-size:14.5px;line-height:1.5}
+.diver-profile-note{margin:8px 0 0;font-size:13px;line-height:1.5;color:var(--o-ink-2)}
+.diver-profile-note:empty{display:none}
+.diver-profile-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-top:16px}
+.diver-profile-actions button{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px;border-radius:100px;font:500 14px/1 var(--o-display);cursor:pointer;transition:translate 160ms var(--ease),background-color 160ms var(--ease)}
+.diver-profile-more{border:1px solid transparent;background:var(--button,#123e47);color:var(--button-ink,#fff)}
+.diver-profile-resume{border:1px solid color-mix(in srgb,var(--o-ink) 18%,transparent);background:none;color:var(--o-ink)}
+.diver-profile-actions button:hover{translate:0 -1px}
+.diver-profile-resume:hover{background:color-mix(in srgb,var(--o-ink) 6%,transparent)}
+.diver-profile-links{display:flex;gap:12px;flex-basis:100%;margin-top:2px}
+.diver-profile-links a{display:inline-flex;align-items:center;min-height:32px;font-size:13px;color:var(--o-ink-2);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);text-underline-offset:4px}
+.diver-profile-links a:hover{color:var(--o-ink);text-decoration-color:currentColor}
+.diver-profile :is(button,a):focus-visible{outline:2px solid var(--o-ink);outline-offset:2px}
+/* The tail points down at the diver's head; it hides when the card had to sit over them. */
+.diver-profile-tail{position:absolute;left:var(--tail,50%);bottom:-8px;width:16px;height:16px;margin-left:-8px;rotate:45deg;background:inherit;border:inherit;border-top-color:transparent;border-left-color:transparent;border-radius:0 0 4px 0}
+.diver-profile[data-tail="false"] .diver-profile-tail{display:none}
+/* While the diver is pointed at, a small label floats over their head. */
+.diver-profile-hint{position:fixed;left:0;top:0;z-index:19;padding:7px 12px;border-radius:100px;background:color-mix(in srgb,var(--o-surface-0) 92%,transparent);color:var(--o-ink);font:500 13px/1 var(--o-display);white-space:nowrap;box-shadow:0 10px 24px -14px #052c3a80;pointer-events:none;transform:translate(-50%,-100%);animation:profile-hint 200ms var(--ease,ease) both}
+.diver-profile-hint[hidden]{display:none}
+@keyframes profile-hint{from{opacity:0;margin-top:4px}}
+/* Touch screens: every control at least 44 px. Short screens (a phone held sideways): the card drops its second line and the links (the full About has them),
+   so it fits under the top bar. */
+@media(pointer:coarse){.diver-profile-close{width:44px;height:44px;top:4px;right:4px}.diver-profile-links a{min-height:44px;min-width:44px;justify-content:center}.diver-profile-links{margin-top:-4px}}
+@media(max-height:499px){.diver-profile{padding:14px 16px 10px}.diver-profile-head img{width:56px;height:56px}.diver-profile-body{margin-top:10px;font-size:13.5px}.diver-profile-note{display:none}.diver-profile-actions{margin-top:10px}.diver-profile-links{display:none}}
+/* On a narrow screen the card and the hero would share the frame: the hero steps aside while the card is up. */
+@media(max-width:900px){body[data-profile="open"] .hero{opacity:0;visibility:hidden;pointer-events:none}}
+body:is([data-submerged="true"],[data-clear-ui="true"]) :is(.diver-profile,.diver-profile-hint){display:none}
+@media(prefers-reduced-motion:reduce){.diver-profile,.diver-profile-hint{animation:none}.diver-profile-actions button:hover{translate:none}}
