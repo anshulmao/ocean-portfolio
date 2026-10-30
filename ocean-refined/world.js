@@ -1,4 +1,5 @@
 import { createExperienceMetrics } from './experience-performance.js';
+import { markerBox } from './look-indicator.js';
 import { createWaterlineSplash } from './waterline-splash.js';
 import { toDisplayDepth, DISPLAY_MAX_DEPTH } from './depth-metrics.js';
 import {createDiveScooter} from './scooter.js';
@@ -95,12 +96,12 @@ const cameraYaw=[0,0],cameraPitch=[0,0];
 function followAngle(state,goal,frequency,dt){const gap=Math.atan2(Math.sin(state[0]-goal),Math.cos(state[0]-goal)),lead=state[1]+frequency*gap,decay=Math.exp(-frequency*dt);state[0]=goal+(gap+lead*dt)*decay;state[1]=(state[1]-frequency*lead*dt)*decay;}
 const cameraGoal=new THREE.Vector3(),swimDirection=new THREE.Vector3();
 const poseYaw=new THREE.Quaternion(),posePitch=new THREE.Quaternion(),axisY=new THREE.Vector3(0,1,0),axisX=new THREE.Vector3(1,0,0);
-const fogDay=new THREE.Color('#accdd5'),fogNight=new THREE.Color('#152740'),fogDeep=new THREE.Color('#075361'),fogAbyss=new THREE.Color('#022532');
+const fogDay=new THREE.Color('#accdd5'),fogNight=new THREE.Color('#152740'),fogDeep=new THREE.Color('#064a6c'),fogAbyss=new THREE.Color('#02213c');
 const lightDay=new THREE.Color('#ffe6bf'),lightNight=new THREE.Color('#97bded'),skyFillNight=new THREE.Color('#7493bd');
 const cloudDay=new THREE.Color('#ffffff'),cloudNight=new THREE.Color('#526a8b');
 // Per-frame temporaries: the update loop allocates nothing.
 const scratchA=new THREE.Vector3(),scratchB=new THREE.Vector3(),scratchC=new THREE.Vector3(),scratchQ=new THREE.Quaternion(),downLight=new THREE.Vector3(),beamAim=new THREE.Quaternion();
-const diverGlow=new THREE.Color(0,0,0),halfTurn=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),Math.PI),ambientDay=new THREE.Color('#c8e7e6'),depthTint=new THREE.Color('#72cbd1'),goldenCloud=new THREE.Color('#ffab79'),goldenSun=new THREE.Color('#ffb57c');
+const diverGlow=new THREE.Color(0,0,0),halfTurn=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),Math.PI),ambientDay=new THREE.Color('#c8e7e6'),depthTint=new THREE.Color('#70bcdb'),goldenCloud=new THREE.Color('#ffab79'),goldenSun=new THREE.Color('#ffb57c');
 const wrapBeam=(v,c)=>c+((v-c+36)%72+72)%72-36;
 // What the camera can see this frame: its frustum and the distance at which the haze has absorbed a surface.
 const view={frustum:new THREE.Frustum(),eye:new THREE.Vector3(),range:Infinity},viewProjection=new THREE.Matrix4();
@@ -401,7 +402,9 @@ function beginModels(){
   const creaturesLoad=busy(import('./user-creatures.js').then(({createUserCreatures})=>{userCreatures=createUserCreatures({terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy',sites:{formations:heroFormations?.sites||[],life:livingWorld?.sites||[],landmarks:LANDMARKS,patches:()=>userCorals?.diagnostics?.patches||[]}});scene.add(userCreatures.root);userCreatures.root.visible=false;diagnostic.userCreatures=userCreatures.diagnostics;return userCreatures.load();}).then(()=>{stylizeTree(userCreatures.root,{toon:.25,rim:.22,caustics:.45});return prepare(userCreatures.root);}).catch(error=>console.warn('New creature set unavailable:',error)));
   const coralsLoad=busy(import('./user-corals.js').then(({createUserCorals})=>{userCorals=createUserCorals({terrainHeightAt:reef.userData.terrainHeightAt,collisions:reef.userData.collisions,economy:quality==='economy'});scene.add(userCorals.root);userCorals.root.visible=false;diagnostic.userCorals=userCorals.diagnostics;return userCorals.load();}).then(()=>{stylizeTree(userCorals.root,{toon:.3,rim:.2,caustics:.55});return prepare(userCorals.root);}).catch(error=>console.warn('New coral set unavailable:',error)));
 
-    Promise.allSettled([creaturesLoad,coralsLoad]).then(()=>{diagnostic.optionalModels='settled';experienceMetrics.mark('optionalModelsSettled');enrichedDone();});
+  // The schooling fish's species shapes and skins (marine-life.js, school-fish.js): until now their meshes draw nothing.
+  const schoolsLoad=marine.loadLooks().then(()=>prepare(marine.root)).catch(error=>console.warn('School fish unavailable:',error));
+    Promise.allSettled([creaturesLoad,coralsLoad,schoolsLoad]).then(()=>{diagnostic.optionalModels='settled';experienceMetrics.mark('optionalModelsSettled');enrichedDone();});
   }).catch(error=>{console.warn('Optional ocean enrichment could not start:',error);enrichedDone();});
 }
 // Set for one frame when the diver is moved at once (start-at-site, tour cuts): the camera cuts with it instead of sweeping.
@@ -685,14 +688,16 @@ function updateBubbles(underwater){
 }
 // A reef label stands aside for the guided dive's own interface: the clear-screen button, the tour sheet and the
 // look-there marker. Their boxes are read a few times a second, not every frame.
-const KEEP_OUT='#clear-ui-toggle:not([hidden]),section.tour-card[data-show="true"],.look-there[data-show="true"] span,.look-there[data-show="true"] i';
+// The look-there marker moves every frame, so its box comes straight from look-indicator.js rather than this cache.
+const KEEP_OUT='#clear-ui-toggle:not([hidden]),section.tour-card[data-show="true"]';
 let keepOut=[],keepOutAt=-1;
 function keptOut(x,y){
   const now=performance.now();
   if(now-keepOutAt>250){keepOutAt=now;keepOut=[];for(const el of document.querySelectorAll(KEEP_OUT)){const r=el.getBoundingClientRect();if(r.width&&r.height)keepOut.push(r);}}
   // A label is centred over its point and stands above it: about 150 px wide and 44 px tall at most.
   for(const r of keepOut)if(x+75>r.left&&x-75<r.right&&y>r.top&&y-44<r.bottom)return true;
-  return false;
+  const marker=markerBox();
+  return Boolean(marker)&&x+75>marker[0]&&x-75<marker[2]&&y>marker[1]&&y-44<marker[3];
 }
 function labelVisible(worldPosition,item,alpha,padding=35){
   let shown=alpha>0;

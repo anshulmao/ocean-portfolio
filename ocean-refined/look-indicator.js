@@ -9,7 +9,11 @@ node.className = 'look-there'; node.dataset.show = 'false'; node.setAttribute('a
 node.innerHTML = '<i></i><span></span>';
 document.body.append(node);
 const label = node.querySelector('span'), at = new THREE.Vector3(), local = new THREE.Vector3();
-let shownLabel = '', shown = false, band = null;
+let shownLabel = '', shown = false, band = null, labelWidth = 0;
+// Where the marker is drawn this frame (client px: left, top, right, bottom), so the reef labels can stand aside from it
+// as it moves (world.js keptOut). Kept from the position written here, not read back from the page.
+const box = [0, 0, 0, 0];
+export const markerBox = () => shown ? box : null;
 // The marker keeps to the band between the compass at the top and the guide's card and controls at the bottom, so its
 // name never sits on the HUD. Measured once a size, since the HUD only moves when the window does.
 addEventListener('resize', () => { band = null; });
@@ -35,7 +39,10 @@ export function pointAt(camera, subject, text = '') {
   node.style.transform = `translate(${left.toFixed(1)}px, ${top.toFixed(1)}px)`;
   node.style.setProperty('--turn', `${(Math.atan2(-y, x) * 180 / Math.PI + 45).toFixed(1)}deg`);
   node.dataset.edge = String(!onScreen); node.dataset.side = x > .3 ? 'left' : 'right';
-  if (text !== shownLabel) { shownLabel = text; label.textContent = text; }
+  if (text !== shownLabel) { shownLabel = text; label.textContent = text; labelWidth = label.offsetWidth || 0; }
+  // The ring is 36 px round its point; the name sits 26 px off to one side (journey.css .look-there).
+  const right = node.dataset.side !== 'left';
+  box[0] = right ? left - 24 : left - 32 - labelWidth; box[1] = top - 24; box[2] = right ? left + 32 + labelWidth : left + 24; box[3] = top + 24;
   if (!shown) { shown = true; node.dataset.show = 'true'; }
   return onScreen;
 }
