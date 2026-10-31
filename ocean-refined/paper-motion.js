@@ -40,8 +40,8 @@ document.addEventListener('pointermove', event => {
   if (leaning && leaning !== el) { leaning.style.removeProperty('--mx'); leaning.style.removeProperty('--my'); leaning = null; }
   if (!el || el.disabled) return;
   const box = el.getBoundingClientRect();
-  el.style.setProperty('--mx', `${(((event.clientX - box.left) / box.width) - .5) * 10}px`);
-  el.style.setProperty('--my', `${(((event.clientY - box.top) / box.height) - .5) * 6}px`);
+  el.style.setProperty('--mx', `${(((event.clientX - box.left) / box.width) - .5) * 8}px`);
+  el.style.setProperty('--my', `${(((event.clientY - box.top) / box.height) - .5) * 4}px`);
   leaning = el;
 }, {passive: true});
 

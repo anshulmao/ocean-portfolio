@@ -520,7 +520,7 @@ body{color:var(--o-ink)}
 .reading-role-date .reading-kicker,.reading-card-copy>.reading-kicker{font-size:13px}
 .reading-resume-variants summary{justify-content:flex-start;gap:14px}
 .reading-resume-variants small{display:inline;margin:0 8px 0 0;color:var(--o-ink-2)}
-.reading-marquee{overflow:hidden;background:var(--o-surface-0);padding:20px 0 56px}
+.reading-marquee{position:relative;z-index:21;overflow:hidden;background:var(--o-surface-0);padding:20px 0 56px}
 .reading-marquee>div{display:flex;width:max-content;font:300 clamp(44px,6.4vw,92px)/1.05 Outfit,system-ui,sans-serif;letter-spacing:-.045em;color:var(--o-ink)}
 .reading-marquee span{display:flex;align-items:center;padding-right:clamp(32px,4vw,64px);white-space:nowrap}
 .reading-marquee span::after{content:"";width:.16em;height:.16em;margin-left:clamp(32px,4vw,64px);border-radius:50%;background:var(--paper-accent)}
@@ -541,14 +541,15 @@ body{color:var(--o-ink)}
 /* Headings: each word rises out of its own mask. */
 .rm-split .rm-w{display:inline-block;overflow:hidden;vertical-align:top;padding-bottom:.16em;margin-bottom:-.16em}
 .rm-split .rm-w>span{display:inline-block;translate:0 110%}
-.rm-split.is-in .rm-w>span{animation:rm-word 1000ms var(--rm-out) calc(var(--i) * 55ms) both}
+.rm-split.is-in .rm-w>span{animation:rm-word 1000ms var(--rm-out) min(calc(var(--i) * 55ms),320ms) both}
 .rm-reveal{opacity:0;translate:0 26px}
 .rm-reveal.is-in{animation:rm-to 900ms var(--rm-spring) var(--d,0ms) both}
 /* First screen: the picture settles from a close-up, drifts with the scroll, and the caption surfaces after it. */
 .reading-porthole picture img{scale:1.1;animation:rm-zoom 1800ms var(--rm-out) both}
 .reading-porthole figcaption{animation:rm-in 800ms var(--rm-spring) 800ms both}
 @supports(animation-timeline:view()){.reading-porthole picture img{animation:rm-zoom 1800ms var(--rm-out) both,rm-parallax linear both;animation-timeline:auto,view();animation-range:normal,cover 0% cover 100%}}
-.reading-marquee>div{animation:rm-marquee 70s linear infinite}
+.reading-marquee>div{animation:rm-marquee 95s linear infinite}
+.reading-marquee:hover>div{animation-play-state:paused}
 /* Controls answer: lift on hover, squash under the finger, spring back. */
 .reading-button,.reading-chip,.reading-dive,.reading-nav nav a{transition:translate 420ms var(--rm-spring),scale 360ms var(--rm-spring-pop),background-color 160ms ease,color 160ms ease,filter 160ms ease}
 .reading-button:hover,.reading-chip:hover,.reading-dive:hover{translate:var(--mx,0px) calc(var(--my,0px) - 2px)}
@@ -575,3 +576,6 @@ body{color:var(--o-ink)}
 @media(max-width:1000px){.rm-depth{top:auto;bottom:16px;right:16px;translate:0 12px;flex-direction:row}.rm-depth[data-on="true"]{translate:0 0}.rm-depth i{display:none}}
 }
 @media(prefers-reduced-motion:reduce){.reading-marquee>div{animation:none}.paper-ripple{display:none}}
+
+.reading-porthole-marker{font-size:13px;letter-spacing:0}
+.reading-resume-preview>span{font-size:13px}

@@ -316,3 +316,30 @@ html body #landmark-dialog :is(.arc-rail-section,.arc-rail-entries button):not(#
 html body #landmark-dialog .arc-progress-track i:not(#_){transition:transform 420ms var(--p-spring-pop),background-color 200ms var(--ease),opacity 200ms var(--ease)}
 }
 @media(prefers-reduced-motion:reduce){.paper-ripple,.paper-bubbles{display:none}}
+
+/* 13. Round 2 (critic): spacing, leftovers, a sky-tinted paper, and a calmer motion budget. */
+html body .movement-field p{margin:2px 0 16px}
+html body .movement-field:last-child p{margin-bottom:4px}
+html body .settings-body{mask-image:linear-gradient(#000 calc(100% - 18px),transparent);-webkit-mask-image:linear-gradient(#000 calc(100% - 18px),transparent);padding-bottom:22px}
+html body #settings-general-content>.settings-subgroup{margin-top:12px;padding:16px;border-radius:14px;background:var(--o-surface-0)}
+html body #settings-general-content>.settings-subgroup:first-child{margin-top:4px}
+html body #landmark-dialog .arc-rail-entries .holo-label:not(#_){display:none}
+html body #landmark-dialog .arc-rail-entries button:not(#_){grid-template-columns:minmax(0,1fr) 13px}
+html body .plan-head p,html body .plan-head .holo-label{font-family:var(--o-display);font-size:14px;letter-spacing:0;text-transform:none}
+html body .plan-info .plan-art{height:64px;padding-bottom:0}
+
+/* The paper takes a little of the sky: dawn warms it, dusk cools it, and it changes with the time of day. Night swaps the whole set instead. */
+html[data-sky-preset="dawn"]{--p-sky:#ff9f7a}
+html[data-sky-preset="dusk"]{--p-sky:#b98ad8}
+html[data-sky-preset="day"]{--p-sky:#6fd0e0}
+:root:not([data-theme="night"]):is([data-sky-preset="dawn"],[data-sky-preset="dusk"],[data-sky-preset="day"]) body :is(.settings-menu,.capture-hint,.interact-prompt,.status,.tour-card,.journey-toast,.zone-card,.dive-summary,.plan-info,.plan-overview,#landmark-dialog,.scene-footer .look-hint,.scene-footer .location,.diver-profile,.guided-button,.settings-toggle,.view-controls>button){
+  --o-surface-0:color-mix(in srgb,#f3fbfa 91%,var(--p-sky));--o-surface-1:color-mix(in srgb,#e2f4f1 90%,var(--p-sky));--o-surface-2:color-mix(in srgb,#c9ece6 88%,var(--p-sky));
+}
+html body :is(.settings-menu,.tour-card,#landmark-dialog,.plan-info,.plan-overview,.scene-footer .look-hint,.scene-footer .location){transition:background-color 700ms ease}
+@media(prefers-reduced-motion:no-preference){
+/* Calmer: small controls skip the lift (the squash and the ripple are enough), and the button lean is capped. */
+html body :is(.settings-close,.theme-control>button,.weather-picker>button,.movement-preset-row>button,.view-controls>button,.tour-card footer button):not(:disabled):not(#_):hover{translate:0 0}
+html body #landmark-dialog[open]{animation-timing-function:var(--p-spring)}
+}
+html body #general-brightness .movement-field+.movement-field{margin-top:20px}
+html body #general-brightness .movement-field{padding-bottom:0}
