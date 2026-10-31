@@ -38,7 +38,7 @@ try {
   assert.ok(during.samples > 10, 'The profile is sampled');
   await page.evaluate(() => { oceanControls.surface({instant: true}); oceanJourney.tick(.1); });
   await open.waitFor({state: 'visible'});
-  assert.match(await open.innerText(), /Dive summary\s*New/);
+  assert.match(await open.innerText(), /Dive log\s*New/);
   assert.equal(await dialog.evaluate(node => node.open), false, 'Surfacing never opens the page by itself');
 
   for (const [name, width, height] of [['desktop', 1440, 900], ['phone', 390, 844]]) {
