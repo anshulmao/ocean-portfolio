@@ -543,19 +543,24 @@ function setSkyPreset(preset,persist=true){
   if(persist)try{localStorage.setItem('ocean-theme',preset);}catch{}
   wake();
 }
-let surfaceReturn=null;
+let surfaceReturn=null,surfaceHeading=null,surfaceAnchor=null;
 function returnSurfaceView(phaseValue=phase){
   if(getMode()!=='surface'||diveTarget!==0)return;
   if(camera&&diagnostic.ready)surfaceReturn={time:0,position:camera.position.clone(),rotation:camera.quaternion.clone()};
   exploration.setInterfaceOpen(false);setExploring(false);syncControlSuspension();
   frameSurface(phaseValue);
+  if(surfaceHeading)surfaceReturn=null;
   wake();
 }
 function frameSurface(phaseValue=phase){
   if(!skySystem||exploration.state.mode!=='surface')return;
   const sun=skySystem.getState(phaseValue).sunDirection;
   // The horizontal sun direction uses east -Z / west +Z, consistent with the star map.
-  surfaceFramingYaw=sun[2]<=0?0:Math.PI;
+  const target=sun[2]<=0?0:Math.PI;
+  const turn=Math.atan2(Math.sin(target-surfaceFramingYaw),Math.cos(target-surfaceFramingYaw));
+  if(diagnostic.ready&&!reducedMotion&&Math.abs(turn)>.001){
+    if(!surfaceHeading||surfaceHeading.target!==target)surfaceHeading={from:surfaceFramingYaw,turn,target,time:0};
+  }else{surfaceFramingYaw=target;surfaceHeading=null;}
   exploration.frameSky(surfaceFramingYaw);
 }
 function updateMotionUI(){
@@ -872,6 +877,17 @@ function updateWorld(dt,clockDt=dt){
   else if(diveHeldFor){diveHeldFor=0;hurry=1;startup.heldMs=Math.round(performance.now())-startup.heldFrom;if(holdNoted){holdNoted=false;if(status.textContent===HOLD_NOTE)status.textContent='';}if(reducedMotion&&diveTarget===1)dive=diveTarget;}
   let easedDive=THREE.MathUtils.smoothstep(dive,0,1);let underwater=THREE.MathUtils.smoothstep(easedDive,.13,.27);
   uniforms.uTime.value=elapsed;uniforms.uNight.value=night;uniforms.uDive.value=underwater;
+  let turningSurface=false;
+  if(surfaceHeading){
+    if(exploration.state.mode!=='surface'||diveTarget!==0||exploration.state.exploring||lookHeld)surfaceHeading=null;
+    else{
+      turningSurface=true;surfaceHeading.time+=dt;
+      const progress=reducedMotion?1:Math.min(1,surfaceHeading.time/4),blend=(1-Math.cos(Math.PI*progress))/2;
+      surfaceFramingYaw=surfaceHeading.from+surfaceHeading.turn*blend;
+      exploration.frameSky(surfaceFramingYaw);
+      if(progress===1)surfaceHeading=null;
+    }
+  }
   const nav=exploration.update(dt,easedDive>.95,reducedMotion,reef?.userData.safeAscentRoute);
   safetyStop.blend=reducedMotion?Number(safetyStop.active):THREE.MathUtils.lerp(safetyStop.blend,Number(safetyStop.active),1-Math.exp(-dt*6));if(safetyStop.blend<.001)safetyStop.blend=0;
   if(nav.mode==='transition'&&previousMode!=='transition'){ascentCameraTime=0;ascentCameraStart.copy(camera.position).sub(playerPosition);camera.getWorldDirection(ascentAimStart);ascentAimStart.multiplyScalar(10).add(camera.position).sub(playerPosition);}
@@ -903,7 +919,19 @@ function updateWorld(dt,clockDt=dt){
   if(easedDive>.95&&!firstPerson&&settings.collisionEnabled&&reef.userData.collisions){const cameraPath=scratchA.copy(chasePosition).sub(playerPosition),cameraCandidate=scratchB.copy(playerPosition);let open=.1;for(let fraction=.95;fraction>=.1;fraction-=.1){cameraCandidate.copy(playerPosition).addScaledVector(cameraPath,fraction);if(reef.userData.collisions.segmentClear(playerPosition,cameraCandidate,.28)){open=fraction;break;}}
     cameraPull=reducedMotion||snapCamera?open:cameraPull+(open-cameraPull)*(1-Math.exp(-dt*(open<cameraPull?14:2.5)));chasePosition.copy(playerPosition).addScaledVector(cameraPath,cameraPull);}else cameraPull=.95;
   const ascending=nav.mode==='transition';
+  // Keep the surface diver's world position as the pivot, including across time presets.
+  // Camera and diver share a heading, so their screen composition never swings apart.
+  const surfaceSide=Math.tan(THREE.MathUtils.degToRad(camera.fov*.5))*camera.aspect*7.2*.66;
+  if(nav.mode!=='surface'||diveTarget!==0)surfaceAnchor=null;
+  else if(!surfaceAnchor){
+    surfaceAnchor=new THREE.Vector3(surfaceSide,0,2.8).applyAxisAngle(axisY,surfaceFramingYaw).add(playerPosition);
+  }
+
   if(!viewerOrbit){cameraGoal.set(THREE.MathUtils.lerp(playerPosition.x+10*Math.sin(surfaceFramingYaw),chasePosition.x,easedDive),THREE.MathUtils.lerp(2.5,chasePosition.y,easedDive)+bob,THREE.MathUtils.lerp(playerPosition.z+10*Math.cos(surfaceFramingYaw),chasePosition.z,easedDive));
+  if(surfaceAnchor){
+    scratchA.set(surfaceSide,0,-7.2).applyAxisAngle(axisY,surfaceFramingYaw);
+    cameraGoal.x=surfaceAnchor.x-scratchA.x;cameraGoal.z=surfaceAnchor.z-scratchA.z;
+  }
   if(ascending){
     cameraGoal.copy(playerPosition).add(scratchA.set(7,2.2,6));
     cameraGoal.y=Math.max(cameraGoal.y,reef.userData.terrainHeightAt(cameraGoal.x,cameraGoal.z)+1);
@@ -953,7 +981,7 @@ function updateWorld(dt,clockDt=dt){
   const descentControlled=diveTarget===1&&nav.mode==='diver';
   const settledView=!(ascending||dive!==diveTarget&&!descentControlled||surfaceLandingTime>0||safetyStop.blend>0);
   if(cameraWas!==nav.perspective){if(cameraWas)cameraShift=1;cameraWas=nav.perspective;}
-  if(reducedMotion||snapCamera||diagnostic.frames===0){camera.position.copy(cameraGoal);cameraVelocity.set(0,0,0);cameraShift=0;}
+  if(turningSurface||reducedMotion||snapCamera||diagnostic.frames===0){camera.position.copy(cameraGoal);cameraVelocity.set(0,0,0);cameraShift=0;}
   else {
     // A critically damped spring, exact over the step: the camera eases after its goal and settles without overshoot at any frame rate.
     // First person sits tight on the diver's eye; the follow camera trails softly; a switch between them glides for a moment.
@@ -977,7 +1005,7 @@ function updateWorld(dt,clockDt=dt){
   if(easedDive>.95&&!ascending&&nav.roll!==undefined)aimQuaternion.multiply(scratchQ.setFromAxisAngle(axisZ,nav.roll*(firstPerson?.3:.22)+nav.lean));
   // The view the diver steers is eased where it is made (exploration.js), so in a settled dive the camera stays with it; the dive and the ascent keep their slow, rate-limited swing.
   const aimAngle=camera.quaternion.angleTo(aimQuaternion),aimBlend=1-Math.exp(-dt*(settledView?THREE.MathUtils.lerp(settings.cameraResponse*(firstPerson?4:1.5),8,Math.min(1,cameraShift*1.6)):3));
-  camera.quaternion.slerp(aimQuaternion,reducedMotion||snapCamera||diagnostic.frames===0?1:settledView?aimBlend:Math.min(aimBlend,dt*2.8/Math.max(.0001,aimAngle)));snapCamera=false;}else{viewerOrbit.update();diagnostic.cameraMoving=true;}
+  camera.quaternion.slerp(aimQuaternion,turningSurface||reducedMotion||snapCamera||diagnostic.frames===0?1:settledView?aimBlend:Math.min(aimBlend,dt*2.8/Math.max(.0001,aimAngle)));snapCamera=false;}else{viewerOrbit.update();diagnostic.cameraMoving=true;}
   if(surfaceReturn){
     if(nav.mode!=='surface'||diveTarget!==0||nav.exploring||lookHeld||viewerOrbit)surfaceReturn=null;
     else{
@@ -1040,7 +1068,7 @@ function updateWorld(dt,clockDt=dt){
   const surfaceX=Math.tan(THREE.MathUtils.degToRad(camera.fov*.5))*camera.aspect*7.2*.66;
   const framingYaw=surfaceFramingYaw;
   relative.set(surfaceX,0,-7.2).applyAxisAngle(axisY,framingYaw);
-  const surfaceWorldX=playerPosition.x+10*Math.sin(framingYaw)+relative.x,surfaceWorldZ=playerPosition.z+10*Math.cos(framingYaw)+relative.z;
+  const surfaceWorldX=surfaceAnchor?.x??(playerPosition.x+10*Math.sin(framingYaw)+relative.x),surfaceWorldZ=surfaceAnchor?.z??(playerPosition.z+10*Math.cos(framingYaw)+relative.z);
   const surfaceY=waveHeight(surfaceWorldX,surfaceWorldZ,elapsed)-.06;
   const diverBlend=ascending?1-ascentLanding:easedDive;
   diver.root.position.set(THREE.MathUtils.lerp(surfaceWorldX,playerPosition.x,diverBlend),THREE.MathUtils.lerp(surfaceY,playerPosition.y,diverBlend),THREE.MathUtils.lerp(surfaceWorldZ,playerPosition.z,diverBlend));
