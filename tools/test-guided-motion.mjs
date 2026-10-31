@@ -118,7 +118,7 @@ function toTravel(env) {
 // CollisionWorld must take the body around it, with no endpoint-only assertions.
 {
   const collision = new CollisionWorld();
-  collision.addBox(new THREE.Box3(new THREE.Vector3(-4, -15, -10), new THREE.Vector3(-1, -2, -6)));
+  collision.addBox(new THREE.Box3(new THREE.Vector3(-29, -18, -45), new THREE.Vector3(-23, -6, -42)));
   const env = environment(60, { collision });
   toTravel(env);
   for (let frame = 0; frame < 60 * 100 && tourStatus() !== 'dwell'; frame++) env.tick();
@@ -136,30 +136,34 @@ function toTravel(env) {
 const key = code => window.dispatchEvent({ type: 'keydown', code, repeat: false, target: { closest: () => null }, preventDefault() {} });
 const keyup = code => window.dispatchEvent({ type: 'keyup', code, target: { closest: () => null }, preventDefault() {} });
 
-// The controls: the welcome lays out C, W A S D, up and down and V as key chips and asks for one at a time, ticking each as
-// it is done (by what it changed, whatever the input) and moving on. Swimming about to try them keeps the tour within
-// ROAM (5 m) of where the welcome began. The rest come with the fly-bys that use them (the scooter across the reef shelf,
+// The controls: the welcome lays out W A S D, up and down, C and V as key chips and asks for one at a time, ticking each as
+// it is done (by what it changed, whatever the input) and moving on, while the guide drifts in toward the reef. Swimming
+// about to try them holds the drift and keeps the tour within ROAM (5 m) of where they took over; letting go picks the
+// drift up again. The rest come with the fly-bys that use them (the scooter across the reef shelf,
 // the lamp under the arch, the camera at the whale shark), and a control already tried is not taught again. N skips the
 // controls (toTravel above).
 {
   const env = environment(60);
   startTour(); env.tick(.5);
   assert.equal(tourStatus(), 'intro');
-  assert.equal(env.state.tour.tip, 'Try it, 1 of 4: Press C to open your dive computer.');
-  document.body.dataset.computerOpen = 'true'; env.tick(.1); delete document.body.dataset.computerOpen;
-  assert.equal(env.state.tour.tip, '✓ Dive computer', 'a control done is ticked'); env.tick(1.3);
-  assert.equal(env.state.tour.tip, 'Try it, 2 of 4: Swim with W A S D. The tour waits for you here.');
-  const from = [...env.state.playerPosition];
+  assert.equal(env.state.tour.tip, 'Try it, 1 of 4: Swim with W A S D. The guide picks up again when you let go.');
+  env.tick(2);
+  const drifted = [...env.state.playerPosition];
+  assert.ok(env.nav.state.travelling, 'the welcome drifts in toward the reef');
   key('KeyW'); env.tick(.8); keyup('KeyW'); env.tick(.6);
-  const swum = Math.hypot(env.state.playerPosition[0] - from[0], env.state.playerPosition[2] - from[2]);
+  const swum = Math.hypot(env.state.playerPosition[0] - drifted[0], env.state.playerPosition[2] - drifted[2]);
   assert.ok(swum > 1.2 && swum < 5, `swum a little (${swum.toFixed(2)} m)`);
   assert.equal(tourStatus(), 'intro', 'swimming about in the welcome keeps the tour');
   assert.ok(window.oceanTour.tried.includes('swim'));
-  env.tick(1);
-  assert.equal(env.state.tour.tip, 'Try it, 3 of 4: Space to rise, Shift to sink.');
+  env.tick(1.2);
+  assert.ok(env.nav.state.travelling, 'and the drift picks up again once they let go');
+  assert.equal(env.state.tour.tip, 'Try it, 2 of 4: Space to rise, Shift to sink.');
   key('ShiftLeft'); env.tick(1); keyup('ShiftLeft'); env.tick(.6);
   assert.ok(window.oceanTour.tried.includes('updown'), 'sinking counts as up and down');
   env.tick(1);
+  assert.equal(env.state.tour.tip, 'Try it, 3 of 4: Press C to open your dive computer.');
+  document.body.dataset.computerOpen = 'true'; env.tick(.1); delete document.body.dataset.computerOpen;
+  assert.equal(env.state.tour.tip, '✓ Dive computer', 'a control done is ticked'); env.tick(1.3);
   assert.equal(env.state.tour.tip, 'Try it, 4 of 4: Press V to see yourself in third person.');
   env.nav.togglePerspective(); env.tick(1.5);
   assert.equal(env.state.tour.tip, 'That’s the controls. Press N to start the tour.');
@@ -278,7 +282,7 @@ for (const hz of [30, 60, 120]) {
     const leg = env.samples.slice(before);
     moving += leg.length / hz;
     assert.equal(tourStatus(), { stop: 'dwell', end: 'done' }[step.kind], `${step.key} arrived at ${hz} Hz: ${JSON.stringify(env.state.tour)}`);
-    const target = step.landmark ? env.landmarks.find(item => item.id === step.landmark).interactionPosition : step.at;
+    const target = env.state.tour.goal;
     assert.ok(distance(env.state.playerPosition, target) < 1.6, `${step.key}: arrival reflects the body position`);
     assert.ok(leg.length > hz, 'the swim lasts across many frames');
     // Every fly-by on the leg shows once, for its hold, and turns the view to its subject while the swim carries on.
@@ -293,14 +297,23 @@ for (const hz of [30, 60, 120]) {
     }
     // The leg to the treasure swims through the arch itself, under its roof (reef.js: arch at 20, -72, roof 9.6 m over its floor).
     if (step.key === 'projects') {
-      const roof = terrainHeightAt(20, -72) + 9.6 - .6, under = leg.filter(p => Math.abs(p[2] + 72) < 1.5);
+      const roof = terrainHeightAt(20, -72) + 9.6 - .6, under = leg.filter(p => Math.abs(p[2] + 72) < 1.5 && Math.abs(p[0] - 20) < 10);
       assert.ok(under.length && under.every(p => Math.abs(p[0] - 20) < 3.5 && p[1] < roof), `through the arch, under its roof (${JSON.stringify(under[0])})`);
     }
     // The way up ends in open water just seaward of the wreck, well above the seabed, with the reef rising to the north.
-    if (step.key === 'open-water') {
-      // Through the middle of the bait ball where it has wandered to, not past its edge.
+    // Through the middle of the bait ball where it has wandered to, not past its edge.
+    if (step.key === 'experience') {
       const middle = Math.min(...leg.map(p => distance(p, [50.5, -27.8, -66])));
       assert.ok(middle < 1.5, `straight through the bait ball (${middle.toFixed(2)} m from its middle)`);
+    }
+    // A stop is come in to on the line from its subject: the last stretch heads at it, with no swing round to face it.
+    if (step.kind === 'stop') {
+      const tail = leg.slice(-Math.round(hz * 2.5)), [a, b] = [tail[0], tail.at(-1)], subject = env.landmarks.find(item => item.id === step.landmark).position;
+      const heading = Math.atan2(b[0] - a[0], b[2] - a[2]), facing = Math.atan2(subject[0] - b[0], subject[2] - b[2]);
+      const off = Math.abs(Math.atan2(Math.sin(heading - facing), Math.cos(heading - facing)));
+      assert.ok(off < .5, `${step.key}: comes in facing it (${off.toFixed(2)} rad off over the last 2.5 s)`);
+    }
+    if (step.key === 'open-water') {
       const [x, y, z] = env.state.playerPosition;
       assert.ok(y - terrainHeightAt(x, z) > 20 && z < WRECK.max[2] - 8, `in open water seaward of the wreck (${env.state.playerPosition.map(v => v.toFixed(1))})`);
     }
@@ -330,9 +343,9 @@ for (const hz of [30, 60, 120]) {
   assert.equal(env.placed, 0, 'full-motion tour never places the player, even when OS reduced motion is enabled');
   assert.ok(maxStep < 7 / hz, `bounded continuous body steps (${maxStep})`);
   assert.ok(totalDistance > 250, `the player crossed the whole reef (${totalDistance})`);
-  // Round 5: nothing holds between the sites and the way up ends above the wreck, so about two minutes of motion (SPEC:
-  // timing budget); the reading is on top and at the visitor's pace.
-  assert.ok(moving > 100 && moving < 170, `a portfolio-first pace (${moving.toFixed(0)} s of motion)`);
+  // Round 6: the far side of the reef and more of its life, about three minutes of motion (SPEC: timing budget); the
+  // welcome's drift and the reading are on top, at the visitor's pace.
+  assert.ok(moving > 140 && moving < 260, `a full dive's pace (${moving.toFixed(0)} s of motion)`);
   const plan = tourPlan();
   assert.ok(Math.abs(plan.seconds - moving) < 40, `the planner's estimate is close (${plan.seconds.toFixed(0)} s planned)`);
   // Swimming off from the ending simply ends the tour.
@@ -361,10 +374,10 @@ for (const hz of [30, 60, 120]) {
 }
 {
   const env = environment(60, { unavailable: true });
-  startTour(); env.tick(.5); window.oceanTour.next(); env.tick(10);
+  startTour(); env.tick(.5); window.oceanTour.next(); env.tick(1); const held = [...env.state.playerPosition]; env.tick(9);
   assert.equal(tourStatus(), 'travel'); assert.equal(env.state.tour.routeIssue, true);
   assert.equal(env.state.tour.paused, true); assert.equal(env.placed, 0);
-  assert.ok(distance(env.state.playerPosition, [0, -8, 0]) < .01);
+  assert.ok(distance(env.state.playerPosition, held) < .01, 'the diver holds where the route was refused');
   // An explicit Skip remains available for an unreachable route.
   window.oceanTour.next(); env.tick(1);
   assert.equal(tourStatus(), 'dwell'); assert.equal(env.placed, 1);
@@ -475,8 +488,8 @@ for (const hz of [30, 60, 120]) {
   key('KeyW'); env.tick(.2); keyup('KeyW');
   const steps = tracked.filter(([event]) => event === 'tour_step').map(([, p]) => p.index);
   assert.deepEqual(steps, STEPS.map((step, i) => i), 'a tour_step for every step, in order');
-  assert.deepEqual(tracked[0], ['tour_started', { from: 'underwater', tour_version: 5 }]);
-  assert.deepEqual(tracked.at(-1), ['tour_ended', { step: 'open-water', index: STEPS.length - 1, how: 'swam_off', tour_version: 5 }]);
+  assert.deepEqual(tracked[0], ['tour_started', { from: 'underwater', tour_version: 6 }]);
+  assert.deepEqual(tracked.at(-1), ['tour_ended', { step: 'open-water', index: STEPS.length - 1, how: 'swam_off', tour_version: 6 }]);
   for (const [event, properties] of tracked) assert.deepEqual(eventProperties(event, properties), properties, `${event} passes the privacy allowlist whole`);
   env.nav.destroy();
   console.log(`PASS: reduced motion runs the tour on fades with no pans; ${tracked.length} analytics events, all allowed.`);
@@ -518,7 +531,7 @@ console.log('PASS: rejected routes hold, explicit Skip and reduced motion fade, 
   document.documentElement.dataset.input = 'touch';
   const env = environment(60);
   startTour(); env.tick(.5);
-  assert.equal(env.state.tour.tip, 'Try it, 1 of 2: Swim with the stick. The tour waits for you here.');
+  assert.equal(env.state.tour.tip, 'Try it, 1 of 2: Swim with the stick. The guide picks up again when you let go.');
   window.oceanTour.next(); env.tick(.5);
   for (let i = 0; i < 60 * 400 && !(env.state.tour.key === 'projects' && tourStatus() === 'dwell'); i++) { env.tick(); if (tourStatus() === 'dwell') window.oceanTour.next(); }
   assert.equal(env.state.tour.tip, '', 'no computer tip at the treasure on a phone');
@@ -575,21 +588,21 @@ console.log('PASS: rejected routes hold, explicit Skip and reduced motion fade, 
 for (const interruption of ['stall', 'pause', 'takeover']) {
   const env = environment(60, { collision: reefCollision, residents: { sleeper: [-17, terrainHeightAt(-17, -19) + .45, -19] } });
   toTravel(env);
-  // Skip ahead with Continue to the wreck, then let the leg through the arch to the treasure swim.
-  for (let i = 0; i < 400 && !(tourStatus() === 'dwell' && env.state.tour.key === 'experience'); i++) { window.oceanTour.next(); env.tick(.5); }
-  assert.equal(env.state.tour.key, 'experience', 'reached the wreck by Continue');
+  // Skip ahead with Continue to the anchor, then let the leg through the arch to the treasure swim.
+  for (let i = 0; i < 400 && !(tourStatus() === 'dwell' && env.state.tour.key === 'about'); i++) { window.oceanTour.next(); env.tick(.5); }
+  assert.equal(env.state.tour.key, 'about', 'reached the anchor by Continue');
   window.oceanTour.next(); env.tick(.1);
   assert.equal(env.state.tour.key, 'projects');
   const before = env.samples.length;
-  // Over the cliff edge, where the live app stalled, the swim is interrupted.
-  for (let i = 0; i < 60 * 60 && env.state.playerPosition[1] > -30; i++) env.tick();
+  // On the way down to the gully, short of the cliff edge where the live app stalled, the swim is interrupted.
+  for (let i = 0; i < 60 * 120 && env.state.playerPosition[1] > -30; i++) env.tick();
   if (interruption === 'stall') env.nav.cancelTravel();
   else if (interruption === 'pause') { key('KeyP'); env.tick(1); key('KeyP'); }
   else { key('KeyW'); env.tick(.3); keyup('KeyW'); env.tick(1); assert.equal(tourStatus(), 'free'); key('KeyG'); env.tick(.1); }
   for (let i = 0; i < 60 * 100 && tourStatus() === 'travel'; i++) env.tick();
   assert.equal(tourStatus(), 'dwell', `the treasure reached after a ${interruption}`);
   if (interruption === 'stall') assert.equal(env.state.tour.detours, 1, 'the stall was recovered by a detour');
-  const roof = terrainHeightAt(20, -72) + 9.6 - .6, under = env.samples.slice(before).filter(p => Math.abs(p[2] + 72) < 1.5);
+  const roof = terrainHeightAt(20, -72) + 9.6 - .6, under = env.samples.slice(before).filter(p => Math.abs(p[2] + 72) < 1.5 && Math.abs(p[0] - 20) < 10);
   assert.ok(under.length && under.every(p => Math.abs(p[0] - 20) < 3.5 && p[1] < roof), `still through the arch after a ${interruption} (${JSON.stringify(under[0])})`);
   window.oceanTour.stop(); env.nav.destroy();
 }

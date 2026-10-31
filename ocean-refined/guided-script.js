@@ -11,9 +11,14 @@ import { toDisplayDepth } from './depth-metrics.js';
 //   kind     intro: the welcome, read where the diver levels out; waits for Continue (N).
 //            stop:  a portfolio site; the camera turns to the landmark and waits for Continue. Read it (F) opens `opens`.
 //            end:   the ending; the visitor chooses to keep exploring or surface.
-//   at       where the diver swims to; `landmark` takes it from the placed model instead.
+//   at       where the diver swims to (the welcome: where it drifts to); `landmark` takes it from the placed model instead.
+//   view     a stop's own viewpoint: a point, or { behind, near, distance, rise } to stand squarely in front of the landmark
+//            with that resident lined up behind it. Every stop is approached on the line from its subject (guided-dive.js
+//            APPROACH), so the diver arrives facing it.
 //   via      the leg's scenic route, used when the tour arrives from the step before. A point is [x, y, z]; a fly-by is
 //            { at, key, title, line, ... } and is a point of the route too:
+//              orbit    { around, radius, turn, rise }: round that stop's landmark from where the last stop left off, the
+//                       turn (degrees) taken the way that ends nearer what comes next.
 //              look     what the camera glances at as it passes: a point, { visitor: id } (an animal, followed as it
 //                       swims), { resident: id, near } (an animal where it settled, near standing in until it loads) or
 //                       { bait: true } (the bait ball, which wanders slowly round its home; followed too).
@@ -41,19 +46,37 @@ export const SPEED = 3.6, FLYBY = 5, REACH = 9, SLOW = .5, BRIEF = 2.5;
 const depth = y => `${Math.round(toDisplayDepth(-y))} m`;
 
 export const STEPS = [
-  { key: 'welcome', kind: 'intro', place: 'Guided dive', title: 'Welcome to the guided dive',
-    line: 'This is my portfolio, as a reef. Look anywhere as we go. There’s a lot of life down here.',
-    short: 'This is my portfolio, as a reef. Look anywhere as we go.',
-    pan: [[-12, -9, -15], [26, -14, -10], [0, -26, -55], [-12, -9, -15]] },
+  // The site starts at the surface out over the deep end, west of the anchor (exploration.js SURFACE_START). The welcome is
+  // read as the guide drifts in toward the reef, and the controls are tried on the way.
+  { key: 'welcome', kind: 'intro', at: [-26, -11, -48], place: 'Guided dive', title: 'This is the reef',
+    line: 'This is my portfolio, as a reef. You’re going to have a fun time. Try the controls as we swim in.',
+    short: 'My portfolio, as a reef. Try the controls as we swim in.',
+    // The barracuda wheel ahead, the reef rising beyond it, the wreck down to the left.
+    pan: [[-36, -20, -44], [-24, -18, -20], [18, -21, -39], [-28, -16, -30]] },
+  // Across the far side of the reef first (the west), then in to the anchor, squarely in front of it with the nurse shark
+  // lined up behind it.
   { key: 'about', kind: 'stop', landmark: 'about', opens: 'glance', place: `About · The Anchor · ${depth(-9)}`, signal: '#7ff0cf',
-    title: 'This anchor is me', line: 'Open it for my portfolio at a glance: who I am and where everything lives.' },
-  // Act 1, down through the portfolio: past the nurse shark and right across the reef shelf on the scooter, by the table
-  // coral tower, round north of it and past the pillar coral cathedral, and back west to the wreck.
-  { key: 'experience', kind: 'stop', landmark: 'experience', place: `Experience · The Wreck · ${depth(-21)}`, signal: '#ffcf7a',
-    title: 'Here’s the wreck', line: 'This is where you’ll find my experience.',
+    view: { behind: 'sleeper', near: [-19, -12.6, -22], distance: 6.5, rise: 1.2 },
+    title: 'This anchor is me', line: 'Open it for my portfolio at a glance: who I am and where everything lives.',
     via: [
-      { at: [-2, -5, -30], key: 'nurse', title: 'A nurse shark, asleep', line: 'Nurse sharks rest on the sand by day. Let it be.',
-        look: { resident: 'sleeper', near: [-19, -12.6, -22] }, reach: 11 },
+      { at: [-26, -13, -38], key: 'barracuda', title: 'A barracuda wheel', line: 'Young barracuda turning slowly in mid-water.',
+        look: [-36, -20, -44] },
+      { at: [-24, -16, -24], key: 'grotto', title: 'A limestone grotto', line: 'Stone ribs over the sand, and sea fans at the door.',
+        look: [-35, -27, -30] },
+      { at: [-28, -13, -12], key: 'whipray', title: 'A pink whipray', line: 'It glides low over the sand by the cleaning reef.',
+        look: [-41, -23, -16] },
+      { at: [-28, -10, -1], key: 'brain-coral', title: 'The brain coral dome', line: 'A giant moray keeps a den at its foot.',
+        look: [-42, -16, -2], hold: 6 },
+      [-16, -6, 3],
+    ] },
+  // Round the anchor to the nurse shark asleep behind it, then right across the reef shelf on the scooter, by the table coral
+  // tower, round north of it and past the pillar coral cathedral, down the east side to the gully, through the limestone arch
+  // (reef.js: the arch at 20, -72) and over the lantern garden to the treasure: the deepest stop comes first, as on a real dive.
+  { key: 'projects', kind: 'stop', landmark: 'projects', teach: 'computer', place: `Projects · The Treasure · ${depth(-45)}`, signal: '#c9a2ff',
+    title: 'The treasure', line: 'This is where you’ll find my projects.',
+    via: [
+      { orbit: { around: 'about', radius: 8, turn: 110, rise: 2 }, at: [-6, -7, -20], key: 'nurse', title: 'A nurse shark, asleep',
+        line: 'Nurse sharks rest on the sand by day. Let it be.', look: { resident: 'sleeper', near: [-19, -12.6, -22] }, hold: 8, slow: .45, reach: 4 },
       { at: [6, -9, -24], key: 'scooter', title: 'Scooter on', line: 'Across the reef shelf. The deep end is out there; we’ll get to it.',
         scooter: true, teach: 'scooter', hold: 4, slow: .7 },
       { at: [22, -12, -14], key: 'tower', title: 'The table coral tower', line: 'Plates of coral stacked up a leaning stone trunk.',
@@ -61,29 +84,18 @@ export const STEPS = [
       [30, -10, 2], [44, -11, 2],
       { at: [52, -15, -8], key: 'cathedral', title: 'The pillar coral cathedral', line: 'Organ-pipe columns in a horseshoe.',
         look: [48, -23.5, -28], hold: 6, reach: 11 },
-      // Into the wreck's viewpoint from above and to the north-east: a tall coral stands just east of it.
-      [44, -17, -18], [31, -16, -19], [22, -16, -15],
-    ] },
-  // Round the west of the wreck and down to the gully, then through the limestone arch (reef.js: the arch at 20, -72) and
-  // out over the lantern garden to the treasure. Over the gully's lip first, then about 3 m off its floor under the roof
-  // (clear to -48 m), so the route holds for seabed clearances up to 2.2 m.
-  { key: 'projects', kind: 'stop', landmark: 'projects', teach: 'computer', place: `Projects · The Treasure · ${depth(-45)}`, signal: '#c9a2ff',
-    title: 'The treasure', line: 'This is where you’ll find my projects.',
-    via: [
-      [6, -21, -28], [4, -26, -44], [10, -27, -52], [17, -30, -56], [22, -37, -58], [22, -41, -59], [21, -43.5, -60],
+      [58, -20, -24], [56, -26, -40], [46, -32, -52], [32, -37, -57], [24, -40, -58.5], [21, -43.5, -60],
       { at: [20, -46.4, -62.6], key: 'arch', title: 'Through the arch', line: 'A limestone arch over the gully. In we go.',
         look: [20, -48, -72], teach: 'lamp', hold: 6 },
       [20, -49, -66], [20, -51, -70], [20, -51.6, -79],
       { at: [20, -50, -84], key: 'lanterns', title: 'The lantern garden', line: 'Soft lights on the deep ledge.',
         look: [8, -55, -86], reach: 6 },
-      // The treasure's viewpoint is just north of the chest: round to it over open water, never across the chest.
-      [6, -49, -94], [1, -50, -90], [-8, -46, -77],
+      [4, -47, -74],
     ] },
-  // Act 2, the way up: along the deep ledge to the soft coral spire, where the swim drifts while a whale shark passes out to
-  // sea, up through the bait ball, and on to open water just seaward of the wreck, with the whole reef rising ahead.
-  { key: 'open-water', kind: 'end', at: [20, -12, -56], teach: 'view', place: `Above the wreck · ${depth(-12)}`, signal: '#ff9d8a',
-    title: 'This is my reef', line: 'My portfolio lives here. Dive around on your own and look at the life, or head up when you’re ready.',
-    short: 'My portfolio lives here. Explore on your own, or head up.',
+  // The way up: along the deep ledge to the soft coral spire, where the swim drifts while a whale shark passes out to sea,
+  // through the bait ball, and round the west of the wreck (clear of its masts and the barracuda's beat) to see it whole.
+  { key: 'experience', kind: 'stop', landmark: 'experience', view: [2, -19, -36], place: `Experience · The Wreck · ${depth(-21)}`, signal: '#ffcf7a',
+    title: 'Here’s the wreck', line: 'This is where you’ll find my experience.',
     via: [
       [-6, -46, -79], [8, -47, -86], [24, -47, -84],
       { at: [36, -45, -79], key: 'whale-shark', title: 'Look out to sea', line: 'A whale shark, passing over the deep water.',
@@ -94,8 +106,13 @@ export const STEPS = [
         look: { bait: true }, through: true, hold: 5, slow: .35, reach: 8 },
       { at: [48, -28, -67], key: 'bait-ball', title: 'Through the bait ball', line: 'They open a tunnel around you.',
         slow: .6, hold: 4, reach: 6 },
-      [38, -18, -62],
-    ],
+      [34, -26, -58], [14, -28, -55], [-10, -22, -44],
+    ] },
+  // Up into open water just seaward of the wreck, with the whole reef rising ahead.
+  { key: 'open-water', kind: 'end', at: [16, -11, -58], teach: 'view', place: `Above the wreck · ${depth(-11)}`, signal: '#ff9d8a',
+    title: 'This is my reef', line: 'My portfolio lives here. Dive around on your own and look at the life, or head up when you’re ready.',
+    short: 'My portfolio lives here. Explore on your own, or head up.',
+    via: [[-2, -15, -46], [6, -12, -56]],
     // The wreck below, the reef rising beyond it to the shallows, and the tower off to the right.
     pan: [[18, -21, -39], [0, -10, -6], [38, -15.5, -8]] },
 ];

@@ -1798,8 +1798,8 @@ export function createSkySystem(uniforms, rng) {
   const presets={day:0,night:Math.PI,
     dawn:(sunrise.date-reference)/DAY_MS*TAU,
     dusk:(sunset.date-reference)/DAY_MS*TAU};
-  // Begin just before sunrise on the current local date, keeping the real sky.
-  const openingPhase=presets.dawn-12*60*1000/DAY_MS*TAU;
+  // Begin in full day on the current local date, keeping the real sky: the water has its most light for longest.
+  const openingPhase=presets.day;
   const rotationMatrix=new THREE.Matrix4(),sunDirection=new THREE.Vector3(),moonDirection=new THREE.Vector3(),moonLight=new THREE.Vector3();
   let cachedPhase=NaN,cachedState;
   const atPhase=phase=>new Date(reference.getTime()+phase/TAU*DAY_MS);

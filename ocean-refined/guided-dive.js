@@ -14,8 +14,9 @@ export { STEPS };
 export const STOPS = STEPS.filter(step => step.kind === 'stop');
 // Analytics (only with consent; analytics-privacy.js declares what is kept): which step, by its key and number.
 // tour_version: the shape of the tour, so a funnel never mixes one round's steps with another's (4: three stops and the
-// long way up to the shallows; 5: the same three stops, ending in open water above the wreck).
-const VERSION = 5;
+// long way up to the shallows; 5: the same three stops, ending in open water above the wreck; 6: in from open water over
+// the far side of the reef, the treasure before the wreck).
+const VERSION = 6;
 const note = (event, extra = {}) => track(event, { step: STEPS[index].key, index, tour_version: VERSION, ...extra });
 const ARRIVE_RADIUS = 1.6, PAN_BEAT = 3, INTRO_BEAT = 4.5, HOLD_SIGNAL = '#8ff4ff';
 // The opening from the surface (SPEC step 0): a held beat while the surface copy fades, the camera eases in on the diver
@@ -34,7 +35,7 @@ const CONTROLS = {
     tip: ['Press C to check your depth on your dive computer.', 'Tap Dive computer to check your depth.'] },
   interact: { key: 'F', name: 'Open a site', touch: 'Read it' },
   // Swimming and rising or sinking are noticed by the diver moving under the visitor's own control (notice()).
-  swim: { key: 'W A S D', name: 'Swim', touch: 'Stick: swim', try: ['Swim with W A S D. The tour waits for you here.', 'Swim with the stick. The tour waits for you here.'] },
+  swim: { key: 'W A S D', name: 'Swim', touch: 'Stick: swim', try: ['Swim with W A S D. The guide picks up again when you let go.', 'Swim with the stick. The guide picks up again when you let go.'] },
   updown: { key: 'Space · Shift', name: 'Up and down', touch: 'Rise and sink', try: ['Space to rise, Shift to sink.', 'Use the rise and sink buttons.'] },
   scooter: { key: 'E', name: 'Scooter', touch: 'Scooter (hold)', try: ['Hold E to spin up your scooter.', 'Hold the scooter button.'],
     tip: ['That’s the scooter. Hold E to use it yourself, any time.', 'That’s the scooter. Hold ⚡ to use it yourself, any time.'] },
@@ -51,11 +52,14 @@ const CONTROLS = {
 // ROAM: in the welcome the visitor may swim this far (m) from where it started and still be on the tour; further puts it on hold.
 // On a phone the computer and the view live in the menu, not on the deck, so the welcome asks only for what the deck has and
 // no later beat teaches them there (DESK).
-const PRIMER = { keys: ['computer', 'swim', 'updown', 'view'], touch: ['swim', 'updown'] }, DESK = new Set(['computer', 'view']);
+const PRIMER = { keys: ['swim', 'updown', 'computer', 'view'], touch: ['swim', 'updown'] }, DESK = new Set(['computer', 'view']);
 const CHEER = 1.2, ROAM = 5, MOVED = 1.2;
 // RISE: in the welcome the visitor can rise this far (m) over where it began and no further, so rising cannot carry them out
 // of it and up to the surface.
 const RISE = 2.5;
+// The welcome's drift toward the reef (m/s), and how long (s) after the visitor lets go of the swim it picks up again.
+const DRIFT = .9, RESUME = 1.5;
+let idle = 0;
 // Big animals passing while the tour swims: the view turns to one coming within SPOT m that is no fly-by's subject, for
 // SPOT_HOLD s, and not to the same one again within SPOT_AGAIN s.
 const BIG = new Set(['whale', 'whale-shark', 'orcas', 'dolphins']), SPOT = 40, SPOT_HOLD = 5, SPOT_AGAIN = 45;
@@ -103,6 +107,31 @@ const sights = [], passed = new Set(), cued = new Set(); let sight = null, sight
 let spotted = null, spottedFor = 0, tourTime = 0; const spottedAt = new Map();
 // Where the current leg set off along its scenic waypoints, or null on a leg without them.
 let scenicFrom = null;
+// The leg's scenic route as swum: the step's own, with any orbit worked out where things are now, and the approach that
+// brings the swim in on the line from the stop's subject, so the diver arrives facing it rather than swinging round to it.
+let legVia = [];
+const APPROACH = 8, LEAD = 16;
+function legOf(step) {
+  const items = (step.via ?? []).flatMap((item, i, all) => item.orbit ? orbitOf(item, all[i + 1]) : [item]);
+  if (step.kind === 'stop' || step.approach) {
+    const dx = goal[0] - look[0], dz = goal[2] - look[2], length = Math.hypot(dx, dz) || 1, distance = step.approach ?? APPROACH;
+    const x = goal[0] + dx / length * distance, z = goal[2] + dz / length * distance;
+    items.push([x, Math.max(goal[1] + .5, terrainHeightAt(x, z) + 2.5), z]);
+  }
+  return items;
+}
+// An orbit fly-by: round a landmark from where the last stop left the diver, the view held on its subject, turning the way
+// that ends nearer what comes next. The fly-by itself starts at the first point of the turn.
+function orbitOf(item, after) {
+  const { around, radius, turn, rise, points = 3 } = item.orbit, centre = [0, 0, 0];
+  resolve(STEPS.find(step => step.landmark === around), [0, 0, 0], centre);
+  const from = scenicFrom ?? item.at, a0 = Math.atan2(from[2] - centre[2], from[0] - centre[0]), next = after ? pointOf(after) : from;
+  const at = (sign, k) => { const a = a0 + sign * turn * Math.PI / 180 * k / points, x = centre[0] + Math.cos(a) * radius, z = centre[2] + Math.sin(a) * radius;
+    return [x, Math.max(centre[1] + rise, terrainHeightAt(x, z) + 2.5), z]; };
+  const sign = Math.hypot(...at(1, points).map((v, k) => v - next[k])) < Math.hypot(...at(-1, points).map((v, k) => v - next[k])) ? 1 : -1;
+  const path = Array.from({ length: points }, (_, k) => at(sign, k + 1));
+  return [{ ...item, at: path[0] }, ...path.slice(1)];
+}
 // cheer: the control just done in the welcome, shown ticked for CHEER seconds before the next is asked for.
 let cheer = null, cheerFor = 0, keysShown = '';
 // roaming: the visitor has taken the controls in the welcome, inside ROAM of `start`. starting: Start pressed, waiting on the assets.
@@ -121,10 +150,19 @@ function landmarkOf(step) {
 function resolve(step, target = goal, subject = look) {
   if (!step.landmark) { target.splice(0, 3, ...step.at); subject.splice(0, 3, ...(Array.isArray(step.pan?.[0]) ? step.pan[0] : step.at)); return true; }
   const placed = landmarkOf(step);
-  if (placed) { target.splice(0, 3, ...placed.interactionPosition); subject.splice(0, 3, ...placed.position); lift(target, subject); return true; }
+  if (placed) { target.splice(0, 3, ...placed.interactionPosition); subject.splice(0, 3, ...placed.position); own(step, target, subject); lift(target, subject); return true; }
   // Before the models settle, a viewpoint beside the charted position stands in.
   const [x, , z] = LANDMARKS.find(item => item.id === step.landmark).position, floor = terrainHeightAt(x, z);
-  target.splice(0, 3, x + 6, floor + 5, z); subject.splice(0, 3, x, floor + 1.5, z); lift(target, subject); return false;
+  target.splice(0, 3, x + 6, floor + 5, z); subject.splice(0, 3, x, floor + 1.5, z); own(step, target, subject); lift(target, subject); return false;
+}
+// A stop's own viewpoint (step.view) where the model's is not the one to see it from: a point, or { behind, near, distance,
+// rise } to stand squarely in front of the landmark with that resident (where it settled; near until it has) lined up behind.
+function own(step, target, subject) {
+  const view = step.view; if (!view) return;
+  if (Array.isArray(view)) { target.splice(0, 3, ...view); return; }
+  const animal = controls()?.residentAt?.(view.behind) ?? view.near, dx = subject[0] - animal[0], dz = subject[2] - animal[2], length = Math.hypot(dx, dz) || 1;
+  const x = subject[0] + dx / length * view.distance, z = subject[2] + dz / length * view.distance;
+  target.splice(0, 3, x, Math.max(subject[1] + view.rise, terrainHeightAt(x, z) + 2.5), z);
 }
 // On a phone the sheet covers the lower part of the screen at a stop, so the view aims a little below the landmark and the
 // landmark sits above the middle, clear of it: about 12°, a fifth of the distance down.
@@ -148,15 +186,15 @@ function route(start, step, via = onward(step, start)) {
 // The scenic waypoints after the stretch of the scenic line (the leg's start, its waypoints, its goal) the diver is nearest.
 // A leg that set off from anywhere but the step before has no scenic line: it swims the planner's own route.
 function onward(step, at) {
-  if (!scenicFrom || !step.via?.length) return [];
-  const line = [scenicFrom, ...step.via.map(pointOf), goal]; let nearest = Infinity, next = 0;
+  if (!scenicFrom || !legVia.length) return [];
+  const line = [scenicFrom, ...legVia.map(pointOf), goal]; let nearest = Infinity, next = 0;
   for (let i = 1; i < line.length; i++) {
     from.fromArray(line[i - 1]); to.fromArray(line[i]).sub(from);
     const t = Math.max(0, Math.min(1, probe.fromArray(at).sub(from).dot(to) / Math.max(to.lengthSq(), 1e-6)));
     const d = probe.fromArray(at).distanceTo(from.addScaledVector(to, t));
     if (d < nearest) { nearest = d; next = i - 1; }
   }
-  return step.via.slice(next);
+  return legVia.slice(next);
 }
 function paint() {
   const step = STEPS[index], shown = status !== 'off' && status !== 'starting' && reveal <= 0, reading = status === 'intro' || status === 'dwell' || status === 'done';
@@ -201,7 +239,7 @@ function paint() {
   setQuiet(touring() || status === 'starting');
   setBar(status === 'done' ? 1 : (index + (arrived === index ? 1 : 0)) / STEPS.length);
   const flyTip = paintCaption(fingers);
-  if (window.oceanDiagnostics) window.oceanDiagnostics.tour = { status, stop: index, key: step.key, kind: step.kind, arrived, paused, routeIssue, detours, tip, sight: sight?.key ?? null, flyTip };
+  if (window.oceanDiagnostics) window.oceanDiagnostics.tour = { status, stop: index, key: step.key, kind: step.kind, arrived, paused, routeIssue, detours, tip, sight: sight?.key ?? null, flyTip, goal: [...goal] };
 }
 // Notices a control in use by what it changed. The first reading of a tour is only a baseline.
 function notice(api) {
@@ -289,7 +327,8 @@ function startPan() {
 }
 // A pan subject is a point, or { visitor } for an animal passing (null while it is not there).
 const visitorAt = id => { const found = controls()?.visitors?.().find(item => item.id === id); return found ? [found.x, found.y, found.z] : null; };
-function aim(subject, follow = false) { const point = subject.visitor ? visitorAt(subject.visitor) : subject; if (point) controls()?.lookAt(point, follow); }
+// In the welcome the diver is drifting in, so a subject is a glance too (lookAt only holds a view at rest).
+function aim(subject, follow = false) { const point = subject.visitor ? visitorAt(subject.visitor) : subject; if (!point) return; controls()?.lookAt(point, follow); if (status === 'intro') controls()?.glance?.(point); }
 function pan(dt) {
   if (paused) return;
   const beat = STEPS[index].kind === 'intro' ? INTRO_BEAT : PAN_BEAT;
@@ -375,7 +414,7 @@ function launch() {
   const api = controls();
   api.guide(true, true, true);
   inputs = api.nav.inputs; best = Infinity; stall = 0; legTime = 0; settle = 2;
-  if (!api.travelPath(leg, look, STEPS[index].speed ?? SPEED)) blockRoute();
+  if (!api.travelPath(leg, look, STEPS[index].speed ?? SPEED, LEAD)) blockRoute();
   else lineUp(window.oceanDiagnostics.playerPosition);
 }
 function blockRoute() {
@@ -390,11 +429,12 @@ function arrive() {
 // A cut: fade the water over, move the diver, fade back. Reduced motion always travels this way.
 function cutTo(then) { endSight(); controls()?.cancelTravel(); cut = then; cutTime = .24; fade.dataset.on = 'true'; }
 function go(next) {
-  controls()?.tether?.(null); index = next; resolve(STEPS[index]); status = 'travel'; paused = routeIssue = roaming = false; detours = 0;
+  controls()?.tether?.(null); controls()?.glance?.(null); index = next; resolve(STEPS[index]); status = 'travel'; paused = routeIssue = roaming = false; detours = 0;
   inputs = controls().nav.inputs; paint();
   here.fromArray(window.oceanDiagnostics.playerPosition);
   // The scenic line starts where the step before is, so a leg rejoined partway takes up the waypoints still ahead.
   scenicFrom = arrived === index - 1 && STEPS[index].via ? resolveAt(STEPS[index - 1]) : null;
+  legVia = scenicFrom ? legOf(STEPS[index]) : [];
   sight = null; sights.length = 0; passed.clear(); cued.clear();
   if (reduced()) { cutTo(land); return; }
   if (!route(here.toArray(), STEPS[index])) { blockRoute(); return; }
@@ -410,7 +450,15 @@ function begin() {
   // The welcome sheet follows the title card by REVEAL, counted from when the card went up during the descent.
   if (titled < 0) { titled = 0; splash('Guided dive', 'Welcome to the reef'); }
   endPrelude(); reveal = Math.max(.4, REVEAL - titled); titled = -1; note('tour_step');
-  api.guide(true, true, true); api.tether?.(start.y + RISE); startPan(); paint();
+  api.guide(true, true, true); api.tether?.(start.y + RISE); drift(); startPan(); paint();
+}
+// The welcome drifts in toward the reef at an easy pace while the controls are tried. A visitor swimming about takes over,
+// and the drift picks up again once they have let go for RESUME seconds.
+function drift() {
+  const api = controls(), step = STEPS[0]; if (!step.at || reduced()) return;
+  resolve(step); here.fromArray(window.oceanDiagnostics.playerPosition);
+  leg.length = 0; leg.push(...planGuidedRoute(here.toArray(), goal, { floor: terrainHeightAt, clear, clearance: Math.max(1.5, api.settings?.floorClearance ?? 1.5) }));
+  if (leg.length) { api.guide(true, true, true); api.travelPath(leg, null, DRIFT); inputs = api.nav.inputs; }
 }
 function endPrelude() { prelude = -1; delete document.body.dataset.prelude; controls()?.frameDiver?.(false); }
 function handOver() { note('tour_taken_over'); endSight(); controls()?.tether?.(null); status = 'free'; paused = false; cut = null; fade.dataset.on = 'false'; controls()?.guide(false); paint(); }
@@ -488,12 +536,13 @@ function update(dt, api, state, diving) {
   // In the welcome the visitor may swim about to try the controls: the tour holds only once they leave its ROAM. Swimming
   // off from the overview simply ends the tour; anywhere else it puts the tour on hold.
   if (nav.inputs !== inputs) {
-    if (status === 'intro') { roaming = true; inputs = nav.inputs; }
+    if (status === 'intro') { if (!roaming) { start.fromArray(state.playerPosition); api.tether?.(start.y + RISE); } roaming = true; idle = 0; inputs = nav.inputs; }
     else { if (status === 'done') stop(null, 'swam_off'); else handOver(); return; }
   }
   if (status === 'intro') {
     introFor += dt;
     if (roaming && here.fromArray(state.playerPosition).distanceTo(start) > ROAM) { handOver(); return; }
+    if (roaming) { idle = nav.manualInput ? 0 : idle + dt; if (idle > RESUME) { roaming = false; drift(); } }
     if (starting && (assetsIn(state) || introFor > ASSETS_WAIT)) { starting = false; advance(); return; }
   }
   if (cut) { cutTime -= dt; if (cutTime <= 0) { const then = cut; cut = null; then(); fade.dataset.on = 'false'; } return; }

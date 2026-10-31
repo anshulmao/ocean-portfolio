@@ -6,6 +6,9 @@ import { planSurfaceReturn } from './return-route.js';
 import { toDisplayDepth } from './depth-metrics.js';
 import {routeTarget,smoothRoute,distance as routeDistance} from './cinematic-route.js';
 
+// Where the site starts, at the surface: over the deep end, west of the anchor and seaward of the reef (x, z).
+export const SURFACE_START = [-26, -60];
+
 // The swimming model. Everything that moves is eased by a critically damped follower that is exact over a step of
 // any length, so the same input gives the same swim at 30, 60 or 120 updates a second:
 //   linear   velocity chases the commanded velocity (frequency `acceleration` while swimming, `deceleration` while
@@ -53,7 +56,8 @@ function soften(angle, change, limit, zone) {
 export function createExploration(canvas, wake, settings=savedSettings) {
   const keys=new Set(),padKeys=new Set(),cleanup=[],controls=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','Space','ShiftLeft','ShiftRight','ArrowUp','ArrowDown','ArrowLeft','ArrowRight']);
   // `base` is where the controls have put the diver; `offset` (what the scene reads) adds the idle drift on top.
-  const offset=new THREE.Vector3(0,8,0),base=new THREE.Vector3(0,8,0),drift=new THREE.Vector3();
+  // The dive starts at the surface out over the deep end, west of the anchor (SURFACE_START: x, z), with the reef ahead.
+  const offset=new THREE.Vector3(SURFACE_START[0],8,SURFACE_START[1]),base=offset.clone(),drift=new THREE.Vector3();
   const velocity=new THREE.Vector3(),thrust=new THREE.Vector3(),desired=new THREE.Vector3(),course=new THREE.Vector3(0,0,-1),dest=new THREE.Vector3(),focus=new THREE.Vector3();
   const travelStart=new THREE.Vector3(),curveTarget=new THREE.Vector3(),curveFrom=new THREE.Vector3(),curveTo=new THREE.Vector3();
   let travelSpan=0,curveProbe=0,curveClear=false;
@@ -64,7 +68,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   let syncedCameraMode=initialPerspective;
   // Beyond the fields other modules read: velocity (m/s, live), turnRate (rad/s, smoothed), roll (rad, positive banks left into a left turn),
   // pitchLead (rad, the body tipping into a climb or a descent), lean (rad, the idle sway), float (m, the idle drift already inside offset), idle (0..1).
-  const state={offset,yaw:0,pitch:0,perspective:initialPerspective,moving:false,exploring:false,speed:0,atBoundary:false,colliding:false,contacts:0,mode:'surface',transition:false,ascentProgress:0,ascentDepth:0,ascentLaunch:0,travelling:false,travelBlocked:false,manualInput:false,pointerLocked:false,scooter:0,lamp:true,inputs:0,guided:false,freeLook:false,bodyYaw:0,bodyPitch:0,suspended:false,velocity,turnRate:0,roll:0,pitchLead:0,lean:0,float:drift,idle:0,device:'keys'};
+  const state={offset,yaw:0,pitch:0,perspective:initialPerspective,moving:false,exploring:false,speed:0,atBoundary:false,colliding:false,contacts:0,mode:'surface',transition:false,ascentProgress:0,ascentDepth:0,ascentLaunch:0,travelling:false,travelBlocked:false,manualInput:false,pointerLocked:false,scooter:0,lamp:false,inputs:0,guided:false,freeLook:false,bodyYaw:0,bodyPitch:0,suspended:false,velocity,turnRate:0,roll:0,pitchLead:0,lean:0,float:drift,idle:0,device:'keys'};
   // look: where the diver faces. spin: its turn rate (rad/s). spinPush: the rate's own derivative while the keys drive it.
   // pend: aim input summed since the last update (rad). lag: aim not yet shown, when smoothing is on.
   const look={yaw:0,pitch:0},body={yaw:0,pitch:0},sweep={on:false,back:false,t:0,length:0,yaw:0,pitch:0,turn:0,tilt:0,goal:0},spin={yaw:0,pitch:0},spinPush={yaw:0,pitch:0},pend={yaw:0,pitch:0},lag={yaw:0,pitch:0},bank={roll:0,lead:0},bankRate={roll:0,lead:0};
@@ -86,6 +90,9 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   // tetherTop: a ceiling (world y) the swim may not rise above, set by the guided dive while its welcome lets the visitor try
   // the controls, so rising cannot carry them out of it and up to the surface. Infinity is no tether.
   let tetherTop=Infinity;
+  // focusLead: how far out (m) a leg's subject starts drawing the view. The guided dive turns to a stop from well back, so
+  // the swim's last curve and the turn to the subject happen together rather than one after the other.
+  let focusLead=FOCUS_RANGE;
   let hasDest=false,hasFocus=false,docking=false,dockTime=0,coursed=false,pace=0,travelSpeed=0,guided=false,freeControl=false,freeLook=false,settling=false,slack=0,boost=0,spool=0,coast=1,pendingDive=null;
   const coordinate=value=>Array.isArray(value)?value:[value.x,value.y,value.z];
   let suspended=false,captureRequired=true,touchId=null,skipMove=false,blockedTime=0,ascent=null,lastSubmerged=false,surfaceLocked=true,intentionalUnlock=false,pathCheckAt=0,pathIsClear=true;
@@ -196,7 +203,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   const gamepad=createGamepad({onAction:act,wake});
   cleanup.push(()=>touch.destroy(),()=>gamepad.destroy());
 
-  function reset(){base.set(0,lastSubmerged?0:8,0);offset.copy(base);halt();look.yaw=defaultYaw;look.pitch=0;blockedTime=0;state.travelBlocked=false;ascent=null;state.ascentLaunch=0;surfaceLocked=!lastSubmerged;state.mode=lastSubmerged?'diver':'surface';takeControl();boost=spool=0;floorStale=true;requireRecapture();}
+  function reset(){base.set(SURFACE_START[0],lastSubmerged?0:8,SURFACE_START[1]);offset.copy(base);halt();look.yaw=defaultYaw;look.pitch=0;blockedTime=0;state.travelBlocked=false;ascent=null;state.ascentLaunch=0;surfaceLocked=!lastSubmerged;state.mode=lastSubmerged?'diver':'surface';takeControl();boost=spool=0;floorStale=true;requireRecapture();}
   // An explicit quick return, separate from the normal collision-routed ascent.
   function returnToSurface(){
     ascent=null;pendingDive=null;lastSubmerged=false;surfaceLocked=true;
@@ -237,7 +244,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     for(let i=points.length-1;i>=0;i--)travelRemaining[i]=i===points.length-1?0:travelRemaining[i+1]+routeDistance(points[i],points[i+1]);
   }
   function travel(point,focusPoint,speed){
-    const target=coordinate(point),safeMaxY=8-settings.ascentThreshold-1;travelSpeed=speed>0?speed:settings.atlasCruiseSpeed;
+    const target=coordinate(point),safeMaxY=8-settings.ascentThreshold-1;travelSpeed=speed>0?speed:settings.atlasCruiseSpeed;focusLead=FOCUS_RANGE;
     dest.set(clamp(target[0],-bounds.x,bounds.x),clamp((target[1]??-8)+8,bounds.yMin,safeMaxY),clamp(target[2]??0,bounds.zMin,bounds.zMax));
     travelStart.copy(base);travelSpan=Math.hypot(dest.x-base.x,dest.z-base.z);curveProbe=0;curveClear=false;
     // A fresh departure builds its pace from the swim already under way and turns from the way the diver is drifting; a new waypoint mid-route keeps both.
@@ -250,11 +257,11 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     mid[1]=Math.max(mid[1],terrain(mid[0],mid[2])+settings.floorClearance);
     useTravelRoute(smoothRoute([start,mid,end],{clear:travelClear}));
   }
-  function travelPath(points,focusPoint,speed){
+  function travelPath(points,focusPoint,speed,lead=FOCUS_RANGE){
     if(!points?.length)return false;
     const start=[base.x,base.y-8,base.z],route=smoothRoute([start,...points],{clear:travelClear});
     if(!route.length)return false;
-    travel(points.at(-1),focusPoint,speed);useTravelRoute(route);return true;
+    travel(points.at(-1),focusPoint,speed);focusLead=Math.max(FOCUS_RANGE,lead);useTravelRoute(route);return true;
   }
   function beginAscent(routeProvider,returnViaReef=false){
     if(ascent||state.mode==='surface')return false;clear();state.mode='transition';releasePointer();position.set(base.x,base.y-8,base.z);let route=[];try{route=routeProvider?.(position.clone())||[];}catch{}
@@ -420,7 +427,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
       // --- autopilot: where to swim and where to look ---
       let steering=false,autoLook=false,goalYaw=look.yaw,goalPitch=0;
       // A fly-by eases in and out: the glance over about a second and a half, the pace a little slower so the view leads the brake.
-      paceScale+=(paceGoal-paceScale)*(1-Math.exp(-dt*1.4));glanceWeight+=((glanceOn&&hasDest?1:0)-glanceWeight)*(1-Math.exp(-dt*1.6));if(glanceWeight<.002&&!glanceOn)glanceWeight=0;
+      paceScale+=(paceGoal-paceScale)*(1-Math.exp(-dt*1.1));glanceWeight+=((glanceOn&&hasDest?1:0)-glanceWeight)*(1-Math.exp(-dt*1.15));if(glanceWeight<.002&&!glanceOn)glanceWeight=0;
       if(traveling){delta.copy(dest).sub(base);if(delta.length()<settings.travelArrival){hasDest=false;docking=true;dockTime=0;}}
       if((hasDest||docking)&&submerged&&!suspended){
         steering=true;autoLook=true;const cruise=travelSpeed||settings.atlasCruiseSpeed,rate=cruise/Math.max(.1,settings.travelSlowdown);
@@ -482,7 +489,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
       if(hasFocus&&submerged&&!suspended){
         const fx=focus.x-base.x,fy=focus.y-(base.y-8),fz=focus.z-base.z,horizontal=Math.hypot(fx,fz);
         if(fx*fx+fy*fy+fz*fz>.01){
-          const weight=hasDest?1-smoothstep(base.distanceTo(dest),settings.travelArrival,FOCUS_RANGE):1,focusYaw=Math.atan2(-fx,-fz),focusPitch=clamp(Math.atan2(fy,horizontal),-limit,limit);
+          const weight=hasDest?1-smoothstep(base.distanceTo(dest),settings.travelArrival,focusLead):1,focusYaw=Math.atan2(-fx,-fz),focusPitch=clamp(Math.atan2(fy,horizontal),-limit,limit);
           goalYaw+=wrap(focusYaw-goalYaw)*weight;goalPitch+=(focusPitch-goalPitch)*weight;autoLook=true;
         }
       }

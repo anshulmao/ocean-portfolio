@@ -511,7 +511,7 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   // Dive planner and guided tour hooks: autopilot, instant placement, dive start / surfacing, and the flashlight and scooter state.
   travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free,looking){exploration.setGuided(value,free,looking);},frameDiver(value){preludeOn=Boolean(value);if(reducedMotion)prelude=Number(preludeOn);wake();},lookAt(point,follow){exploration.lookAt(point,follow);wake();},glance(point){exploration.glance(point);},pacing(scale){exploration.pacing(scale);},guideScooter(on){exploration.guideScooter(on);},tether(top){exploration.tether(top);},baitBall(){return livingWorld?.baitBall?.()??null;},residentAt(id){return userCreatures?.residentAt?.(id)??null;},
   encounter(id,course){return userCreatures?.encounter?.(id,playerPosition,viewerOrbit?null:view,course)??false;},visitors(){return userCreatures?.visitors?.()??[];},
-  travelPath(points,focus,speed){return exploration.travelPath(points,focus,speed);},
+  travelPath(points,focus,speed,lead){return exploration.travelPath(points,focus,speed,lead);},
   cancelTravel(options){return exploration.cancelTravel(options);},
   // The guided dive's surface prelude: a dive is asked for, and goes under a couple of seconds from now. What it will wait
   // for starts at once (the build, the landmarks, and in economy detail the optional packs, which wait for a dive to be
@@ -1231,7 +1231,7 @@ async function boot(){
   await stage('diver');
   skySystem=createSkySystem(uniforms,rng);scene.add(skySystem.root);expeditionUI=createExpeditionUI({sky:skySystem,getPhase:()=>phase,setPhase:value=>{phase=value;phaseTarget=null;wake();},frameSurface});
   diagnostic.starCount=skySystem.starCount;diagnostic.constellationCount=skySystem.constellationCount;
-  phase=skySystem.openingPhase;paintTheme(false,'dawn');diagnostic.openingSunAltitude=skySystem.getState(phase).sunAltitude;
+  phase=skySystem.openingPhase;paintTheme(false,'day');diagnostic.openingSunAltitude=skySystem.getState(phase).sunAltitude;
   for(const item of skySystem.labels){const label=document.createElement('div');label.className='constellation-label';label.innerHTML=`<i></i>${item.name.toUpperCase()}`;$('#sky-labels').append(label);label.style.left=label.style.top='0';skyLabels.push({label,shift:'',anchor:item.anchor});}
   early(skySystem.root);for(const material of skySystem.prepare(renderer))linking.add(material);
   await stage('sky');
