@@ -16,12 +16,12 @@ const ARCH = ['The arch', 20, -72, 6];
 const SAMPLE = 2, LOOK = .5, SEEN_AFTER = 1.5;
 // A site counts as visited within this many metres (horizontal) of it; a feature within its radius plus FEATURE_REACH.
 const SITE_REACH = 16, FEATURE_REACH = 7;
-// Photos kept for the session, oldest let go first.
-const KEEP_PHOTOS = 40;
+// Photos and dives kept for the session, oldest let go first.
+const KEEP_PHOTOS = 40, KEEP_DIVES = 20;
 const remember = (key, fallback) => { try { return JSON.parse(sessionStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const keep = (key, value) => { try { sessionStorage.setItem(key, JSON.stringify(value)); } catch {} };
 
-const photos = [];
+const photos = [], dives = [];
 let dive = null, last = null, number = remember('ocean-dive-number', 0);
 // Species seen on any dive this session: the summary marks a first sighting as new.
 const everSeen = new Set(remember('ocean-seen', []));
@@ -100,7 +100,7 @@ addEventListener('oceandiveend', ({ detail }) => {
   record.profile.push([+record.time.toFixed(1), 0]);
   record.averageDepth = record.time ? record.depthSum / record.time : 0;
   record.found = detail.found; record.ended = Date.now();
-  last = record;
+  last = record; dives.push(record); while (dives.length > KEEP_DIVES) dives.shift();
   dispatchEvent(new CustomEvent('oceandivelog', { detail: record }));
 });
 
@@ -112,4 +112,4 @@ export function addPhoto(full, share) {
   while (photos.length > KEEP_PHOTOS) URL.revokeObjectURL(photos.shift().url);
   return photo;
 }
-window.oceanDiveLog = { get current() { return dive; }, get last() { return last; }, get photos() { return photos; }, get seenEver() { return everSeen; } };
+window.oceanDiveLog = { get current() { return dive; }, get last() { return last; }, get dives() { return dives; }, get photos() { return photos; }, get seenEver() { return everSeen; } };

@@ -6,8 +6,8 @@ import { preparedChartsReady, drawPreparedChart } from './prepared-charts.js';
 import { sendPhoto, wordCount, NOTE_WORDS } from './submissions.js';
 import { track } from './analytics.js';
 
-// The dive summary: once the diver is back at the surface a button on the right opens the last dive's log page (the
-// record comes from dive-log.js as `oceandivelog`). The page shows the numbers and the depth profile, the reef chart
+// The dive log page: once the diver is back at the surface a Dive log button beside Guided dive opens the last dive's
+// log (the record comes from dive-log.js as `oceandivelog`), and View more logs at the top turns to the visit's other dives. The page shows the numbers and the depth profile, the reef chart
 // with the swim drawn over it and the sites ticked off, the photos as postcards, and a field guide to the animals seen.
 // Photos are in memory only; sharing one with Anshul, with a short note, is the only thing that leaves the device.
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -36,12 +36,13 @@ const mapX = x => (x + 62) / 124 * 100, mapY = z => (z + 105) / 140 * 100;
 const button = document.createElement('button');
 button.type = 'button'; button.className = 'guided-button ds-open'; button.hidden = true;
 button.setAttribute('aria-haspopup', 'dialog'); button.setAttribute('aria-controls', 'dive-summary');
-button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg><span>Dive summary</span><small></small>';
+button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg><span>Dive log</span><small></small>';
 const dialog = document.createElement('dialog');
 dialog.className = 'ds'; dialog.id = 'dive-summary'; dialog.setAttribute('aria-labelledby', 'ds-title');
 dialog.innerHTML = `<div class="ds-inner">
   <header class="ds-head ds-step" style="--i:0"><div><p class="holo-label ds-kicker"></p><h2 id="ds-title"></h2><p class="ds-sub"></p></div>
-    <button type="button" class="holo-chip ds-close">Close <kbd>Esc</kbd></button></header>
+    <div class="ds-head-tools"><details class="ds-more" hidden><summary class="holo-chip">View more logs <span aria-hidden="true">▾</span></summary><ul class="ds-more-list" aria-label="Your dives this visit"></ul></details>
+    <button type="button" class="holo-chip ds-close">Close <kbd>Esc</kbd></button></div></header>
   <section class="ds-stats ds-step" style="--i:1" aria-label="Dive numbers">
     <dl class="ds-tiles"></dl>
     <figure class="ds-panel ds-profile"><div class="ds-label"><span class="holo-label">Dive profile</span><span class="ds-average"></span></div>
@@ -79,7 +80,8 @@ document.body.append(dialog);
 const guidedButton = document.getElementById('guided-dive');
 if (guidedButton) guidedButton.after(button); else (document.querySelector('.portfolio-actions') || document.body).append(button);
 
-let record = null, photos = [], current = 0, selected = null, filter = 'dive', closing = 0;
+// latest: the newest dive, which the button opens; record: the dive the page is showing.
+let latest = null, record = null, photos = [], current = 0, selected = null, filter = 'dive', closing = 0;
 // Sites found: those the journey has found this session, and any this dive reached.
 const foundSites = () => new Set([...(window.oceanDiagnostics?.journey?.found || []), ...Object.keys(record.sites)]);
 
@@ -314,16 +316,30 @@ function paint() {
   $('.ds-kicker', dialog).textContent = `Dive log · No. ${two(record.number)}`;
   $('#ds-title', dialog).textContent = 'Back on the surface';
   $('.ds-sub', dialog).textContent = `${started.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })} · In at ${time(started)}, out at ${time(ended)}`;
-  paintPhotos(); paintStats(); paintProfile(); paintSites(); paintGuide(); paintFoot();
+  paintMore(); paintPhotos(); paintStats(); paintProfile(); paintSites(); paintGuide(); paintFoot();
 }
+// View more logs: the visit's other dives, newest first, in a small list under the button.
+function paintMore() {
+  const all = window.oceanDiveLog?.dives || [], more = $('.ds-more', dialog);
+  more.hidden = all.length < 2; more.open = false;
+  $('.ds-more-list', more).innerHTML = [...all].reverse().map(dive => `<li><button type="button" data-number="${dive.number}" aria-current="${dive === record}">
+    <b>Dive ${two(dive.number)}</b><span>${clock(dive.time)} · ${dive.maxDepth.toFixed(1)} m · ${Object.keys(dive.seen).length} species</span></button></li>`).join('');
+}
+$('.ds-more', dialog).addEventListener('click', event => {
+  const pick = event.target.closest('[data-number]'); if (!pick) return;
+  const dive = window.oceanDiveLog?.dives.find(item => item.number === Number(pick.dataset.number)); if (!dive) return;
+  record = dive; paint(); dialog.scrollTop = 0; $('.ds-more summary', dialog).focus();
+});
 
-function open() {
-  if (!record || dialog.open || document.querySelector('dialog[open]')) return false;
-  paint();
+// open(): the newest dive; open(record): any dive of the visit (the logbook's Dive log page opens them).
+function open(chosen) {
+  const dive = chosen?.number ? chosen : latest;
+  if (!dive || dialog.open || document.querySelector('dialog[open]')) return false;
+  record = dive; paint();
   dialog.scrollTop = 0; delete dialog.dataset.closing;
   window.oceanControls?.setInterfaceOpen?.(true);
   dialog.showModal(); document.body.dataset.summary = 'true';
-  button.dataset.seen = 'true'; button.setAttribute('aria-expanded', 'true'); $('small', button).textContent = clock(record.time);
+  button.dataset.seen = 'true'; button.setAttribute('aria-expanded', 'true'); $('small', button).textContent = clock(latest.time);
   track('dive_summary_opened');
   return true;
 }
@@ -343,13 +359,13 @@ dialog.addEventListener('close', () => {
 });
 dialog.addEventListener('click', event => { if (event.target === dialog) close(); });
 $('.ds-close', dialog).addEventListener('click', () => close());
-button.addEventListener('click', open);
+button.addEventListener('click', () => open());
 
 addEventListener('oceandivelog', ({ detail }) => {
-  record = detail;
+  latest = record = detail;
   const seen = Object.keys(detail.seen).length;
   $('small', button).textContent = 'New';
-  button.setAttribute('aria-label', `Dive summary: ${clock(detail.time)}, ${detail.maxDepth.toFixed(1)} metres, ${seen} species`);
+  button.setAttribute('aria-label', `Dive log: ${clock(detail.time)}, ${detail.maxDepth.toFixed(1)} metres, ${seen} species`);
   button.hidden = false; button.dataset.seen = 'false'; button.setAttribute('aria-expanded', 'false');
 });
-window.oceanDiveSummary = { open, close, get isOpen() { return dialog.open; }, get record() { return record; } };
+window.oceanDiveSummary = { open, close, get isOpen() { return dialog.open; }, get record() { return record; }, get latest() { return latest; } };

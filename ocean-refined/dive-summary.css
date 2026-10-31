@@ -28,6 +28,22 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
 .ds-head h2{margin-top:8px;font:500 30px/1.1 var(--holo-font);text-shadow:var(--holo-text-glow);text-decoration:underline wavy var(--holo-dim) 1px;text-underline-offset:.3em;rotate:-1deg;transform-origin:0 100%}
 .ds-sub{margin-top:12px !important;font:400 13px/1.4 var(--holo-font);color:#cdeff6}
 .ds-close{min-height:40px}
+.ds-head-tools{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+/* View more logs: a small list that drops from the top of the page. */
+.ds-more{position:relative}
+.ds-more[hidden]{display:none}
+.ds-more summary{min-height:40px;list-style:none}
+.ds-more summary::-webkit-details-marker{display:none}
+.ds-more summary span{transition:rotate var(--motion-settle) var(--journey-ease)}
+.ds-more[open] summary span{rotate:180deg}
+.ds-more-list{position:absolute;right:0;top:calc(100% + 6px);z-index:2;display:grid;gap:2px;min-width:240px;max-height:300px;overflow:auto;margin:0;padding:6px;list-style:none;border:1px solid var(--holo-dim);border-radius:3px;background:#05222f;box-shadow:0 10px 30px #021a26cc,var(--holo-glow,0 0 14px #5fe9ff33)}
+.ds-more[open] .ds-more-list{animation:ds-drop var(--motion-settle) var(--journey-in) both}
+@keyframes ds-drop{from{opacity:0;translate:0 -6px}}
+.ds-more-list button{display:grid;gap:4px;width:100%;padding:9px 10px;border:0;border-radius:2px;background:none;color:var(--holo-ink);font:inherit;text-align:left;cursor:pointer;transition:background var(--motion-hover) var(--journey-ease)}
+.ds-more-list button:hover,.ds-more-list button:focus-visible{background:#8ff4ff14;outline:none}
+.ds-more-list button[aria-current="true"]{background:#8ff4ff1f;box-shadow:inset 2px 0 0 var(--holo-strong)}
+.ds-more-list b{font:500 13px/1 var(--holo-font)}
+.ds-more-list span{font:500 10px/1.2 var(--holo-mono);color:#bfe9f2}
 
 .ds-label{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px 10px;margin-bottom:12px}
 .ds-label>span:last-child{font:500 11px/1 var(--holo-mono);letter-spacing:.05em;color:#bfe9f2}
@@ -154,7 +170,7 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
 .ds-foot div{display:flex;gap:8px;flex-wrap:wrap}
 
 @media (prefers-reduced-motion:reduce){
-  dialog.ds[open],dialog.ds[open] .ds-step,dialog.ds[data-closing="true"],.ds-detail[data-swap="true"] :is(.art img,.copy){animation:none}
+  dialog.ds[open],dialog.ds[open] .ds-step,dialog.ds[data-closing="true"],.ds-more[open] .ds-more-list,.ds-detail[data-swap="true"] :is(.art img,.copy){animation:none}
   .postcard,.species{transition:none}
 }
 @media (max-width:860px){
@@ -172,3 +188,37 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
   .ds-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ds :is(.holo-chip){min-height:44px}
 }
+
+/* The logbook's Dive log page (dive-log-page.js), in the records' projected light. */
+.dl-page{display:grid;gap:18px}
+.dl-page :is(h3,h4,p,dl,dd,figure,ul){margin:0}
+.dl-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.dl-head h3{margin-top:8px;font:500 28px/1.1 var(--holo-font)}
+.dl-when{margin-top:8px !important;font:400 13px/1.4 var(--holo-font);opacity:.85}
+.dl-more{position:relative}
+.dl-more summary{min-height:40px;list-style:none}
+.dl-more summary::-webkit-details-marker{display:none}
+.dl-more[open] .ds-more-list{animation:ds-drop var(--motion-settle) var(--journey-in) both}
+.dl-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.dl-stats div{padding:10px 12px;border:1px solid var(--holo-faint);border-radius:3px}
+.dl-stats dt{font:500 9px/1 var(--holo-font);letter-spacing:.16em;text-transform:uppercase;color:var(--holo-strong)}
+.dl-stats dd{margin-top:8px;font:500 18px/1 var(--holo-mono);font-variant-numeric:tabular-nums}
+.dl-profile{padding:10px 12px;border:1px solid var(--holo-faint);border-radius:3px}
+.dl-spark{display:block;width:100%;height:64px}
+.dl-spark-fill{fill:#8ff4ff14}
+.dl-spark-line{fill:none;stroke:var(--holo-strong);stroke-width:1.6}
+.dl-block{display:grid;gap:10px}
+.dl-sites,.dl-species,.dl-photos{padding:0;list-style:none}
+.dl-sites{display:grid;gap:6px}
+.dl-sites li{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--holo-faint);border-left:2px solid var(--signal);border-radius:2px;font:400 13px/1.3 var(--holo-font)}
+.dl-sites li[data-done="false"]{border-left-style:dashed;opacity:.75}
+.dl-sites li span{font-size:12px;opacity:.85}
+.dl-species{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.dl-species li{display:grid;gap:3px;padding:8px;border:1px solid var(--holo-faint);border-radius:3px;background:linear-gradient(#1d84aa55,#05222f00 70%)}
+.dl-species img{width:100%;aspect-ratio:4/3;object-fit:contain}
+.dl-species b{font:500 12px/1.25 var(--holo-font)}
+.dl-species span{font:400 10px/1.25 var(--holo-mono);opacity:.8}
+.dl-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.dl-photos img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;border:1px solid var(--holo-dim);border-radius:2px}
+.dl-note,.dl-empty{font:400 13px/1.5 var(--holo-font);opacity:.85}
+.dl-empty{padding:18px;border:1px dashed var(--holo-faint);border-radius:3px}

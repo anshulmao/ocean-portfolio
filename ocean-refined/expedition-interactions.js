@@ -169,7 +169,7 @@ function takePhoto() {
     const ratio = Math.min(1, 1280 / canvas.width, 720 / canvas.height), share = document.createElement('canvas');
     share.width = Math.max(1, Math.round(canvas.width * ratio)); share.height = Math.max(1, Math.round(canvas.height * ratio));
     share.getContext('2d').drawImage(canvas, 0, 0, share.width, share.height);
-    photos++; track('reef_photo_taken'); say('Photo saved to your dive summary.');
+    photos++; track('reef_photo_taken'); say('Photo saved to your dive log.');
     Promise.all([blobOf(full, .92), blobOf(share, .8).then(blob => blob.size <= 1048576 ? blob : blobOf(share, .6))])
       .then(([large, small]) => addPhoto(large, small)).catch(() => say('This photo could not be kept. Please try again.'));
   } catch { say('This browser could not take a photo. Please try again after the scene finishes loading.'); }
