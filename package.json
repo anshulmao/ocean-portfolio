@@ -26,10 +26,11 @@
     "test:encounter-lifecycle": "node ocean-refined/newqa/creature-lifecycle.mjs",
     "test:unit": "node --test tools/test-held-map.mjs tools/test-ascent-composition.mjs tools/test-cinematic-route.mjs tools/test-guided-motion.mjs tools/test-navigation-clock.mjs tools/test-settings-escape.mjs ocean-refined/newqa/creature-smoke.mjs ocean-refined/newqa/distributed-ecology.mjs ocean-refined/newqa/diver-rig.mjs ocean-refined/newqa/experience-performance.mjs ocean-refined/newqa/fish-navigation.mjs ocean-refined/newqa/moray-resident.mjs ocean-refined/newqa/movement-profile.mjs ocean-refined/newqa/safety-stop-clock.mjs ocean-refined/newqa/school-fish.mjs ocean-refined/newqa/waterline-splash.mjs",
     "smoke": "node tools/smoke.mjs",
-    "check": "npm run build && npm run test:build && npm run test:services && npm run test:unit && npm run smoke",
+    "check": "npm run build && npm run test:build && npm run test:services && npm run test:unit && npm run smoke && npm run test:ui",
     "test:profile": "node tools/test-profile-free-look.mjs",
     "test:surface": "node tools/test-surface-controls.mjs",
     "test:layout": "node tools/test-mobile-layout.mjs",
+    "test:ui": "node tools/test-ui-system.mjs",
     "audit:reef": "node tools/audit-reef.mjs"
   },
   "devDependencies": {

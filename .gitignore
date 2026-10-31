@@ -16,6 +16,7 @@ __pycache__/
 build-report.json
 release-files.json
 # Browser reports and captures
+.taste-skill/
 **/*-qa.png
 **/*-qa.json
 **/*-report.json
