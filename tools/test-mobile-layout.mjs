@@ -153,14 +153,15 @@ async function run(profileName) {
     await page.keyboard.press('Escape'); await page.waitForTimeout(800);
     if (await looking()) throw Error('a second Escape should bring the hero back');
   });
-  // After a dive, its summary (dive-plan.js) opens from the hero's links, clear of the hero.
+  // After a dive, its summary (dive-summary.js) opens from the button on the right as a full page.
   await step('surface-summary', async () => {
-    await page.evaluate(() => dispatchEvent(new CustomEvent('oceandiveend', {detail: {time: 134, maxDepth: 18.4, found: 2}})));
-    await press(page.locator('.dive-summary-toggle'));
-    await page.waitForFunction(() => document.querySelector('#dive-summary').dataset.show === 'true', null, {timeout: 5000});
+    await page.evaluate(() => dispatchEvent(new CustomEvent('oceandivelog', {detail: {number: 1, started: Date.now() - 140000, ended: Date.now(), time: 134, maxDepth: 18.4, averageDepth: 9.2,
+      profile: [[0, 0], [40, 9], [90, 18.4], [134, 0]], track: [[0, 8], [-8, -6], [-12, -14], [4, -20]], sites: {about: {t: 44, depth: 9}}, features: {}, seen: {anthias: {t: 50, depth: 9, place: 'The Anchor', fresh: true}}, photos: [], safetyStop: false, found: 2}})));
+    await press(page.locator('.ds-open'));
+    await page.waitForFunction(() => document.querySelector('#dive-summary').open, null, {timeout: 5000});
     await state('surface-summary');
     await page.keyboard.press('Escape');
-    await page.waitForFunction(() => document.querySelector('#dive-summary').dataset.show !== 'true' && !document.body.dataset.menu, null, {timeout: 5000});
+    await page.waitForFunction(() => !document.querySelector('#dive-summary').open && !document.body.dataset.menu, null, {timeout: 5000});
   });
   await step('reading-glance', async () => { await page.evaluate(() => oceanArchive.open('glance')); await state('reading-glance'); });
   await step('reading-project', async () => { await page.evaluate(() => oceanArchive.open('projects', 'rae')); await state('reading-project'); await page.evaluate(() => oceanArchive.close()); });

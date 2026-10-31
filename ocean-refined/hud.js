@@ -222,7 +222,7 @@ document.addEventListener('keydown', event => {
       // navigation's window listener releases capture, including drag-to-look.
       if(!nav||document.pointerLockElement||nav.exploring)return;
       // Existing Escape actions have priority over opening another panel.
-      if(nav.returnPhase==='offer'||nav.returnPhase==='stop'||document.body.dataset.clearUi==='true'||document.querySelector('.dive-summary[data-show="true"]')||event.target.closest?.('input,textarea,select,[contenteditable="true"]'))return;
+      if(nav.returnPhase==='offer'||nav.returnPhase==='stop'||document.body.dataset.clearUi==='true'||event.target.closest?.('input,textarea,select,[contenteditable="true"]'))return;
       event.preventDefault();event.stopImmediatePropagation();setMenu(true);return;
     }
     const movement = $('#movement-panel');

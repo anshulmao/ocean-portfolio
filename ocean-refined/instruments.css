@@ -32,10 +32,8 @@ body[data-submerged="true"] .dive-flag{display:none}
 #plan-dive{--glyph:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6l2 2 3-4M3 13l2 2 3-4M3 20l2 2 3-4M12 6h9M12 13h9M12 20h9'/%3E%3C/svg%3E")}
 #guided-dive{--glyph:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='7' r='3'/%3E%3Ccircle cx='17.5' cy='9' r='2.5'/%3E%3Cpath d='M2 20a6 6 0 0 1 12 0M15 14.6a5 5 0 0 1 7 4.4'/%3E%3C/svg%3E")}
 /* Reading notes take a denser tint than the instruments: their body text has to hold over bright shallows. */
-section.tour-card,aside.dive-summary,dialog.dive-prompt{--holo-tint-solid:#05222fe0}
-aside.dive-summary{padding:15px 16px 16px 22px}
-.dive-summary header .holo-label{font-size:18px;line-height:1.2;color:var(--holo-ink)}
-.dive-summary dd,.plan-info dd{font-variant-numeric:tabular-nums}
+section.tour-card,dialog.dive-prompt{--holo-tint-solid:#05222fe0}
+.plan-info dd{font-variant-numeric:tabular-nums}
 dialog.dive-prompt{padding-left:24px}
 .dive-prompt h2{width:fit-content}
 
@@ -49,11 +47,8 @@ dialog.dive-prompt{padding-left:24px}
 @media(max-width:600px){
   .dive-flag{margin-right:-11px}
   .ascent-status.holo{padding-left:42px;background-position:13px 50%,0 0}
-  aside.dive-summary{padding-left:20px}
 }
 
-/* The return summary stays on the left-hand surface rail. */
-@media(min-width:601px){aside.dive-summary{left:var(--pad);right:auto;top:197px;width:min(300px,29vw);max-height:calc(100dvh - 270px);overflow:auto}}
 /* The surface arrows have their own bottom-right lane. */
 body:not([data-submerged="true"]) .view-controls{left:auto;right:var(--pad);bottom:54px}
 @media(max-width:600px){

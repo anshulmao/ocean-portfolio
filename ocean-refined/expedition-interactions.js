@@ -3,10 +3,11 @@ import * as THREE from './vendor/three.module.min.js';
 import { onTick, ui } from './ui-ticker.js';
 import { safetyRatingMarkup } from './safety-rating.js';
 import { createSafetyStopClock, SAFETY_STOP_SECONDS, inSafetyStopRange } from './safety-stop-clock.js';
-import {sendFeedback, sendPhoto} from './submissions.js';
+import {sendFeedback} from './submissions.js';
+import {addPhoto} from './dive-log.js';
 import {track} from './analytics.js';
 
-// Visitor submissions are explicit; photos still download locally unless separately shared.
+// Visitor submissions are explicit; photos stay in memory for the dive summary unless shared from there.
 const stylesheet = document.createElement('link');
 stylesheet.rel = 'stylesheet'; stylesheet.href = new URL('./expedition-interactions.css', import.meta.url).href;
 document.head.append(stylesheet);
@@ -155,38 +156,24 @@ function collect() {
   track('artifact_collected',{artifact_id:nearest.id});
   say(`${nearest.name} collected · +100 discovery points`); nearest = null; prompt.hidden = true; return true;
 }
-let sharedPhoto = null;
-const sharePhotoButton=document.createElement('button');sharePhotoButton.type='button';sharePhotoButton.className='motion-control';sharePhotoButton.textContent='Share last reef photo';sharePhotoButton.hidden=true;
-document.querySelector('#photo-settings')?.after(sharePhotoButton);
-sharePhotoButton.addEventListener('click',()=> {
-  if(!sharedPhoto || dialog.open)return;
-  window.oceanHud?.setMenu(false,false);
-  const photo=sharedPhoto;
-  if(!begin('Share your reef photo', '<p>Send this reef photo privately to Anshul? It will not appear in a public gallery.</p><div data-photo-preview></div><p class="feedback-error" role="alert" hidden></p><div class="feedback-actions"><button type="button" data-cancel>Keep it on my device</button><button type="button" class="expedition-primary" data-share>Share with Anshul</button></div>', 'photo'))return;
-  const preview=document.createElement('img'), objectURL=URL.createObjectURL(photo);preview.src=objectURL;preview.alt='Your reef photo';preview.style.cssText='width:100%;height:auto;border-radius:12px';dialog.querySelector('[data-photo-preview]').append(preview);
-  dialog.addEventListener('close',()=>URL.revokeObjectURL(objectURL),{once:true});
-  dialog.querySelector('[data-cancel]').addEventListener('click',()=>dialog.close());
-  const button=dialog.querySelector('[data-share]'),error=dialog.querySelector('.feedback-error');
-  button.addEventListener('click',async()=> {
-    button.disabled=true;button.textContent='Sharing…';error.hidden=true;
-    try {await sendPhoto(photo);track('reef_photo_shared');say('Your reef photo was shared privately with Anshul.');if(button.isConnected)dialog.close();}
-    catch(failure){if(button.isConnected){error.textContent=failure.message;error.hidden=false;button.disabled=false;button.textContent='Share with Anshul';}}
-  });
-});
 function takePhoto() {
   const controls = window.oceanControls, state = window.oceanDiagnostics;
   if (!state?.submerged || state.cameraMode !== 'first' || controls?.getTransition() || ui.dialog || ui.panel) { say('Photos are available in first-person underwater. Press V to change view.'); return; }
   try {
     controls.render();
-    // Read once in the same task as the draw; no preserveDrawingBuffer or per-frame GPU readback.
-    const canvas = controls.getRenderer().domElement, data = canvas.toDataURL('image/png');
-    const link = document.createElement('a'); link.download = `reef-photo-${new Date().toISOString().replace(/[:.]/g,'-')}.png`; link.href = data; link.click();
-    photos++;track('reef_photo_downloaded');say('Reef photo downloaded. You can share it with Anshul from Settings.');
-    const preview=document.createElement('canvas');const ratio=Math.min(1,1280/canvas.width,720/canvas.height);preview.width=Math.max(1,Math.round(canvas.width*ratio));preview.height=Math.max(1,Math.round(canvas.height*ratio));
-    preview.getContext('2d').drawImage(canvas,0,0,preview.width,preview.height);
-    preview.toBlob(blob=> {if(blob && blob.size<=1048576){sharedPhoto=blob;sharePhotoButton.hidden=false;}},'image/jpeg',.8);
-  } catch { say('This browser could not export a photo. Please try again after the scene finishes loading.'); }
+    // Read once in the same task as the draw; no preserveDrawingBuffer or per-frame GPU readback. The photo is kept in
+    // memory for the dive summary (dive-log.js): the full frame for downloading, and a copy small enough to share.
+    const canvas = controls.getRenderer().domElement, full = document.createElement('canvas');
+    full.width = canvas.width; full.height = canvas.height; full.getContext('2d').drawImage(canvas, 0, 0);
+    const ratio = Math.min(1, 1280 / canvas.width, 720 / canvas.height), share = document.createElement('canvas');
+    share.width = Math.max(1, Math.round(canvas.width * ratio)); share.height = Math.max(1, Math.round(canvas.height * ratio));
+    share.getContext('2d').drawImage(canvas, 0, 0, share.width, share.height);
+    photos++; track('reef_photo_taken'); say('Photo saved to your dive summary.');
+    Promise.all([blobOf(full, .92), blobOf(share, .8).then(blob => blob.size <= 1048576 ? blob : blobOf(share, .6))])
+      .then(([large, small]) => addPhoto(large, small)).catch(() => say('This photo could not be kept. Please try again.'));
+  } catch { say('This browser could not take a photo. Please try again after the scene finishes loading.'); }
 }
+const blobOf = (canvas, quality) => new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(Error('photo')), 'image/jpeg', quality));
 function buildArtifacts(controls) {
   const floor = controls.reef?.userData.terrainHeightAt;
   if (mesh || typeof floor !== 'function') return;

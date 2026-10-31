@@ -8,7 +8,7 @@
 .holo-chip{appearance:none;display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid var(--holo-dim);border-radius:3px;background:var(--holo-fill,var(--holo-tint));color:var(--holo-ink);font:500 11px/1 var(--holo-font);letter-spacing:.12em;text-transform:uppercase;text-shadow:var(--holo-text-glow);white-space:nowrap;cursor:pointer;transition:translate var(--motion-press,120ms) var(--journey-ease)}
 .holo-chip:hover{border-color:var(--holo-strong);background:var(--holo-fill-hover,#8ff4ff26)}
 .holo-chip:active{translate:0 1px}
-:is(.holo-chip,.plan-mark,.summary-close):focus-visible{outline:2px solid var(--holo-focus,var(--holo-strong));outline-offset:2px}
+:is(.holo-chip,.plan-mark):focus-visible{outline:2px solid var(--holo-focus,var(--holo-strong));outline-offset:2px}
 .holo-chip kbd{padding:2px 5px;border:1px solid var(--holo-dim);border-radius:2px;font:500 9px/1 var(--holo-mono);letter-spacing:0}
 .holo-chip--go{border-color:var(--signal,var(--holo));background:color-mix(in srgb,var(--signal,var(--holo)) 18%,transparent)}
 .holo-chip--go:hover{background:color-mix(in srgb,var(--signal,var(--holo)) 30%,transparent)}
@@ -71,9 +71,9 @@ dialog.dive-plan::backdrop{background:#031e2bf0}
 .plan-art .art-floor{stroke-dasharray:2 5;opacity:.55}
 .plan-kicker{color:var(--signal,var(--holo-strong))}
 .plan-info h3{margin:0;font:400 clamp(22px,2.6vw,28px)/1.1 var(--holo-font);letter-spacing:.02em}
-.plan-info dl,.dive-summary dl{display:flex;flex-wrap:wrap;gap:8px 26px;margin:0}
-.plan-info dt,.dive-summary dt{font:500 9px/1 var(--holo-font);letter-spacing:.16em;text-transform:uppercase;color:var(--holo-strong)}
-.plan-info dd,.dive-summary dd{margin:6px 0 0;font:500 14px/1 var(--holo-mono);letter-spacing:.04em}
+.plan-info dl{display:flex;flex-wrap:wrap;gap:8px 26px;margin:0}
+.plan-info dt{font:500 9px/1 var(--holo-font);letter-spacing:.16em;text-transform:uppercase;color:var(--holo-strong)}
+.plan-info dd{margin:6px 0 0;font:500 14px/1 var(--holo-mono);letter-spacing:.04em}
 .plan-info ul{display:grid;gap:7px;margin:2px 0 4px;padding:0;list-style:none;font-size:13.5px;line-height:1.45}
 .plan-info li{position:relative;padding-left:15px}
 .plan-info li::before{content:"";position:absolute;left:0;top:.68em;width:7px;height:1px;background:var(--signal,var(--holo))}
@@ -89,7 +89,7 @@ dialog.dive-plan::backdrop{background:#031e2bf0}
 .plan-total{grid-column:1/3;font:500 10px/1.4 var(--holo-font);letter-spacing:.14em;text-transform:uppercase;color:var(--holo-strong)}
 .plan-tour{grid-column:3;grid-row:1/3}
 
-/* Dive-link prompt and dive summary. */
+/* Dive-link prompt. */
 dialog.dive-prompt{position:fixed;inset:0;width:min(92vw,380px);height:fit-content;margin:auto;padding:20px 20px 18px;overflow:visible}
 dialog.dive-prompt:not([open]){display:none}
 dialog.dive-prompt::backdrop{background:#031e2b8f}
@@ -98,17 +98,6 @@ dialog.dive-prompt::backdrop{background:#031e2b8f}
 .dive-prompt .holo-label{color:var(--signal,var(--holo-strong))}
 .prompt-note{font-size:13.5px;line-height:1.5}
 .dive-prompt div{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
-aside.dive-summary{position:fixed;right:var(--pad,24px);top:152px;z-index:6;display:grid;gap:12px;width:min(300px,calc(100vw - 48px));padding:14px 16px 16px;opacity:0;translate:0 14px;visibility:hidden;transition:opacity 250ms var(--journey-out),translate 250ms var(--journey-out),visibility 0s 250ms}
-aside.dive-summary[data-show="true"]{opacity:1;translate:0 0;visibility:visible;transition:opacity var(--journey-standard,420ms) var(--journey-in),translate var(--journey-standard,420ms) var(--journey-in)}
-.dive-summary header{display:flex;align-items:center;justify-content:space-between}
-.dive-summary p{margin:0}
-.summary-close{width:28px;height:28px;margin:-6px -8px -6px 0;padding:0;border:0;background:none;color:var(--holo-strong);font:300 20px/1 var(--holo-font);cursor:pointer}
-.sum-note{font-size:13px;line-height:1.45}
-.sum-log{justify-self:start}
-.dive-summary-toggle{position:fixed;left:var(--pad,24px);top:145px;z-index:6;min-height:40px}
-.dive-summary-toggle[hidden]{display:none}
-body:is([data-submerged="true"],[data-menu="open"],[data-movement-panel="open"],[data-clear-ui="true"],[data-dialog="open"]) :is(.dive-summary-toggle,aside.dive-summary){visibility:hidden;pointer-events:none}
-body:has(dialog[open]) :is(.dive-summary-toggle,aside.dive-summary){visibility:hidden;pointer-events:none}
 
 @media(max-width:760px){
   dialog.dive-plan{padding:14px}
@@ -126,18 +115,13 @@ body:has(dialog[open]) :is(.dive-summary-toggle,aside.dive-summary){visibility:h
 @media(max-width:600px){
   .dive-entry{gap:6px;margin-top:10px}
   .dive-entry .holo-chip{padding:9px 10px;font-size:10px;letter-spacing:.08em;gap:6px}
-  /* The summary takes the place of the look arrows while it is up (dive-plan.js marks the body), so it clears the entry buttons. */
-  aside.dive-summary{top:auto;right:16px;bottom:56px;left:16px;width:auto}
-  .dive-summary-toggle{top:calc(var(--hud-top,24px) + 64px);min-height:44px}
-  body[data-summary="true"]:not([data-submerged="true"]) .view-controls{visibility:hidden}
 }
 /* A phone held sideways: the site art shrinks so the start button stays close to the fold. */
 @media(pointer:coarse) and (max-height:499px){.plan-art{height:40px;padding-bottom:6px}.plan-info{gap:8px;padding:12px 14px 14px}.plan-wrap{gap:10px}}
 /* Finger-sized targets on phones and touch screens: the drawing of a marker stays the same, its button grows. */
 @media(max-width:600px),(pointer:coarse){
-  :is(.dive-entry,.plan-info,.plan-overview,.plan-head,.dive-summary,.dive-prompt) .holo-chip{min-height:44px}
+  :is(.dive-entry,.plan-info,.plan-overview,.plan-head,.dive-prompt) .holo-chip{min-height:44px}
   .plan-mark[data-kind="scenic"]{width:40px;height:40px}
-  .summary-close{width:40px;height:40px;margin:-10px -12px -10px 0}
 }
 @media(prefers-reduced-motion:no-preference){
   @keyframes plan-rise{from{opacity:0;translate:0 16px}}

@@ -59,6 +59,17 @@ test('validates private JPEG uploads and removes objects when metadata save fail
   const fail=fixture({savedStatus:500});assert.equal((await fail.handler(request('photo',photo,headers))).status,503);
   assert.equal(fail.calls.at(-1).init.method,'DELETE');
 });
+test('a shared photo keeps an optional note of up to 40 words',async()=>{
+  const photo=new Uint8Array([255,216,1,2,255,217]);
+  const note='Found the whale shark on the way down — loved it';
+  const ok=fixture();assert.equal((await ok.handler(request('photo',photo,{'content-type':'image/jpeg','x-request-id':id,'x-photo-note':encodeURIComponent(note)}))).status,201);
+  assert.equal(JSON.parse(ok.calls.at(-1).init.body).note,note);
+  const plain=fixture();assert.equal((await plain.handler(request('photo',photo,{'content-type':'image/jpeg','x-request-id':id}))).status,201);
+  assert.equal('note' in JSON.parse(plain.calls.at(-1).init.body),false);
+  const long=fixture();assert.equal((await long.handler(request('photo',photo,{'content-type':'image/jpeg','x-request-id':id,'x-photo-note':encodeURIComponent(Array(41).fill('word').join(' '))}))).status,400);
+  assert.equal(long.calls.length,0);
+  assert.equal((await fixture().handler(request('photo',photo,{'content-type':'image/jpeg','x-request-id':id,'x-photo-note':'%E0%A4%A'}))).status,400);
+});
 test('analytics keeps only declared properties and strips URL/private attribution',()=>{
   assert.deepEqual(eventProperties('feedback_saved',{rating:5,feedback:'private',email:'a@example.com'}),{rating:5});
   assert.equal(eventProperties('invented_event',{}),null);
