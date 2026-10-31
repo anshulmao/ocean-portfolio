@@ -47,6 +47,9 @@ body:is([data-clear-ui="true"],[data-safety-stop="true"]) :is(.zone-card,.journe
 .waypoint[data-show="true"]{opacity:.94}
 /* A message is the louder voice: the chip steps back while one is up, so they never stack. */
 body[data-announce="on"] .waypoint[data-show="true"]{opacity:0}
+/* A landmark's floating label steps back while an announcement is up too (on every screen, as on a phone): arriving at a
+   site, its "Found" toast and its label would otherwise sit on top of each other. */
+body[data-announce="on"] #reef-labels{visibility:hidden}
 .waypoint i{width:9px;height:9px;background:var(--signal,#7ff0cf);transform:rotate(45deg)}
 /* The marker breathes only while the chip is on screen. */
 .waypoint[data-show="true"] i{animation:journey-breathe 2.6s ease-in-out infinite}
