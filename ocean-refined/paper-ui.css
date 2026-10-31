@@ -218,3 +218,101 @@ html body .tour-card footer button:not(#_):hover{background:var(--o-surface-2)}
 html body .tour-card footer [data-tour="exit"]:not(#_){background:none;color:var(--o-ink-2)}
 html body .tour-card footer button:not(#_):is([data-tour="next"],[data-tour="rejoin"],[data-tour="surface"],[data-tour="read"]){background:var(--p-action);color:var(--p-action-ink)}
 html body .tour-card footer kbd:not(#_){border:0;background:var(--o-surface-2);border-radius:6px;font:500 11px/1 var(--o-display)}
+
+/* 11. Finish, round 2 (critic): the settings layout, a readable hint line, one accent in the logbook, a 13 px floor. */
+html body .weather-track{display:none}
+html body :is(.weather-picker,.theme-control){grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+html body :is(.weather-picker,.theme-control)>button{min-height:42px;padding:8px 12px;font-size:14px;gap:8px;background:var(--o-surface-0)}
+html body :is(.weather-picker,.theme-control)>button svg{width:18px;height:18px}
+html body :is(.weather-picker,.theme-control)>button:hover{background:var(--o-surface-2)}
+html body :is(.weather-picker,.theme-control)>button:is([aria-pressed="true"],[data-current="true"]){background:var(--p-action);color:var(--p-action-ink)}
+html body .weather-picker>button[data-current="true"]::after{display:none}
+html body .time-labels{font-size:12px;margin:2px 0 12px}
+html body .sky-clock{font-size:13px;line-height:1.4;margin-top:12px}
+html body .movement-field p,html body .holo-switch small,html body .movement-intro{font-size:13px}
+html body .movement-field{padding-bottom:8px}
+html body #settings-general-content .settings-subgroup{padding:18px 0 4px}
+html body .settings-menu :is(h3.holo-label,.settings-inline-control){margin-bottom:6px}
+html body .settings-body{padding-bottom:28px;mask-image:linear-gradient(#000 calc(100% - 28px),transparent);-webkit-mask-image:linear-gradient(#000 calc(100% - 28px),transparent)}
+html body #weather-settings .settings-inline-control{align-items:flex-start}
+html body #settings-weather-title output{display:inline;margin:0 0 0 8px;color:var(--o-ink-2)}
+
+/* The hint line and the four sky-look arrows: on paper like everything else. */
+html body .scene-footer .look-hint{padding:9px 16px;border-radius:var(--o-r-pill);background:var(--o-surface-0);box-shadow:var(--p-float);font:400 13px/1 var(--o-display);letter-spacing:0;opacity:1;color:var(--o-ink)}
+html body .view-controls:not(#_){opacity:1}
+html body .view-controls>button{background:var(--o-surface-0);color:var(--o-ink);opacity:1}
+html body .view-controls>button:hover{background:var(--o-surface-1)}
+html body .scene-footer .location{padding:9px 16px;border-radius:var(--o-r-pill);background:var(--o-surface-0);box-shadow:var(--p-float)}
+
+/* Logbook: one accent. The sidebar drops its tags; the progress track is a row of soft pills in the accent. */
+html body #landmark-dialog :is([data-group],[data-go],[data-section]){--tab:var(--p-accent);--tab-soft:var(--o-surface-1)}
+html body #landmark-dialog .arc-rail-name small:not(#_){display:none}
+html body #landmark-dialog .arc-progress-track i:not(#_){height:6px;width:14px;border-radius:3px;background:var(--o-surface-2)}
+html body #landmark-dialog .arc-progress-track i[data-state="seen"]:not(#_){background:var(--p-accent);opacity:.5}
+html body #landmark-dialog .arc-progress-track i[data-state="current"]:not(#_){background:var(--p-accent);opacity:1;transform:scaleX(1.8)}
+html body #landmark-dialog .arc-rail-no:not(#_){display:none}
+
+/* 12. Motion. Springs, not fades: things arrive with a little overshoot, settle, and answer the pointer. Only opacity and the
+   translate, scale and rotate properties move, and none of it runs for visitors who ask for reduced motion. */
+:root{
+  /* A damped spring (zeta .62): overshoots about 8 percent, settles in about half a second. The pop variant (zeta .5) is livelier. */
+  --p-spring:linear(0,.116 4.2%,.36 8.3%,.618 12.5%,.829 16.7%,.973 20.8%,1.052 25%,1.081 29.2%,1.08 33.3%,1.062 37.5%,1.04 41.7%,1.021 45.8%,1.006 50%,.998 54.2%,.994 58.3%,.993 62.5%,.994 66.7%,.996 70.8%,.998 75%,.999 79.2%,1 83.3%,1);
+  --p-spring-pop:linear(0,.104 4.2%,.34 8.3%,.61 12.5%,.849 16.7%,1.023 20.8%,1.124 25%,1.162 29.2%,1.153 33.3%,1.118 37.5%,1.075 41.7%,1.034 45.8%,1.002 50%,.983 54.2%,.974 58.3%,.974 62.5%,.979 66.7%,.986 70.8%,.993 75%,.999 79.2%,1.002 83.3%,1);
+}
+.paper-ripple,.paper-bubbles{pointer-events:none}
+@media(prefers-reduced-motion:no-preference){
+@keyframes paper-pop{from{opacity:0;scale:.9;translate:0 var(--m-rise,12px)}}
+@keyframes paper-rise{from{opacity:0;translate:0 14px}}
+@keyframes paper-sheet{from{opacity:0;scale:.965;translate:0 36px}}
+@keyframes paper-card{from{opacity:0;scale:.84}}
+@keyframes paper-ripple{from{opacity:.22;scale:0}to{opacity:0;scale:1}}
+@keyframes paper-bubble{0%{opacity:0;scale:.4;translate:0 0}12%{opacity:1}100%{opacity:0;scale:1.15;translate:var(--dx) var(--dy)}}
+
+/* Panels and notices arrive with a spring from where they belong, replacing the hologram's flicker. */
+html body :is(.settings-menu,.dive-computer-toggle,.archive-toggle,.capture-hint,.ascent-status,.interact-prompt):not([hidden]):not(#_){animation:paper-pop 560ms var(--p-spring) var(--m-delay,0ms) backwards}
+html body .settings-menu{transform-origin:calc(100% - 28px) 0}
+html body .settings-menu:not([hidden]) .settings-head,html body .settings-menu:not([hidden]) .settings-body>*{animation:paper-rise 600ms var(--p-spring) calc(90ms + var(--i,0) * 55ms) backwards}
+html body .settings-body>:nth-child(1){--i:1}html body .settings-body>:nth-child(2){--i:2}html body .settings-body>:nth-child(3){--i:3}html body .settings-body>:nth-child(4){--i:4}html body .settings-body>:nth-child(5){--i:5}
+html body .diver-profile{transform-origin:var(--tail,50%) 100%;animation:paper-card 620ms var(--p-spring-pop) both}
+html body .diver-profile>:not(.diver-profile-tail):not(.diver-profile-close){animation:paper-rise 560ms var(--p-spring) calc(70ms + var(--i,0) * 50ms) backwards}
+html body .diver-profile>:nth-child(2){--i:1}html body .diver-profile>:nth-child(3){--i:2}html body .diver-profile>:nth-child(4){--i:3}html body .diver-profile>:nth-child(5){--i:4}html body .diver-profile>:nth-child(6){--i:5}
+html body #landmark-dialog[open]{animation:paper-sheet 640ms var(--p-spring) backwards}
+html body #landmark-dialog[open] .arc-index{animation:paper-rise 560ms var(--p-spring) 120ms backwards}
+html body #landmark-dialog .arc-page>*{animation:paper-rise 560ms var(--p-spring) calc(60ms + var(--i,0) * 45ms) backwards}
+html body #landmark-dialog .arc-page>:nth-child(1){--i:0}html body #landmark-dialog .arc-page>:nth-child(2){--i:1}html body #landmark-dialog .arc-page>:nth-child(3){--i:2}html body #landmark-dialog .arc-page>:nth-child(4){--i:3}html body #landmark-dialog .arc-page>:nth-child(n+5){--i:4}
+html body #landmark-dialog :is(.arc-find,.arc-reel-find,.arc-proof,.arc-contacts a):not(#_){animation:paper-rise 600ms var(--p-spring) calc(160ms + var(--k,0) * 55ms) backwards}
+html body #landmark-dialog :is(.arc-find,.arc-reel-find,.arc-proof):nth-child(1){--k:0}html body #landmark-dialog :is(.arc-find,.arc-reel-find,.arc-proof):nth-child(2){--k:1}html body #landmark-dialog :is(.arc-find,.arc-reel-find,.arc-proof):nth-child(3){--k:2}html body #landmark-dialog :is(.arc-find,.arc-reel-find,.arc-proof):nth-child(4){--k:3}html body #landmark-dialog :is(.arc-find,.arc-reel-find,.arc-proof):nth-child(5){--k:4}html body #landmark-dialog :is(.arc-find,.arc-reel-find,.arc-proof):nth-child(n+6){--k:5}
+html body dialog.dive-plan[open] .plan-info,html body dialog.dive-plan[open] .plan-overview{animation-timing-function:var(--p-spring)}
+
+/* Every control answers: it lifts on hover, squashes under the finger and springs back. */
+html body :is(.dive-button,.guided-button,.settings-toggle,.menu-toggle,.settings-close,.motion-control,.camera-toggle,.credits-toggle,.archive-toggle,.dive-computer-toggle,.quiet-ui-toggle,.explore-back,.holo-chip,.hero-link,.surface-nav a,.view-controls>button,.theme-control>button,.weather-picker>button,.movement-preset-row>button,.tour-card footer button,.diver-profile-actions button):not(#_){transition:translate 420ms var(--p-spring),scale 360ms var(--p-spring-pop),background-color 160ms var(--ease),color 160ms var(--ease),filter 160ms var(--ease)}
+html body :is(.dive-button,.guided-button,.settings-toggle,.menu-toggle,.settings-close,.motion-control,.camera-toggle,.credits-toggle,.archive-toggle,.dive-computer-toggle,.quiet-ui-toggle,.explore-back,.holo-chip,.surface-nav a,.view-controls>button,.theme-control>button,.weather-picker>button,.movement-preset-row>button,.tour-card footer button,.diver-profile-actions button):not(:disabled):not(#_):hover{translate:var(--mx,0px) calc(var(--my,0px) - 2px)}
+html body :is(.dive-button,.guided-button,.settings-toggle,.menu-toggle,.settings-close,.motion-control,.camera-toggle,.credits-toggle,.archive-toggle,.dive-computer-toggle,.quiet-ui-toggle,.explore-back,.holo-chip,.surface-nav a,.view-controls>button,.theme-control>button,.weather-picker>button,.movement-preset-row>button,.tour-card footer button,.diver-profile-actions button,.touch-key):not(:disabled):not(#_):active{scale:.94;translate:0 1px;transition-duration:90ms,90ms,160ms,160ms,160ms}
+html body .hero-link:not(#_):hover{translate:0 -1px}
+html body .settings-toggle:not(#_)[aria-expanded="true"] svg,html body .menu-toggle:not(#_)[aria-expanded="true"] svg{rotate:90deg}
+html body :is(.settings-toggle,.menu-toggle) svg{transition:rotate 520ms var(--p-spring-pop)}
+html body :is(.settings-menu,.dive-computer-toggle,.archive-toggle) .hud-icon{transition:rotate 420ms var(--p-spring-pop)}
+.paper-ripple{position:absolute;inset:0;border-radius:inherit;overflow:hidden;z-index:0}
+.paper-ripple i{position:absolute;translate:-50% -50%;border-radius:50%;background:currentColor;opacity:0;scale:0;animation:paper-ripple 640ms cubic-bezier(.2,.7,.2,1) forwards}
+.paper-bubbles{position:fixed;inset:0;z-index:80;overflow:hidden}
+.paper-bubbles i{position:absolute;border-radius:50%;background:#ffffff8c;border:1.5px solid #ffffffe6;opacity:0;animation:paper-bubble 1.2s cubic-bezier(.3,.6,.4,1) both}
+
+/* Switches and sliders: the thumb springs, the track answers. */
+html body .holo-switch i{transition:background-color 200ms var(--ease)}
+html body .holo-switch i::before{transition:translate 480ms var(--p-spring-pop),background-color 200ms var(--ease),scale 200ms var(--p-spring)}
+html body .holo-switch:active i::before{scale:1.25 1}
+html body :is(#time-slider,.movement-field input[type="range"])::-webkit-slider-thumb{transition:scale 260ms var(--p-spring-pop)}
+html body :is(#time-slider,.movement-field input[type="range"]):active::-webkit-slider-thumb{scale:1.3}
+html body :is(#time-slider,.movement-field input[type="range"])::-moz-range-thumb{transition:scale 260ms var(--p-spring-pop)}
+html body :is(#time-slider,.movement-field input[type="range"]):active::-moz-range-thumb{scale:1.3}
+
+/* Logbook: cards lift, the picture drifts inside, rail rows slide. */
+html body #landmark-dialog :is(.arc-find,.arc-reel-find):not(#_){transition:translate 420ms var(--p-spring),background-color 200ms var(--ease)}
+html body #landmark-dialog :is(.arc-find,.arc-reel-find):not(#_):is(:hover,:focus-visible){translate:0 -5px}
+html body #landmark-dialog :is(.arc-find,.arc-reel-find):is(:hover,:focus-visible) .arc-thumb img{transform:scale(1.06)}
+html body #landmark-dialog .arc-thumb img{transition:transform 700ms var(--p-spring)}
+html body #landmark-dialog :is(.arc-rail-section,.arc-rail-entries button):not(#_){transition:background-color 180ms var(--ease),translate 360ms var(--p-spring)}
+html body #landmark-dialog :is(.arc-rail-section,.arc-rail-entries button):not(#_):hover{translate:4px 0}
+html body #landmark-dialog .arc-progress-track i:not(#_){transition:transform 420ms var(--p-spring-pop),background-color 200ms var(--ease),opacity 200ms var(--ease)}
+}
+@media(prefers-reduced-motion:reduce){.paper-ripple,.paper-bubbles{display:none}}

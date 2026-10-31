@@ -8,7 +8,7 @@ const toggle = (key, label, group, value, description = '') => ({key, label, gro
 const choice = (key, label, group, value, options, description = '') => ({key, label, group, type:'select', value, options, description});
 
 export const schema = [
-  number('brightnessBoost','Increase brightness','Lighting',0,0,100,5,'%', 'Adds neutral illumination to model colors without changing sky tint or gamma.'),
+  number('brightnessBoost','Brightness','Lighting',0,0,100,5,'%', 'Lifts the shadows so the reef is easier to see.'),
   number('waterClarity','Water clarity','Lighting',100,70,180,5,'%', 'How far you can see under water. Clearer water shows more of the reef at once, which takes more drawing on slower devices.'),
   number('swimSpeed','Forward speed','Swimming',4,.5,8,.1,'m/s'),
   number('reverseMultiplier','Reverse speed multiplier','Swimming',.75,.1,1,.01,'×'),

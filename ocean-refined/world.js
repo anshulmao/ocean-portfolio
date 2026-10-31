@@ -821,7 +821,7 @@ function cullWorld(dt){
 }
 function paintHud(nav,submerged,depth,edge,skyState){
   const ascending=nav.mode==='transition';
-  setText(hud('#look-hint'),nav.mode==='transition'?`Ascending · ${Math.ceil(toDisplayDepth(nav.ascentDepth))} m remaining`:nav.pointerLocked?(submerged?(settings.keyboardMode==='turn'?'W/S swim · A/D turn':'WASD swim')+' · Space/Shift depth · E scooter · Q light · Esc / ; frees mouse':'Look around · Mouse or arrow keys · Esc / ; releases mouse'):submerged?'Click ocean to aim · '+(settings.keyboardMode==='turn'?'W/S swim · A/D turn':'WASD swim')+' · E scooter · Q light':'Click the ocean to look around · Esc / ; releases mouse');
+  setText(hud('#look-hint'),nav.mode==='transition'?`Ascending · ${Math.ceil(toDisplayDepth(nav.ascentDepth))} m remaining`:nav.pointerLocked?(submerged?(settings.keyboardMode==='turn'?'W/S swim · A/D turn':'WASD swim')+' · Space/Shift depth · E scooter · Q light · Esc lets go':'Look around with the mouse or arrow keys. Esc lets go.'):submerged?'Click ocean to aim · '+(settings.keyboardMode==='turn'?'W/S swim · A/D turn':'WASD swim')+' · E scooter · Q light':'Click the ocean to look around. Esc lets go.');
   setText(hud('#depth-value'),`${String(Math.round(toDisplayDepth(depth))).padStart(2,'0')} M`);
   // The marker moves by whole pixels of its track (measured once, and again after a resize): a tenth of a percent was a layout write every six centimetres of depth.
   if(!depthTrack)depthTrack=hud('#depth-marker')?.parentElement?.clientHeight||-1;
@@ -841,7 +841,7 @@ function paintHud(nav,submerged,depth,edge,skyState){
   setText(hud('#speed-value'),`${nav.speed.toFixed(1)} M/S`);
   setText(hud('#reef-zone'),nav.colliding?'CORAL NEARBY':nav.atBoundary?'EXPLORATION LIMIT':edge?'OUTER SLOPE':'REEF SHELF');
   const skyTime=skyState.date?skyClock(skyState.date):'';
-  setText(hud('#sky-clock'),`KL ${skyTime} · ${paused?'PAUSED':'72× TIME'}`);
+  setText(hud('#sky-clock'),`${skyTime} in Kuala Lumpur · ${paused?'paused':'time at 72×'}`);
   setAttribute(hud('#sky-clock'),'title','Kuala Lumpur sky · current lunar phase · 20 minutes per simulated day');
   // Diagnostics nobody polls per frame follow the HUD rate.
   projected.copy(diver.root.position).project(camera);
