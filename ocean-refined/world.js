@@ -539,8 +539,16 @@ function setSkyPreset(preset,persist=true){
   phaseTarget=phase+Math.atan2(Math.sin(wanted-phase),Math.cos(wanted-phase));
   if(reducedMotion){phase=phaseTarget;phaseTarget=null;night=skySystem?.getNightFactor(phase)??0;}
   paintTheme(preset==='night',preset);
-  frameSurface(wanted);
+  returnSurfaceView(wanted);
   if(persist)try{localStorage.setItem('ocean-theme',preset);}catch{}
+  wake();
+}
+let surfaceReturn=null;
+function returnSurfaceView(phaseValue=phase){
+  if(getMode()!=='surface'||diveTarget!==0)return;
+  if(camera&&diagnostic.ready)surfaceReturn={time:0,position:camera.position.clone(),rotation:camera.quaternion.clone()};
+  exploration.setInterfaceOpen(false);setExploring(false);syncControlSuspension();
+  frameSurface(phaseValue);
   wake();
 }
 function frameSurface(phaseValue=phase){
@@ -574,7 +582,7 @@ function paintAtlas(){
   $('.reef-map').dataset.collapsed=String(mapCollapsed);$('#map-toggle').setAttribute('aria-expanded',String(!mapCollapsed));$('#map-toggle').setAttribute('aria-label',mapCollapsed?'Expand reef atlas':'Collapse reef atlas');$('#map-toggle').textContent=mapCollapsed?'＋':'−';
 }
 // Looking around at the surface folds the hero down to the dive button; Back unfolds it (Escape does too, with a mouse).
-$('#explore')?.addEventListener('click',()=>{exploration.setInterfaceOpen(false);setExploring(false);});
+$('#explore')?.addEventListener('click',()=>returnSurfaceView());
 $('#map-toggle').addEventListener('click',()=>{mapCollapsed=!mapCollapsed;paintAtlas();});
 canvas.addEventListener('pointerdown',()=>{lookHeld=false;},{capture:true});
 // Ahead of hud.js, which opens Settings on an Escape when nothing is being looked at: a held look ends first, as one with
@@ -874,6 +882,7 @@ function updateWorld(dt,clockDt=dt){
   previousMode=nav.mode;
   if(nav.mode==='diver'&&easedDive>.75)beginModels();
   if(mapDestination&&!nav.travelling){$('#map-caption').textContent=nav.travelBlocked?'Coral ahead. Steer around it to continue.':nav.manualInput?'Free swimming. Choose a marker to explore.':`${mapDestination.title} reef · A home for this part of the portfolio.`;mapDestination=null;}
+  if(nav.mode==='surface'&&diveTarget===0&&(nav.exploring||lookHeld)&&!nav.manualInput&&!interfaceOpen&&!movementPanelOpen&&!settingsMenuOpen&&performance.now()-lastInput>=10000)returnSurfaceView();
   const looking=nav.exploring||lookHeld&&nav.mode==='surface'&&diveTarget===0;if(looking!==exploring)setExploring(looking);
   const bob=paused?0:Math.sin(elapsed*settings.bobFrequency)*settings.bobAmplitude;
   playerPosition.set(nav.offset.x,-8+nav.offset.y,nav.offset.z);
@@ -968,7 +977,24 @@ function updateWorld(dt,clockDt=dt){
   if(easedDive>.95&&!ascending&&nav.roll!==undefined)aimQuaternion.multiply(scratchQ.setFromAxisAngle(axisZ,nav.roll*(firstPerson?.3:.22)+nav.lean));
   // The view the diver steers is eased where it is made (exploration.js), so in a settled dive the camera stays with it; the dive and the ascent keep their slow, rate-limited swing.
   const aimAngle=camera.quaternion.angleTo(aimQuaternion),aimBlend=1-Math.exp(-dt*(settledView?THREE.MathUtils.lerp(settings.cameraResponse*(firstPerson?4:1.5),8,Math.min(1,cameraShift*1.6)):3));
-  camera.quaternion.slerp(aimQuaternion,reducedMotion||snapCamera||diagnostic.frames===0?1:settledView?aimBlend:Math.min(aimBlend,dt*2.8/Math.max(.0001,aimAngle)));snapCamera=false;}else{viewerOrbit.update();diagnostic.cameraMoving=true;}camera.getWorldDirection(viewDirection);camera.updateMatrixWorld(true);
+  camera.quaternion.slerp(aimQuaternion,reducedMotion||snapCamera||diagnostic.frames===0?1:settledView?aimBlend:Math.min(aimBlend,dt*2.8/Math.max(.0001,aimAngle)));snapCamera=false;}else{viewerOrbit.update();diagnostic.cameraMoving=true;}
+  if(surfaceReturn){
+    if(nav.mode!=='surface'||diveTarget!==0||nav.exploring||lookHeld||viewerOrbit)surfaceReturn=null;
+    else{
+      surfaceReturn.time+=dt;
+      const progress=reducedMotion?1:Math.min(1,surfaceReturn.time/2),blend=(1-Math.cos(Math.PI*progress))/2;
+      // Orbit around the diver rather than cutting through them on a day-to-dusk half turn.
+      const start=new THREE.Spherical().setFromVector3(scratchA.copy(surfaceReturn.position).sub(playerPosition));
+      const end=new THREE.Spherical().setFromVector3(scratchB.copy(cameraGoal).sub(playerPosition));
+      const turn=Math.atan2(Math.sin(end.theta-start.theta),Math.cos(end.theta-start.theta));
+      start.radius=THREE.MathUtils.lerp(start.radius,end.radius,blend);start.phi=THREE.MathUtils.lerp(start.phi,end.phi,blend);start.theta+=turn*blend;
+      camera.position.setFromSpherical(start).add(playerPosition);
+      camera.quaternion.slerpQuaternions(surfaceReturn.rotation,aimQuaternion,blend);cameraVelocity.set(0,0,0);
+      diagnostic.cameraMoving=progress<1;
+      if(progress===1)surfaceReturn=null;
+    }
+  }
+  camera.getWorldDirection(viewDirection);camera.updateMatrixWorld(true);
   underwater=THREE.MathUtils.smoothstep(-camera.position.y,-.12,1.2);uniforms.uDive.value=underwater;
   splashState.cameraY=camera.position.y;splashState.transition=dive!==diveTarget||nav.mode==='transition'||surfaceLandingTime>0;splashState.reducedMotion=reducedMotion;waterlineSplash?.update(splashState);
   const skyState=skySystem.update(phase,camera.position,night,underwater,elapsed);
@@ -1229,7 +1255,7 @@ async function boot(){
   window.oceanProfile=diverProfile;
   early(diver.root);
   await stage('diver');
-  skySystem=createSkySystem(uniforms,rng);scene.add(skySystem.root);expeditionUI=createExpeditionUI({sky:skySystem,getPhase:()=>phase,setPhase:value=>{phase=value;phaseTarget=null;wake();},frameSurface});
+  skySystem=createSkySystem(uniforms,rng);scene.add(skySystem.root);expeditionUI=createExpeditionUI({sky:skySystem,getPhase:()=>phase,setPhase:value=>{phase=value;phaseTarget=null;wake();},frameSurface:phaseValue=>returnSurfaceView(phaseValue)});
   diagnostic.starCount=skySystem.starCount;diagnostic.constellationCount=skySystem.constellationCount;
   phase=skySystem.openingPhase;paintTheme(false,'dawn');diagnostic.openingSunAltitude=skySystem.getState(phase).sunAltitude;
   for(const item of skySystem.labels){const label=document.createElement('div');label.className='constellation-label';label.innerHTML=`<i></i>${item.name.toUpperCase()}`;$('#sky-labels').append(label);label.style.left=label.style.top='0';skyLabels.push({label,shift:'',anchor:item.anchor});}

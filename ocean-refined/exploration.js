@@ -201,7 +201,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     state.speed=state.scooter=0;state.moving=state.travelling=state.colliding=false;state.contacts=0;
     state.travelBlocked=false;blockedTime=0;wake();
   }
-  function frameSky(value){defaultYaw=value;if(!state.exploring){look.yaw=value;lag.yaw=pend.yaw=spin.yaw=0;state.yaw=value;}}
+  function frameSky(value){defaultYaw=value;if(!state.exploring){look.yaw=value;look.pitch=0;lag.yaw=lag.pitch=pend.yaw=pend.pitch=spin.yaw=spin.pitch=spinPush.yaw=spinPush.pitch=0;state.yaw=value;state.pitch=0;}}
   function setTerrain(fn){if(typeof fn==='function'){terrain=fn;floorStale=true;}}
   function setCollisions(value){collisions=value;}
   function suspend(value){suspended=state.suspended=Boolean(value);clear();if(value)requireRecapture();}

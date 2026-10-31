@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
+import { bindHeldMap } from './held-map.js';
 import { onTick } from './ui-ticker.js';
 import { icon } from './ui-icons.js';
 import { conditions } from './instruments.js';
@@ -73,7 +74,10 @@ map?.addEventListener('keydown', event => {
 map?.addEventListener('click', event => {
   if (mapFull && document.body.dataset.submerged === 'true' && event.target.closest('#map-chart button, #map-legend button')) setMapView(false);
 });
-addEventListener('oceanmediumchange', () => setMapView(false));
+bindHeldMap({window, document,
+  available: () => document.body.dataset.submerged === 'true' && !document.querySelector('dialog[open]') && !document.body.dataset.menu,
+  getExpanded: () => mapFull, setExpanded: setMapView});
+expand?.setAttribute('title', 'Expand reef map · hold M or Caps Lock underwater');
 
 // 3. Following the view, once per drawn frame. The bearing uses the scene's own convention
 // (world.js paintHud), so the tape and the three-digit readout always agree.
