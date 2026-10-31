@@ -6,8 +6,8 @@ import { planSurfaceReturn } from './return-route.js';
 import { toDisplayDepth } from './depth-metrics.js';
 import {routeTarget,smoothRoute,distance as routeDistance} from './cinematic-route.js';
 
-// Where the site starts, at the surface: over the deep end, west of the anchor and seaward of the reef (x, z).
-export const SURFACE_START = [-26, -60];
+// Where the site starts, at the surface: well out over the deep end, near above the treasure, the reef ahead (x, z).
+export const SURFACE_START = [-18, -90];
 
 // The swimming model. Everything that moves is eased by a critically damped follower that is exact over a step of
 // any length, so the same input gives the same swim at 30, 60 or 120 updates a second:
@@ -21,7 +21,7 @@ const { clamp, smoothstep } = THREE.MathUtils, RAD = Math.PI / 180;
 const wrap = angle => Math.atan2(Math.sin(angle), Math.cos(angle));
 // T90: a critically damped follower covers 90% of a step in 3.89 / frequency seconds.
 const T90 = 3.89, VERTICAL = .8;
-const AUTO_RESPONSE = 10, AUTO_ACCEL = 3.5, AUTO_BRAKE = 3.5, COURSE_RATE = 4, FOCUS_RANGE = 5;
+const AUTO_RESPONSE = 10, AUTO_ACCEL = 3.5, AUTO_BRAKE = 3.5, COURSE_RATE = 4, FOCUS_RANGE = 5, GLANCE_FADE = 2;
 const LOOK_AUTO = 4, LOOK_GUIDED = 3.2, SWEEP_AUTO = 2.2, SWEEP_GUIDED = 1.4;
 // Free look under the guide: the visitor's own look holds this long (s) after their last aim before the guide's drifts back. BODY_TURN: the body's turn onto the course (1/s).
 const LOOK_HOLD = 1.4, BODY_TURN = 3, BACKING = 2;
@@ -56,7 +56,7 @@ function soften(angle, change, limit, zone) {
 export function createExploration(canvas, wake, settings=savedSettings) {
   const keys=new Set(),padKeys=new Set(),cleanup=[],controls=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','Space','ShiftLeft','ShiftRight','ArrowUp','ArrowDown','ArrowLeft','ArrowRight']);
   // `base` is where the controls have put the diver; `offset` (what the scene reads) adds the idle drift on top.
-  // The dive starts at the surface out over the deep end, west of the anchor (SURFACE_START: x, z), with the reef ahead.
+  // The dive starts at the surface out over the deep end (SURFACE_START: x, z), with the reef ahead.
   const offset=new THREE.Vector3(SURFACE_START[0],8,SURFACE_START[1]),base=offset.clone(),drift=new THREE.Vector3();
   const velocity=new THREE.Vector3(),thrust=new THREE.Vector3(),desired=new THREE.Vector3(),course=new THREE.Vector3(0,0,-1),dest=new THREE.Vector3(),focus=new THREE.Vector3();
   const travelStart=new THREE.Vector3(),curveTarget=new THREE.Vector3(),curveFrom=new THREE.Vector3(),curveTo=new THREE.Vector3();
@@ -86,7 +86,10 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   // hasDest: swimming to `dest`. docking: inside the arrival distance, settling onto the point. coursed: `course` holds a bearing to turn from.
   // Fly-bys (the guided dive): glance turns the view to a subject beside the route while a leg swims on, pacing eases the cruise
   // to a fraction of itself, and guideScoot runs the scooter for the visitor to see. A leg's end or any takeover clears all three.
-  let glanceOn=false,glanceWeight=0,paceScale=1,paceGoal=1,guideScoot=false,wasLeading=false;const glancePoint=new THREE.Vector3();
+  // The glance moves from one subject to the next as one eased pan: its point blends from where it was looking to the new
+  // subject (glanceT over glanceFor seconds, eased in and out), and it fades in and out the same way (glanceFade, GLANCE_FADE s).
+  let glanceOn=false,glanceWeight=0,glanceFade=0,glanceT=1,glanceFor=1,paceScale=1,paceGoal=1,guideScoot=false,wasLeading=false;
+  const glancePoint=new THREE.Vector3(),glanceFrom=new THREE.Vector3(),glanceTo=new THREE.Vector3(),glanceSeen=new THREE.Vector3();
   // tetherTop: a ceiling (world y) the swim may not rise above, set by the guided dive while its welcome lets the visitor try
   // the controls, so rising cannot carry them out of it and up to the surface. Infinity is no tether.
   let tetherTop=Infinity;
@@ -231,7 +234,20 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   // follow: the same subject has moved (an animal swimming by), so a sweep under way carries on towards where it is now.
   // A fly-by's subject while the leg swims on (null lets the view go back to the course), its pace as a fraction of the cruise,
   // and the scooter run by the guide. They only act while a leg is under way.
-  function glance(point){if(!point){glanceOn=false;wake();return;}const at=coordinate(point);glancePoint.set(at[0],at[1],at[2]);glanceOn=true;wake();}
+  // follow: the same subject has moved (an animal swimming by), so the target moves with it without starting a new pan.
+  function glance(point,follow=false){
+    if(!point){glanceOn=false;wake();return;}
+    const at=coordinate(point);
+    if(follow&&glanceOn){glanceTo.set(at[0],at[1],at[2]);wake();return;}
+    if(glanceWeight>.05){
+      // From the subject in view to the next: longer for a bigger turn, as a pan (PAN_BASE, PAN_PER_RADIAN) is.
+      glanceFrom.copy(glancePoint);glanceTo.set(at[0],at[1],at[2]);
+      scratchA.subVectors(glanceFrom,glanceSeen.set(base.x,base.y-8,base.z));scratchB.subVectors(glanceTo,glanceSeen);
+      const turn=scratchA.lengthSq()>1e-6&&scratchB.lengthSq()>1e-6?scratchA.angleTo(scratchB):0;
+      glanceFor=clamp(PAN_BASE+turn*PAN_PER_RADIAN,PAN_MIN,PAN_MAX);glanceT=0;
+    }else{glanceFrom.set(at[0],at[1],at[2]);glanceTo.copy(glanceFrom);glancePoint.copy(glanceFrom);glanceT=1;}
+    glanceOn=true;wake();
+  }
   function pacing(scale=1){paceGoal=clamp(Number(scale)||1,.05,1);wake();}
   function guideScooter(on){guideScoot=state.guideScooter=Boolean(on);wake();}
   function endFlyBy(){glanceOn=guideScoot=state.guideScooter=false;paceGoal=1;}
@@ -427,7 +443,8 @@ export function createExploration(canvas, wake, settings=savedSettings) {
       // --- autopilot: where to swim and where to look ---
       let steering=false,autoLook=false,goalYaw=look.yaw,goalPitch=0;
       // A fly-by eases in and out: the glance over about a second and a half, the pace a little slower so the view leads the brake.
-      paceScale+=(paceGoal-paceScale)*(1-Math.exp(-dt*1.1));glanceWeight+=((glanceOn&&hasDest?1:0)-glanceWeight)*(1-Math.exp(-dt*1.15));if(glanceWeight<.002&&!glanceOn)glanceWeight=0;
+      paceScale+=(paceGoal-paceScale)*(1-Math.exp(-dt*1.1));glanceFade=clamp(glanceFade+(glanceOn&&hasDest?1:-1)*dt/GLANCE_FADE,0,1);glanceWeight=easeInOut(glanceFade);
+      if(glanceT<1){glanceT=Math.min(1,glanceT+dt/glanceFor);glancePoint.lerpVectors(glanceFrom,glanceTo,easeInOut(glanceT));}else glancePoint.copy(glanceTo);
       if(traveling){delta.copy(dest).sub(base);if(delta.length()<settings.travelArrival){hasDest=false;docking=true;dockTime=0;}}
       if((hasDest||docking)&&submerged&&!suspended){
         steering=true;autoLook=true;const cruise=travelSpeed||settings.atlasCruiseSpeed,rate=cruise/Math.max(.1,settings.travelSlowdown);

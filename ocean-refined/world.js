@@ -509,7 +509,7 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   // QA hook: after placing the camera by hand, cull the scene for it again.
   recull(){camera.updateMatrixWorld(true);refreshView();userCreatures?.update(0,playerPosition,viewerOrbit?null:view);if(built)cullWorld(0);},
   // Dive planner and guided tour hooks: autopilot, instant placement, dive start / surfacing, and the flashlight and scooter state.
-  travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free,looking){exploration.setGuided(value,free,looking);},frameDiver(value){preludeOn=Boolean(value);if(reducedMotion)prelude=Number(preludeOn);wake();},lookAt(point,follow){exploration.lookAt(point,follow);wake();},glance(point){exploration.glance(point);},pacing(scale){exploration.pacing(scale);},guideScooter(on){exploration.guideScooter(on);},tether(top){exploration.tether(top);},baitBall(){return livingWorld?.baitBall?.()??null;},residentAt(id){return userCreatures?.residentAt?.(id)??null;},
+  travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free,looking){exploration.setGuided(value,free,looking);},frameDiver(value){preludeOn=Boolean(value);if(reducedMotion)prelude=Number(preludeOn);wake();},lookAt(point,follow){exploration.lookAt(point,follow);wake();},glance(point,follow){exploration.glance(point,follow);},pacing(scale){exploration.pacing(scale);},guideScooter(on){exploration.guideScooter(on);},tether(top){exploration.tether(top);},baitBall(){return livingWorld?.baitBall?.()??null;},residentAt(id){return userCreatures?.residentAt?.(id)??null;},
   encounter(id,course){return userCreatures?.encounter?.(id,playerPosition,viewerOrbit?null:view,course)??false;},visitors(){return userCreatures?.visitors?.()??[];},
   travelPath(points,focus,speed,lead){return exploration.travelPath(points,focus,speed,lead);},
   cancelTravel(options){return exploration.cancelTravel(options);},
@@ -545,9 +545,8 @@ function setSkyPreset(preset,persist=true){
 }
 function frameSurface(phaseValue=phase){
   if(!skySystem||exploration.state.mode!=='surface')return;
-  const sun=skySystem.getState(phaseValue).sunDirection;
-  // The horizontal sun direction uses east -Z / west +Z, consistent with the star map.
-  surfaceFramingYaw=sun[2]<=0?0:Math.PI;
+  // The surface faces the reef (+Z): the dive starts out over the deep water, looking in at where it is going.
+  surfaceFramingYaw=Math.PI;
   exploration.frameSky(surfaceFramingYaw);
 }
 function updateMotionUI(){

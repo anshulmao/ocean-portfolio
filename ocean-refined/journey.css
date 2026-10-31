@@ -71,8 +71,9 @@ body[data-announce="on"] .waypoint[data-show="true"]{opacity:0}
    adds the headline, the caption and every action. Its fill is nearly opaque: nothing behind it reads through the
    words. On a desktop it keeps the lower right corner, above the dive console and clear of the prompt in the middle;
    while the full computer face is up it stands above that. */
-section.tour-card.holo{--holo-tint-solid:#05222ff2}
-section.tour-card{position:fixed;right:var(--pad,24px);bottom:150px;z-index:var(--o-z-sheet);display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head actions";align-items:center;column-gap:12px;box-sizing:border-box;width:min(calc(100vw - 2*var(--o-pad)),440px);max-height:calc(100dvh - 2*var(--o-pad));padding:6px 12px 6px 22px;opacity:0;translate:0 14px;visibility:hidden;transition:opacity 250ms var(--journey-out),translate 250ms var(--journey-out),visibility 0s 250ms}
+/* A light tint, as the depth card has: the water shows through and the text glow carries the words. */
+section.tour-card.holo{--holo-tint-solid:#05222f73}
+section.tour-card{position:fixed;right:var(--pad,24px);bottom:calc(22px + var(--o-safe-b));z-index:var(--o-z-sheet);display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head actions";align-items:center;column-gap:12px;box-sizing:border-box;width:min(calc(100vw - 2*var(--o-pad)),440px);max-height:calc(100dvh - 2*var(--o-pad));padding:6px 12px 6px 22px;opacity:0;translate:0 14px;visibility:hidden;transition:opacity 250ms var(--journey-out),translate 250ms var(--journey-out),visibility 0s 250ms}
 section.tour-card[data-show="true"]{opacity:1;translate:0 0;visibility:visible;transition:opacity var(--journey-standard) var(--journey-in),translate var(--journey-standard) var(--journey-in)}
 section.tour-card[data-sheet="expanded"]{grid-template-areas:"head head" "title title" "body body" "pace pace" "actions actions";padding:6px 18px 14px 22px}
 body[data-computer-open="true"][data-camera="third"] section.tour-card{bottom:292px}
@@ -131,7 +132,7 @@ body[data-clear-ui="true"] .look-there{visibility:hidden}
 .tour-card[data-sheet="collapsed"] footer button{border-color:var(--signal,var(--holo))}
 /* A fly-by's caption (guided-dive.js): a title and a line over the water, with no card, only a scrim that fades out to the
    right. Top centre under the top bar; on a phone, top left under the depth chip, clear of the compass. */
-.tour-caption{position:fixed;top:calc(var(--o-under-bar) + 8px);left:50%;z-index:var(--o-z-announce);display:grid;gap:3px;box-sizing:border-box;width:max-content;max-width:min(520px,calc(100vw - 2*var(--o-pad)));padding:10px 40px 11px 16px;border-left:2px solid var(--signal,var(--holo));background:linear-gradient(90deg,color-mix(in srgb,var(--holo-tint-solid) 78%,#0000) 55%,#0000);color:var(--holo-ink);font-family:var(--holo-font);text-shadow:var(--holo-text-glow);pointer-events:none;opacity:0;translate:-50% -6px;transition:opacity 400ms var(--journey-out),translate 400ms var(--journey-out)}
+.tour-caption{position:fixed;top:calc(var(--o-under-bar) + 8px);left:50%;z-index:var(--o-z-announce);display:grid;gap:3px;box-sizing:border-box;width:max-content;max-width:min(520px,calc(100vw - 2*var(--o-pad)));padding:10px 40px 11px 16px;border-left:2px solid var(--signal,var(--holo));background:linear-gradient(90deg,color-mix(in srgb,var(--holo-tint-solid) 45%,#0000) 55%,#0000);color:var(--holo-ink);font-family:var(--holo-font);text-shadow:var(--holo-text-glow);pointer-events:none;opacity:0;translate:-50% -6px;transition:opacity 400ms var(--journey-out),translate 400ms var(--journey-out)}
 .tour-caption[data-show="true"]{opacity:1;translate:-50% 0;transition:opacity 500ms var(--journey-in),translate 500ms var(--journey-in)}
 .tour-caption b{font-size:19px;font-weight:500;line-height:1.2}
 .tour-caption span{font-size:14px;line-height:1.4;opacity:.86}
@@ -143,6 +144,8 @@ body:is([data-clear-ui="true"],[data-safety-stop="true"]) .tour-caption{visibili
 body[data-tour-teach="scooter"] .touch-actions [data-swim="KeyE"],body[data-tour-teach="photo"] .touch-actions [data-photo],body[data-tour-teach="lamp"] .touch-actions [data-lamp]{border-color:var(--holo-strong);animation:journey-ping 1.4s var(--journey-out) infinite}
 body[data-guide-scooter="true"] .touch-actions [data-swim="KeyE"]{background:var(--holo-fill-on)}
 @media (prefers-reduced-motion:reduce){body[data-tour-teach] .touch-actions .touch-key{animation:none}}
+/* On a desktop the tour card takes the bottom-right corner, where the Ahead card sits: the tour names the sites itself. */
+body:is([data-tour="intro"],[data-tour="travel"],[data-tour="dwell"],[data-tour="done"]) .calm-ahead{display:none!important}
 .tour-fade{position:fixed;inset:0;z-index:var(--o-z-labels);pointer-events:none;background:#04303f;opacity:0;transition:opacity var(--journey-standard) var(--journey-ease)}
 .tour-fade[data-on="true"]{opacity:1;transition:opacity 200ms var(--journey-out)}
 /* The tour narrates each landmark itself, so the generic prompt to click in stays out of its way. */

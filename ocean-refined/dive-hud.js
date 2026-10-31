@@ -130,13 +130,13 @@ function paintPanel(state) {
   if (dive.location !== side.location) { side.location = dive.location; panel.location.textContent = dive.location; }
   if (mode !== side.mode) { side.mode = mode; panel.status.textContent = mode; }
 }
-// One line on the slate when a stop comes due and when it is done (journey.js owns the toast).
+// One line on the slate when a stop is done (journey.js owns the toast).
 function announceStop(state) {
   if (dive.stop === shown.stop) return;
   const from = shown.stop; shown.stop = dive.stop;
   if (state.transition || !window.oceanJourney?.say) return;
-  if (dive.stop === 'due' && from === 'none') window.oceanJourney.say(dive.deco ? 'Deco stop' : 'Safety stop', `Level off at ${STOP.depth} m for ${dive.stopTotal / 60} minutes. Simulated: surfacing early costs nothing.`, '#8ff4ff', 5200);
-  else if (dive.stop === 'done') window.oceanJourney.say('Stop complete', 'OK to surface. Ascend slowly.', '#8ff4ff', 3600);
+  // A stop coming due is shown by the ascent's own offer (expedition-interactions.js), not a banner over the view.
+  if (dive.stop === 'done' && from !== 'none') window.oceanJourney.say('Stop complete', 'OK to surface. Ascend slowly.', '#8ff4ff', 3600);
 }
 function update(dt = 0) {
   const state = window.oceanDiagnostics, underwater = Boolean(state?.submerged);

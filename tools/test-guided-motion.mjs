@@ -61,7 +61,8 @@ function environment(hz, { reducedMotion = false, unavailable = false, collision
     visitors: () => whaleFrom ? [whaleAt(whaleFrom, clock)] : [], startDive: options => { calls.push(['startDive', options]); nav.startDive(); atSurface = false; return true; }, getTransition: () => transition,
     guide: (...args) => nav.setGuided(...args), travelPath: (...args) => unavailable ? false : nav.travelPath(...args),
     cancelTravel: (...args) => nav.cancelTravel(...args), place: (...args) => { placed++; nav.place(...args); }, lookAt: (point, follow) => nav.lookAt(point, follow), residentAt: id => residents[id] ?? null,
-    glance: point => nav.glance(point), pacing: scale => nav.pacing(scale), guideScooter: on => nav.guideScooter(on), tether: top => nav.tether(top),
+    glance: (point, follow) => nav.glance(point, follow), pacing: scale => nav.pacing(scale), guideScooter: on => nav.guideScooter(on), tether: top => nav.tether(top),
+    surface: () => { calls.push(['surface']); return true; },
     // The bait ball as living-world.js places it (its home over the spire, 3.6 m across), here off home by its full wander.
     baitBall: () => [50.5, -27.8, -66, 3.6],
   };
@@ -118,7 +119,7 @@ function toTravel(env) {
 // CollisionWorld must take the body around it, with no endpoint-only assertions.
 {
   const collision = new CollisionWorld();
-  collision.addBox(new THREE.Box3(new THREE.Vector3(-29, -18, -45), new THREE.Vector3(-23, -6, -42)));
+  collision.addBox(new THREE.Box3(new THREE.Vector3(-23, -18, -57), new THREE.Vector3(-17, -6, -53)));
   const env = environment(60, { collision });
   toTravel(env);
   for (let frame = 0; frame < 60 * 100 && tourStatus() !== 'dwell'; frame++) env.tick();
@@ -155,7 +156,7 @@ const keyup = code => window.dispatchEvent({ type: 'keyup', code, target: { clos
   assert.ok(swum > 1.2 && swum < 5, `swum a little (${swum.toFixed(2)} m)`);
   assert.equal(tourStatus(), 'intro', 'swimming about in the welcome keeps the tour');
   assert.ok(window.oceanTour.tried.includes('swim'));
-  env.tick(1.2);
+  env.tick(2.2);
   assert.ok(env.nav.state.travelling, 'and the drift picks up again once they let go');
   assert.equal(env.state.tour.tip, 'Try it, 2 of 4: Space to rise, Shift to sink.');
   key('ShiftLeft'); env.tick(1); keyup('ShiftLeft'); env.tick(.6);
@@ -176,17 +177,17 @@ const keyup = code => window.dispatchEvent({ type: 'keyup', code, target: { clos
   assert.ok(window.oceanTour.tried.includes('interact'));
   // Taught where it is used: the fly-by's caption carries the control once, and drops it once tried.
   const until = (test, seconds = 400) => { for (let frame = 0; frame < 60 * seconds && !test(); frame++) { env.tick(); if (!test() && tourStatus() === 'dwell') window.oceanTour.next(); } assert.ok(test(), JSON.stringify(env.state.tour)); };
-  // The scooter: the guide runs it across the reef shelf, and that is not the visitor trying it. Holding E is.
-  until(() => env.state.tour.sight === 'scooter'); env.tick(1.5);
-  assert.equal(env.state.tour.flyTip, 'That’s the scooter. Hold E to use it yourself, any time.');
-  assert.ok(env.nav.state.scooter > .5 && env.nav.state.guideScooter, `the guide runs the scooter (${env.nav.state.scooter.toFixed(2)})`);
-  assert.ok(!window.oceanTour.tried.includes('scooter'), 'the guide’s own run is not the visitor trying it');
+  // The scooter: across the reef shelf the swim all but stops and waits for the visitor to try it (up to 7 s). Holding E is
+  // trying it, and the fly-by goes on.
+  until(() => env.state.tour.sight === 'scooter'); env.tick(2);
+  assert.equal(env.state.tour.flyTip, 'Hold E for your scooter: the guide speeds up with you.');
+  assert.ok(env.nav.state.velocity.length() < 1, `the swim waits (${env.nav.state.velocity.length().toFixed(2)} m/s)`);
+  assert.ok(!env.nav.state.guideScooter, 'the guide does not run it while it waits for the visitor');
   key('KeyE'); env.tick(.6); keyup('KeyE'); env.tick(.1);
   assert.equal(env.state.tour.flyTip, '', 'gone once used');
   assert.equal(tourStatus(), 'travel', 'the scooter speeds the guide, it does not take over');
-  until(() => env.state.tour.sight !== 'scooter');
-  env.tick(2);
-  assert.ok(env.nav.state.scooter < .1, 'the guide lets go of the scooter after its fly-by');
+  env.tick(2.5);
+  assert.notEqual(env.state.tour.sight, 'scooter', 'and once tried, the fly-by goes on');
   // The lamp under the arch, the camera as the whale shark passes; the computer at the treasure was tried in the welcome.
   until(() => env.state.tour.sight === 'arch');
   assert.equal(env.state.tour.flyTip, 'It’s dark under the arch. Press Q for your lamp.');
@@ -200,19 +201,19 @@ const keyup = code => window.dispatchEvent({ type: 'keyup', code, target: { clos
   console.log('PASS: the welcome asks for each control in turn and ticks it; the guide shows the scooter; tips come with their fly-bys, once.');
 }
 
-// Swimming off past ROAM in the welcome puts the tour on hold, to be rejoined.
+// In the welcome the visitor may swim anywhere and stays on the tour: only Skip (or Start) leaves it.
 {
   const env = environment(60);
   startTour(); env.tick(.5);
   const from = [...env.state.playerPosition];
-  key('KeyW');
-  for (let frame = 0; frame < 60 * 8 && tourStatus() === 'intro'; frame++) env.tick();
-  keyup('KeyW');
+  key('KeyW'); env.tick(8); keyup('KeyW'); env.tick(.5);
   const swum = Math.hypot(...env.state.playerPosition.map((v, i) => v - from[i]));
-  assert.equal(tourStatus(), 'free', 'out of the welcome\'s reach, the tour holds');
-  assert.ok(swum > 5 && swum < 6.5, `held as the diver left the 5 m around the start (${swum.toFixed(2)} m)`);
+  assert.equal(tourStatus(), 'intro', 'swimming far keeps the welcome');
+  assert.ok(swum > 15, `swum well away (${swum.toFixed(1)} m)`);
+  window.oceanTour.next(); env.tick(.5);
+  assert.equal(tourStatus(), 'travel', 'and Skip leads on from wherever they are');
   window.oceanTour.stop(); env.nav.destroy();
-  console.log('PASS: leaving 5 m of the welcome puts the tour on hold.');
+  console.log(`PASS: the welcome lets the visitor swim anywhere (${swum.toFixed(0)} m) and stays on the tour.`);
 }
 
 // Start waits for the tour's animals: while the creature set loads it says so, then leads on as soon as it is in.
@@ -276,7 +277,7 @@ for (const hz of [30, 60, 120]) {
       record.frames++; shown.set(key, record);
       if (record.frames > hz * 1.5) record.slowest = Math.min(record.slowest, env.nav.state.velocity.length());
       if (record.frames > hz * 1.5) record.scooter = Math.max(record.scooter, env.nav.state.scooter);
-      const subject = sight.look?.visitor ? (env.whaleFrom && [whaleAt(env.whaleFrom, env.clock)].map(w => [w.x, w.y, w.z])[0]) : sight.look?.resident ? sleeper : sight.look?.bait ? [50.5, -27.8, -66] : sight.look;
+      const subject = sight.look?.visitor ? (env.whaleFrom && [whaleAt(env.whaleFrom, env.clock)].map(w => [w.x, w.y, w.z])[0]) : sight.look?.resident === 'sleeper' ? sleeper : sight.look?.resident ? sight.look.near : sight.look?.bait ? [50.5, -27.8, -66] : sight.look;
       if (subject && record.frames > hz * 2.5) record.nearest = Math.min(record.nearest, aimAt(subject));
     }
     const leg = env.samples.slice(before);
@@ -288,7 +289,7 @@ for (const hz of [30, 60, 120]) {
     // Every fly-by on the leg shows once, for its hold, and turns the view to its subject while the swim carries on.
     assert.deepEqual([...shown.keys()], flyBys(step).map(item => item.key), `${step.key}: every fly-by, in order`);
     for (const sight of flyBys(step)) {
-      const record = shown.get(sight.key), hold = sight.hold ?? 5;
+      const record = shown.get(sight.key), hold = (sight.hold ?? 5) + (sight.wait ? 7 : 0);
       // Its hold, or cut short once the next is in reach: never under BRIEF (2.5 s).
       assert.ok(record.frames / hz > 2.45 && record.frames / hz < hold + .1, `${sight.key}: lasts up to ${hold} s (${(record.frames / hz).toFixed(2)})`);
       if (sight.look && record.frames / hz > 3.5) assert.ok(record.nearest < .2, `${sight.key}: the view turns to it (${record.nearest.toFixed(3)} rad off at nearest)`);
@@ -488,8 +489,8 @@ for (const hz of [30, 60, 120]) {
   key('KeyW'); env.tick(.2); keyup('KeyW');
   const steps = tracked.filter(([event]) => event === 'tour_step').map(([, p]) => p.index);
   assert.deepEqual(steps, STEPS.map((step, i) => i), 'a tour_step for every step, in order');
-  assert.deepEqual(tracked[0], ['tour_started', { from: 'underwater', tour_version: 6 }]);
-  assert.deepEqual(tracked.at(-1), ['tour_ended', { step: 'open-water', index: STEPS.length - 1, how: 'swam_off', tour_version: 6 }]);
+  assert.deepEqual(tracked[0], ['tour_started', { from: 'underwater', tour_version: 7 }]);
+  assert.deepEqual(tracked.at(-1), ['tour_ended', { step: 'open-water', index: STEPS.length - 1, how: 'swam_off', tour_version: 7 }]);
   for (const [event, properties] of tracked) assert.deepEqual(eventProperties(event, properties), properties, `${event} passes the privacy allowlist whole`);
   env.nav.destroy();
   console.log(`PASS: reduced motion runs the tour on fades with no pans; ${tracked.length} analytics events, all allowed.`);
@@ -539,21 +540,21 @@ console.log('PASS: rejected routes hold, explicit Skip and reduced motion fade, 
   console.log('PASS: on a phone the welcome asks for what the deck has, and the menu-only controls are not taught.');
 }
 
-// In the welcome, rising stops 2.5 m over where it began: it cannot carry the visitor out of it and up to the surface.
+// In the welcome, rising stops 3.5 m under the surface: it cannot carry the visitor out of it and up to the surface.
 // Leaving the welcome lets the ceiling go.
 {
   const env = environment(60);
   startTour(); env.tick(.5);
   const from = env.state.playerPosition[1];
   key('Space'); env.tick(6); keyup('Space'); env.tick(1);
-  const rose = env.state.playerPosition[1] - from;
+  const rose = env.state.playerPosition[1] - from, top = env.state.playerPosition[1];
   assert.equal(tourStatus(), 'intro', 'still in the welcome');
-  assert.ok(rose > 1.5 && rose < 2.8, `rose to the welcome's ceiling and no further (${rose.toFixed(2)} m)`);
+  assert.ok(top > -4.3 && top < -3.2, `rose to the welcome's ceiling and no further (${top.toFixed(2)} m)`);
   window.oceanTour.next(); env.tick(.5); window.oceanTour.stop();
   key('Space'); env.tick(3); keyup('Space'); env.tick(.5);
-  assert.ok(env.state.playerPosition[1] - from > 3.5, 'with the tour over, rising is the visitor’s own again');
+  assert.ok(env.state.playerPosition[1] > top + 1, 'with the tour over, rising is the visitor’s own again');
   env.nav.destroy();
-  console.log(`PASS: the welcome holds rising to ${rose.toFixed(1)} m; the ceiling goes with it.`);
+  console.log(`PASS: the welcome holds rising at ${top.toFixed(1)} m; the ceiling goes with it.`);
 }
 
 // Under way, the visitor's own look holds for a moment once they let go, then the view eases back onto where the guide is
@@ -584,6 +585,38 @@ console.log('PASS: rejected routes hold, explicit Skip and reduced motion fade, 
   const off = Math.abs(Math.atan2(Math.sin(looked.yaw - still.yaw), Math.cos(looked.yaw - still.yaw)));
   assert.ok(off < .1, `and it ends where the guide is looking (${off.toFixed(3)} rad off)`);
   console.log(`PASS: under way, the view holds, then eases back in ${(moving / 120).toFixed(1)} s, fastest at ${Math.round(peakAt * 100)}%.`);
+}
+
+// From one fly-by's subject to the next the view makes one eased pan: it turns one way only (no swing back to the way ahead
+// and out again), slowly away, fastest partway, slowly onto the new subject.
+{
+  const env = environment(120);
+  toTravel(env); env.tick(1);
+  const at = env.state.playerPosition, ahead = env.nav.state.yaw, side = ahead + 1.2;
+  const point = yaw => [at[0] - Math.sin(yaw) * 20, at[1], at[2] - Math.cos(yaw) * 20];
+  window.oceanControls.glance(point(ahead - .6)); env.tick(3);
+  const yaws = []; window.oceanControls.glance(point(side));
+  for (let i = 0; i < 120 * 4; i++) { env.tick(1 / 120); yaws.push(env.nav.state.yaw); }
+  const steps = yaws.slice(1).map((v, i) => Math.atan2(Math.sin(v - yaws[i]), Math.cos(v - yaws[i])));
+  const turning = Math.sign(steps.reduce((sum, v) => sum + v, 0)), back = steps.filter(v => Math.sign(v) === -turning && Math.abs(v) > 2e-3).length;
+  const moving = steps.findLastIndex(v => Math.abs(v) * 120 > .05) + 1, rates = steps.slice(0, moving).map(Math.abs), peak = Math.max(...rates);
+  assert.equal(back, 0, 'it turns one way only');
+  assert.ok(rates[3] < peak * .4 && rates.indexOf(peak) / moving > .2 && rates.indexOf(peak) / moving < .8, `eased in and out (fastest at ${(rates.indexOf(peak) / moving).toFixed(2)})`);
+  window.oceanTour.stop(); env.nav.destroy();
+  console.log(`PASS: from one fly-by's subject to the next, one eased pan, one way (${(moving / 120).toFixed(1)} s).`);
+}
+// The ending: N surfaces, as its Surface button does.
+{
+  globalThis.tracked = [];
+  const env = environment(60, { reducedMotion: true });
+  startTour(); env.tick(.5);
+  for (let i = 0; i < 200 && tourStatus() !== 'done'; i++) { env.tick(.5); if (tourStatus() !== 'done') window.oceanTour.next(); }
+  key('KeyN'); env.tick(.1);
+  assert.equal(tourStatus(), 'off');
+  assert.ok(env.calls.some(call => call[0] === 'surface'), 'the ascent home begins');
+  assert.equal(tracked.at(-1)[1].how, 'surface');
+  env.nav.destroy();
+  console.log('PASS: N at the ending surfaces.');
 }
 
 // A leg replanned partway (a stall's detour, Resume after Pause, or Rejoin after a takeover) keeps the scenic waypoints

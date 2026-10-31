@@ -389,7 +389,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
 
   // --- Residents ------------------------------------------------------------------------------------------------
   const spotted = [], dens = [];
-  let sentinel = null, grazers = null;
+  let sentinel = null, grazers = null, whipray = null;
   // Dens: out from the formation's middle, through its rock, to the first open ground beyond it: the den mouth, with
   // the body back in the rock. A heading that never crosses rock, or only reaches open ground far out (a gap in a ring
   // of columns, say), would leave the eel lying on bare sand, so headings nearest the authored one are tried first.
@@ -412,7 +412,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       herds.push(grazers);
     }
     const w = RESIDENTS.whipray;
-    if (gltfs.has(w.species)) { const a = actor(w.species); if (a) herds.push({ route: route(...w.loop), height: over(w.height, -4), speed: w.speed, pace: 1, members: [{ actor: a, ...member(0, 0, 0, { drift: .6, bob: .12 }) }], look: 6, bank: .12 }); }
+    if (gltfs.has(w.species)) { const a = actor(w.species); if (a) whipray = a; if (a) herds.push({ route: route(...w.loop), height: over(w.height, -4), speed: w.speed, pace: 1, members: [{ actor: a, ...member(0, 0, 0, { drift: .6, bob: .12 }) }], look: 6, bank: .12 }); }
     const s = RESIDENTS.bluespots;
     if (gltfs.has(s.species)) for (const [x, z] of s.spots.slice(0, economy ? s.lean : s.spots.length)) {
       const a = actor(s.species, { clip: 'rest' }); if (!a) continue;
@@ -708,7 +708,8 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     seek(id, u) { const e = casts.get(id); if (!e?.path) return false; e.u = u; for (const c of e.cast) c.actor.started = false; for (const r of e.riders) r.actor.started = false; return true; }
   };
   // Where a resident that stays put actually settled (sand() can move it well away from its wished-for spot): the guided dive frames it from here.
-  const residentAt = id => resting[id] ?? null;
+  // Where a resident is: one lying still where it settled, or the whipray where it glides now (the guided dive follows it).
+  const residentAt = id => resting[id] ?? (id === 'whipray' && whipray ? [whipray.pos.x, whipray.pos.y, whipray.pos.z] : null);
   // The guided dive brings one encounter in on a course of its own, and points out the visitors passing: where each lead animal is now.
   function encounter(id, player, view, course) { const e = casts.get(id); if (!e?.cast.length) return false; const s = slots.find(item => item.slot === e.slot); if (s.active) end(s.active); begin(e, player, view, course); s.active = e; return true; }
   const visitors = () => slots.filter(s => s.active?.path && s.active.cast[0]?.actor.started).map(s => { const p = s.active.cast[0].actor.pos; return { id: s.active.id, x: p.x, y: p.y, z: p.z }; });

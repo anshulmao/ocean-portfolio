@@ -15,8 +15,8 @@ export const STOPS = STEPS.filter(step => step.kind === 'stop');
 // Analytics (only with consent; analytics-privacy.js declares what is kept): which step, by its key and number.
 // tour_version: the shape of the tour, so a funnel never mixes one round's steps with another's (4: three stops and the
 // long way up to the shallows; 5: the same three stops, ending in open water above the wreck; 6: in from open water over
-// the far side of the reef, the treasure before the wreck).
-const VERSION = 6;
+// the far side of the reef, the treasure before the wreck; 7: from out over the treasure, the cathedral from its front).
+const VERSION = 7;
 const note = (event, extra = {}) => track(event, { step: STEPS[index].key, index, tour_version: VERSION, ...extra });
 const ARRIVE_RADIUS = 1.6, PAN_BEAT = 3, INTRO_BEAT = 4.5, HOLD_SIGNAL = '#8ff4ff';
 // The opening from the surface (SPEC step 0): a held beat while the surface copy fades, the camera eases in on the diver
@@ -38,7 +38,7 @@ const CONTROLS = {
   swim: { key: 'W A S D', name: 'Swim', touch: 'Stick: swim', try: ['Swim with W A S D. The guide picks up again when you let go.', 'Swim with the stick. The guide picks up again when you let go.'] },
   updown: { key: 'Space · Shift', name: 'Up and down', touch: 'Rise and sink', try: ['Space to rise, Shift to sink.', 'Use the rise and sink buttons.'] },
   scooter: { key: 'E', name: 'Scooter', touch: 'Scooter (hold)', try: ['Hold E to spin up your scooter.', 'Hold the scooter button.'],
-    tip: ['That’s the scooter. Hold E to use it yourself, any time.', 'That’s the scooter. Hold ⚡ to use it yourself, any time.'] },
+    tip: ['Hold E for your scooter: the guide speeds up with you.', 'Hold ⚡ for your scooter: the guide speeds up with you.'] },
   lamp: { key: 'Q', name: 'Flashlight', touch: 'Lamp', try: ['Press Q to switch your flashlight.', 'Tap the lamp button.'],
     tip: ['It’s dark under the arch. Press Q for your lamp.', 'It’s dark under the arch. Tap the lamp button.'] },
   view: { key: 'V', name: 'Third person view', touch: 'View', try: ['Press V to see yourself in third person.', 'Tap the view button.'],
@@ -49,16 +49,15 @@ const CONTROLS = {
 // F is not among them: there is nothing to open where the welcome is read; it is taught at the anchor, where there is.
 // The rest are taught by the fly-bys that use them: the guide runs the scooter across the reef shelf, the lamp comes in under
 // the arch and the camera as the whale shark passes; the computer at the treasure, the deepest stop, and the view at the end.
-// ROAM: in the welcome the visitor may swim this far (m) from where it started and still be on the tour; further puts it on hold.
 // On a phone the computer and the view live in the menu, not on the deck, so the welcome asks only for what the deck has and
 // no later beat teaches them there (DESK).
 const PRIMER = { keys: ['swim', 'updown', 'computer', 'view'], touch: ['swim', 'updown'] }, DESK = new Set(['computer', 'view']);
-const CHEER = 1.2, ROAM = 5, MOVED = 1.2;
-// RISE: in the welcome the visitor can rise this far (m) over where it began and no further, so rising cannot carry them out
-// of it and up to the surface.
-const RISE = 2.5;
+const CHEER = 1.2, MOVED = 1.2;
+// CEILING: in the welcome the visitor may swim anywhere, up and down included, but no higher than this (world y), so rising
+// cannot carry them out of the tour and up to the surface. Only Skip (or Start) leaves the welcome.
+const CEILING = -3.5;
 // The welcome's drift toward the reef (m/s), and how long (s) after the visitor lets go of the swim it picks up again.
-const DRIFT = .9, RESUME = 1.5;
+const DRIFT = .9, RESUME = 2.5;
 let idle = 0;
 // Big animals passing while the tour swims: the view turns to one coming within SPOT m that is no fly-by's subject, for
 // SPOT_HOLD s, and not to the same one again within SPOT_AGAIN s.
@@ -81,7 +80,7 @@ card.className = 'tour-card holo holo--reading'; card.setAttribute('aria-label',
 card.innerHTML = '<div class="tour-progress" aria-hidden="true"><i></i></div>'
   + '<button type="button" class="tour-head" data-tour="toggle" aria-expanded="false"><span class="holo-label tour-kicker"></span><span class="holo-value tour-count"></span><i class="tour-chevron" aria-hidden="true"></i></button>'
   + '<h2 class="tour-title"></h2><div class="tour-body"><p class="tour-lines" aria-live="polite"></p><button type="button" class="tour-more" data-tour="more" aria-expanded="false"><span>More</span></button><ul class="tour-keys" aria-label="Controls to try" hidden></ul><p class="tour-teach" hidden></p></div><p class="tour-pace"></p>'
-  + '<footer><button type="button" data-tour="pause">Pause <kbd>P</kbd></button><button type="button" data-tour="read">Read it <kbd>F</kbd></button><button type="button" data-tour="next">Next <kbd>N</kbd></button><button type="button" data-tour="rejoin">Rejoin <kbd>G</kbd></button><button type="button" data-tour="surface">Surface</button><button type="button" data-tour="explore">Keep exploring</button><button type="button" data-tour="exit">Exit tour</button></footer>';
+  + '<footer><button type="button" data-tour="pause">Pause <kbd>P</kbd></button><button type="button" data-tour="read">Read it <kbd>F</kbd></button><button type="button" data-tour="next">Next <kbd>N</kbd></button><button type="button" data-tour="rejoin">Rejoin <kbd>G</kbd></button><button type="button" data-tour="surface">Surface <kbd>N</kbd></button><button type="button" data-tour="explore">Keep exploring</button><button type="button" data-tour="exit">Exit tour</button></footer>';
 fade.className = 'tour-fade'; fade.setAttribute('aria-hidden', 'true');
 // A fly-by's caption: a title and a line over the water, no card. On a phone it sits under the depth chip, clear of the
 // subject and the controls; the sheet itself stays folded while the tour swims.
@@ -105,6 +104,9 @@ let titled = -1;
 const sights = [], passed = new Set(), cued = new Set(); let sight = null, sightTime = 0;
 // spotted: the big animal the view has turned to between fly-bys, and for how long; spottedAt: when each was last turned to.
 let spotted = null, spottedFor = 0, tourTime = 0; const spottedAt = new Map();
+// A fly-by that teaches a control waits up to WAIT s for the visitor to try it, the swim at HUSH of its cruise; holdFor: how
+// long the fly-by under way lasts. HOLD_GAP: back-to-back fly-bys nearer than this (m) keep the view on a subject between them.
+const WAIT = 7, HUSH = .12, HOLD_GAP = 30; let waiting = false, holdFor = 0;
 // Where the current leg set off along its scenic waypoints, or null on a leg without them.
 let scenicFrom = null;
 // The leg's scenic route as swum: the step's own, with any orbit worked out where things are now, and the approach that
@@ -134,7 +136,7 @@ function orbitOf(item, after) {
 }
 // cheer: the control just done in the welcome, shown ticked for CHEER seconds before the next is asked for.
 let cheer = null, cheerFor = 0, keysShown = '';
-// roaming: the visitor has taken the controls in the welcome, inside ROAM of `start`. starting: Start pressed, waiting on the assets.
+// roaming: the visitor is swimming about in the welcome (the drift waits for them). starting: Start pressed, waiting on the assets.
 let roaming = false, starting = false, introFor = 0; const start = new THREE.Vector3();
 // used: the controls tried on this tour. seen: what they last read, to notice a change.
 const used = new Set(); let seen = null;
@@ -227,7 +229,7 @@ function paint() {
   card.dataset.more = String(small && more);
   const tip = paintControls(step, fingers);
   // Folded, the row offers one action: the one the moment calls for.
-  const primary = status === 'dwell' ? (step.landmark ? 'read' : 'next') : status === 'free' ? 'rejoin' : status === 'done' ? 'explore' : 'next';
+  const primary = status === 'dwell' ? (step.landmark ? 'read' : 'next') : status === 'free' ? 'rejoin' : status === 'done' ? 'surface' : 'next';
   const show = { pause: status === 'travel', read: status === 'dwell' && Boolean(step.landmark), next: touring(), rejoin: status === 'free', surface: status === 'done', explore: status === 'done', exit: touring() || status === 'free' };
   for (const button of card.querySelectorAll('footer [data-tour]')) { const action = button.dataset.tour; button.hidden = wide ? !show[action] : action !== primary; }
   part('[data-tour="pause"]').firstChild.textContent = paused ? 'Resume ' : 'Pause ';
@@ -362,14 +364,29 @@ function flyBy(dt, at) {
   const next = sights[0], due = next && probe.fromArray(at).distanceTo(to.fromArray(next.at)) <= (next.reach ?? REACH);
   if (sight) {
     sightTime += dt;
-    if (sight.look?.visitor || sight.look?.bait) { const point = subjectOf(sight.look); if (point) api?.glance(point); }
-    if (sightTime >= (sight.hold ?? FLYBY) || (due && sightTime >= BRIEF)) endSight();
+    if (sight.look && !Array.isArray(sight.look)) { const point = subjectOf(sight.look); if (point) api?.glance(point, true); }
+    // A fly-by that teaches a control waits (up to WAIT s, the swim all but still) for the visitor to try it, then goes on;
+    // a visitor who has not tried it by then is shown it (the guide runs the scooter).
+    if (waiting) {
+      const tried = used.has(sight.wait);
+      if (!tried && sightTime < WAIT) return;
+      waiting = false; sightTime = 0; holdFor = tried ? CHEER + .8 : sight.hold ?? FLYBY;
+      api?.pacing(sight.slow ?? SLOW); if (!tried && sight.scooter) api?.guideScooter(true);
+      paint();
+    }
+    if (sightTime >= holdFor || (due && sightTime >= BRIEF)) {
+      // Back to back, the view stays on this subject until the next one's pan, rather than swinging back to the way ahead
+      // between them.
+      const next = sights[0];
+      endSight(Boolean(sight.look && next?.look && probe.fromArray(at).distanceTo(to.fromArray(next.at)) < HOLD_GAP));
+    }
     if (sight || !due) return;
   }
   if (!due) { spot(dt, at); return; }
   if (spotted) { spotted = null; api?.glance(null); }
-  sights.shift(); passed.add(next.key); sight = next; sightTime = 0; if (next.look?.visitor) spottedAt.set(next.look.visitor, tourTime);
-  api?.pacing(next.slow ?? SLOW); api?.glance(subjectOf(next.look)); api?.guideScooter(Boolean(next.scooter));
+  sights.shift(); passed.add(next.key); sight = next; sightTime = 0; holdFor = next.hold ?? FLYBY; if (next.look?.visitor) spottedAt.set(next.look.visitor, tourTime);
+  waiting = Boolean(next.wait) && !used.has(next.wait);
+  api?.pacing(waiting ? HUSH : next.slow ?? SLOW); if (next.look) api?.glance(subjectOf(next.look)); api?.guideScooter(Boolean(next.scooter) && !waiting);
   if (next.through) throughBall(at);
   paint();
 }
@@ -391,7 +408,7 @@ function spot(dt, at) {
   const api = controls();
   if (spotted) {
     spottedFor += dt; const point = visitorAt(spotted);
-    if (point && spottedFor < SPOT_HOLD) { api?.glance(point); return; }
+    if (point && spottedFor < SPOT_HOLD) { api?.glance(point, true); return; }
     spotted = null; api?.glance(null); return;
   }
   for (const item of api?.visitors?.() ?? []) {
@@ -400,10 +417,10 @@ function spot(dt, at) {
     spotted = item.id; spottedFor = 0; spottedAt.set(item.id, tourTime); api?.glance([item.x, item.y, item.z]); return;
   }
 }
-function endSight() {
+function endSight(keep = false) {
   if (spotted) { spotted = null; controls()?.glance(null); }
   if (!sight) return;
-  sight = null; const api = controls(); api?.glance(null); api?.pacing(1); api?.guideScooter(false); paint();
+  sight = null; waiting = false; const api = controls(); if (!keep) api?.glance(null); api?.pacing(1); api?.guideScooter(false); paint();
 }
 // The fly-bys still ahead on the leg's scenic route from here, less any already shown.
 function lineUp(at) {
@@ -414,7 +431,7 @@ function launch() {
   const api = controls();
   api.guide(true, true, true);
   inputs = api.nav.inputs; best = Infinity; stall = 0; legTime = 0; settle = 2;
-  if (!api.travelPath(leg, look, STEPS[index].speed ?? SPEED, LEAD)) blockRoute();
+  if (!api.travelPath(leg, look, STEPS[index].speed ?? SPEED, STEPS[index].lead ?? LEAD)) blockRoute();
   else lineUp(window.oceanDiagnostics.playerPosition);
 }
 function blockRoute() {
@@ -450,7 +467,7 @@ function begin() {
   // The welcome sheet follows the title card by REVEAL, counted from when the card went up during the descent.
   if (titled < 0) { titled = 0; splash('Guided dive', 'Welcome to the reef'); }
   endPrelude(); reveal = Math.max(.4, REVEAL - titled); titled = -1; note('tour_step');
-  api.guide(true, true, true); api.tether?.(start.y + RISE); drift(); startPan(); paint();
+  api.guide(true, true, true); api.tether?.(CEILING); drift(); startPan(); paint();
 }
 // The welcome drifts in toward the reef at an easy pace while the controls are tried. A visitor swimming about takes over,
 // and the drift picks up again once they have let go for RESUME seconds.
@@ -507,6 +524,7 @@ export function tourPlan() {
 }
 
 function update(dt, api, state, diving) {
+  if (stopOnWay) holdStop(api);
   if (status === 'off') return;
   tourTime += dt;
   const mode = api.getMode();
@@ -533,15 +551,14 @@ function update(dt, api, state, diving) {
   // Reading the archive or changing settings holds the tour where it is.
   if (api.nav.suspended || status === 'free') return;
   const nav = api.nav;
-  // In the welcome the visitor may swim about to try the controls: the tour holds only once they leave its ROAM. Swimming
+  // In the welcome the visitor may swim anywhere to try the controls and stays on the tour; only Skip or Start leaves it. Swimming
   // off from the overview simply ends the tour; anywhere else it puts the tour on hold.
   if (nav.inputs !== inputs) {
-    if (status === 'intro') { if (!roaming) { start.fromArray(state.playerPosition); api.tether?.(start.y + RISE); } roaming = true; idle = 0; inputs = nav.inputs; }
+    if (status === 'intro') { roaming = true; idle = 0; inputs = nav.inputs; }
     else { if (status === 'done') stop(null, 'swam_off'); else handOver(); return; }
   }
   if (status === 'intro') {
     introFor += dt;
-    if (roaming && here.fromArray(state.playerPosition).distanceTo(start) > ROAM) { handOver(); return; }
     if (roaming) { idle = nav.manualInput ? 0 : idle + dt; if (idle > RESUME) { roaming = false; drift(); } }
     if (starting && (assetsIn(state) || introFor > ASSETS_WAIT)) { starting = false; advance(); return; }
   }
@@ -575,7 +592,7 @@ card.addEventListener('click', event => {
   else if (action === 'next') next();
   else if (action === 'read') read();
   else if (action === 'rejoin') rejoin();
-  else if (action === 'surface') { stop(null, 'surface'); controls()?.surface(); }
+  else if (action === 'surface') surface();
   else if (action === 'explore') stop('The reef is yours. The lights still mark the three sites.', 'explore');
   else if (action === 'exit') stop('Tour ended. The reef is yours.', 'exit');
   else if (action === 'toggle') { open = card.dataset.sheet !== 'expanded'; more = false; paint(); }
@@ -601,6 +618,14 @@ function next() {
   if (status === 'intro' || status === 'dwell') { paused = false; advance(); }
   else if (status === 'travel') cutTo(land);
 }
+// Surface from the ending (its button, or N): the ascent home, and the safety stop held on the way up as it comes due, as on
+// a real dive (Esc still skips it).
+let stopOnWay = false;
+function surface() { stop(null, 'surface'); stopOnWay = Boolean(controls()?.surface()); }
+function holdStop(api) {
+  if (api.getMode() === 'surface' || !api.nav.returnPhase) { stopOnWay = api.getMode() !== 'surface' && api.nav.mode === 'transition'; return; }
+  if (api.nav.returnPhase === 'offer') { stopOnWay = false; window.oceanExpedition?.openStop?.(); }
+}
 function togglePause() {
   if (status !== 'travel') return;
   paused = !paused;
@@ -616,6 +641,7 @@ addEventListener('keydown', event => {
   if (status === 'off' || event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.target.closest?.('input,textarea,select,[contenteditable="true"]') || document.querySelector('dialog[open]')) return;
   if (event.code === 'KeyG' && status === 'free') { event.preventDefault(); rejoin(); }
   else if (event.code === 'KeyN' && touring()) { event.preventDefault(); next(); }
+  else if (event.code === 'KeyN' && status === 'done') { event.preventDefault(); surface(); }
   else if (event.code === 'KeyP' && status === 'travel') { event.preventDefault(); togglePause(); }
 });
 window.oceanTour = { start: startTour, stop, rejoin, next, plan: tourPlan, get status() { return status; }, STEPS, STOPS, get tried() { return [...used]; },

@@ -30,11 +30,13 @@ import { toDisplayDepth } from './depth-metrics.js';
 //              reach    how near (m) the diver comes before it begins (default REACH).
 //              scooter  the guide runs the scooter through it, for the visitor to see. The boost (2.2×) is on top of
 //                       slow, so .7 makes about 5.5 m/s.
-//              teach    the control it introduces (skipped if tried).
+//              teach    the control it introduces (skipped if tried); wait: the same control, waited for (up to 7 s, the
+//                       swim all but still) before the fly-by goes on.
 //              encounter  an animal called in on its own course: `course` is the line of its pass, measured from this
 //                       fly-by's point, and `cue` how far ahead (m) it is called so it arrives during the fly-by.
 //   pan      what the camera looks at, in turn, once there (the welcome and the ending).
-//   teach    the control this step introduces; speed: the swim's pace for the leg into it (m/s).
+//   teach    the control this step introduces; speed: the swim's pace for the leg into it (m/s); lead: how far out (m)
+//            the camera starts turning to a stop's subject (guided-dive.js LEAD otherwise).
 // Framing (round 5): a fly-by passes its subject 15–22 m off and looks at its middle, so the whole of it is in view, even
 // through a phone's narrow portrait lens (about 26° across). Every leg keeps clear of the wreck, masts and sails included
 // (they have no collision volume), and well wide of the barracuda's beat east of it, so it never bolts.
@@ -48,45 +50,47 @@ const depth = y => `${Math.round(toDisplayDepth(-y))} m`;
 export const STEPS = [
   // The site starts at the surface out over the deep end, west of the anchor (exploration.js SURFACE_START). The welcome is
   // read as the guide drifts in toward the reef, and the controls are tried on the way.
-  { key: 'welcome', kind: 'intro', at: [-26, -11, -48], place: 'Guided dive', title: 'This is the reef',
+  { key: 'welcome', kind: 'intro', at: [-22, -12, -66], place: 'Guided dive', title: 'This is the reef',
     line: 'This is my portfolio, as a reef. You’re going to have a fun time. Try the controls as we swim in.',
     short: 'My portfolio, as a reef. Try the controls as we swim in.',
-    // The barracuda wheel ahead, the reef rising beyond it, the wreck down to the left.
-    pan: [[-36, -20, -44], [-24, -18, -20], [18, -21, -39], [-28, -16, -30]] },
+    // The reef rising ahead, the barracuda wheel off to the right, the wreck down to the left.
+    pan: [[-22, -18, -30], [-36, -20, -44], [18, -21, -39], [-22, -16, -36]] },
   // Across the far side of the reef first (the west), then in to the anchor, squarely in front of it with the nurse shark
   // lined up behind it.
   { key: 'about', kind: 'stop', landmark: 'about', opens: 'glance', place: `About · The Anchor · ${depth(-9)}`, signal: '#7ff0cf',
     view: { behind: 'sleeper', near: [-19, -12.6, -22], distance: 10, rise: 2 },
     title: 'This anchor is me', line: 'Open it for my portfolio at a glance: who I am and where everything lives.',
     via: [
-      { at: [-26, -13, -38], key: 'barracuda', title: 'A barracuda wheel', line: 'Young barracuda turning slowly in mid-water.',
+      { at: [-18, -13, -46], key: 'barracuda', title: 'A barracuda wheel', line: 'Young barracuda turning slowly in mid-water.',
         look: [-36, -20, -44] },
-      { at: [-24, -16, -24], key: 'grotto', title: 'A limestone grotto', line: 'Stone ribs over the sand, and sea fans at the door.',
+      { at: [-16, -15, -28], key: 'grotto', title: 'A limestone grotto', line: 'Stone ribs over the sand, and sea fans at the door.',
         look: [-35, -27, -30] },
-      { at: [-28, -13, -12], key: 'whipray', title: 'A pink whipray', line: 'It glides low over the sand by the cleaning reef.',
-        look: [-41, -23, -16] },
-      { at: [-28, -10, -1], key: 'brain-coral', title: 'The brain coral dome', line: 'A giant moray keeps a den at its foot.',
+      { at: [-28, -12, -12], key: 'whipray', title: 'A pink whipray', line: 'It glides low over the sand by the cleaning reef.',
+        look: { resident: 'whipray', near: [-41, -23, -16] } },
+      { at: [-22, -9, 2], key: 'brain-coral', title: 'The brain coral dome', line: 'A giant moray keeps a den at its foot.',
         look: [-42, -16, -2], hold: 6 },
-      [-16, -6, 3],
+      [-16, -6, 4],
     ] },
   // Round the anchor to the nurse shark asleep behind it, then right across the reef shelf on the scooter, by the table coral
   // tower, round north of it and past the pillar coral cathedral, down the east side to the gully, through the limestone arch
   // (reef.js: the arch at 20, -72) and over the lantern garden to the treasure: the deepest stop comes first, as on a real dive.
-  { key: 'projects', kind: 'stop', landmark: 'projects', teach: 'computer', place: `Projects · The Treasure · ${depth(-45)}`, signal: '#c9a2ff',
+  { key: 'projects', kind: 'stop', landmark: 'projects', teach: 'computer', lead: 30, place: `Projects · The Treasure · ${depth(-45)}`, signal: '#c9a2ff',
     title: 'The treasure', line: 'This is where you’ll find my projects.',
     via: [
       { orbit: { around: 'about', radius: 11, turn: 110, rise: 2.5 }, at: [-6, -7, -20], key: 'nurse', title: 'A nurse shark, asleep',
         line: 'Nurse sharks rest on the sand by day. Let it be.', look: { resident: 'sleeper', near: [-19, -12.6, -22] }, hold: 8, slow: .45, reach: 4 },
-      { at: [6, -9, -24], key: 'scooter', title: 'Scooter on', line: 'Across the reef shelf. The deep end is out there; we’ll get to it.',
-        scooter: true, teach: 'scooter', hold: 4, slow: .7 },
+      { at: [6, -9, -24], key: 'scooter', title: 'The scooter', line: 'Across the reef shelf. The deep end is out there; we’ll get to it.',
+        scooter: true, teach: 'scooter', wait: 'scooter', hold: 4, slow: .7 },
       { at: [22, -12, -14], key: 'tower', title: 'The table coral tower', line: 'Plates of coral stacked up a leaning stone trunk.',
         look: [38, -15.5, -8], hold: 6 },
-      [30, -10, 2], [44, -11, 2],
-      { at: [52, -15, -8], key: 'cathedral', title: 'The pillar coral cathedral', line: 'Organ-pipe columns in a horseshoe.',
+      // Round the cathedral's back and south side to look in at its open side, which faces the wreck (hero-formations.js
+      // `open`), from 17 m, wide of the barracuda's beat.
+      [30, -10, 2], [44, -11, 2], [58, -17, -14], [60, -21, -30], [52, -24, -46],
+      { at: [36, -24, -40], key: 'cathedral', title: 'The pillar coral cathedral', line: 'Organ-pipe columns in a horseshoe.',
         look: [48, -23.5, -28], hold: 6, reach: 11 },
-      [58, -20, -24], [56, -26, -40], [46, -32, -52], [32, -37, -57], [24, -40, -58.5], [21, -43.5, -60],
+      [38, -32, -54], [32, -37, -57], [24, -40, -58.5], [21, -43.5, -60],
       { at: [20, -46.4, -62.6], key: 'arch', title: 'Through the arch', line: 'A limestone arch over the gully. In we go.',
-        look: [20, -48, -72], teach: 'lamp', hold: 6 },
+        look: [20, -48, -72], teach: 'lamp', wait: 'lamp', hold: 6 },
       [20, -49, -66], [20, -51, -70], [20, -51.6, -79],
       { at: [20, -50, -84], key: 'lanterns', title: 'The lantern garden', line: 'Soft lights on the deep ledge.',
         look: [8, -55, -86], reach: 6 },
