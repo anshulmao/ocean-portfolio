@@ -1,0 +1,273 @@
+/* The shared finish for the ocean, its logbook and the static reading path.
+   Loaded after the legacy component sheets. Geometry and state contracts stay
+   with their owners; this file owns surfaces, type, controls and motion. */
+:root{
+  --ui-ground:#f3f8f7;--ui-surface:#e4eeec;--ui-raised:#fff;
+  --ui-ink:#143d46;--ui-secondary:#385c63;--ui-muted:#526e73;--ui-accent:#176c70;
+  --ui-deep:#102b34;--ui-deep-raised:#193b45;--ui-foam:#eef6f5;--ui-foam-muted:#b9cecf;
+  --ui-radius:8px;--ui-sheet:16px;--ui-fast:140ms;--ui-normal:320ms;--ui-slow:520ms;
+  --ui-ease:cubic-bezier(.2,.7,.2,1);--ui-exit:cubic-bezier(.4,0,1,1);
+  --o-display:Outfit,system-ui,sans-serif;--o-mono:var(--o-display);
+  --o-weight-display:400;--o-r-s:var(--ui-radius);--o-r-m:var(--ui-radius);--o-r-l:var(--ui-sheet);
+  --o-surface-0:var(--ui-ground);--o-surface-1:var(--ui-surface);--o-surface-2:#d4e5e2;
+  --o-ink:var(--ui-ink);--o-ink-2:var(--ui-secondary);--o-muted:var(--ui-muted);--o-accent-ink:var(--ui-accent);
+  --o-btn:var(--ui-ink);--o-btn-ink:var(--ui-foam);--o-btn-glow:none;
+  --o-g1:var(--ui-ground);--o-g2:var(--ui-surface);--o-g3:var(--ui-deep-raised);--o-g4:var(--ui-deep);
+  --o-g-shadow:none;--o-g-shadow-deep:none;--o-blur:none;
+  --motion-hover:var(--ui-fast);--motion-standard:var(--ui-normal);--motion-slow:var(--ui-slow);
+  --motion-ease:var(--ui-ease);--journey-ease:var(--ui-ease);--journey-in:var(--ui-ease);
+  --journey-quick:var(--ui-fast);--journey-standard:var(--ui-normal);--journey-slow:var(--ui-slow);
+}
+html[data-theme="night"]{--o-ink:var(--ui-foam);--o-ink-2:var(--ui-foam-muted);--o-muted:var(--ui-foam-muted);--o-btn:var(--ui-foam);--o-btn-ink:var(--ui-deep)}
+html body{font-family:var(--o-display)}
+html body *{text-shadow:none!important}
+html body :is(button,input,select,textarea,kbd){font-family:var(--o-display)}
+html body :is(button,a,summary,input,select,textarea):focus-visible{outline:2px solid var(--holo-focus,var(--ui-accent));outline-offset:4px}
+html body :is(.holo,.holo--reading,.holo-deep,.ocean-dialog,dialog.ds,.dive-prompt,.tour-card,.journey-toast){
+  --holo:#9adbd5;--holo-strong:var(--ui-foam);--holo-ink:var(--ui-foam);--holo-dim:#91b5b66b;--holo-faint:#91b5b62b;
+  --holo-tint:var(--ui-deep-raised);--holo-tint-solid:var(--ui-deep);--holo-fill:var(--ui-deep-raised);
+  --holo-fill-hover:#264d57;--holo-fill-on:#32616a;--holo-focus:#c2eeea;
+  --holo-font:var(--o-display);--holo-mono:var(--o-display);--holo-glow:none;--holo-text-glow:none;--holo-halo:none;
+  color:var(--holo-ink);background:var(--ui-deep);background-image:none;border:0;border-radius:var(--ui-sheet);
+  box-shadow:none;text-shadow:none;backdrop-filter:none; /* taste-skill-ignore: removes inherited blur */
+}
+html body :is(.holo,.slate,.dive-prompt,.tour-card,.journey-toast)::before,
+html body :is(.holo,.slate,.dive-prompt,.tour-card,.journey-toast)::after{content:none}
+html body :is(.slate-hand,.tour-title,.dive-prompt h2,.ds-head h2){rotate:none;text-decoration:none;font-style:normal}
+html body :is(.holo-label,.holo-value,.slate-hand,.tour-title){font-family:var(--o-display);letter-spacing:0;text-transform:none}
+html body :is(.holo-label,.holo-value){font-size:13px;line-height:1.4}
+html body :is(.holo,.ocean-dialog,dialog.ds) *{text-shadow:none}
+
+/* Surface: the ocean is the image; the interface is quiet, legible ink. */
+html body .wordmark{font-size:17px;letter-spacing:-.02em;font-weight:500;text-transform:none}
+html body .wordmark span{font-size:13px;letter-spacing:0;opacity:1;font-weight:400}
+html body .surface-nav{gap:4px;padding:0;border:0;background:none;box-shadow:none;text-shadow:none}
+html body .surface-nav a{font:400 14px/1.2 var(--o-display);letter-spacing:0;text-transform:none;min-height:44px;display:inline-flex;align-items:center;border-radius:var(--ui-radius)}
+html body .surface-nav a:hover{background:var(--ui-ground);color:var(--ui-ink)}
+html body .settings-toggle{border:0;border-radius:var(--ui-radius);background:var(--ui-ground);color:var(--ui-ink);box-shadow:none;filter:none}
+html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{width:min(780px,65vw)}
+html body .hero .surface-copy h1{font-size:clamp(38px,5.1vw,74px);font-weight:400;line-height:1.04;color:var(--o-ink);text-shadow:none}
+html body .hero .surface-copy h1 span{display:block;font:inherit;color:inherit}
+html body:not([data-submerged="true"]) .hero .surface-copy .lede{margin-top:28px;max-width:43ch;color:var(--o-ink);font-size:clamp(17px,1.5vw,21px);line-height:1.5}
+html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.guided-button,.ds-open){min-height:52px;border:0;border-radius:var(--ui-radius);box-shadow:none;text-shadow:none;backdrop-filter:none;font-size:16px;letter-spacing:0} /* taste-skill-ignore: removes inherited blur */
+html body:not([data-submerged="true"]) .portfolio-actions .dive-button{background:var(--ui-ink);color:var(--ui-foam)}
+html body:not([data-submerged="true"]) .portfolio-actions :is(.guided-button,.ds-open){background:var(--ui-ground);color:var(--ui-ink)}
+html body .guided-button small{background:var(--ui-surface);color:var(--ui-secondary);font-size:13px;border-radius:4px}
+html body .portfolio-links .hero-link{border:0;font-size:14px;text-decoration:none;min-height:44px;color:var(--o-ink)}
+html body .portfolio-links .hero-link:hover{text-decoration:underline;text-underline-offset:5px}
+html body .portfolio-links .hero-link+.hero-link{border:0}
+html body :is(.surface-copy,.portfolio-actions,.portfolio-links){text-shadow:none}
+html body .surface-copy{pointer-events:auto}
+html body .constellation-label{font:400 13px/1.4 var(--o-display);letter-spacing:0;text-transform:none}
+html body:not([data-submerged="true"]) :is(.heading-indicator,.depth){display:none}
+html body .settings-menu{padding:20px;border-radius:var(--ui-sheet);background:var(--ui-deep);box-shadow:0 20px 60px #00182040} /* taste-skill-ignore: real floating settings menu */
+html body .settings-menu :is(.holo-label,summary){font-size:15px;letter-spacing:0;text-transform:none}
+html body .settings-menu :is(.settings-group,.settings-subgroup){border-color:transparent}
+html body .settings-menu :is(button,summary){min-height:44px;border-radius:var(--ui-radius)}
+html body .settings-menu :is(.settings-actions button,.settings-quick button,.movement-actions button){background:var(--ui-deep-raised);border:0;text-transform:none;letter-spacing:0;font-size:14px}
+html body .settings-menu :is(.key-reference,.movement-intro,.holo-switch,.sky-clock,.time-title,.time-labels){font-family:var(--o-display);text-transform:none;letter-spacing:0;font-size:13px}
+html body .settings-menu :is(.theme-control button,.theme-control button span,.holo-switch small,.brightness-help,.movement-help){font-size:13px;line-height:1.5;letter-spacing:0;text-transform:none}
+html body .settings-menu :is(.settings-head,.settings-folder,.settings-subgroup){border:0}
+html body .settings-menu input[type="range"]::-webkit-slider-thumb{box-shadow:none}
+html body .diver-profile{background:var(--o-surface-0);border:0;border-radius:var(--ui-sheet);box-shadow:0 16px 48px #00182030} /* taste-skill-ignore: real floating profile dialog */
+html body .diver-profile-head img{box-shadow:none}
+html body .diver-profile :is(button,a){border:0;border-radius:var(--ui-radius);min-height:44px;font-size:14px}
+html body .diver-profile-close{width:44px;height:44px}
+html body .diver-profile :is(.diver-profile-role,.diver-profile-base,.diver-profile-kicker){font-size:13px}
+html body :is(.holo-chip,.tour-card button,.dive-prompt button){border:0;border-radius:var(--ui-radius);background:var(--ui-deep-raised);color:var(--ui-foam);font:400 14px/1.3 var(--o-display);letter-spacing:0;text-transform:none;min-height:44px;box-shadow:none}
+html body :is(.plan-board,.plan-board-head,.plan-site,.plan-info,.tour-card,.dive-prompt){background-image:none;box-shadow:none}
+html body .plan-board{background:var(--ui-deep);border:0;border-radius:var(--ui-sheet)}
+html body .tour-fade{visibility:hidden;transition:opacity var(--ui-normal) var(--ui-ease),visibility 0s var(--ui-normal)}
+html body .tour-fade[data-on="true"]{visibility:visible;transition:opacity 200ms var(--ui-exit),visibility 0s}
+html body section.tour-card[data-show="false"]{display:none}
+html body :is(.journey-toast,.zone-card){visibility:hidden;transition:opacity var(--ui-normal) var(--ui-ease),translate var(--ui-normal) var(--ui-ease),visibility 0s var(--ui-normal)}
+html body :is(.journey-toast,.zone-card)[data-show="true"]{visibility:visible;transition:opacity var(--ui-normal) var(--ui-ease),translate var(--ui-normal) var(--ui-ease),visibility 0s}
+html body .reef-label span{font:400 13px/1.4 var(--o-display);letter-spacing:0;text-transform:none}
+
+/* Shared underwater controls. Physical gauges/charts keep their functional marks. */
+html body :is(.expedition-tools button,.view-controls button,.archive-toggle,.dive-computer-toggle,.quiet-ui-toggle,.quiet-ui-restore,.quiet-ui-computer,.interact-prompt){
+  border:0;border-radius:var(--ui-radius);background:var(--ui-deep-raised);color:var(--ui-foam);font-family:var(--o-display);font-size:13px;letter-spacing:0;text-transform:none;box-shadow:none;text-shadow:none;filter:none;min-height:44px;
+}
+html body :is(.heading-indicator,.depth,.scene-footer,.reef-map,.air-gauge,.dive-computer){font-family:var(--o-display);text-shadow:none;filter:none;--holo-mono:var(--o-display);font-variant-numeric:tabular-nums}
+html body :is(.heading-readout,.scene-footer,.depth-title,.depth-unit,.map-heading){font-family:var(--o-display);letter-spacing:0;text-transform:none}
+html body footer.scene-footer.holo-deep{font-size:13px;background:none;border:0;border-radius:0;box-shadow:none}
+html body :is(.scene-footer,.heading-readout) :is(span,strong,p){font-family:var(--o-display);font-size:13px;letter-spacing:0}
+
+/* The archive is a reading sheet, with the same ground as the dive overlays. */
+html body #landmark-dialog{
+  --arc-text:var(--ui-foam);--arc-muted:var(--ui-foam-muted);--arc-shell:var(--ui-deep);--arc-paper:var(--ui-deep);--arc-solid:var(--ui-deep-raised);--arc-field:var(--ui-deep-raised);--arc-rule:transparent;
+  --sig:#9adbd5;--sig-soft:#264d57;--sig-line:transparent;
+  border:0;border-radius:var(--ui-sheet);background:var(--ui-deep);box-shadow:none;
+}
+html body #landmark-dialog .arc-scan{display:none}
+html body #landmark-dialog :is(.arc-header,.arc-footer,.arc-rail){background:var(--ui-deep-raised);border:0}
+html body #landmark-dialog :is(.arc-header,.arc-footer){padding:16px 20px}
+html body #landmark-dialog :is(.arc-emblem,.arc-find,.arc-figure,.arc-link,.arc-btn,.arc-file,.arc-fact,.arc-note,.arc-plate,.arc-callout){border:0;box-shadow:none;background-image:none;border-radius:var(--ui-radius)}
+html body #landmark-dialog :is(button,a){text-shadow:none}
+html body #landmark-dialog :is(.arc-kicker,.arc-folio,.arc-rail-no,.arc-find-no,.arc-grid-no,.arc-section-no){display:none}
+html body #landmark-dialog :is(#landmark-title,.arc-rail-name,.holo-label,#entry-number,.arc-btn,.arc-link,.arc-file){font-family:var(--o-display);letter-spacing:0;text-transform:none}
+html body #landmark-dialog #landmark-title{font-size:16px;line-height:1.3}
+html body #landmark-dialog :is(.arc-btn,.arc-link,.arc-file,.arc-rail-section){min-height:44px;font-size:14px}
+html body #landmark-dialog :is(.arc-title,.arc-case-title){font-weight:400;letter-spacing:-.035em;line-height:1.1}
+html body #landmark-dialog :is(.arc-body,.arc-prose,.arc-case-body){font-size:16px;line-height:1.65}
+html body #landmark-dialog :is(.arc-rail-entries button,.arc-rail-section){border-radius:var(--ui-radius)}
+html body #landmark-dialog :is(.arc-rail-section,.arc-rail-entries button)[aria-current]{background:var(--ui-deep);color:var(--ui-foam)}
+html body #landmark-dialog :is(.arc-case-visual,.arc-media,.arc-story-visual){border-radius:var(--ui-radius);box-shadow:none}
+html body #landmark-dialog[data-section][data-entry]{--sig:#9adbd5;--sig-soft:#264d57;--sig-line:transparent;--tab:#9adbd5;--tab-soft:var(--ui-deep)}
+html body #landmark-dialog :is(.arc-tool,.arc-action,.arc-turn,.arc-grid-link){border:0;border-radius:var(--ui-radius);background:var(--ui-deep-raised);font:400 14px/1.3 var(--o-display);text-transform:none;letter-spacing:0;min-height:44px}
+html body #landmark-dialog .arc-rail-section[aria-current]{border-left-color:transparent}
+html body #landmark-dialog :is(.arc-pagehead>.holo-label,.arc-strap,.arc-step,.arc-rule-no,.arc-rail-entries .holo-label,.arc-find .holo-label){display:none}
+html body #landmark-dialog .arc-pagehead h3{margin-top:0}
+html body #landmark-dialog .arc-grid .arc-find{border:0;background:var(--ui-deep-raised)}
+html body #landmark-dialog .arc-rail-section[aria-current] .hud-icon{color:var(--ui-foam)}
+html body #landmark-dialog .arc-rail :is(li,.arc-rail-section){--tab:#9adbd5;--tab-soft:#264d57}
+html body #landmark-dialog .arc-progress-track i{--tab:#9adbd5}
+html body #landmark-dialog .arc-rail .arc-rail-section[aria-current]{color:var(--ui-foam);border-color:transparent;background:var(--ui-deep)}
+html body #landmark-dialog :is(.arc-pager button,.arc-surface,.arc-expand,.arc-lightbox-close){min-height:44px;border:0;border-radius:var(--ui-radius);font:400 14px/1.3 var(--o-display);text-transform:none;letter-spacing:0;background:var(--ui-deep-raised)}
+html body #landmark-dialog .arc-rail-entries button{grid-template-columns:minmax(0,1fr) 13px}
+html body #landmark-dialog :is(.arc-back,.arc-find-status,.arc-find-kind){font:400 13px/1.4 var(--o-display);letter-spacing:0;text-transform:none}
+html body #landmark-dialog .arc-find-status{border:0;color:var(--ui-foam-muted);padding:0}
+html body dialog.ds{background:var(--ui-deep);border:0;border-radius:var(--ui-sheet);box-shadow:none}
+html body dialog.ds :is(.ds-card,.ds-stat,.ds-visit,.ds-metric,.ds-highlight,.ds-rate,.ds-chart-wrap){background:var(--ui-deep-raised);border:0;border-radius:var(--ui-radius);box-shadow:none}
+html body dialog.ds :is(.ds-head,.ds-section,.ds-foot){border-color:transparent}
+html body dialog.ds :is(h2,h3,button,summary){text-transform:none;letter-spacing:0;text-shadow:none}
+html body dialog.ds .ds-head h2{font-size:32px;font-weight:400}
+html body dialog.ds :is(.ds-panel,.ds-tiles>div,.ds-map,.ds-more-list){background:var(--ui-deep-raised);border:0;border-radius:var(--ui-radius);box-shadow:none}
+html body dialog.ds :is(.ds-pin,.ds-dot){box-shadow:none}
+html body dialog.ds :is(.holo-label,.ds-sub,.ds-tiles dt,.ds-tiles span,.ds-panel h3){font-size:13px;line-height:1.5;text-transform:none;letter-spacing:0}
+
+/* The reading route uses the same family, surfaces and control recipe. */
+html:has(.reading-page){background:var(--ui-ground)}
+html body.reading-page{background:var(--surface);--deep:var(--ui-deep-raised);--deep-2:var(--ui-deep);--deep-3:#0b222a;--accent:var(--ui-accent);--motion-ease:var(--ui-ease)}
+.reading-page .reading-nav{top:0;width:100%;max-width:none;margin:0;padding:16px var(--band);border:0;border-radius:0;background:var(--surface);box-shadow:none;backdrop-filter:none;gap:20px} /* taste-skill-ignore: removes inherited blur */
+.reading-page .reading-wordmark small{font-size:12px;color:var(--ink-2)}
+.reading-page .reading-nav nav a{font-size:14px;min-height:44px}
+.reading-page :is(.reading-dive,.reading-button,.reading-chip){border:0;border-radius:var(--ui-radius);background:var(--surface-2);font-size:14px;min-height:44px;box-shadow:none}
+.reading-page .reading-button--primary{background:var(--ink);color:var(--surface)}
+.reading-page :is(.reading-hero h1 em,.reading-hero h1>span){color:inherit;font:inherit}
+.reading-page .reading-hero h1{font-size:clamp(44px,5.5vw,80px);line-height:1.04;font-weight:400;margin-top:0}
+.reading-page .reading-hero{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:64px}
+.reading-page .reading-hero h1{font-size:clamp(32px,4.8vw,68px)}
+.reading-page .reading-hero h1>span{display:block;color:inherit}
+.reading-page .reading-kicker{font-size:14px;letter-spacing:0;text-transform:none;color:var(--ink-2)}
+.reading-page :is(.reading-hero-copy,.reading-section-heading,.reading-card-copy,.reading-project-hero,.reading-approach-note,.reading-introduction>div,.reading-gallery-heading)> .reading-kicker{display:none}
+.reading-page :is(.reading-project-number,.reading-kicker>span,.reading-story-number,.reading-journey-grid figcaption>span){display:none}
+.reading-page :is(.reading-proof,.reading-hero-foot,.reading-resume-variants,.reading-project-facts,.reading-story-evidence){border:0}
+.reading-page .reading-proof dt{font-size:13px;letter-spacing:0;text-transform:none}
+.reading-page :is(.reading-card-cover,.reading-portrait,.reading-media,.reading-next,.reading-resume-preview){border:0;border-radius:var(--ui-radius);box-shadow:none;rotate:none}
+.reading-page :is(.reading-card-open,.reading-card-copy,.reading-next-copy){border:0;box-shadow:none}
+.reading-page .reading-card-link{border-radius:var(--ui-sheet);overflow:hidden}
+.reading-page .reading-card-copy{background:var(--surface-2)}
+.reading-page .reading-section--about{background:var(--deep);border-radius:0}
+.reading-page :is(.reading-section--experience,.reading-section--resume,.reading-contact,.reading-footer){background-image:none}
+.reading-page .reading-section--experience{background-color:var(--deep)}
+.reading-page .reading-section--resume{background-color:var(--deep-2)}
+.reading-page :is(.reading-contact,.reading-footer){background-color:var(--deep-3)}
+.reading-page :is(.reading-hero-foot,.reading-tags,.reading-card-action,.reading-footer,.reading-resume-variants small){font-family:var(--o-display);font-size:14px;letter-spacing:0}
+.reading-page :is(.reading-story-section p,.reading-introduction .reading-prose){color:var(--ink);font-size:17px}
+.reading-page :is(.reading-card-link,.reading-approach-note,.reading-process,.reading-next,.reading-about-note){background-image:none;box-shadow:none;backdrop-filter:none;border:0} /* taste-skill-ignore: removes inherited blur */
+.reading-page :is(.reading-card-link,.reading-approach-note){background-color:var(--surface-2)}
+.reading-page :is(.reading-more-work,.reading-process,.reading-role,.reading-approach-note,.reading-kicker,.reading-porthole a,.reading-footer,.reading-about-facts>div){border:0}
+.reading-page :is(.reading-porthole,.reading-portrait){box-shadow:none;border-radius:var(--ui-sheet)}
+.reading-page .reading-porthole-marker{display:none}
+.reading-page .reading-porthole figcaption{font-size:14px}
+.reading-page .reading-porthole figcaption{background:var(--ui-deep);border:0;border-radius:var(--ui-radius);box-shadow:none;backdrop-filter:none} /* taste-skill-ignore: removes inherited blur */
+.reading-page .reading-process h3{font-size:28px;max-width:25ch}
+.reading-page .reading-process> .reading-icon{display:none}
+.reading-page :is(.reading-process>span,.reading-role-number,.reading-role-index){display:none}
+.reading-page .reading-section-heading h2{max-width:25ch}
+.reading-page .reading-section-heading>p:not(.reading-kicker){max-width:60ch}
+.reading-page .reading-prose p{max-width:65ch}
+.reading-page :is(.reading-resume,.reading-media,.reading-story-quote,.reading-toc){background:var(--surface-2);background-image:none;border:0;border-radius:var(--ui-sheet);box-shadow:none;backdrop-filter:none} /* taste-skill-ignore: removes inherited blur */
+.reading-page .reading-resume-links .reading-chip:first-child{background:var(--foam);color:var(--ui-deep)}
+.reading-page :is(.reading-process-icon,.reading-document-icon){background:none;border:0;box-shadow:none;border-radius:0}
+.reading-page .reading-process-icon{display:none}
+.reading-page .reading-process-number{display:none}
+.reading-page .reading-process li{grid-template-columns:minmax(0,1fr);border:0;padding:20px 0}
+.reading-page .reading-process li+li{padding-top:60px}
+.reading-page .reading-approach-note h3{font-size:30px;line-height:1.2;max-width:24ch}
+.reading-page .reading-role-date .reading-kicker{display:block}
+.reading-page .reading-role-date>span:last-child{font-size:13px}
+.reading-page .reading-contact h2 span{color:inherit}
+.reading-page :is(.reading-role-date,.reading-project-facts dt,.reading-proof dd>span,.reading-resume-preview>span){font-size:13px;letter-spacing:0;text-transform:none}
+.reading-page .reading-role-copy h3{font-size:clamp(25px,2.4vw,34px)}
+.reading-page :is(.reading-lead,.reading-section-intro,.reading-card-copy>p:not(.reading-kicker),.reading-role-copy p){color:var(--ink)}
+.reading-page .reading-portrait figcaption{background:var(--ui-deep);padding:16px;color:var(--ui-foam)}
+.reading-page .reading-portrait figcaption>span{font-size:13px}
+.reading-page .reading-nav nav{border:0}
+.reading-page .reading-resume-date{font-size:14px}
+.reading-page .reading-card-action{color:var(--ink)}
+.reading-page :is(.reading-role,.reading-resume-variants li,.reading-toc li){border:0}
+.reading-page :is(.reading-proof dd>span,.reading-more-work summary>span:last-child,.reading-hero-foot a,.reading-process>.reading-kicker){font-size:13px}
+.reading-page :is(.reading-contact,.reading-resume,.reading-section--deep) .reading-chip{background:var(--ui-deep-raised);color:var(--ui-foam)}
+.reading-page :is(.reading-contact,.reading-resume,.reading-section--deep) .reading-resume-links .reading-chip:first-child{background:var(--ui-foam);color:var(--ui-deep)}
+.reading-page .reading-porthole::before{content:none}
+.reading-page .reading-more-work:not([open])>.reading-project-grid{display:none}
+.reading-page .reading-resume-variants:not([open])>:not(summary){display:none}
+.reading-page .reading-role+.reading-role{margin-top:36px}
+
+/* Feedback is shared, but component owners still handle dismissal/lifecycle. */
+@media(prefers-reduced-motion:no-preference){
+  html body :is(button,a,summary){transition:transform var(--ui-fast) var(--ui-ease),translate var(--ui-fast) var(--ui-ease),opacity var(--ui-fast) var(--ui-ease),background-color var(--ui-fast) var(--ui-ease)}
+  html body button:not(:disabled):active{scale:.98}
+  html body:not([data-submerged="true"]):not([data-exploring="true"]) .surface-copy{animation:ui-arrive var(--ui-slow) var(--ui-ease) both}
+  html body .surface-copy>*{animation:none}
+  html body:not([data-submerged="true"]):not([data-exploring="true"]) .portfolio-actions{animation:ui-arrive var(--ui-slow) var(--ui-ease) 70ms both}
+  html body:not([data-submerged="true"]):not([data-exploring="true"]) .portfolio-links{animation:ui-arrive var(--ui-slow) var(--ui-ease) 140ms both}
+  html body .settings-menu:not([hidden]){animation:ui-sheet var(--ui-normal) var(--ui-ease) both}
+  html body #landmark-dialog[open]:not([data-closing="true"]){animation:ui-sheet var(--ui-normal) var(--ui-ease) both}
+  .reading-page .reading-hero-copy{animation:ui-arrive var(--ui-slow) var(--ui-ease) both}
+  .reading-page .reading-card-cover img{transition:transform var(--ui-slow) var(--ui-ease)}
+  @supports(animation-timeline:view()){
+    .reading-page :is(.reading-section-heading,.reading-project-card,.reading-story-section,.reading-journey-grid li){animation:ui-arrive linear both;animation-timeline:view();animation-range:entry 0% entry 18%}
+  }
+}
+@keyframes ui-arrive{from{opacity:.15;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ui-sheet{from{opacity:0;translate:0 16px;scale:.995}to{opacity:1;translate:0 0;scale:1}}
+@media(max-width:900px){
+  .reading-page .reading-hero{gap:36px}
+  .reading-page .reading-nav{padding:12px var(--gut);flex-wrap:wrap;gap:8px 16px}
+  .reading-page .reading-nav nav{order:3;flex-basis:100%}
+  .reading-page .reading-nav nav ul{justify-content:space-between;gap:0}
+  .reading-page .reading-nav nav a{padding:10px 8px}
+}
+@media(max-width:600px){
+  html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{width:auto;right:var(--pad);top:clamp(108px,16vh,145px)}
+  html body .hero .surface-copy h1{font-size:clamp(30px,7.7vw,44px)}
+  html body:not([data-submerged="true"]) .hero .surface-copy .lede{font-size:17px;margin-top:24px;max-width:32ch}
+  html body:not([data-submerged="true"]) .portfolio-actions{margin-top:24px}
+  html body:not([data-submerged="true"]) .portfolio-links{margin-top:14px;gap:0 8px}
+  html body .portfolio-links .hero-link{font-size:13px;padding:0 4px}
+  html body .settings-menu{padding:16px}
+  html body #landmark-dialog{border-radius:0}
+  html body #landmark-dialog :is(.arc-header,.arc-footer){padding:10px 12px}
+  .reading-page .reading-hero h1{font-size:clamp(29px,7.7vw,44px)}
+  .reading-page .reading-section-heading h2{font-size:32px}
+  .reading-page .reading-process h3{font-size:24px}
+  .reading-page .reading-dive{padding:0 12px}
+  .reading-page .reading-dive .reading-icon:last-child{display:none}
+  .reading-page .reading-nav{position:relative}
+  .reading-page .reading-wordmark{white-space:normal}
+  .reading-page .reading-dive{font-size:13px;gap:6px}
+  .reading-page .reading-monogram{width:32px;height:32px;flex:none}
+  .reading-page .reading-nav{gap:8px}
+  .reading-page .reading-wordmark{font-size:13px;gap:8px}
+  .reading-page .reading-wordmark small{font-size:11px}
+  .reading-page .reading-project-facts{min-width:0}
+  .reading-page .reading-hero{gap:28px}
+  .reading-page .reading-hero{grid-template-columns:minmax(0,1fr)}
+  .reading-page .reading-introduction{gap:64px}
+}
+@media(max-width:359px){.reading-page .reading-dive span{max-width:70px}.reading-page .reading-nav nav a{font-size:13px;padding:10px 4px}}
+@media(max-height:540px) and (min-width:601px){
+  html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{top:92px;width:min(700px,70vw)}
+  html body .hero .surface-copy h1{font-size:38px}
+  html body:not([data-submerged="true"]) .hero .surface-copy .lede{margin-top:16px;font-size:17px}
+  html body:not([data-submerged="true"]) .portfolio-actions{margin-top:16px}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  html body :is(.surface-copy,.portfolio-actions,.portfolio-links,.settings-menu,#landmark-dialog,.reading-hero-copy,.reading-section-heading,.reading-project-card,.reading-story-section,.reading-journey-grid li){animation:none;transition:none}
+  html body :is(button,a,summary,.reading-card-cover img){transition:none}
+}
+@media print{.reading-page .reading-nav{position:static}html body #landmark-dialog{background:white;color:black}}
