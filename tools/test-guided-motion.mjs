@@ -562,8 +562,12 @@ console.log('PASS: rejected routes hold, explicit Skip and reduced motion fade, 
 {
   const run = looking => {
     const env = environment(120); toTravel(env);
-    for (let i = 0; i < 120 * 60 && tourStatus() !== 'dwell'; i++) env.tick();
-    window.oceanTour.next(); env.tick(4);
+    for (let i = 0; i < 120 * 120 && tourStatus() !== 'dwell'; i++) env.tick();
+    // A calm stretch, between the tower's fly-by and the cathedral's, where the guide's own view is not turning to a subject.
+    window.oceanTour.next();
+    for (let i = 0; i < 120 * 120 && env.state.tour.sight !== 'tower'; i++) env.tick();
+    for (let i = 0; i < 120 * 30 && env.state.tour.sight === 'tower'; i++) env.tick();
+    env.tick(.3);
     if (looking) window.oceanInput.aim(500, 0);
     env.tick(.1);
     const away = env.nav.state.yaw; env.tick(1.2);
