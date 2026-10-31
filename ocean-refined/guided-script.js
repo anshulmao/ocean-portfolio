@@ -56,7 +56,7 @@ export const STEPS = [
   // Across the far side of the reef first (the west), then in to the anchor, squarely in front of it with the nurse shark
   // lined up behind it.
   { key: 'about', kind: 'stop', landmark: 'about', opens: 'glance', place: `About · The Anchor · ${depth(-9)}`, signal: '#7ff0cf',
-    view: { behind: 'sleeper', near: [-19, -12.6, -22], distance: 6.5, rise: 1.2 },
+    view: { behind: 'sleeper', near: [-19, -12.6, -22], distance: 10, rise: 2 },
     title: 'This anchor is me', line: 'Open it for my portfolio at a glance: who I am and where everything lives.',
     via: [
       { at: [-26, -13, -38], key: 'barracuda', title: 'A barracuda wheel', line: 'Young barracuda turning slowly in mid-water.',
