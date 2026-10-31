@@ -75,7 +75,7 @@ export const STEPS = [
   { key: 'projects', kind: 'stop', landmark: 'projects', teach: 'computer', place: `Projects · The Treasure · ${depth(-45)}`, signal: '#c9a2ff',
     title: 'The treasure', line: 'This is where you’ll find my projects.',
     via: [
-      { orbit: { around: 'about', radius: 8, turn: 110, rise: 2 }, at: [-6, -7, -20], key: 'nurse', title: 'A nurse shark, asleep',
+      { orbit: { around: 'about', radius: 11, turn: 110, rise: 2.5 }, at: [-6, -7, -20], key: 'nurse', title: 'A nurse shark, asleep',
         line: 'Nurse sharks rest on the sand by day. Let it be.', look: { resident: 'sleeper', near: [-19, -12.6, -22] }, hold: 8, slow: .45, reach: 4 },
       { at: [6, -9, -24], key: 'scooter', title: 'Scooter on', line: 'Across the reef shelf. The deep end is out there; we’ll get to it.',
         scooter: true, teach: 'scooter', hold: 4, slow: .7 },
