@@ -49,7 +49,7 @@
 body:is([data-menu="open"],[data-profile="open"],[data-summary="true"],[data-exploring="true"]) .diver-profile-ping{display:none}
 /* The sky's and the reef's floating labels step aside while the card is up, so none sits behind or over it. */
 body[data-profile="open"] :is(#sky-labels,#reef-labels){visibility:hidden}
-/* On a narrow screen the card and the hero would share the frame: the hero steps aside while the card is up. */
-@media(max-width:900px){body[data-profile="open"] .hero{opacity:0;visibility:hidden;pointer-events:none}}
+/* The profile gets the frame to itself at every screen size. */
+body[data-profile="open"] .hero{opacity:0;visibility:hidden;pointer-events:none}
 body:is([data-submerged="true"],[data-clear-ui="true"]) :is(.diver-profile,.diver-profile-hint,.diver-profile-ping){display:none}
 @media(prefers-reduced-motion:reduce){.diver-profile,.diver-profile-hint,.diver-profile-ping::before,.diver-profile-ping::after{animation:none}.diver-profile-ping::before{opacity:.8;scale:1}.diver-profile-ping::after{display:none}.diver-profile-actions button:hover{translate:none}}

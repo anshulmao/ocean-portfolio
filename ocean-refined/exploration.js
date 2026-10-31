@@ -118,7 +118,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     try{const result=raw?canvas.requestPointerLock({unadjustedMovement:true}):canvas.requestPointerLock();
       result?.catch?.(error=>{if(raw&&error?.name==='NotSupportedError'){try{canvas.requestPointerLock()?.catch?.(lockFailed);}catch{lockFailed();}}else lockFailed();});}catch{lockFailed();}
   }
-  function recapture(){if(suspended||ascent)return false;captureRequired=false;state.exploring=true;canvas.focus({preventScroll:true});if(settings.pointerLock)lockPointer();wake();return true;}
+  function recapture({pointerLock=true}={}){if(suspended||ascent)return false;captureRequired=false;state.exploring=true;canvas.focus({preventScroll:true});if(settings.pointerLock&&pointerLock)lockPointer();wake();return true;}
   function syncPerspectiveSetting(){if(settings.cameraMode!==syncedCameraMode){state.perspective=settings.cameraMode==='third'?'third':'first';syncedCameraMode=state.perspective;}}
   function togglePerspective(value){if(state.mode==='surface'||ascent)return state.perspective==='third';state.perspective=value===undefined?(state.perspective==='first'?'third':'first'):(value?'third':'first');settings.cameraMode=state.perspective;syncedCameraMode=state.perspective;wake();return state.perspective==='third';}
   function toggleFreeCam(value){return togglePerspective(value);}

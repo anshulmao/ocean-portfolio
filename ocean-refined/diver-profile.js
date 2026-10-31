@@ -20,7 +20,7 @@ const PULSE = 2.2, INVITE_AFTER = 1.5, MET = 'ocean-diver-met';
 const HEAD = .5;
 const touchInput = () => document.documentElement.dataset.input === 'touch' || (!document.documentElement.dataset.input && matchMedia('(pointer: coarse)').matches);
 
-export function createDiverProfile({ diver, camera, canvas, glow, available, setInterfaceOpen, open: openSection, reducedMotion, wake, keepLooking, recapture }) {
+export function createDiverProfile({ diver, camera, canvas, glow, available, setInterfaceOpen, open: openSection, reducedMotion, wake, keepLooking, recapture, isExploring }) {
   const about = PORTFOLIO_CONTENT.about.entries.find(entry => entry.id === 'overview') || {};
   const portrait = PORTFOLIO_MEDIA.overview || {};
   const fullName = portrait.caption || about.name || 'Anshul';
@@ -91,7 +91,7 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
     return hit.applyMatrix4(diver.root.matrixWorld).y > diver.root.position.y - BELOW_WATER;
   }
 
-  let clearCheck = 0, fromCrosshair = false, inviting = false, availableFor = 0, ceiling = EDGE, pointer = null, hovered = false, shown = false, amount = 0, lifted = false, time = 0, returnFocus = null;
+  let clearCheck = 0, fromFreeLook = false, inviting = false, availableFor = 0, ceiling = EDGE, pointer = null, hovered = false, shown = false, amount = 0, lifted = false, time = 0, returnFocus = null;
   const locked = () => document.pointerLockElement === canvas;
   const centre = () => { const rect = canvas.getBoundingClientRect(); return [rect.left + rect.width / 2, rect.top + rect.height / 2]; };
   // The hit test runs in update(): with the ocean paused the frames stop, so a move or a leave asks for one.
@@ -120,7 +120,7 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
   // A press on the ocean closes the card; one that came from the crosshair takes the mouse straight back (a press may).
   canvas.addEventListener('pointerdown', () => { if (shown) close(false, 'press'); });
   // Ahead of every other Escape (hud.js opens Settings on one, exploration.js asks for a recapture): this one only closes the card.
-  addEventListener('keydown', event => { if (shown && event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); close(); } }, { capture: true });
+  addEventListener('keydown', event => { if (shown && event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); if (!event.repeat) close(); } }, { capture: true });
   card.querySelector('.diver-profile-close').addEventListener('click', () => close(true, 'press'));
   for (const button of card.querySelectorAll('[data-section]')) button.addEventListener('click', () => { close(false); openSection(button.dataset.section); });
 
@@ -132,28 +132,33 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
     const img = card.querySelector('img');
     if (!img.getAttribute('src') && portrait.src) { img.src = portrait.src; img.alt = portrait.alt || ''; }
     returnFocus = document.activeElement;
-    // Opened from the crosshair (looking around with the mouse taken): the visit stays a look around, so the hero does not
-    // come back behind the card, and closing it goes back to the crosshair.
-    fromCrosshair = locked();
+    // Remember drag/touch free look as well as pointer lock before opening the card
+    // suspends navigation. The hero stays hidden until a separate Escape leaves free look.
+    fromFreeLook = locked() || Boolean(isExploring?.());
     // Under the masthead where there is room for it there (it stays over the diver's head otherwise).
     ceiling = Math.max(EDGE, (document.querySelector('.masthead')?.getBoundingClientRect().bottom ?? 0) + 8);
     shown = true; card.hidden = false; hint.hidden = true;
     document.body.dataset.profile = 'open';
+    if (fromFreeLook) keepLooking?.(true);
     setInterfaceOpen(true);
-    if (fromCrosshair) keepLooking?.(true);
     place();
     card.focus({ preventScroll: true });
     wake();
     return true;
   }
   // how: 'press' when a click or tap closed it, which may take the mouse again; Escape and the rest may not (a browser
-  // grants no pointer lock on Escape), so they leave the look around waiting for the next click on the ocean.
+  // grants no pointer lock on Escape), so they resume drag/keyboard look until the next click captures the mouse.
   function close(restore = true, how = 'key') {
     if (!shown) return;
     shown = false; card.hidden = true;
     delete document.body.dataset.profile;
     setInterfaceOpen(false);
-    if (fromCrosshair) { fromCrosshair = false; if (how === 'press') { keepLooking?.(false); recapture?.(); restore = false; } }
+    if (fromFreeLook) {
+      fromFreeLook = false;
+      keepLooking?.(true);
+      recapture?.({pointerLock: how === 'press'});
+      if (how === 'press') restore = false;
+    }
     if (restore && returnFocus?.isConnected && returnFocus !== document.body) returnFocus.focus({ preventScroll: true });
     else if (restore) canvas.focus({ preventScroll: true });
     returnFocus = null;

@@ -592,7 +592,7 @@ $('#map-toggle').addEventListener('click',()=>{mapCollapsed=!mapCollapsed;paintA
 canvas.addEventListener('pointerdown',()=>{lookHeld=false;},{capture:true});
 // Ahead of hud.js, which opens Settings on an Escape when nothing is being looked at: a held look ends first, as one with
 // the mouse taken does.
-addEventListener('keydown',event=>{if(event.key==='Escape'&&lookHeld&&!diverProfile?.isOpen){lookHeld=false;event.preventDefault();event.stopImmediatePropagation();wake();}},{capture:true});
+addEventListener('keydown',event=>{if(event.key==='Escape'&&lookHeld&&!diverProfile?.isOpen){event.preventDefault();event.stopImmediatePropagation();if(!event.repeat)returnSurfaceView();}},{capture:true});
 // A visitor reaching for a way into the water (Dive in, Guided dive, Choose a dive site): the first draws go one a
 // frame from here on, since what is not drawn by the time the camera goes under is all paid in one frame there. A touch
 // screen has no hover, so a finger landing on one counts too. (Delegated, so it covers whichever of them is on screen.)
@@ -1277,7 +1277,8 @@ async function boot(){
   diver=createDiver();diverAnimator=createDiverAnimator(diver);diagnostic.diverAnimation=diverAnimator.diagnostics;stylizeTree(diver.root,{toon:.45,rim:.4,caustics:.6,glow:'flat',glowColor:diverGlow});for(const material of Object.values(diver.materials))stylize(material,{toon:.45,rim:.4,caustics:.6,glow:'flat',glowColor:diverGlow});scene.add(diver.root);
   // Pointing at the diver at the surface lights them up; a click opens Anshul's profile over their head (diver-profile.js).
   diverProfile=createDiverProfile({diver,camera,canvas,glow:diverGlow,reducedMotion:()=>reducedMotion,wake,setInterfaceOpen,
-    keepLooking:value=>{lookHeld=value;wake();},recapture:()=>exploration.recapture(),
+    isExploring:()=>exploring||lookHeld||exploration.state.exploring,
+    keepLooking:value=>{lookHeld=value;if(value)setExploring(true);wake();},recapture:options=>exploration.recapture(options),
     open:section=>window.oceanArchive?.open(section),
     available:()=>diagnostic.ready&&!viewerOrbit&&diveTarget===0&&!getTransition()&&exploration.state.mode==='surface'&&diver.root.visible&&!document.querySelector('dialog[open]')&&!document.body.dataset.menu&&document.body.dataset.clearUi!=='true'&&(window.oceanTour?.status??'off')==='off'});
   window.oceanProfile=diverProfile;
