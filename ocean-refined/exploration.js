@@ -136,7 +136,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     try{const result=raw?canvas.requestPointerLock({unadjustedMovement:true}):canvas.requestPointerLock();
       result?.catch?.(error=>{if(raw&&error?.name==='NotSupportedError'){try{canvas.requestPointerLock()?.catch?.(lockFailed);}catch{lockFailed();}}else lockFailed();});}catch{lockFailed();}
   }
-  function recapture(){if(suspended||ascent)return false;captureRequired=false;state.exploring=true;canvas.focus({preventScroll:true});if(settings.pointerLock)lockPointer();wake();return true;}
+  function recapture({pointerLock=true}={}){if(suspended||ascent)return false;captureRequired=false;state.exploring=true;canvas.focus({preventScroll:true});if(settings.pointerLock&&pointerLock)lockPointer();wake();return true;}
   function syncPerspectiveSetting(){if(settings.cameraMode!==syncedCameraMode){state.perspective=settings.cameraMode==='third'?'third':'first';syncedCameraMode=state.perspective;}}
   function togglePerspective(value){if(state.mode==='surface'||ascent)return state.perspective==='third';state.perspective=value===undefined?(state.perspective==='first'?'third':'first'):(value?'third':'first');settings.cameraMode=state.perspective;syncedCameraMode=state.perspective;wake();return state.perspective==='third';}
   function toggleFreeCam(value){return togglePerspective(value);}
@@ -219,7 +219,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     state.speed=state.scooter=0;state.moving=state.travelling=state.colliding=false;state.contacts=0;
     state.travelBlocked=false;blockedTime=0;wake();
   }
-  function frameSky(value){defaultYaw=value;if(!state.exploring){look.yaw=value;lag.yaw=pend.yaw=spin.yaw=0;state.yaw=value;}}
+  function frameSky(value){defaultYaw=value;if(!state.exploring){look.yaw=value;look.pitch=0;lag.yaw=lag.pitch=pend.yaw=pend.pitch=spin.yaw=spin.pitch=spinPush.yaw=spinPush.pitch=0;state.yaw=value;state.pitch=0;}}
   function setTerrain(fn){if(typeof fn==='function'){terrain=fn;floorStale=true;}}
   function setCollisions(value){collisions=value;}
   function suspend(value){suspended=state.suspended=Boolean(value);clear();if(value)requireRecapture();}
