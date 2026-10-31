@@ -74,7 +74,7 @@ export const STEPS = [
   // Round the anchor to the nurse shark asleep behind it, then right across the reef shelf on the scooter, by the table coral
   // tower, round north of it and past the pillar coral cathedral, down the east side to the gully, through the limestone arch
   // (reef.js: the arch at 20, -72) and over the lantern garden to the treasure: the deepest stop comes first, as on a real dive.
-  { key: 'projects', kind: 'stop', landmark: 'projects', teach: 'computer', lead: 30, place: `Projects · The Treasure · ${depth(-45)}`, signal: '#c9a2ff',
+  { key: 'projects', kind: 'stop', landmark: 'projects', view: [-13.5, -43.2, -74.2], teach: 'computer', lead: 30, place: `Projects · The Treasure · ${depth(-45)}`, signal: '#c9a2ff',
     title: 'The treasure', line: 'This is where you’ll find my projects.',
     via: [
       { orbit: { around: 'about', radius: 11, turn: 110, rise: 2.5 }, at: [-6, -7, -20], key: 'nurse', title: 'A nurse shark, asleep',
@@ -83,12 +83,13 @@ export const STEPS = [
         scooter: true, teach: 'scooter', wait: 'scooter', hold: 4, slow: .7 },
       { at: [22, -12, -14], key: 'tower', title: 'The table coral tower', line: 'Plates of coral stacked up a leaning stone trunk.',
         look: [38, -15.5, -8], hold: 6 },
-      // Round the cathedral's back and south side to look in at its open side, which faces the wreck (hero-formations.js
-      // `open`), from 17 m, wide of the barracuda's beat.
-      [30, -10, 2], [44, -11, 2], [58, -17, -14], [60, -21, -30], [52, -24, -46],
-      { at: [36, -24, -40], key: 'cathedral', title: 'The pillar coral cathedral', line: 'Organ-pipe columns in a horseshoe.',
-        look: [48, -23.5, -28], hold: 6, reach: 11 },
-      [38, -32, -54], [32, -37, -57], [24, -40, -58.5], [21, -43.5, -60],
+      // Round the cathedral's back and south side, then west to look in at its open side, which faces the wreck
+      // (hero-formations.js `open`). The whole fly-by stays within about 40° of that side, 16-20 m out, wide of the
+      // barracuda's beat.
+      [30, -10, 2], [44, -11, 2], [58, -17, -14], [60, -21, -30], [52, -24, -46], [42, -25, -47],
+      { at: [35, -25, -38], key: 'cathedral', title: 'The pillar coral cathedral', line: 'Organ-pipe columns in a horseshoe.',
+        look: [48, -23.5, -28], hold: 6, reach: 7 },
+      [36, -27, -46], [38, -32, -54], [32, -37, -57], [24, -40, -58.5], [21, -43.5, -60],
       { at: [20, -46.4, -62.6], key: 'arch', title: 'Through the arch', line: 'A limestone arch over the gully. In we go.',
         look: [20, -48, -72], teach: 'lamp', wait: 'lamp', hold: 6 },
       [20, -49, -66], [20, -51, -70], [20, -51.6, -79],

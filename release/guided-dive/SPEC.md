@@ -7,7 +7,7 @@ The source of truth for how the guided dive should feel and behave. The raw brie
 
 The guided dive is the main way a first-time visitor meets the portfolio. It should:
 
-1. Show the whole reef in about **two and a half minutes of actual movement**, plus as long as the visitor wants to read.
+1. Show the whole reef in about **four minutes of actual movement** (round 7; it was two and a half), plus as long as the visitor wants to read.
    It goes down through the portfolio first, then takes the long way back up.
 2. Signpost the portfolio. It says where About, Experience and Projects live, not what's in them.
 3. Teach the controls a few at a time, at the moment each one is useful.
@@ -19,24 +19,26 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
 |---|------|
 | R1 | **The guide moves the visitor. The visitor moves the camera.** While the guide is swimming, mouse, drag or arrow-key look changes only the view and never the course. |
 | R2 | When the visitor lets go of the look (1.4 s with no look input), the camera sweeps back, eased in and out, to where the guide is looking: the subject at a stop, a fly-by's subject or the way ahead while swimming. Their own look always wins straight away. |
-| R3 | Movement keys or the touch pad take over the dive. The tour holds and offers **Rejoin (G)**. Nothing is lost. |
+| R3 | Movement keys or the touch pad take over the dive. The tour holds and offers **Rejoin (G)**. Nothing is lost. The welcome is the exception: it is free swimming (round 7). |
 | R4 | The tour waits only at the welcome, the three portfolio sites and the ending, and **N** continues from each. Everything else is a **fly-by**: the swim slows and the camera glances, but nothing stops. |
 | R5 | Copy at a stop is small. "This is where you'll find X." No essays and no headline claims. |
 | R6 | Reduced motion: legs become fades between stops, there's no auto-pan, and look indicators stay. |
 | R7 | Touch, phone and keyboard all get equal treatment, and every key hint has a tap equivalent. |
 | R8 | The visitor can always exit, surface or keep exploring. The safety stop is offered, never forced. |
 
-## The sequence (round 6)
+## The sequence (round 7)
 
 World coordinates are metres (x, y, z), with y negative below the surface. "Right" is +x, facing −z. The site starts at
-the surface out over the deep end, west of the anchor, at (−26, −60) (`exploration.js` SURFACE_START). The route itself
+the surface out over the deep end, beyond the treasure, at (−18, −90), facing the reef (`exploration.js` SURFACE_START). The route itself
 lives in `ocean-refined/guided-script.js`.
 
 Only five moments wait for the visitor: the welcome, **About**, **Projects**, **Experience** and the ending. Everything
 between them is a **fly-by**:
 
 - The swim slows.
-- The camera glances at the subject from 15–22 m off, so it reads whole.
+- The camera eases across to the subject (2 s, ease in and out, one way only) and frames it from 15–22 m off, so it
+  reads whole. While the guide steers, the camera is independent of the diver's turns.
+- Back-to-back fly-bys hand the view from one subject to the next without swinging back to the way ahead.
 - A caption names it.
 - The swim carries on.
 
@@ -53,9 +55,9 @@ Every stop is approached on the line from its subject, so the diver arrives faci
 - The guide drifts in toward the reef at about 0.9 m/s. The camera looks across at the barracuda wheel, the reef rising
   beyond it, and the wreck down to the left.
 - The controls are asked for one at a time: W A S D, Space/Shift, C, V. On a phone it's the stick and rise and sink only.
-- Swimming holds the drift. Letting go for 1.5 s picks it up again.
-- Leaving 5 m of where they took over puts the tour on hold.
-- Rising stops 2.5 m over where they took over.
+- The welcome is free swimming: moving holds the drift and letting go for 2.5 s picks it up again. Nothing here puts
+  the tour on hold or asks to rejoin. Only **Skip** leaves the tour.
+- Rising stops 3.5 m below the surface.
 - N starts the tour.
 
 ### Act 1: across the reef to the anchor
@@ -69,13 +71,13 @@ Every stop is approached on the line from its subject, so the diver arrives faci
 
 4. Fly-bys:
    - **The nurse shark**, an orbit: the diver strafes round the anchor while the camera stays on the shark.
-   - **Scooter on** across the reef shelf.
+   - **Scooter on** across the reef shelf. The fly-by waits up to 7 s for the visitor to try E, then carries on.
    - **The table coral tower.**
-   - **The pillar coral cathedral.**
+   - **The pillar coral cathedral**, seen from its open (west-south-west) front.
    - Down the east side to the gully, clear of the barracuda's beat.
-   - **Through the arch.**
+   - **Through the arch.** The fly-by waits up to 7 s for the visitor to try Q.
    - **The lantern garden.**
-5. **Projects: the Treasure** (stop).
+5. **Projects: the Treasure** (stop), seen from 9 m, the way the anchor is. The camera starts turning to it 30 m out.
 
 ### Act 3: the way up
 
@@ -86,11 +88,13 @@ Every stop is approached on the line from its subject, so the diver arrives faci
    - Then round the west of the wreck.
 7. **Experience: the Wreck** (stop), seen whole from 16 m to its west.
 8. **The ending**, in open water just seaward of the wreck at about 8 m (shown depth), with the reef rising ahead. The
-   choice is **Keep exploring** or **Surface**.
+   choice is **Keep exploring** or **Surface (N)**.
 
 ### 9. Surface (if chosen)
 
-- Play the existing ascent: rise, offer the **safety stop** (hold, or skip with Esc), surface.
+- N, or the Surface button, plays the existing ascent: rise, open the **safety stop** on the way up (hold, or skip with Esc),
+  surface.
+- The old top banner during the ascent ("surfacing early costs nothing") is gone. "Stop complete" stays.
 - Back at the surface, the tour is complete.
 
 ## Look-there indicators
@@ -128,11 +132,12 @@ Every stop is approached on the line from its subject, so the diver arrives faci
 - One short line per beat, two at most. Use second person and present tense.
 - Signpost: "This is where you'll find…". Don't summarise the portfolio in the tour.
 - Key hints follow the input in hand (keys on desktop, buttons on touch).
-- **Fly-by captions** are a title and one line over the water, with no card. They sit top centre on a desktop, and top
+- **Fly-by captions** are a title and one line over a light tint, like the depth gauge. They sit top centre on a desktop, and top
   left under the depth chip on a phone, clear of the compass. While the tour leads on a phone, Back to the surface
   makes way for them.
 - **At a stop on a phone**, the camera aims a little below the landmark, so the landmark sits above the middle of the
   screen, clear of the sheet.
+- **On a desktop the tour card** sits in the bottom-right corner, see-through with a slight tint like the depth gauge.
 - The existing long `lines`/`short` copy on stops is retired from the tour. It stays in the archive.
 
 ## Timing budget
@@ -141,6 +146,8 @@ Every stop is approached on the line from its subject, so the diver arrives faci
   That's down from about 250 s.
 - **Round 6:** about 555 m and roughly **200 s**. It takes in the far side of the reef and more of its life. The
   welcome's drift is on top, at the visitor's pace.
+- **Round 7:** about 603 m and roughly **225 s**, plus up to 7 s at each of the scooter and the arch if the visitor
+  doesn't try them.
 - **Round 5:** about 410 m and roughly **145 s**. The way up ends above the wreck rather than in the shallows, and the
   way down is a little longer round the west of the wreck.
 - Reading time is unbounded. The welcome, the three sites and the ending wait for the visitor.
@@ -159,6 +166,7 @@ Every stop is approached on the line from its subject, so the diver arrives faci
 - The whole tour completes with N only, on desktop and on a phone layout.
 - With reduced motion on, every leg is a fade, and there are no pans, fly-bys or called-in animals.
 - The whale shark's line stays over open water (D4).
+- The cathedral fly-by is seen from within 45° of the horseshoe's open side (round 7).
 - Surface from the ending runs the existing ascent and safety-stop offer. The ending sits at about 3 m (shown depth), inside
   the stop's 3–5 m band, so the free-standing offer holds off while the ending sheet is up and comes back once the
   visitor keeps exploring.
@@ -400,3 +408,22 @@ stops.
     - Fly-bys can orbit a landmark (`orbit`).
     - Steps and fly-bys are worked out against where things are now, once a leg begins (`legOf`).
   - `tour_version` is now 6.
+- **Round 7: one cinematic camera, a free welcome, the cathedral from its front** (the owner's notes):
+  - **The start** is further out, beyond the treasure at (−18, −90), and faces the reef.
+  - **The welcome** is free swimming. It no longer hands over to a held tour with Rejoin: the visitor swims, the drift
+    picks up when they let go, and only Skip leaves.
+  - **The camera:**
+    - Every switch of subject is an eased pan, 2 s, in and out, one way (`GLANCE_FADE`, `glance(point, follow)`). The
+      "left, then right" swing came from the glance snapping to a chase and back.
+    - While the guide steers, the view doesn't follow the diver's turns.
+    - Back-to-back fly-bys (within 30 m) keep the glance between them.
+    - The early fly-bys are framed from further off.
+  - **The pink whipray** is followed where it actually is (`residentAt('whipray')`).
+  - **The cathedral** is seen from its open front, not over its back wall: the swim comes round west of it first, and
+    the whole fly-by stays within about 45° of the open side. A test checks it (the old line was 63° off at worst).
+  - **The treasure** is seen from 9 m and 3 m up, not 4 m, so the stop matches the anchor and the fly-bys.
+  - **The treasure** draws the camera from 30 m out (`lead`).
+  - **Waits:** the scooter and the lamp fly-bys hold for up to 7 s for the visitor's input, then carry on.
+  - **Surfacing:** N at the ending surfaces, with the safety stop. The safety-stop banner is gone.
+  - **Desktop:** the tour card sits bottom right; it and the captions are see-through with a slight tint.
+  - `tour_version` is now 7.

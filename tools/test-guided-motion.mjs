@@ -279,6 +279,9 @@ for (const hz of [30, 60, 120]) {
       if (record.frames > hz * 1.5) record.scooter = Math.max(record.scooter, env.nav.state.scooter);
       const subject = sight.look?.visitor ? (env.whaleFrom && [whaleAt(env.whaleFrom, env.clock)].map(w => [w.x, w.y, w.z])[0]) : sight.look?.resident === 'sleeper' ? sleeper : sight.look?.resident ? sight.look.near : sight.look?.bait ? [50.5, -27.8, -66] : sight.look;
       if (subject && record.frames > hz * 2.5) record.nearest = Math.min(record.nearest, aimAt(subject));
+      // The cathedral is seen from its open side, which faces the wreck (hero-formations.js: open = atan2(-11, -30)).
+      if (key === 'cathedral') { const [x, , z] = env.state.playerPosition, off = Math.atan2(z + 28, x - 48) - Math.atan2(-11, -30);
+        record.side = Math.max(record.side ?? 0, Math.abs(Math.atan2(Math.sin(off), Math.cos(off)))); }
     }
     const leg = env.samples.slice(before);
     moving += leg.length / hz;
@@ -295,6 +298,7 @@ for (const hz of [30, 60, 120]) {
       if (sight.look && record.frames / hz > 3.5) assert.ok(record.nearest < .2, `${sight.key}: the view turns to it (${record.nearest.toFixed(3)} rad off at nearest)`);
       if (!sight.scooter) assert.ok(record.slowest < 3.6 * (sight.slow ?? .5) + .4, `${sight.key}: the swim slows (${record.slowest.toFixed(2)} m/s)`);
       assert.equal(record.scooter > .5, Boolean(sight.scooter), `${sight.key}: the scooter runs only where the guide shows it`);
+      if (sight.key === 'cathedral') assert.ok(record.side < .8, `the cathedral is seen from its open front (up to ${(record.side * 180 / Math.PI).toFixed(0)}° off it)`);
     }
     // The leg to the treasure swims through the arch itself, under its roof (reef.js: arch at 20, -72, roof 9.6 m over its floor).
     if (step.key === 'projects') {
