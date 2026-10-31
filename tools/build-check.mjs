@@ -28,7 +28,8 @@ const linked=[...page.matchAll(/<link rel="stylesheet" href="\.\/([^"]+)">/g)].m
 const bundle=await fs.readFile(path.join(root,'dist',linked[0]),'utf8'),uncomment=css=>css.replace(/("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*')|\/\*[\s\S]*?\*\//g,(match,string)=>string||'').replace(/\s+/g,' ').trim();
 let cursor=0;const flat=uncomment(bundle);for(const [,media,href] of source.matchAll(/<link rel="stylesheet"(?: media="(\w+)")? href="\.\/([^"]+\.css)">/g)){if(media==='print'){assert.match(page,new RegExp(`media="print" href="\\./${href}"`));continue;}const at=flat.indexOf(uncomment(await fs.readFile(path.join(root,'ocean-refined',href),'utf8')),cursor);assert.ok(at>=cursor,`${href} missing from the bundle or out of order`);cursor=at;}
 const preloaded=new Set([...page.matchAll(/rel="modulepreload" href="\.\/([^"]+)"/g)].map(m=>m[1]));for(const module of ['reef.js','frame-pacing.js','living-world.js','vendor/three.core.min.js'])assert.ok(preloaded.has(module),`${module} is not preloaded`);
-console.log('Build checks passed: stale files removed, retired assets excluded, 27 species (gzipped copies exact) and coral cache inputs valid, one bundled stylesheet, modules preloaded');
+{const clips=await fs.readdir(path.join(root,'dist/assets/audio/clips'));for(const name of ['breath0.mp3','sea.mp3','whale0.mp3','clicks0.mp3','thunder0.mp3'])assert.ok(clips.includes(name),`sound clip ${name} missing`);await assert.rejects(fs.access(path.join(root,'dist/assets/audio/source')),'sound sources must not ship');}
+console.log('Build checks passed: stale files removed, retired assets excluded, 27 species (gzipped copies exact) and coral cache inputs valid, one bundled stylesheet, modules preloaded, sound clips without their sources');
 
 await assert.rejects(fs.access(path.join(root,'dist/assets/models/user-sets/sets')));
 const {PORTFOLIO_CONTENT}=await import('../ocean-refined/portfolio-content.js');
