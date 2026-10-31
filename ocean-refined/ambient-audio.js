@@ -256,7 +256,7 @@ function build(ctx, whole = false) {
 }
 
 // 3. Steering. Continuous parameters follow the scene: s is { under, depth,
-// wind, rain, storm, speed, scooter, open, first }. Gusts, swell and the
+// wind, rain, storm, speed, scooter, open, first, breathing }. Gusts, swell and the
 // drone's drift are slow sines evaluated here rather than extra oscillators in
 // the graph.
 const roughSea = s => Math.max(clamp((s.wind - .18) / .82, 0, 1), s.storm);
@@ -294,8 +294,8 @@ function steer(g, s, at, glide = GLIDE) {
   set(g.motorTone.frequency, (96 + 34 * s.scooter) * (1 + (s.scooter ? .012 * Math.sin(at * 9.1) : 0)));
   set(g.motorLP.frequency, 320 + 380 * s.scooter);
   set(L.motor.gain, LEVEL.motor * s.scooter ** 1.2);
-  // Seen from behind, the diver's regulator is a little further off.
-  set(g.reg.gain, s.first ? 1 : .72);
+  // Seen from behind, the diver's regulator is a little further off; the visitor sets its level of their own as well.
+  set(g.reg.gain, (s.first ? 1 : .72) * loudness(s.breathing));
   const shallow = 1 - smoothstep(s.depth, 3, 18);
   set(g.surgeLP.frequency, 220 + 380 * swell);
   set(L.surge.gain, LEVEL.surge * shallow * (.6 + .4 * sea) * (.08 + .92 * swell * swell));
@@ -389,8 +389,11 @@ const effortOf = s => clamp(s.speed / 8.8, 0, 1) * (1 - .5 * s.scooter);
 const $ = selector => document.querySelector(selector), calm = matchMedia('(prefers-reduced-motion: reduce)'), panel = $('#landmark-dialog');
 const read = key => { try { return localStorage.getItem(key); } catch { return null; } };
 const write = (key, value) => { try { localStorage.setItem(key, value); } catch {} };
-const GESTURES = ['pointerdown', 'keydown', 'touchend', 'click'], scene = { under: 0, depth: 0, wind: .18, rain: 0, storm: 0, speed: 0, scooter: 0, open: false, first: false };
+const GESTURES = ['pointerdown', 'keydown', 'touchend', 'click'], scene = { under: 0, depth: 0, wind: .18, rain: 0, storm: 0, speed: 0, scooter: 0, open: false, first: false, breathing: 1 };
 let enabled = read('ocean-sound') === 'on', volume = clamp(Number(read('ocean-sound-volume') ?? .7) || 0, 0, 1);
+// The breathing's own level, on top of the volume: the whole regulator (inhale, valve, exhale and bubbles). Full unless set.
+let breathing = clamp(Number(read('ocean-sound-breathing') ?? 1), 0, 1);
+if (Number.isNaN(breathing)) breathing = 1;
 let ctx = null, graph = null, timer = 0, sleeping = 0, armed = false, held = false, primed = false, steered = false;
 let below = false, wasOpen = false, found = 0, tourStop = -1, thunderAt = 0, thunderPower = 1, whaleAt = 0, crestAt = 0, fishAt = 0;
 
@@ -400,7 +403,7 @@ function tick() {
   const state = window.oceanDiagnostics, nav = window.oceanControls?.nav, now = ctx.currentTime, y = state?.position ? state.position[1] : 2.5, diving = nav && nav.mode !== 'surface';
   scene.under = smoothstep(-y, -.12, 1.2); scene.depth = Math.max(0, -y);
   scene.wind = intensity.wind; scene.rain = intensity.rain; scene.storm = intensity.storm;
-  scene.speed = diving ? nav.speed : 0; scene.scooter = diving ? nav.scooter : 0; scene.open = Boolean(panel?.open); scene.first = state?.cameraMode === 'first';
+  scene.speed = diving ? nav.speed : 0; scene.scooter = diving ? nav.scooter : 0; scene.open = Boolean(panel?.open); scene.first = state?.cameraMode === 'first'; scene.breathing = breathing;
   steer(graph, scene, now, steered ? GLIDE : 0); steered = true;
   if (scene.under > .02) { if (graph.breathAt < now) graph.breathAt = now + 1; breathe(graph, effortOf(scene), now + 1.5); }
   // The animals are heard only underwater, and not while the records are open.
@@ -478,6 +481,11 @@ function setVolume(value) {
   if (timer) graph.master.gain.setTargetAtTime(MASTER * loudness(volume), ctx.currentTime, .05);
   paint();
 }
+// The next steering tick carries the new breathing level into the graph.
+function setBreathing(value) {
+  breathing = clamp(Number(value) || 0, 0, 1); write('ocean-sound-breathing', String(breathing));
+  paint();
+}
 document.addEventListener('visibilitychange', () => { if (!enabled) return; if (document.hidden) rest(); else start(); });
 // "Pause motion" pauses the sound with it. A scene that starts paused because of reduced motion does not: that visitor still chose to hear it.
 $('#motion')?.addEventListener('click', () => setTimeout(() => { held = Boolean(window.oceanDiagnostics?.paused); if (enabled) { if (held) rest(); else start(true); } paint(); }));
@@ -500,17 +508,21 @@ const group = document.createElement('section');
 group.className = 'settings-subgroup'; group.id = 'sound-settings'; group.setAttribute('aria-labelledby', 'settings-sound-title');
 group.innerHTML = '<div class="settings-inline-control"><h3 id="settings-sound-title" class="holo-label">Sound</h3><button id="sound-mute" class="time-cycle sound-mute" type="button" aria-label="Unmute ambient sound" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3l4-3.5v12l-4-3.5H4Z"/><g class="sound-on"><path d="M14.5 9.2a4 4 0 0 1 0 5.6M17 6.8a7.4 7.4 0 0 1 0 10.4"/></g><g class="sound-off"><path d="m15 9.5 5 5m0-5-5 5"/></g></svg></button></div>'
   + '<label class="holo-switch"><input id="sound-switch" type="checkbox" role="switch"><i aria-hidden="true"></i><span>Ambient sound</span><small>Sea, weather, breathing and wildlife</small></label>'
-  + '<div class="movement-field sound-volume"><label for="sound-volume">Volume</label><output class="movement-output" for="sound-volume"></output><input id="sound-volume" type="range" min="0" max="100" step="1"></div>';
+  + '<div class="movement-field sound-volume"><label for="sound-volume">Volume</label><output class="movement-output" for="sound-volume"></output><input id="sound-volume" type="range" min="0" max="100" step="1"></div>'
+  + '<div class="movement-field sound-volume"><label for="sound-breathing">Breathing</label><output id="sound-breathing-output" class="movement-output" for="sound-breathing"></output><input id="sound-breathing" type="range" min="0" max="100" step="1"></div>';
 const toggle = group.querySelector('#sound-switch'), slider = group.querySelector('#sound-volume'), reading = group.querySelector('output');
+const breath = group.querySelector('#sound-breathing'), breathReading = group.querySelector('#sound-breathing-output');
 const mute=group.querySelector('#sound-mute');let lastAudibleVolume=volume||.7;
 function paint() {
   toggle.checked = enabled; slider.value = String(Math.round(volume * 100)); reading.textContent = `${Math.round(volume * 100)}%`;
+  breath.value = String(Math.round(breathing * 100)); breathReading.textContent = `${Math.round(breathing * 100)}%`;
   const muted=!enabled||volume===0;
   mute.dataset.muted=String(muted);mute.setAttribute('aria-pressed',String(muted));
   mute.setAttribute('aria-label',muted?'Unmute ambient sound':'Mute ambient sound');mute.title=muted?'Click to unmute':'Click to mute';
 }
 toggle.addEventListener('change', () => turn(toggle.checked, true));
 slider.addEventListener('input', () => setVolume(slider.value / 100));
+breath.addEventListener('input', () => setBreathing(breath.value / 100));
 mute.addEventListener('click',()=>{if(enabled&&volume>0)turn(false,true);else{if(volume===0)setVolume(lastAudibleVolume);turn(true,true);}});
 $('#settings-general-content')?.append(group);
 paint();
@@ -529,7 +541,7 @@ if (read('ocean-sound-hint') !== '1') addEventListener('oceanmediumchange', hint
 // measured without listening; whole: false builds the graph the way the enabling click does, leaving the deferred
 // buffers undrawn, so that click's cost can be timed. probe(): an analyser on the live output.
 function render(seconds = 6, state = {}, { solo = null, events = [], rate = 44100, level = volume, whole = true } = {}) {
-  const offline = new OfflineAudioContext(2, Math.round(seconds * rate), rate), g = build(offline, whole), still = { under: 0, depth: 0, wind: .18, rain: 0, storm: 0, speed: 0, scooter: 0, open: false, first: false };
+  const offline = new OfflineAudioContext(2, Math.round(seconds * rate), rate), g = build(offline, whole), still = { under: 0, depth: 0, wind: .18, rain: 0, storm: 0, speed: 0, scooter: 0, open: false, first: false, breathing: 1 };
   g.master.gain.value = MASTER * loudness(level); g.breathAt = .3;
   if (solo) for (const [name, node] of Object.entries(g.layers)) if (![solo].flat().includes(name)) node.disconnect();
   // An animal call event's value is where its animal is, as [distance (m), side (-1 left to 1 right)]: the voice is set
@@ -561,11 +573,12 @@ function probe() { if (graph && !analyser) { analyser = ctx.createAnalyser(); an
 window.oceanAudio = {
   get enabled() { return enabled; }, enable() { return turn(true); }, disable() { return turn(false); }, toggle() { return turn(!enabled); },
   get volume() { return volume; }, set volume(value) { setVolume(value); },
+  get breathing() { return breathing; }, set breathing(value) { setBreathing(value); },
   /** Context state and the gain every layer and bus is at right now. */
   status() {
     const round = value => Math.round(value * 10000) / 10000, layers = {};
     if (graph) for (const [name, node] of Object.entries(graph.layers)) layers[name] = round(node.gain.value);
-    return { enabled, volume, context: ctx?.state ?? 'none', running: Boolean(timer), waiting: armed, paused: held, reducedMotion: calm.matches, nodes: graph?.count ?? 0, tick: TICK,
+    return { enabled, volume, breathing, context: ctx?.state ?? 'none', running: Boolean(timer), waiting: armed, paused: held, reducedMotion: calm.matches, nodes: graph?.count ?? 0, tick: TICK,
       master: graph ? round(graph.master.gain.value) : 0, air: graph ? round(graph.air.gain.value) : 0, water: graph ? round(graph.water.gain.value) : 0, mix: graph ? round(graph.bus.gain.value) : 0,
       airCutoff: graph ? Math.round(graph.airLP.frequency.value) : 0, waterCutoff: graph ? Math.round(graph.waterLP.frequency.value) : 0, mixCutoff: graph ? Math.round(graph.duck.frequency.value) : 0,
       limiting: graph ? round(graph.limiter.reduction) : 0, layers, scene: { ...scene } };

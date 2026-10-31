@@ -20,7 +20,7 @@ try{
   await page.waitForFunction(()=>oceanControls.nav.suspended);
   const folders=await page.locator('#settings-menu .settings-body > details > summary').allTextContents();
   assert.equal(folders[0],'General');assert.match(folders[1],/controls/);assert.equal(folders.at(-1),'Keyboard & touch');
-  for(const id of ['time-slider','weather-settings','sound-switch','sound-volume'])assert.equal(await page.locator(`#settings-menu #${id}`).count(),1);
+  for(const id of ['time-slider','weather-settings','sound-switch','sound-volume','sound-breathing'])assert.equal(await page.locator(`#settings-menu #${id}`).count(),1);
   assert.equal(await page.locator('.brightness-quick').isVisible(),false);
   await page.locator('#settings-general #movement-brightnessBoost').fill('35');
   assert.equal(await page.evaluate(()=>oceanControls.settings.brightnessBoost),35);
@@ -42,6 +42,11 @@ try{
   await page.locator('#sound-volume').fill('0');await page.locator('#sound-mute').click();
   assert.equal(await page.locator('#sound-volume').inputValue(),'40');
   await page.locator('#sound-mute').click();
+  // Breathing has its own level, kept with the other sound settings.
+  await page.locator('#sound-breathing').fill('30');
+  assert.equal(await page.evaluate(()=>oceanAudio.breathing),.3);
+  assert.equal(await page.evaluate(()=>localStorage.getItem('ocean-sound-breathing')),'0.3');
+  assert.equal(await page.locator('#sound-breathing-output').textContent(),'30%');
   assert.equal(await page.locator('.masthead #time-cycle').count(),0);
   await page.locator('#movement-toggle').click();
   await page.waitForFunction(()=>document.body.dataset.movementPanel==='open');
