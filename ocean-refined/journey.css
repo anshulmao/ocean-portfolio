@@ -170,6 +170,8 @@ body:is([data-tour="intro"],[data-tour="travel"],[data-tour="dwell"],[data-tour=
 .tour-fade[data-on="true"]{opacity:1;transition:opacity 200ms var(--journey-out)}
 /* The tour narrates each landmark itself, so the generic prompt to click in stays out of its way. */
 body:is([data-tour="intro"],[data-tour="travel"],[data-tour="dwell"]) .waypoint{opacity:0}
+/* The settings menu stands over the scene on every screen: the Ahead chip waits behind it. */
+body[data-menu="open"] .waypoint{visibility:hidden}
 /* The guided dive's opening (guided-dive.js): the surface copy steps aside while the camera moves in on the diver. */
 body[data-prelude="on"] :is(.masthead,.hero,.scene-footer,.capture-hint){opacity:0;visibility:hidden;pointer-events:none;transition:opacity .6s,visibility 0s .6s}
 /* Key caps mean nothing without a keyboard. */

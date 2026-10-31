@@ -9,8 +9,8 @@ const panel = document.querySelector('#landmark-dialog');
 const credits = document.querySelector('#credits-dialog');
 const point = new THREE.Vector3(), ray = new THREE.Ray(), direction = new THREE.Vector3(), hit = new THREE.Vector3();
 let eligible = null, opened = null, returnFocus = null, lifting = 0;
-// The most the records wait for a chest's lid before they open (s), whatever the clip's length.
-const LID_WAIT = 1.6;
+// The most the records wait for a chest's lid before they open (s), whatever the clip's length (the chest's runs 1.97 s).
+const LID_WAIT = 2.2;
 
 function clearSight(start, end, controls) {
   const world = controls.reef?.userData.collisions;

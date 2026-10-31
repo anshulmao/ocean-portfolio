@@ -26,21 +26,25 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
 | R7 | Touch, phone and keyboard all get equal treatment, and every key hint has a tap equivalent. |
 | R8 | The visitor can always exit, surface or keep exploring. The safety stop is offered, never forced. |
 
-## The sequence (round 7)
+## The sequence (round 8)
 
 World coordinates are metres (x, y, z), with y negative below the surface. "Right" is +x, facing −z. The site starts at
 the surface out over the deep end, beyond the treasure, at (−18, −90), facing the reef (`exploration.js` SURFACE_START). The route itself
 lives in `ocean-refined/guided-script.js`.
 
-Only five moments wait for the visitor: the welcome, **About**, **Projects**, **Experience** and the ending. Everything
+Only five moments wait for the visitor: the welcome, **About**, **Experience**, **Projects** and the ending. Everything
 between them is a **fly-by**:
 
 - The swim slows.
 - The camera eases across to the subject (2 s, ease in and out, one way only) and frames it from 15–22 m off, so it
   reads whole. While the guide steers, the camera is independent of the diver's turns.
-- Back-to-back fly-bys hand the view from one subject to the next without swinging back to the way ahead.
+- Back-to-back fly-bys hand the view from one subject to the next without swinging back to the way ahead, while the
+  first subject is still ahead.
 - A caption names it.
-- The swim carries on.
+- The swim carries on. A subject the swim leaves behind is let go (after 2.5 s), and the view turns back to the way
+  ahead: the guide never looks back over the diver's shoulder.
+- **Looking round:** after 8 calm seconds on the course, the view looks to one side, at the reef 20 m off, for 3.5 s,
+  then back; the other side next time.
 
 Every stop is approached on the line from its subject, so the diver arrives facing it. The camera starts turning to it
 16 m out. The visitor's own look always wins (R1, D5).
@@ -75,11 +79,12 @@ Every stop is approached on the line from its subject, so the diver arrives faci
    - **The nurse shark**, an orbit: the diver strafes round the anchor while the camera stays on the shark.
    - **Scooter on** across the reef shelf. The fly-by waits up to 7 s for the visitor to try E, then carries on.
    - **The table coral tower.**
+   - Straight down from the tower, under the barracuda's beat.
    - **The pillar coral cathedral**, seen from its open (west-south-west) front.
    - Down the east side to the gully, clear of the barracuda's beat.
    - **Through the arch.** The fly-by waits up to 7 s for the visitor to try Q.
    - **The lantern garden.**
-5. **Projects: the Treasure** (stop), seen from 9 m, the way the anchor is. The camera starts turning to it 30 m out.
+5. **Experience: the Treasure** (stop), seen from 9 m, the way the anchor is. The camera starts turning to it 30 m out.
 
 ### Act 3: the way up
 
@@ -88,7 +93,7 @@ Every stop is approached on the line from its subject, so the diver arrives faci
    - **A bait ball, ahead.**
    - **Through the bait ball.**
    - Then round the west of the wreck.
-7. **Experience: the Wreck** (stop), seen whole from 16 m to its west.
+7. **Projects: the Wreck** (stop), seen whole from 16 m to its west.
 8. **The ending**, in open water just seaward of the wreck at about 8 m (shown depth), with the reef rising ahead. The
    choice is **Keep exploring** or **Surface (N)**.
 
@@ -107,8 +112,9 @@ Every stop is approached on the line from its subject, so the diver arrives faci
 - It fades out after the subject has been in view for about 2 s, or when it leaves.
 - **Every pass is seen side-on** (round 5): a visitor rises no steeper than 30° over the diver. It swims up to 12 m under
   its band and, if that is not enough, further out (`user-creatures.js` RISE, DEEPEN).
-- **Between fly-bys the guide turns to a big animal** (whale, whale shark, orcas, dolphins) passing within 40 m, for 5 s,
-  and not to the same one again within 45 s.
+- **Between fly-bys the guide turns to a big animal** passing within its range (whales 100 m, orcas 80 m, the whale shark
+  60 m, dolphins 40 m: a little inside the look-there marker's), for 5 s, and not to the same one again within 45 s. Not
+  one a fly-by ahead is about to show, nor one already behind the diver.
 - During the tour, the whale shark is called in for the "Look out to sea" drift on the ascent (`oceanControls.encounter`, with
   its course measured from the drift's point). Natural encounters also get the indicator while the guide is active.
 - *"Look, life above."*
@@ -151,6 +157,7 @@ Every stop is approached on the line from its subject, so the diver arrives faci
   That's down from about 250 s.
 - **Round 6:** about 555 m and roughly **200 s**. It takes in the far side of the reef and more of its life. The
   welcome's drift is on top, at the visitor's pace.
+- **Round 8:** about 527 m and roughly **196 s**, with the direct leg to the cathedral.
 - **Round 7:** about 603 m and roughly **225 s**, plus up to 7 s at each of the scooter and the arch if the visitor
   doesn't try them.
 - **Round 5:** about 410 m and roughly **145 s**. The way up ends above the wreck rather than in the shallows, and the
@@ -437,3 +444,17 @@ stops.
     checks it from three surface headings.
   - **Press and tick:** trying a control the tour is asking for presses its key in and draws a tick on: the welcome's
     chips, the lamp and scooter fly-bys (and the camera), and the stops' tips. CHEER is now 1.5 s.
+- **Round 8 (the owner's notes):**
+  - **The sites swap:** Experience now lives in the treasure on the deep ledge, and Projects in the wreck. The section ids
+    keep their meaning everywhere (records, analytics, colours, found lights); the places swap (`reef.js` LANDMARKS,
+    `model-scene.js`'s landmarks and models, `set-pieces.js`, the barracuda's home site, the dive plan, the map markers,
+    the site names, deep links `#treasure` and `#wreck`, and the tour's stops). `tour_version` is now 8.
+  - **The chest opens first:** pressing F at a chest (or Read it on the tour) swings its lid up (1.97 s) before the
+    records open; with reduced motion they open at once (`landmark-interactions.js` LID_WAIT, `oceanLandmarks.openSite`).
+  - **Tower to cathedral:** a direct descent to the cathedral's open front replaces the loop round its back, about 75 m and
+    20 s shorter. It passes 8.5 m off the barracuda's beat (it bolts only inside 6 m) and over the rock in front of the
+    cathedral.
+  - **No looking back:** a fly-by's subject left behind is let go and the view turns to the way ahead (the cathedral was
+    watched over the shoulder all the way down to the arch). On a calm stretch the view looks round now and then.
+  - **Orcas and whales** are turned to at the look-there marker's range, not 40 m, so a passing pod is not missed.
+  - **Sound** (PR 32) is on by default; the browser still holds it until the visitor's first click or key.

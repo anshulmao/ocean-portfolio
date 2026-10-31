@@ -33,7 +33,11 @@ try{
   await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>oceanControls.weather.locked),false);
   await page.locator('#weather-glyph').click();assert.equal(await page.evaluate(()=>oceanControls.weather.target),'clear');
   await page.locator('#weather-glyph').click();assert.equal(await page.evaluate(()=>oceanControls.weather.target),'rain');
+  // Sound is on by default; mute turns it off and back on.
+  assert.equal(await page.evaluate(()=>oceanAudio.enabled),true);
   await page.locator('#sound-volume').fill('40');
+  await page.locator('#sound-mute').click();
+  assert.equal(await page.evaluate(()=>oceanAudio.enabled),false);
   await page.locator('#sound-mute').click();
   assert.equal(await page.evaluate(()=>oceanAudio.enabled),true);
   await page.locator('#sound-mute').click();

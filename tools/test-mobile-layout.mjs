@@ -186,6 +186,8 @@ async function run(profileName) {
     await page.evaluate(() => oceanTour.next());
     await page.waitForFunction(() => ['travel', 'dwell'].includes(oceanTour.status), null, {timeout: 30000});
     await page.waitForTimeout(2500); await state('guided-travel', true);
+    // The rest of the swim to the anchor is skipped (Skip travel): from the deep ledge it is the whole far-side route.
+    await page.evaluate(() => { if (oceanTour.status === 'travel') oceanTour.next(); });
     await page.waitForFunction(() => oceanTour.status === 'dwell', null, {timeout: 120000});
     await state('guided-stop', true);
     // A fly-by on the way to the wreck: its caption over the water, clear of the instruments, the sheet and the deck.
