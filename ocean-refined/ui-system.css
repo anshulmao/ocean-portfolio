@@ -256,6 +256,7 @@ html body.reading-page{background:var(--surface);--deep:var(--ui-deep-raised);--
   .reading-page .reading-project-facts{min-width:0}
   .reading-page .reading-hero{gap:28px}
   .reading-page .reading-hero{grid-template-columns:minmax(0,1fr)}
+  .reading-page .reading-introduction{gap:64px}
 }
 @media(max-width:359px){.reading-page .reading-dive span{max-width:70px}.reading-page .reading-nav nav a{font-size:13px;padding:10px 4px}}
 @media(max-height:540px) and (min-width:601px){

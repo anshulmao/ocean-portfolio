@@ -83,7 +83,7 @@ try {
       page.on('pageerror', error => errors.push(error.message));
       try {
         await page.goto(base);
-        await page.waitForFunction(() => window.oceanArchive && window.oceanPlan, null, {timeout:30000});
+        await page.waitForFunction(() => window.oceanArchive && window.oceanPlan && window.oceanProfile && window.oceanDiveSummary, null, {timeout:30000});
         await page.evaluate(() => document.fonts.ready);
         await fit(page); await shot(page, `surface-${viewport.width}`);
         await page.locator('#menu-toggle').click();
