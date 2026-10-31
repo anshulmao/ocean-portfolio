@@ -39,7 +39,7 @@ export const schema = [
   number('cameraDistance','Follow distance','Camera',8.2,3,12,.1,'m'),
   number('cameraHeight','Follow height','Camera',2.2,0,4,.1,'m'),
   number('cameraResponse','Camera response','Camera',12,1,30,.5),
-  number('cameraFov','Field of view','Camera',47,35,90,1,'°'),
+  number('cameraFov','Field of view','Camera',52,35,90,1,'°'),
   number('cameraLookAhead','Look ahead distance','Camera',4,0,10,.1,'m'),
   number('diveResponse','Dive transition response','Transitions',.95,.3,3,.05),
   number('surfaceReturnResponse','Surface return response','Transitions',3,.5,10,.1),

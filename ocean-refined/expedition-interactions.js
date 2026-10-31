@@ -23,6 +23,7 @@ const touchInput = () => document.documentElement.dataset.input === 'touch';
 const dialog = document.createElement('dialog'); dialog.className = 'expedition-dialog'; dialog.setAttribute('aria-labelledby', 'expedition-title');
 document.body.append(dock, notice, prompt, dialog);
 const score = dock.querySelector('[data-score]'), photoButton = dock.querySelector('[data-photo]'), stopButton = dock.querySelector('[data-stop]');
+const deckPhoto = document.querySelector('.touch-deck [data-photo]');
 const offerFill = stopButton.querySelector('i'), offerTime = stopButton.querySelector('output');
 let offerLeft=0, offerUsed=false, offerSecond=-1,returnOffer=false;
 function offerAvailable() { return offerLeft>0&&!dialog.open&&!ui.dialog&&!ui.panel&&!window.oceanControls?.nav?.suspended&&(window.oceanControls?.nav.returnPhase==='offer'||(!window.oceanDiagnostics?.nearbyLandmark&&!nearest)); }
@@ -209,14 +210,16 @@ onTick(dt=> {
   const underwater = Boolean(state.submerged);
   if (underwater !== lastSubmerged) { lastSubmerged = underwater; dock.hidden = !underwater; }
   photoButton.disabled = state.cameraMode !== 'first' || Boolean(controls.getTransition());
+  deckPhoto?.setAttribute('aria-disabled', String(photoButton.disabled));
   const reading = toDisplayDepth(-controls.getPlayerPosition().y);
   const returning=controls.nav.returnPhase;
   // The offer's hint follows the input in use: the button itself is the action on touch.
   const offerKey=`${returning==='offer'}|${touchInput()}`;
   if(returnOffer!==offerKey){returnOffer=offerKey;stopButton.querySelector('small').innerHTML=touchInput()?(returning==='offer'?'Hold at 3–5 m · tap to stop':'Hold at 3–5 m · tap to begin'):returning==='offer'?'Hold at 3–5 m · <kbd>F</kbd> to stop · <kbd>Esc</kbd> to surface':'Hold at 3–5 m · Press <kbd>F</kbd>';}
-  // The guided dive passes through 3–5 m on purpose (the anchor and the shallow reef): no offer to stop while it leads.
-  // An ascent's own offer (returning === 'offer') still comes up, from the overview's Surface or anywhere else.
-  const guiding=['intro','travel','look','dwell'].includes(window.oceanTour?.status);
+  // The guided dive passes through 3–5 m on purpose (the anchor and the shallows) and ends there: no offer to stop while it
+  // leads or while its ending sheet is up, whose Surface brings the ascent's own offer (returning === 'offer'). Keep
+  // exploring ends the tour, and the offer is back.
+  const guiding=['intro','travel','dwell','done'].includes(window.oceanTour?.status);
   const inRange=underwater&&inSafetyStopRange(reading)&&(returning==='offer'||(!returning&&!guiding));
   // A small dead band avoids retriggering on idle bobbing, while a route that
   // passes above the stop zone can offer the invitation again on its final hold.
@@ -255,6 +258,8 @@ onTick(dt=> {
 dock.querySelector('[data-stop]').addEventListener('click',openStop);
 prompt.addEventListener('click',collect);
 dock.querySelector('[data-photo]').addEventListener('click',takePhoto);
+// On touch there is no H: the deck's camera key takes the photo (index.html).
+deckPhoto?.addEventListener('click',takePhoto);
 dock.querySelector('[data-inventory]').addEventListener('click',openInventory);
 addEventListener('keydown',event=> {
   if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.target.closest?.('input,textarea,select,[contenteditable="true"]')) return;

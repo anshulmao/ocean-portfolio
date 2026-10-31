@@ -32,7 +32,8 @@ function lookThere(dt, api, state, live) {
     if (d < noted[1] && d < nearest) { nearest = d; subject = item; }
   }
   if (!subject) { if (marked) { pointAt(camera, null); marked = null; } return; }
-  if (marked !== subject.id) { marked = subject.id; markedFor = 0; }
+  // A new sighting is announced as well, so the ambient sound can mark it with a gentle note (ambient-audio.js).
+  if (marked !== subject.id) { marked = subject.id; markedFor = 0; dispatchEvent(new CustomEvent('oceansighting', { detail: { ...subject } })); }
   const rise = subject.y - py, where = rise > 4 ? 'above' : rise < -4 ? 'below' : 'nearby';
   markedFor = pointAt(camera, [subject.x, subject.y, subject.z], `${NOTED[subject.id][0]} · ${where}`) ? markedFor + dt : 0;
   if (markedFor > SEEN_AFTER) { pointed.add(subject.id); pointAt(camera, null); marked = null; }

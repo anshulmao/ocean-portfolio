@@ -79,7 +79,7 @@ let nextBubble=0,bubbleCursor=0,bubbleClock=-1,exploring=false,mapDestination=nu
 // Escape closes it, until the next click on the ocean takes the mouse again or a second Escape ends the look (diver-profile.js).
 let lookHeld=false;
 let mapCollapsed=mobile;
-let previousMode='surface',surfaceX=0,surfaceZ=0,surfaceFramingYaw=0,expeditionUI=null;
+let previousMode='surface',surfaceX=0,surfaceZ=0,surfaceFramingYaw=Math.PI,expeditionUI=null;
 // The guided dive's opening (release/guided-dive/SPEC.md, step 0): at the surface the camera eases in on the diver and
 // centres them before the dive. prelude runs 0..1 over PRELUDE seconds with a sine ease in and out, and gives way to
 // the dive's own approach as the descent starts.
@@ -509,9 +509,9 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   // QA hook: after placing the camera by hand, cull the scene for it again.
   recull(){camera.updateMatrixWorld(true);refreshView();userCreatures?.update(0,playerPosition,viewerOrbit?null:view);if(built)cullWorld(0);},
   // Dive planner and guided tour hooks: autopilot, instant placement, dive start / surfacing, and the flashlight and scooter state.
-  travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free,looking){exploration.setGuided(value,free,looking);},frameDiver(value){preludeOn=Boolean(value);if(reducedMotion)prelude=Number(preludeOn);wake();},lookAt(point,follow){exploration.lookAt(point,follow);wake();},residentAt(id){return userCreatures?.residentAt?.(id)??null;},
+  travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free,looking){exploration.setGuided(value,free,looking);},frameDiver(value){preludeOn=Boolean(value);if(reducedMotion)prelude=Number(preludeOn);wake();},lookAt(point,follow){exploration.lookAt(point,follow);wake();},glance(point,follow,fade){exploration.glance(point,follow,fade);},pacing(scale){exploration.pacing(scale);},guideScooter(on){exploration.guideScooter(on);},tether(top){exploration.tether(top);},baitBall(){return livingWorld?.baitBall?.()??null;},residentAt(id){return userCreatures?.residentAt?.(id)??null;},
   encounter(id,course){return userCreatures?.encounter?.(id,playerPosition,viewerOrbit?null:view,course)??false;},visitors(){return userCreatures?.visitors?.()??[];},
-  travelPath(points,focus,speed){return exploration.travelPath(points,focus,speed);},
+  travelPath(points,focus,speed,lead){return exploration.travelPath(points,focus,speed,lead);},
   cancelTravel(options){return exploration.cancelTravel(options);},
   // The guided dive's surface prelude: a dive is asked for, and goes under a couple of seconds from now. What it will wait
   // for starts at once (the build, the landmarks, and in economy detail the optional packs, which wait for a dive to be
@@ -544,7 +544,7 @@ function setSkyPreset(preset,persist=true){
   wake();
 }
 let surfaceReturn=null,surfaceHeading=null,surfaceAnchor=null;
-function returnSurfaceView(phaseValue=phase){
+function returnSurfaceView(phaseValue=null){
   if(getMode()!=='surface'||diveTarget!==0)return;
   if(camera&&diagnostic.ready)surfaceReturn={time:0,position:camera.position.clone(),rotation:camera.quaternion.clone()};
   exploration.setInterfaceOpen(false);setExploring(false);syncControlSuspension();
@@ -552,11 +552,12 @@ function returnSurfaceView(phaseValue=phase){
   if(surfaceHeading)surfaceReturn=null;
   wake();
 }
-function frameSurface(phaseValue=phase){
+function frameSurface(phaseValue=null){
   if(!skySystem||exploration.state.mode!=='surface')return;
-  const sun=skySystem.getState(phaseValue).sunDirection;
-  // The horizontal sun direction uses east -Z / west +Z, consistent with the star map.
-  const target=sun[2]<=0?0:Math.PI;
+  // Start facing the reef, as the guided dive expects. Back and resize retain the
+  // chosen heading; an explicit time selection can turn the surface composition.
+  const sun=phaseValue===null?null:skySystem.getState(phaseValue).sunDirection;
+  const target=sun?(sun[2]<=0?0:Math.PI):(surfaceHeading?.target??surfaceFramingYaw);
   const turn=Math.atan2(Math.sin(target-surfaceFramingYaw),Math.cos(target-surfaceFramingYaw));
   if(diagnostic.ready&&!reducedMotion&&Math.abs(turn)>.001){
     if(!surfaceHeading||surfaceHeading.target!==target)surfaceHeading={from:surfaceFramingYaw,turn,target,time:0};
@@ -655,7 +656,7 @@ function makeWater(){
 // The landmarks' labels and chart markers need only the list of them: they are on the page from the start.
 function makeLandmarkMarks(){
   for(const [index,landmark] of LANDMARKS.entries()){
-    const label=document.createElement('div');label.className='reef-label';label.innerHTML=`${landmark.title}<span>${landmark.description.replace(/\d+(?:\.\d+)? m/, `${Math.round(toDisplayDepth(-landmark.position[1]))} m`)}</span><i></i>`;$('#reef-labels').append(label);label.style.left=label.style.top='0';reefLabels.push({label,landmark,shift:' translate(-50%,-100%)',anchor:new THREE.Vector3(...landmark.position).add(new THREE.Vector3(0,2,0))});
+    const label=document.createElement('div');label.className='reef-label';label.innerHTML=`${landmark.title}<span>${landmark.description.replace(/\d+(?:\.\d+)? m/, `${Math.round(toDisplayDepth(-landmark.position[1]))} m`)}</span><i></i>`;$('#reef-labels').append(label);label.style.left=label.style.top='0';reefLabels.push({label,landmark,shift:' translate(-50%,-100%)',rise:44,anchor:new THREE.Vector3(...landmark.position).add(new THREE.Vector3(0,2,0))});
     const marker=document.createElement('button');marker.type='button';marker.textContent=String(index+1);marker.setAttribute('aria-label',`Map marker ${landmark.title}`);marker.title=landmark.title;marker.dataset.landmark=landmark.id;
     marker.style.left=`${(landmark.position[0]+62)/124*100}%`;marker.style.top=`${(landmark.position[2]+105)/140*100}%`;
     const visit=()=>{if(!diagnostic.submerged)return;mapDestination=landmark;const target=modelScene?.landmarks?.find(item=>item.id===landmark.id);const approach=target?.interactionPosition;exploration.travel(approach||landmark.position,target?.position||landmark.position);setExploring(true);canvas.focus({preventScroll:true});$('#map-caption').textContent=`Swimming toward ${landmark.title}. WASD takes control.`;};
@@ -811,7 +812,8 @@ function labelVisible(worldPosition,item,alpha,padding=35){
   if(shown){
     projected.copy(worldPosition).project(camera);
     const x=(projected.x*.5+.5)*viewWidth,y=(-projected.y*.5+.5)*viewHeight;
-    shown=projected.z<1&&x>padding&&x<viewWidth-padding&&y>labelTop&&y<viewHeight-labelBottom&&!keptOut(x,y);
+    // A label hung above its point (rise: its height, px) keeps all of itself below the instruments at the top.
+    shown=projected.z<1&&x>padding&&x<viewWidth-padding&&y>labelTop+(item.rise||0)&&y<viewHeight-labelBottom&&!keptOut(x,y);
     // Moved by transform alone, so a label that tracks the camera costs the page no layout.
     if(shown)item.label.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px)${item.shift}`;
   }
@@ -1286,7 +1288,7 @@ async function boot(){
   await stage('diver');
   skySystem=createSkySystem(uniforms,rng);scene.add(skySystem.root);expeditionUI=createExpeditionUI({sky:skySystem,getPhase:()=>phase,setPhase:value=>{phase=value;phaseTarget=null;wake();},frameSurface:phaseValue=>returnSurfaceView(phaseValue)});
   diagnostic.starCount=skySystem.starCount;diagnostic.constellationCount=skySystem.constellationCount;
-  phase=skySystem.openingPhase;paintTheme(false,'dawn');diagnostic.openingSunAltitude=skySystem.getState(phase).sunAltitude;
+  phase=skySystem.openingPhase;paintTheme(false,'day');diagnostic.openingSunAltitude=skySystem.getState(phase).sunAltitude;
   for(const item of skySystem.labels){const label=document.createElement('div');label.className='constellation-label';label.innerHTML=`<i></i>${item.name.toUpperCase()}`;$('#sky-labels').append(label);label.style.left=label.style.top='0';skyLabels.push({label,shift:'',anchor:item.anchor});}
   early(skySystem.root);for(const material of skySystem.prepare(renderer))linking.add(material);
   await stage('sky');

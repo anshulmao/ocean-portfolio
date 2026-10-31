@@ -21,8 +21,8 @@ export const GLANCE = 'glance';
 export const SECTIONS = {
   glance: { hash: 'records', label: 'At a glance', short: 'Glance', site: 'START HERE' },
   about: { hash: 'profile', label: 'About', short: 'About', site: 'THE ANCHOR', line: 'An anchor for my story.' },
-  experience: { hash: 'log', label: 'Experience', short: 'Experience', site: 'THE WRECK', line: 'Explore the chapters of my journey.' },
-  projects: { hash: 'finds', label: 'Projects', short: 'Projects', site: 'THE TREASURE', line: 'Discover what I’ve been building.' },
+  experience: { hash: 'log', label: 'Experience', short: 'Experience', site: 'THE TREASURE', line: 'Explore the chapters of my journey.' },
+  projects: { hash: 'finds', label: 'Projects', short: 'Projects', site: 'THE WRECK', line: 'Discover what I’ve been building.' },
   resume: { hash: 'resume', label: 'Résumé', short: 'Résumé', site: 'THE LOGBOOK', line: 'The work, on one page.' },
 };
 const media = PORTFOLIO_MEDIA;
@@ -420,7 +420,7 @@ function renderDive(id) {
   return [el('div', { class: 'arc-sheet' },
     el('header', { class: 'arc-sheet-head', 'data-hero': true },
       el('div', {},
-        el('p', { class: 'holo-label', text: `${SECTIONS.experience.label} · The wreck · ${dive.number ? `Chapter ${pad(dive.number)} of ${pad(total)}` : 'Career chapter'}` }),
+        el('p', { class: 'holo-label', text: `${SECTIONS.experience.label} · The treasure · ${dive.number ? `Chapter ${pad(dive.number)} of ${pad(total)}` : 'Career chapter'}` }),
         el('h3', { id: 'archive-entry-title', text: entry.title })),
       dive.number && el('p', { class: 'arc-diveno' }, el('span', { class: 'holo-label', text: 'Dive no.' }), el('strong', { text: pad(dive.number) }))),
     // The role is the page heading, so the boxes start with the facts the heading does not carry.
@@ -465,7 +465,7 @@ function renderCatalogue() {
   const section = PORTFOLIO_CONTENT.projects, list = finds();
   return [
     el('header', { class: 'arc-pagehead', 'data-hero': true },
-      el('p', { class: 'holo-label', text: `Projects · The treasure · ${list.length} stories` }),
+      el('p', { class: 'holo-label', text: `Projects · The wreck · ${list.length} stories` }),
       el('h3', { id: 'archive-entry-title', text: SECTIONS.projects.label }),
       intro('projects', section.subtitle, false)),
     el('ul', { class: 'arc-grid' }, list.map(findCard)),

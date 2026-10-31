@@ -29,7 +29,7 @@ try {
   await page.waitForTimeout(5000);
   assert.ok(await page.evaluate(()=>!oceanControls.nav.exploring&&Math.abs(oceanControls.nav.pitch)<.001),'idle sky exploration returns home');
   await page.evaluate(()=>document.querySelector('#dawn').click());
-  await page.waitForTimeout(4500);
+  await page.waitForFunction(()=>Math.abs(oceanControls.nav.yaw)<.001,null,{timeout:90000});
   console.log('Checking fixed pivot across evening turn');
   const positions=await page.evaluate(async()=>{
     const camera=oceanControls.getCamera(),diver=oceanControls.viewer.layers().diver;
@@ -45,10 +45,12 @@ try {
       const p=projected();screenDrift=Math.max(screenDrift,Math.abs(p.x-screen.x));
       maxStep=Math.max(maxStep,camera.position.distanceTo(last));last.copy(camera.position);
     }
-    return {immediate,drift,screenDrift,maxStep,travel:camera.position.distanceTo(start)};
+    return {immediate,drift,screenDrift,maxStep,start:start.toArray()};
   });
   assert.ok(positions.immediate<.01,'preset does not snap the camera');
-  assert.ok(positions.travel>10,'evening turns to the opposite heading');
+  await page.waitForFunction(()=>Math.abs(oceanControls.nav.yaw-Math.PI)<.001,null,{timeout:90000});
+  const travel=await page.evaluate(start=>oceanControls.getCamera().position.distanceTo({x:start[0],y:start[1],z:start[2]}),positions.start);
+  assert.ok(travel>10,'evening turns to the opposite heading');
   assert.ok(positions.drift<.001,'diver stays at the same horizontal world position throughout the turn');
   assert.ok(positions.screenDrift<.025,`diver stays in the same screen position (${positions.screenDrift})`);
   assert.ok(positions.maxStep<2,'camera rotates smoothly around its fixed pivot');

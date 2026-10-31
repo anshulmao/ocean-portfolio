@@ -13,6 +13,7 @@ Requirements: Node.js 22+ and Python 3.10+.
 - `ocean-refined/world-viewer.html` explores and exports the world.
 - `ocean-refined/pack-viewer.html` inspects model packs and rigs.
 - `ocean-refined/creature-studio.html` shows the creature and coral set at site scale with every clip, and downloads each model. `npm run export:creatures` rebuilds the set's GLBs from `creature-species.js`; `ocean-refined/user-creature-routes.js` holds the encounter, resident and school settings.
+- `ocean-refined/ambient-audio.js` is the sound: synthesised in the browser, with real recordings for the breathing, sea bed, dolphins, whales and thunder. `npm run prepare:audio` (needs ffmpeg) cuts `ocean-refined/assets/audio/source/` into the clips that ship; sources and licence are in `ocean-refined/assets/audio/CREDITS.md`.
 - `ocean-refined/portfolio-content.js` contains the portfolio text. Editor-only introduction drafts are excluded by the production build.
 - Model sources, rigs, textures and prepared caches are in `ocean-refined/assets/`. Creator and licence metadata are preserved alongside the models.
 

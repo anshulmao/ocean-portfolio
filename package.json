@@ -21,6 +21,7 @@
     "test:encounters": "node ocean-refined/newqa/creature-encounters.mjs",
     "perf:reef": "node ocean-refined/newqa/reef-probe.mjs",
     "export:creatures": "node ocean-refined/tools/export-creature-set.mjs",
+    "prepare:audio": "cd ocean-refined && node tools/prepare-audio.mjs",
     "test:build": "node tools/build-check.mjs",
     "test:encounter-lifecycle": "node ocean-refined/newqa/creature-lifecycle.mjs",
     "test:unit": "node --test tools/test-held-map.mjs tools/test-ascent-composition.mjs tools/test-cinematic-route.mjs tools/test-guided-motion.mjs tools/test-navigation-clock.mjs tools/test-settings-escape.mjs ocean-refined/newqa/creature-smoke.mjs ocean-refined/newqa/distributed-ecology.mjs ocean-refined/newqa/diver-rig.mjs ocean-refined/newqa/experience-performance.mjs ocean-refined/newqa/fish-navigation.mjs ocean-refined/newqa/moray-resident.mjs ocean-refined/newqa/movement-profile.mjs ocean-refined/newqa/safety-stop-clock.mjs ocean-refined/newqa/school-fish.mjs ocean-refined/newqa/waterline-splash.mjs",

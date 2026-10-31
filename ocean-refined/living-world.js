@@ -720,7 +720,7 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
       const R = bait.radius;
       bait.spinRate += (.45 + .35 * fear + bait.kick * 1.1 - bait.spinRate) * ease(dt, 1.6);
       bait.spin += dt * bait.spinRate;
-      c.set(home.x + Math.sin(time * .05) * 2.5, home.y + Math.sin(time * .083) * 1 - hunker * 3, home.z + Math.cos(time * .041) * 2.5, R);
+      ballAt(c); c.w = R;
       U.uBallMove.value.set(bait.spin, .82, time, 0);
       const inside = underwater > .5 && d < R * 1.05;
       if (inside && !bait.inside) emit('bait-part', me.x, me.y, me.z, 1);
@@ -752,6 +752,10 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
       }
     }, conceal() { for (let k = 0; k < 3; k++) { conceal(fish, bait.jacks[k].slot); bait.jacks[k].seen = false; } } });
     bait.ball = ball; bait.uniforms = U; bait.home = home;
+    // Where the ball is now: a slow wander round its home on the clock, so it can be read from afar (the guided dive swims
+    // through it), not only once its group is near enough to update.
+    function ballAt(out) { return out.set(home.x + Math.sin(time * .05) * 2.5, home.y + Math.sin(time * .083) * 1 - hunker * 3, home.z + Math.cos(time * .041) * 2.5, bait.radius); }
+    bait.at = ballAt;
     site('bait-ball', 'Bait ball', home.x, home.y, home.z, 12, 'behaviour', 'A turning ball of silver fry over the soft coral spire, with three jacks circling. Swim through it: it opens a tunnel around you.');
   }
 
@@ -943,5 +947,7 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
   };
   // `under` holds everything below the surface: hand it to the scene's shader warm-up before the first dive.
   lifeSites.length = 0; lifeSites.push(...sites);
-  return { root, under, update, counts, sites, events, debug };
+  // The bait ball now, as [x, y, z, radius]: the guided dive steers through its middle.
+  const baitBall = () => { if (!bait.at) return null; const b = bait.at(new THREE.Vector4()); return [b.x, b.y, b.z, b.w]; };
+  return { root, under, update, counts, sites, events, debug, baitBall };
 }
