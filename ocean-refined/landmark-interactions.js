@@ -8,7 +8,9 @@ const prompt = document.querySelector('#interact-prompt');
 const panel = document.querySelector('#landmark-dialog');
 const credits = document.querySelector('#credits-dialog');
 const point = new THREE.Vector3(), ray = new THREE.Ray(), direction = new THREE.Vector3(), hit = new THREE.Vector3();
-let eligible = null, opened = null, returnFocus = null;
+let eligible = null, opened = null, returnFocus = null, lifting = 0;
+// The most the records wait for a chest's lid before they open (s), whatever the clip's length.
+const LID_WAIT = 1.6;
 
 function clearSight(start, end, controls) {
   const world = controls.reef?.userData.collisions;
@@ -32,12 +34,21 @@ archiveToggle.prepend(icon('resume'));
 // dive, and still works when the 3D scene never became available. A landmark or a
 // link opens its own section; the button and the surface link have no target, so
 // they open the at-a-glance view. Nothing here waits on a download before it opens.
-function openArchive(id, fromWaypoint=false, entry=null) {
+function openArchive(id, fromWaypoint=false, entry=null, site=id) {
   const controls = window.oceanControls;
-  if (controls?.getTransition() || controls?.getMode() === 'transition' || panel.open || credits.open) return false;
+  if (controls?.getTransition() || controls?.getMode() === 'transition' || panel.open || credits.open || lifting) return false;
   if (!fromWaypoint) opened = null;
   returnFocus = document.activeElement;controls?.setInterfaceOpen(true);
-  if (fromWaypoint) controls?.models?.interact(id,true);
+  // A chest swings its lid up first, and the records open once it has (the diver holds still meanwhile).
+  const lid = fromWaypoint ? controls?.models?.interact(site,true) : 0;
+  if (typeof lid === 'number' && lid > 0) {
+    prompt.hidden = true;
+    lifting = setTimeout(() => { lifting = 0; showRecords(id, entry); }, Math.min(lid, LID_WAIT) * 1000);
+    return true;
+  }
+  return showRecords(id, entry);
+}
+function showRecords(id, entry) {
   const label = panel.querySelector('#archive-return-label');
   if (label) label.textContent = window.oceanDiagnostics?.submerged ? 'Return to the reef' : 'Return to the surface';
   prompt.hidden = true;panel.showModal();
@@ -53,12 +64,14 @@ function interact() {
   if (!controls || !eligible || controls.getMode() !== 'diver' || controls.getTransition() || panel.open || credits.open) return;
   opened = eligible;
   // On the guided dive a site can open another page of the records (the anchor opens At a glance).
-  openArchive(window.oceanTour?.opens?.(opened.id) ?? opened.id,true);
+  openArchive(window.oceanTour?.opens?.(opened.id) ?? opened.id,true,null,opened.id);
 }
 // The expedition key handler runs in capture phase so it can prioritize a
 // nearby portfolio site over an artifact. Keeping the same eligibility check
 // here avoids depending on which key listener runs first.
-window.oceanLandmarks = { interactNearby() { if (!eligible) return false; interact(); return panel.open; } };
+window.oceanLandmarks = { interactNearby() { if (!eligible) return false; interact(); return panel.open || Boolean(lifting); },
+  // A site opened from further off than its own prompt reaches (the guided dive's stops): its chest plays as from close by.
+  openSite(id, page=id) { const site = LANDMARKS.find(item => item.id === id); if (!site) return false; opened = site; if (openArchive(page, true, null, id)) return true; opened = null; return false; } };
 
 // A quiet way in for visitors who would rather read than dive (index.html: the hero's links).
 document.getElementById('logbook-link')?.addEventListener('click', () => openArchive('projects'));
@@ -158,7 +171,7 @@ function update() {
   const controls = window.oceanControls, state = window.oceanDiagnostics;
   setHidden(archiveToggle, !state?.submerged || Boolean(controls?.getTransition()));
   eligible = null;
-  if (!controls || !state?.ready || controls.getMode() !== 'diver' || controls.getTransition() || panel.open || credits.open || ui.panel) {
+  if (!controls || !state?.ready || controls.getMode() !== 'diver' || controls.getTransition() || panel.open || credits.open || lifting || ui.panel) {
     setHidden(prompt, true); return;
   }
   if (state.playerPosition) player.fromArray(state.playerPosition); else player.copy(controls.getPlayerPosition());

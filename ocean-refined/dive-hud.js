@@ -12,7 +12,7 @@ import { toDisplayDepth, DISPLAY_MAX_DEPTH } from './depth-metrics.js';
 const $ = selector => document.querySelector(selector);
 const computer = $('#dive-computer'), toggle = $('#dive-computer-toggle'), gauge = $('#air-gauge');
 const spg = $('#spg'), needle = $('#air-fill'), airFlag = $('#air-flag'), depthMax = $('#depth-max'), sceneLocation = $('#scene-location');
-const PLACES = {about:'Anchor / About',experience:'Wreck / Experience',projects:'Treasure / Projects'};
+const PLACES = {about:'Anchor / About',experience:'Treasure / Experience',projects:'Wreck / Projects'};
 // What the no-stop cell says in each state, on the console and on the full face. Colour never carries it alone.
 const SHORT = {ndl:'NDL', low:'NDL · LOW', due:`STOP · ${STOP.depth} m`, stop:'STOP · HOLD', deco:`DECO · ${STOP.depth} m`, done:'STOP DONE'};
 const LONG = {ndl:'NO-DECO LIMIT', low:'NO-DECO LIMIT · LOW', due:`SAFETY STOP · ${STOP.depth} m`, stop:`SAFETY STOP · HOLD ${STOP.depth} m`, deco:`DECO STOP · ${STOP.depth} m`, done:'STOP COMPLETE'};

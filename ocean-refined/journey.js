@@ -9,8 +9,8 @@ import { announce, clearAnnouncements } from './announce.js';
 // It only reads the public controls and diagnostics, like the other HUD files.
 const SITES = {
   about: { name: 'The Anchor', signal: '#7ff0cf' },
-  experience: { name: 'The Wreck', signal: '#ffcf7a' },
-  projects: { name: 'The Treasure', signal: '#c9a2ff' }
+  experience: { name: 'The Treasure', signal: '#ffcf7a' },
+  projects: { name: 'The Wreck', signal: '#c9a2ff' }
 };
 const ZONES = [
   { until: 16, title: 'Sunlit shallows', place: 'Coral gardens', range: '0 – 11 m' },

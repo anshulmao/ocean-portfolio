@@ -619,7 +619,9 @@ compact.addEventListener?.('change', () => { if (status !== 'off') paint(); });
 // On a phone the sheet stands in for the scene's own prompt, so it offers the same action.
 function read() {
   const prompt = document.querySelector('#interact-prompt'), step = STEPS[index];
-  if (prompt && !prompt.hidden) prompt.click(); else window.oceanArchive?.open?.(step.opens ?? step.landmark);
+  if (prompt && !prompt.hidden) prompt.click();
+  else if (window.oceanLandmarks?.openSite) window.oceanLandmarks.openSite(step.landmark, step.opens ?? step.landmark);
+  else window.oceanArchive?.open?.(step.opens ?? step.landmark);
 }
 // The tour's own animals (user-creatures.js: the nurse shark, the whale shark) are in, and drawn, once the optional sets
 // have settled: oceanDiagnostics.enriched says so (the loading work), as optionalModels did before it. userCreatures.ready

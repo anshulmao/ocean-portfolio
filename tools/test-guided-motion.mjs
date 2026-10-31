@@ -49,7 +49,7 @@ function environment(hz, { reducedMotion = false, unavailable = false, collision
   if (!surface) nav.startDive();
   // Placed model viewpoints as the live app has them once the models' bounds refine them (read from oceanControls.landmarks):
   // [x, height over the seabed, z] from the charted spot. The wreck's is well north of its hull, the treasure's just north.
-  const approach = { about: [5.8, 2.8, 0], experience: [0, 5.4, 17.2], projects: [0, 2.8, 4] };
+  const approach = { about: [5.8, 2.8, 0], experience: [0, 2.8, 4], projects: [0, 5.4, 17.2] };
   const landmarks = LANDMARKS.map(item => { const [x, , z] = item.position, floor = terrainHeightAt(x, z), [dx, up, dz] = approach[item.id];
     return { ...item, position: [x, floor + 1.4, z], interactionPosition: [x + dx, floor + up, z + dz] }; });
   const api = window.oceanControls = {
@@ -193,7 +193,7 @@ const keyup = code => window.dispatchEvent({ type: 'keyup', code, target: { clos
   // The lamp under the arch, the camera as the whale shark passes; the computer at the treasure was tried in the welcome.
   until(() => env.state.tour.sight === 'arch');
   assert.equal(env.state.tour.flyTip, 'It’s dark under the arch. Press Q for your lamp.');
-  until(() => env.state.tour.key === 'projects' && tourStatus() === 'dwell');
+  until(() => env.state.tour.key === 'experience' && tourStatus() === 'dwell');
   assert.equal(env.state.tour.tip, '', 'the computer was tried in the welcome');
   until(() => env.state.tour.sight === 'whale-shark');
   assert.equal(env.state.tour.flyTip, 'Press H to take a photo of it.');
@@ -305,13 +305,13 @@ for (const hz of [30, 60, 120]) {
       if (sight.key === 'cathedral') assert.ok(record.side < .8, `the cathedral is seen from its open front (up to ${(record.side * 180 / Math.PI).toFixed(0)}° off it)`);
     }
     // The leg to the treasure swims through the arch itself, under its roof (reef.js: arch at 20, -72, roof 9.6 m over its floor).
-    if (step.key === 'projects') {
+    if (step.key === 'experience') {
       const roof = terrainHeightAt(20, -72) + 9.6 - .6, under = leg.filter(p => Math.abs(p[2] + 72) < 1.5 && Math.abs(p[0] - 20) < 10);
       assert.ok(under.length && under.every(p => Math.abs(p[0] - 20) < 3.5 && p[1] < roof), `through the arch, under its roof (${JSON.stringify(under[0])})`);
     }
     // The way up ends in open water just seaward of the wreck, well above the seabed, with the reef rising to the north.
     // Through the middle of the bait ball where it has wandered to, not past its edge.
-    if (step.key === 'experience') {
+    if (step.key === 'projects') {
       const middle = Math.min(...leg.map(p => distance(p, [50.5, -27.8, -66])));
       assert.ok(middle < 1.5, `straight through the bait ball (${middle.toFixed(2)} m from its middle)`);
     }
@@ -542,7 +542,7 @@ console.log('PASS: rejected routes hold, explicit Skip and reduced motion fade, 
   startTour(); env.tick(.5);
   assert.equal(env.state.tour.tip, 'Try it, 1 of 2: Swim with the stick. The guide picks up again when you let go.');
   window.oceanTour.next(); env.tick(.5);
-  for (let i = 0; i < 60 * 400 && !(env.state.tour.key === 'projects' && tourStatus() === 'dwell'); i++) { env.tick(); if (tourStatus() === 'dwell') window.oceanTour.next(); }
+  for (let i = 0; i < 60 * 400 && !(env.state.tour.key === 'experience' && tourStatus() === 'dwell'); i++) { env.tick(); if (tourStatus() === 'dwell') window.oceanTour.next(); }
   assert.equal(env.state.tour.tip, '', 'no computer tip at the treasure on a phone');
   window.oceanTour.stop(); env.nav.destroy(); delete document.documentElement.dataset.input;
   console.log('PASS: on a phone the welcome asks for what the deck has, and the menu-only controls are not taught.');
@@ -637,7 +637,7 @@ for (const interruption of ['stall', 'pause', 'takeover']) {
   for (let i = 0; i < 400 && !(tourStatus() === 'dwell' && env.state.tour.key === 'about'); i++) { window.oceanTour.next(); env.tick(.5); }
   assert.equal(env.state.tour.key, 'about', 'reached the anchor by Continue');
   window.oceanTour.next(); env.tick(.1);
-  assert.equal(env.state.tour.key, 'projects');
+  assert.equal(env.state.tour.key, 'experience');
   const before = env.samples.length;
   // On the way down to the gully, short of the cliff edge where the live app stalled, the swim is interrupted.
   for (let i = 0; i < 60 * 120 && env.state.playerPosition[1] > -30; i++) env.tick();

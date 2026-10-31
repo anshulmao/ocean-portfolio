@@ -167,8 +167,8 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
   const floorAt = (x, z) => terrainHeightAt?.(x, z) ?? -12;
   const landmarks = [
     { id: 'about', position: [-12, floorAt(-12, -15) + 1.4, -15], interactionPosition: [-6.8, floorAt(-12, -15) + 5.3, -15], maxRange: 6.2 },
-    { id: 'experience', position: [18, floorAt(18, -39) + 1.6, -39], interactionPosition: [24, floorAt(18, -39) + 4.4, -39], maxRange: 6.5 },
-    { id: 'projects', position: [-18, floorAt(-18, -82) + 1.3, -82], interactionPosition: [-12, floorAt(-18, -82) + 4.3, -82], maxRange: 6.5 }
+    { id: 'experience', position: [-18, floorAt(-18, -82) + 1.3, -82], interactionPosition: [-12, floorAt(-18, -82) + 4.3, -82], maxRange: 6.5 },
+    { id: 'projects', position: [18, floorAt(18, -39) + 1.6, -39], interactionPosition: [24, floorAt(18, -39) + 4.4, -39], maxRange: 6.5 }
   ];
 
   const positions = new Map(landmarks.map(item => [item.id, item.position]));
@@ -413,7 +413,9 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
       chest.openAction?.stop();
       settle(chest.closeAction);
     }
-    return true;
+    // Opening, the seconds its lid takes to swing up (0 where it snaps open: no clip, or motion off), so the records can
+    // wait for it (landmark-interactions.js).
+    return chest.open ? (motionEnabled && chest.openAction ? chest.openAction.getClip().duration : 0) : true;
   }
 
   function loadOne(key, file, place) {
@@ -583,8 +585,8 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
           addStaticProxy(new THREE.Box3(center.clone().add(new THREE.Vector3(-size.x * .12, -size.y * .16, -size.z * .46)), center.clone().add(new THREE.Vector3(size.x * .12, size.y * .16, size.z * .46))), 'fallen anchor arms');
         }
       }),
-      () => loadOne('experience-ship', MODEL_FILES.ship, async gltf => {
-        const { wrapper, box } = await addModel('experience', gltf, 20, -.28);
+      () => loadOne('projects-ship', MODEL_FILES.ship, async gltf => {
+        const { wrapper, box } = await addModel('projects', gltf, 20, -.28);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
         const hullBottom = box.min.y, hullTop = box.min.y + Math.min(1.55, Math.max(.85, size.y * .22));
@@ -599,13 +601,13 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
           addStaticProxy(new THREE.Box3(new THREE.Vector3(center.x + halfX, hullBottom, center.z - halfZ), new THREE.Vector3(center.x + size.x * .46, hullTop, center.z + halfZ)), 'ship stern hull');
         }
       }),
-      () => loadOne('projects-chest-a', MODEL_FILES.chest, async gltf => {
-        await addChest('projects', gltf, 2.45, -.3);
+      () => loadOne('experience-chest-a', MODEL_FILES.chest, async gltf => {
+        await addChest('experience', gltf, 2.45, -.3);
         const secondScene = cloneSkinned(gltf.scene);
-        const floor = groundPosition('projects');
+        const floor = groundPosition('experience');
         const offset = new THREE.Vector3(2.9, 0, -1.35);
         const secondPosition = floor.add(offset);
-        await addChest('projects-second', { scene: secondScene, animations: gltf.animations }, 2.05, 1.0, secondPosition);
+        await addChest('experience-second', { scene: secondScene, animations: gltf.animations }, 2.05, 1.0, secondPosition);
       }),
       ...MODEL_FILES.coral.map((file, index) => async () => { if (!await preparedPromise) await loadCoral(file, index); })
     ];
@@ -640,7 +642,7 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     const emissiveState = [];
     wrapper.traverse(object => {
       if (!object.isMesh) return;
-      if (id === 'projects-second') {
+      if (id === 'experience-second') {
         object.material = Array.isArray(object.material)
           ? object.material.map(material => material.clone())
           : object.material.clone();

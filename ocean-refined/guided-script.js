@@ -72,10 +72,10 @@ export const STEPS = [
       [-16, -6, 4],
     ] },
   // Round the anchor to the nurse shark asleep behind it, then right across the reef shelf on the scooter, by the table coral
-  // tower, round north of it and past the pillar coral cathedral, down the east side to the gully, through the limestone arch
+  // tower, straight down to the pillar coral cathedral's open front, down the east side to the gully, through the limestone arch
   // (reef.js: the arch at 20, -72) and over the lantern garden to the treasure: the deepest stop comes first, as on a real dive.
-  { key: 'projects', kind: 'stop', landmark: 'projects', view: [-13.5, -43.2, -74.2], teach: 'computer', lead: 30, place: `Projects · The Treasure · ${depth(-45)}`, signal: '#c9a2ff',
-    title: 'The treasure', line: 'This is where you’ll find my projects.',
+  { key: 'experience', kind: 'stop', landmark: 'experience', view: [-13.5, -43.2, -74.2], teach: 'computer', lead: 30, place: `Experience · The Treasure · ${depth(-45)}`, signal: '#ffcf7a',
+    title: 'The treasure', line: 'This is where you’ll find my experience.',
     via: [
       { orbit: { around: 'about', radius: 11, turn: 110, rise: 2.5 }, at: [-6, -7, -20], key: 'nurse', title: 'A nurse shark, asleep',
         line: 'Nurse sharks rest on the sand by day. Let it be.', look: { resident: 'sleeper', near: [-19, -12.6, -22] }, hold: 8, slow: .45, reach: 4 },
@@ -83,13 +83,14 @@ export const STEPS = [
         scooter: true, teach: 'scooter', wait: 'scooter', hold: 4, slow: .7 },
       { at: [22, -12, -14], key: 'tower', title: 'The table coral tower', line: 'Plates of coral stacked up a leaning stone trunk.',
         look: [38, -15.5, -8], hold: 6 },
-      // Round the cathedral's back and south side, then west to look in at its open side, which faces the wreck
-      // (hero-formations.js `open`). The whole fly-by stays within about 40° of that side, 16-20 m out, wide of the
-      // barracuda's beat.
-      [30, -10, 2], [44, -11, 2], [58, -17, -14], [60, -21, -30], [52, -24, -46], [42, -25, -47],
-      { at: [35, -25, -38], key: 'cathedral', title: 'The pillar coral cathedral', line: 'Organ-pipe columns in a horseshoe.',
-        look: [48, -23.5, -28], hold: 6, reach: 7 },
-      [36, -27, -46], [38, -32, -54], [32, -37, -57], [24, -40, -58.5], [21, -43.5, -60],
+      // Straight down from the tower to look in at the cathedral's open side, which faces the wreck (hero-formations.js
+      // `open`): a gentle descent under the barracuda's beat (9 m off it: it bolts only inside 6 m, user-creatures.js),
+      // over the rock in front of the cathedral and clear of the wreck. The fly-by stays within about 40° of the open
+      // side, 15 m out.
+      [28, -17.5, -19], [32, -21, -24], [34.5, -22.5, -29],
+      { at: [35, -23, -35], key: 'cathedral', title: 'The pillar coral cathedral', line: 'Organ-pipe columns in a horseshoe.',
+        look: [48, -23.5, -28], hold: 6, reach: 9 },
+      [37, -27.5, -47], [38, -32, -54], [32, -37, -57], [24, -40, -58.5], [21, -43.5, -60],
       { at: [20, -46.4, -62.6], key: 'arch', title: 'Through the arch', line: 'A limestone arch over the gully. In we go.',
         look: [20, -48, -72], teach: 'lamp', wait: 'lamp', hold: 6 },
       [20, -49, -66], [20, -51, -70], [20, -51.6, -79],
@@ -99,8 +100,8 @@ export const STEPS = [
     ] },
   // The way up: along the deep ledge to the soft coral spire, where the swim drifts while a whale shark passes out to sea,
   // through the bait ball, and round the west of the wreck (clear of its masts and the barracuda's beat) to see it whole.
-  { key: 'experience', kind: 'stop', landmark: 'experience', view: [2, -19, -36], place: `Experience · The Wreck · ${depth(-21)}`, signal: '#ffcf7a',
-    title: 'Here’s the wreck', line: 'This is where you’ll find my experience.',
+  { key: 'projects', kind: 'stop', landmark: 'projects', view: [2, -19, -36], place: `Projects · The Wreck · ${depth(-21)}`, signal: '#c9a2ff',
+    title: 'Here’s the wreck', line: 'This is where you’ll find my projects.',
     via: [
       [-6, -46, -79], [8, -47, -86], [24, -47, -84],
       { at: [36, -45, -79], key: 'whale-shark', title: 'Look out to sea', line: 'A whale shark, passing over the deep water.',
