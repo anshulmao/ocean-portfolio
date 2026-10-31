@@ -16,8 +16,9 @@ export const STOPS = STEPS.filter(step => step.kind === 'stop');
 // tour_version: the shape of the tour, so a funnel never mixes one round's steps with another's (4: three stops and the
 // long way up to the shallows; 5: the same three stops, ending in open water above the wreck; 6: in from open water over
 // the far side of the reef, the treasure before the wreck; 7: from out over the treasure, the cathedral from its front;
-// 8: Experience in the treasure and Projects in the wreck, so the step keys swap places, and a direct leg to the cathedral).
-const VERSION = 8;
+// 8: Experience in the treasure and Projects in the wreck, so the step keys swap places, and a direct leg to the cathedral;
+// 9: the scooter first, out to the right of the anchor past the barracuda, the whipray and the brain coral).
+const VERSION = 9;
 const note = (event, extra = {}) => track(event, { step: STEPS[index].key, index, tour_version: VERSION, ...extra });
 const ARRIVE_RADIUS = 1.6, PAN_BEAT = 3, INTRO_BEAT = 4.5, HOLD_SIGNAL = '#8ff4ff';
 // The opening from the surface (SPEC step 0): a held beat while the surface copy fades, the camera eases in on the diver
@@ -61,13 +62,18 @@ const CEILING = -3.5;
 const DRIFT = .9, RESUME = 2.5;
 let idle = 0;
 // Big animals passing while the tour swims: the view turns to one coming within its SPOT range (m; the look-there marker's,
-// big-life.js, a little inside it) that is no fly-by's subject, for SPOT_HOLD s, and not to the same one again within SPOT_AGAIN s.
-const SPOT = { whale: 100, orcas: 80, 'whale-shark': 60, dolphins: 40 }, SPOT_HOLD = 5, SPOT_AGAIN = 45;
-// After a fly-by the view goes back to the way ahead. A subject the swim has left behind (further than BEHIND rad off the
-// way it is going) is let go once the fly-by has had BRIEF s, rather than watched over the shoulder. On a calm stretch the
-// view looks round now and then: after CALM s on the course, a look to one side at the reef (LOOK_OUT rad off, LOOK_FAR m
-// away) for LOOK_FOR s, the other side next time.
-const BEHIND = 1.9, CALM = 8, LOOK_OUT = .6, LOOK_FAR = 20, LOOK_FOR = 3.5;
+// big-life.js, a little inside it) that is no fly-by's subject, and stays on it SPOT_HOLD s, and not to the same one again
+// within SPOT_AGAIN s.
+const SPOT = { whale: 100, orcas: 80, 'whale-shark': 60, dolphins: 40 }, SPOT_HOLD = 9, SPOT_AGAIN = 45;
+// The guide's own looks between fly-bys are calm ones (round 8, the owner's notes: no quick pans in a row, the camera
+// independent of the swim):
+// - CALM_FADE: how long such a look takes to come round, and back (s; a fly-by's takes 2).
+// - QUIET: none starts within this many seconds of the view last being turned.
+// - Looking round: after CALM s on the course, a look out at the reef, the open water or a fish passing, LOOK_FAR m off and
+//   LOOK_OUT rad to one side of the way ahead, fixed where it is (it does not swing with the swim), for LOOK_FOR s.
+// - BEHIND: off the way the swim is going by more than this (rad), a subject is behind the diver. ABEAM: a subject held
+//   between two fly-bys is let go once it is this far round (just past the diver's side).
+const CALM_FADE = 3.5, QUIET = 6, CALM = 12, LOOK_OUT = .6, LOOK_FAR = 32, LOOK_FOR = 5.5, BEHIND = 1.8, ABEAM = 1.65;
 // The tour waits up to ASSETS_WAIT seconds at Start for the creature set (the nurse shark, the whale shark) to be in.
 const ASSETS_WAIT = 20;
 const motionMedia = matchMedia('(prefers-reduced-motion: reduce)'), coarse = matchMedia('(pointer: coarse)');
@@ -111,9 +117,10 @@ const sights = [], passed = new Set(), cued = new Set(); let sight = null, sight
 // spotted: the big animal the view has turned to between fly-bys, and for how long; spottedAt: when each was last turned to.
 let spotted = null, spottedFor = 0, tourTime = 0; const spottedAt = new Map();
 // heading: the way the swim is going, smoothed from the diver's own steps (lastAt). calmFor: time on the course with nothing
-// to look at; looking: time left on a look round, and lookSide, which side it is to.
+// to look at; looking: time left on a look round, at lookPoint (or the fish lookFish).
+// turnedAt: when the guide last turned the view (tourTime). lookKind: what the next look round is at.
 const heading = new THREE.Vector3(0, 0, -1), lastAt = new THREE.Vector3(), stepped = new THREE.Vector3();
-let hasLast = false, calmFor = 0, looking = 0, lookSide = 1;
+let hasLast = false, calmFor = 0, looking = 0, lookPoint = null, lookFish = null, lookKind = 0, turnedAt = -Infinity;
 // held: the subject the view stays on between two fly-bys (HOLD_GAP), let go once the swim leaves it behind.
 let held = null;
 // A fly-by that teaches a control waits up to WAIT s for the visitor to try it, the swim at HUSH of its cruise; holdFor: how
@@ -326,7 +333,8 @@ function paintControls(step, fingers) {
 // The fly-by's caption: its title, its line and the control it teaches, if that has not been tried.
 let captionShown = '';
 function paintCaption(fingers) {
-  const id = sight?.teach, on = status === 'travel' && Boolean(sight) && !paused, tip = on && id && !used.has(id) ? CONTROLS[id]?.tip?.[fingers ? 1 : 0] ?? '' : '';
+  // A glimpse (a fly-by with no title: a look out at the water or the reef on the way) has no caption.
+  const id = sight?.teach, on = status === 'travel' && Boolean(sight?.title) && !paused, tip = on && id && !used.has(id) ? CONTROLS[id]?.tip?.[fingers ? 1 : 0] ?? '' : '';
   // Tried while it was asked for: the caption shows it pressed and ticked, and the deck key flashes.
   const cheering = on && id && cheer === id;
   if (cheering) document.body.dataset.tourCheer = id; else delete document.body.dataset.tourCheer;
@@ -413,24 +421,33 @@ function flyBy(dt, at) {
       api?.pacing(sight.slow ?? SLOW); if (!tried && sight.scooter) api?.guideScooter(true);
       paint();
     }
-    // A subject left behind is let go (after BRIEF), and the view turns back to the way ahead.
-    const left = sightTime >= BRIEF && behind(subjectOf(sight.look), at);
-    if (left || sightTime >= holdFor || (due && sightTime >= BRIEF)) {
+    // A subject the swim has left well behind (BEHIND: the cathedral once the swim is past its front) ends its fly-by early,
+    // after BRIEF; one beside the diver never does.
+    const passed = sightTime >= BRIEF && behind(subjectOf(sight.look), at);
+    if (passed || sightTime >= holdFor || (due && sightTime >= BRIEF)) {
       // Back to back, the view stays on this subject until the next one's pan, rather than swinging back to the way ahead
-      // between them, but only while the subject is still ahead of the diver.
-      const next = sights[0], subject = subjectOf(sight.look);
-      const keep = !left && Boolean(sight.look && next?.look && probe.fromArray(at).distanceTo(to.fromArray(next.at)) < HOLD_GAP) && !behind(subject, at, 1.2);
-      held = keep && Array.isArray(subject) ? subject : null;
-      endSight(keep);
+      // between them; not one the swim has already left behind.
+      // If the next one's subject is already in sight ahead, the view eases straight across to it instead.
+      const next = sights[0], subject = subjectOf(sight.look), close = Boolean(sight.look && next?.look && probe.fromArray(at).distanceTo(to.fromArray(next.at)) < HOLD_GAP);
+      const following = close && subjectOf(next.look), across = Boolean(following && !behind(following, at, 1.2));
+      const keep = close && (across || !behind(subject, at, ABEAM));
+      held = keep && !across && Array.isArray(subject) ? subject : null;
+      endSight(keep || passed);
+      if (across) turn(following); else if (passed) turn(null);
     }
     if (sight || !due) return;
   }
-  if (held && behind(held, at, 1.6)) { held = null; api?.glance(null); }
+  // A subject held between two fly-bys that the swim has passed (more than ABEAM rad off the way it is going: the tower on
+  // the way down to the cathedral, the arch once through it) is let go, calmly, in one pan: on to the next fly-by's subject
+  // if that is ahead, else to the way ahead.
+  if (held && behind(held, at, ABEAM)) {
+    held = null; const following = sights[0]?.look && subjectOf(sights[0].look);
+    turn(following && !behind(following, at, 1.2) ? following : null);
+  }
   if (!due) { if (!held && !spot(dt, at)) lookRound(dt, at); return; }
   held = null;
-  if (spotted) { spotted = null; api?.glance(null); }
-  if (looking > 0) looking = 0;
-  calmFor = 0;
+  if (spotted) spotted = null;
+  looking = 0; lookFish = null; calmFor = 0; turnedAt = tourTime;
   sights.shift(); passed.add(next.key); sight = next; sightTime = 0; holdFor = next.hold ?? FLYBY; if (next.look?.visitor) spottedAt.set(next.look.visitor, tourTime);
   waiting = Boolean(next.wait) && !used.has(next.wait);
   api?.pacing(waiting ? HUSH : next.slow ?? SLOW); if (next.look) api?.glance(subjectOf(next.look)); api?.guideScooter(Boolean(next.scooter) && !waiting);
@@ -451,45 +468,66 @@ function throughBall(at) {
 }
 // Between fly-bys, a big animal passing near (a whale, the whale shark, orcas, dolphins) is worth turning for: the view
 // follows it for SPOT_HOLD s while the swim carries on, and the look-there marker names it.
-// Returns whether the view is on an animal.
+// Returns whether the view is on an animal. The turn to it and back are calm ones (CALM_FADE), and it waits for QUIET s
+// after the view last turned.
 function spot(dt, at) {
   const api = controls();
   if (spotted) {
     spottedFor += dt; const point = visitorAt(spotted);
     if (point && spottedFor < SPOT_HOLD && !behind(point, at, 2.2)) { api?.glance(point, true); return true; }
-    spotted = null; calmFor = 0; api?.glance(null); return false;
+    spotted = null; calmFor = 0; turn(null); return false;
   }
+  if (tourTime - turnedAt < QUIET) return false;
   // Not one a fly-by ahead is about to show (the whale shark called in for its drift), and not one already behind.
   const shown = new Set(sights.map(item => item.look?.visitor).filter(Boolean));
   for (const item of api?.visitors?.() ?? []) {
     if (!(item.id in SPOT) || shown.has(item.id) || tourTime - (spottedAt.get(item.id) ?? -Infinity) < SPOT_AGAIN) continue;
     if (Math.hypot(item.x - at[0], item.y - at[1], item.z - at[2]) > SPOT[item.id] || behind([item.x, item.y, item.z], at)) continue;
-    if (looking > 0) looking = 0;
-    spotted = item.id; spottedFor = 0; spottedAt.set(item.id, tourTime); api?.glance([item.x, item.y, item.z]); return true;
+    looking = 0; lookFish = null;
+    spotted = item.id; spottedFor = 0; spottedAt.set(item.id, tourTime); turn([item.x, item.y, item.z]); return true;
   }
   return false;
 }
-// On a calm stretch, now and then a look to one side at the reef and back, like a diver looking round. Not on the run in to
-// a stop, where the view turns to its subject (LEAD). The visitor's own look still wins over it (exploration.js glance).
+// The guide's calm turns of the view: to a point, or back to the way ahead (null).
+function turn(point) { controls()?.glance(point, false, CALM_FADE); turnedAt = tourTime; }
+// On a calm stretch, now and then a look round, like a diver's: at a fish passing near, else in turn at the reef (the side
+// where the seabed rises) and out into the open water (the side where it falls away). The point stays where it is in the
+// water, so the look does not swing with the swim, and it ends early once the swim has gone past it. Not on the run in to a
+// stop, where the view turns to its subject (LEAD). The visitor's own look still wins over it (exploration.js glance).
 function lookRound(dt, at) {
   const api = controls(), step = STEPS[index];
-  if (looking > 0) { looking -= dt; if (looking <= 0) { calmFor = 0; api?.glance(null); } else api?.glance(aside(at), true); return; }
+  if (looking > 0) {
+    looking -= dt;
+    const fish = lookFish && visitorAt(lookFish);
+    if (fish) { lookPoint = fish; api?.glance(fish, true); }
+    if (looking <= 0 || behind(lookPoint, at, 1.5)) { looking = 0; lookFish = null; calmFor = 0; turn(null); }
+    return;
+  }
   calmFor += dt;
   const near = probe.fromArray(at).distanceTo(to.fromArray(goal)) < (step.lead ?? LEAD) + 10;
-  if (calmFor < CALM || near || reduced()) return;
-  lookSide = -lookSide; looking = LOOK_FOR; api?.glance(aside(at));
+  if (calmFor < CALM || tourTime - turnedAt < QUIET || near || reduced()) return;
+  lookPoint = lookOut(at); if (!lookPoint) return;
+  looking = LOOK_FOR; turn(lookPoint);
 }
-// Where a look round looks: LOOK_FAR m out to one side of the way ahead, down toward the reef, kept there as the diver swims.
-function aside(at) {
-  const flat = Math.hypot(heading.x, heading.z) || 1, cos = Math.cos(LOOK_OUT * lookSide), sin = Math.sin(LOOK_OUT * lookSide);
-  const fx = heading.x / flat, fz = heading.z / flat, x = at[0] + (fx * cos - fz * sin) * LOOK_FAR, z = at[2] + (fx * sin + fz * cos) * LOOK_FAR;
-  return [x, Math.max(terrainHeightAt(x, z) + 3, at[1] - 8), z];
+// Where the next look round looks: a fish (any visitor that is not one of the big ones) within 30 m and ahead of the
+// diver, else the reef or the open water, by turns, LOOK_FAR m off and LOOK_OUT rad to one side of the way ahead.
+function lookOut(at) {
+  for (const item of controls()?.visitors?.() ?? []) {
+    const point = [item.x, item.y, item.z];
+    if (!(item.id in SPOT) && Math.hypot(point[0] - at[0], point[1] - at[1], point[2] - at[2]) < 30 && !behind(point, at, 1)) { lookFish = item.id; return point; }
+  }
+  const flat = Math.hypot(heading.x, heading.z) || 1, fx = heading.x / flat, fz = heading.z / flat;
+  const side = sign => { const cos = Math.cos(LOOK_OUT * sign), sin = Math.sin(LOOK_OUT * sign), x = at[0] + (fx * cos - fz * sin) * LOOK_FAR, z = at[2] + (fx * sin + fz * cos) * LOOK_FAR; return [x, terrainHeightAt(x, z), z]; };
+  const [left, right] = [side(1), side(-1)], reef = left[1] > right[1] ? left : right, open = reef === left ? right : left;
+  lookKind = 1 - lookKind;
+  // The reef: down at the seabed on the shallow side. The open water: level with the diver on the deep side.
+  return lookKind ? [reef[0], Math.max(reef[1] + 3, at[1] - 10), reef[2]] : [open[0], Math.max(open[1] + 6, at[1] - 2), open[2]];
 }
 function endSight(keep = false) {
   if (!keep) held = null;
   if (spotted) { spotted = null; controls()?.glance(null); }
-  if (looking > 0) { looking = 0; controls()?.glance(null); }
-  calmFor = 0;
+  if (looking > 0) { looking = 0; lookFish = null; controls()?.glance(null); }
+  calmFor = 0; turnedAt = tourTime;
   if (!sight) return;
   sight = null; waiting = false; const api = controls(); if (!keep) api?.glance(null); api?.pacing(1); api?.guideScooter(false); paint();
 }
@@ -501,7 +539,7 @@ function lineUp(at) {
 function launch() {
   const api = controls();
   api.guide(true, true, true);
-  inputs = api.nav.inputs; best = Infinity; stall = 0; legTime = 0; settle = 2; calmFor = 0; hasLast = false;
+  inputs = api.nav.inputs; best = Infinity; stall = 0; legTime = 0; settle = 2; calmFor = 0; hasLast = false; turnedAt = tourTime;
   if (!api.travelPath(leg, look, STEPS[index].speed ?? SPEED, STEPS[index].lead ?? LEAD)) blockRoute();
   else lineUp(window.oceanDiagnostics.playerPosition);
 }

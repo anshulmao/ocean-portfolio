@@ -26,7 +26,7 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
 | R7 | Touch, phone and keyboard all get equal treatment, and every key hint has a tap equivalent. |
 | R8 | The visitor can always exit, surface or keep exploring. The safety stop is offered, never forced. |
 
-## The sequence (round 8)
+## The sequence (round 9)
 
 World coordinates are metres (x, y, z), with y negative below the surface. "Right" is +x, facing −z. The site starts at
 the surface out over the deep end, beyond the treasure, at (−18, −90), facing the reef (`exploration.js` SURFACE_START). The route itself
@@ -38,13 +38,17 @@ between them is a **fly-by**:
 - The swim slows.
 - The camera eases across to the subject (2 s, ease in and out, one way only) and frames it from 15–22 m off, so it
   reads whole. While the guide steers, the camera is independent of the diver's turns.
-- Back-to-back fly-bys hand the view from one subject to the next without swinging back to the way ahead, while the
-  first subject is still ahead.
-- A caption names it.
-- The swim carries on. A subject the swim leaves behind is let go (after 2.5 s), and the view turns back to the way
-  ahead: the guide never looks back over the diver's shoulder.
-- **Looking round:** after 8 calm seconds on the course, the view looks to one side, at the reef 20 m off, for 3.5 s,
-  then back; the other side next time.
+- Back-to-back fly-bys hand the view from one subject to the next without swinging back to the way ahead. If the next
+  subject is already in sight ahead, the view eases straight across to it; otherwise it holds the last one until that one
+  is just past the diver's side (ABEAM), then eases on.
+- A caption names it. A **glimpse** is a fly-by with no caption and no slowing: a look out at the water on the way.
+- The swim carries on. A subject the swim has left well behind (BEHIND, about 103°) ends its fly-by early, after 2.5 s;
+  one beside the diver never does. The guide never looks back over the diver's shoulder.
+- **The view turns one way at a time:** never out to a subject, back to the way ahead and out again. A test counts the
+  reversals on the swim to the anchor (round 8 had 8; now 3, all the course's own bends).
+- **The guide's own looks are calm ones:** a turn to a passing animal, or a look round, eases in and out over 3.5 s (a
+  fly-by's takes 2), and none starts within 6 s of the view last turning (QUIET). A look round needs 12 calm seconds, so
+  on this route it is rare: the scripted fly-bys and glimpses decide where the view goes.
 
 Every stop is approached on the line from its subject, so the diver arrives facing it. The camera starts turning to it
 16 m out. The visitor's own look always wins (R1, D5).
@@ -68,20 +72,22 @@ Every stop is approached on the line from its subject, so the diver arrives faci
 
 ### Act 1: across the reef to the anchor
 
-2. Fly-bys over the far (west) side of the reef: **a barracuda wheel**, **a limestone grotto**, **a pink whipray**, and
-   **the brain coral dome**, with a moray at its foot.
-3. **About: the Anchor** (stop). The diver stands squarely in front of it, with the nurse shark (where it settled) lined
+2. **The scooter**, first, on the open-water approach while the reef is still a way off. The fly-by waits up to 7 s for
+   the visitor to try E, then the guide runs it.
+3. Out to the right of the anchor, over the far (west) side of the reef: **a barracuda wheel** off to the left,
+   **a pink whipray**, and **the brain coral dome**, with a moray at its foot, each 15-18 m off. Then round the north of
+   the anchor to come in to it from in front.
+4. **About: the Anchor** (stop). The diver stands squarely in front of it, with the nurse shark (where it settled) lined
    up behind.
 
 ### Act 2: down to the treasure (deepest first, as on a real dive)
 
 4. Fly-bys:
    - **The nurse shark**, an orbit: the diver strafes round the anchor while the camera stays on the shark.
-   - **Scooter on** across the reef shelf. The fly-by waits up to 7 s for the visitor to try E, then carries on.
    - **The table coral tower.**
    - Straight down from the tower, under the barracuda's beat.
    - **The pillar coral cathedral**, seen from its open (west-south-west) front.
-   - Down the east side to the gully, clear of the barracuda's beat.
+   - Down the east side to the gully, clear of the barracuda's beat, with a glimpse out into the deep blue to the south.
    - **Through the arch.** The fly-by waits up to 7 s for the visitor to try Q.
    - **The lantern garden.**
 5. **Experience: the Treasure** (stop), seen from 9 m, the way the anchor is. The camera starts turning to it 30 m out.
@@ -113,7 +119,8 @@ Every stop is approached on the line from its subject, so the diver arrives faci
 - **Every pass is seen side-on** (round 5): a visitor rises no steeper than 30° over the diver. It swims up to 12 m under
   its band and, if that is not enough, further out (`user-creatures.js` RISE, DEEPEN).
 - **Between fly-bys the guide turns to a big animal** passing within its range (whales 100 m, orcas 80 m, the whale shark
-  60 m, dolphins 40 m: a little inside the look-there marker's), for 5 s, and not to the same one again within 45 s. Not
+  60 m, dolphins 40 m: a little inside the look-there marker's), calmly, and stays on it 9 s; not to the same one again
+  within 45 s, and not within 6 s of the view last turning. Not
   one a fly-by ahead is about to show, nor one already behind the diver.
 - During the tour, the whale shark is called in for the "Look out to sea" drift on the ascent (`oceanControls.encounter`, with
   its course measured from the drift's point). Natural encounters also get the indicator while the guide is active.
@@ -125,7 +132,7 @@ Every stop is approached on the line from its subject, so the diver arrives faci
 |---------|-------|-----|
 | C, W A S D, Space/Shift, V | Welcome | Key chips, one prompt at a time, each ticked once it's tried |
 | F | About, Experience, Projects | "Press F to open it" |
-| E (scooter) | Fly-by across the reef shelf | The guide runs it: the scooter shows in first person, the pace lifts and ⚡ reads as held and rings. "That's the scooter. Hold E to use it yourself, any time." |
+| E (scooter) | The first fly-by, on the open-water approach | The guide runs it: the scooter shows in first person, the pace lifts and ⚡ reads as held and rings. "That's the scooter. Hold E to use it yourself, any time." |
 | Q (lamp) | Fly-by through the arch | "It's dark under the arch. Press Q for your lamp." |
 | H (photo) | Whale shark drift | "Press H to take a photo of it." On touch, the deck has a camera key. |
 | C (computer) | Projects (desktop) | "Press C to check your depth on your dive computer." |
@@ -458,3 +465,15 @@ stops.
     watched over the shoulder all the way down to the arch). On a calm stretch the view looks round now and then.
   - **Orcas and whales** are turned to at the look-there marker's range, not 40 m, so a passing pod is not missed.
   - **Sound** (PR 32) is on by default; the browser still holds it until the visitor's first click or key.
+- **Round 9 (the owner's notes on round 8):**
+  - **The camera is round 7's again, with round 8's additions refined.** Round 8 cut fly-bys short and let go of the view
+    between them whenever a subject was off to the side, so the swim to the anchor went subject, way ahead, subject, way
+    ahead: left, right, left, right. Now only a subject truly behind is let go, and the view hands one subject to the next
+    in one pan. A test counts the reversals.
+  - **Big animals:** turned to calmly (3.5 s), held 9 s rather than 5, and not within 6 s of the last turn.
+  - **The opening:** the scooter is demonstrated first, on the long open-water approach. Then out to the right of the
+    anchor, with the barracuda wheel on the left, over the whipray and past the brain coral, and round to the anchor. The
+    grotto fly-by is gone, to leave room between the others.
+  - **Down to the arch:** one glimpse out into the deep blue instead of the gully floor all the way.
+  - `glance()` takes an optional fade (`exploration.js`), so the guide's own looks are slower than a fly-by's.
+  - `tour_version` is now 9.

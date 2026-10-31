@@ -61,7 +61,7 @@ function environment(hz, { reducedMotion = false, unavailable = false, collision
     visitors: () => whaleFrom ? [whaleAt(whaleFrom, clock)] : [], startDive: options => { calls.push(['startDive', options]); nav.startDive(); atSurface = false; return true; }, getTransition: () => transition,
     guide: (...args) => nav.setGuided(...args), travelPath: (...args) => unavailable ? false : nav.travelPath(...args),
     cancelTravel: (...args) => nav.cancelTravel(...args), place: (...args) => { placed++; nav.place(...args); }, lookAt: (point, follow) => nav.lookAt(point, follow), residentAt: id => residents[id] ?? null,
-    glance: (point, follow) => nav.glance(point, follow), pacing: scale => nav.pacing(scale), guideScooter: on => nav.guideScooter(on), tether: top => nav.tether(top),
+    glance: (point, follow, fade) => nav.glance(point, follow, fade), pacing: scale => nav.pacing(scale), guideScooter: on => nav.guideScooter(on), tether: top => nav.tether(top),
     surface: () => { calls.push(['surface']); return true; },
     // The bait ball as living-world.js places it (its home over the spire, 3.6 m across), here off home by its full wander.
     baitBall: () => [50.5, -27.8, -66, 3.6],
@@ -276,10 +276,10 @@ for (const hz of [30, 60, 120]) {
     let calm = 0;
     for (let frame = 0; frame < hz * 160 && tourStatus() === 'travel'; frame++) {
       env.tick();
-      // Between fly-bys, once the view has had time to come round (3 s), it never looks back over the diver's shoulder:
-      // within 90° of the way the swim is going.
+      // Between fly-bys, once the view has had time to come round (a calm turn's 3.5 s, and a little), it never looks back
+      // over the diver's shoulder: within 90° of the way the swim is going.
       calm = env.state.tour.sight ? 0 : calm + 1;
-      if (calm > hz * 3 && env.samples.length > before + hz) {
+      if (calm > hz * 4.5 && env.samples.length > before + hz) {
         const a = env.samples.at(-Math.round(hz / 2)), b = env.samples.at(-1), way = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
         if (Math.hypot(...way) > .3) { const ahead = b.map((v, k) => v + way[k] * 10); worstBack = Math.max(worstBack, aimAt(ahead)); }
       }
@@ -506,8 +506,8 @@ for (const hz of [30, 60, 120]) {
   key('KeyW'); env.tick(.2); keyup('KeyW');
   const steps = tracked.filter(([event]) => event === 'tour_step').map(([, p]) => p.index);
   assert.deepEqual(steps, STEPS.map((step, i) => i), 'a tour_step for every step, in order');
-  assert.deepEqual(tracked[0], ['tour_started', { from: 'underwater', tour_version: 8 }]);
-  assert.deepEqual(tracked.at(-1), ['tour_ended', { step: 'open-water', index: STEPS.length - 1, how: 'swam_off', tour_version: 8 }]);
+  assert.deepEqual(tracked[0], ['tour_started', { from: 'underwater', tour_version: 9 }]);
+  assert.deepEqual(tracked.at(-1), ['tour_ended', { step: 'open-water', index: STEPS.length - 1, how: 'swam_off', tour_version: 9 }]);
   for (const [event, properties] of tracked) assert.deepEqual(eventProperties(event, properties), properties, `${event} passes the privacy allowlist whole`);
   env.nav.destroy();
   console.log(`PASS: reduced motion runs the tour on fades with no pans; ${tracked.length} analytics events, all allowed.`);
@@ -688,33 +688,40 @@ console.log('PASS: going under faces the reef, whatever the surface faced.');
 }
 console.log('PASS: F at a site opens it from the stop’s viewpoint.');
 
-// On a calm stretch (the swim away from the treasure) the view looks round now and then: a look to one side of the way
-// ahead and back. And a pod of orcas passing abeam, 60 m off, is turned to for a few seconds, then let go.
+// Orcas passing abeam, 60 m off, on a calm stretch (the swim away from the treasure): the view waits until it has been
+// still a while (QUIET, 6 s), turns to them calmly and stays on them, and once they have gone eases back to the way ahead.
 {
-  const toCalm = () => {
-    const env = environment(60); toTravel(env);
-    for (let i = 0; i < 400 && !(tourStatus() === 'dwell' && env.state.tour.key === 'experience'); i++) { window.oceanTour.next(); env.tick(.5); }
-    window.oceanTour.next(); env.tick(1.5);
-    return env;
-  };
-  const aim = env => { const s = env.nav.state; return [-Math.sin(s.yaw) * Math.cos(s.pitch), Math.sin(s.pitch), -Math.cos(s.yaw) * Math.cos(s.pitch)]; };
+  const env = environment(60); toTravel(env);
+  for (let i = 0; i < 400 && !(tourStatus() === 'dwell' && env.state.tour.key === 'experience'); i++) { window.oceanTour.next(); env.tick(.5); }
+  window.oceanTour.next(); env.tick(1.5);
+  const aim = () => { const s = env.nav.state; return [-Math.sin(s.yaw) * Math.cos(s.pitch), Math.sin(s.pitch), -Math.cos(s.yaw) * Math.cos(s.pitch)]; };
   const angle = (u, v) => Math.acos(Math.max(-1, Math.min(1, u.reduce((sum, x, k) => sum + x * v[k], 0) / (Math.hypot(...u) * Math.hypot(...v)))));
-  const way = env => { const a = env.samples.at(-30), b = env.samples.at(-1); return [b[0] - a[0], b[1] - a[1], b[2] - a[2]]; };
-  {
-    const env = toCalm(); let most = 0, early = 0;
-    for (let t = 0; t < 10.5 && !env.state.tour.sight; t += 1 / 60) { env.tick(1 / 60); const off = angle(aim(env), way(env)); most = Math.max(most, off); if (t < 5) early = Math.max(early, off); }
-    assert.ok(early < .3, `the view keeps to the way ahead at first (${early.toFixed(2)} rad)`);
-    assert.ok(most > .35 && most < 1.2, `then looks round to one side (${most.toFixed(2)} rad at most)`);
-    window.oceanTour.stop(); env.nav.destroy();
-  }
-  {
-    const env = toCalm(), w = way(env), flat = Math.hypot(w[0], w[2]), at = env.state.playerPosition;
-    const orcas = { id: 'orcas', x: at[0] - w[2] / flat * 60, y: at[1] + 5, z: at[2] + w[0] / flat * 60 };
-    window.oceanControls.visitors = () => [orcas];
-    const toOrcas = () => { const p = env.state.playerPosition; return angle(aim(env), [orcas.x - p[0], orcas.y - p[1], orcas.z - p[2]]); };
-    env.tick(3); assert.ok(toOrcas() < .25, `orcas passing 60 m off are turned to (${toOrcas().toFixed(2)} rad off them)`);
-    env.tick(5); assert.ok(angle(aim(env), way(env)) < .45, `and let go after a few seconds (${angle(aim(env), way(env)).toFixed(2)} rad off the way ahead)`);
-    window.oceanTour.stop(); env.nav.destroy();
-  }
+  const way = () => { const a = env.samples.at(-30), b = env.samples.at(-1); return [b[0] - a[0], b[1] - a[1], b[2] - a[2]]; };
+  const w = way(), flat = Math.hypot(w[0], w[2]), at = env.state.playerPosition;
+  const orcas = { id: 'orcas', x: at[0] - w[2] / flat * 60, y: at[1] + 5, z: at[2] + w[0] / flat * 60 };
+  const toOrcas = () => { const p = env.state.playerPosition; return angle(aim(), [orcas.x - p[0], orcas.y - p[1], orcas.z - p[2]]); };
+  window.oceanControls.visitors = () => [orcas];
+  env.tick(2); assert.ok(toOrcas() > .9, `not straight after the view last turned (${toOrcas().toFixed(2)} rad off them)`);
+  env.tick(6.5); assert.ok(toOrcas() < .3, `then turned to, calmly (${toOrcas().toFixed(2)} rad off them)`);
+  window.oceanControls.visitors = () => [];
+  env.tick(5.5); assert.ok(angle(aim(), way()) < .45, `and once gone, back to the way ahead (${angle(aim(), way()).toFixed(2)} rad off it)`);
+  window.oceanTour.stop(); env.nav.destroy();
 }
-console.log('PASS: on a calm stretch the view looks round; passing orcas are turned to, then let go.');
+console.log('PASS: passing orcas are turned to calmly, after a quiet spell, then let go.');
+
+// On the swim in to the anchor the view turns one way at a time: from one subject to the next, never out to a subject, back
+// to the way ahead and out again (the round 8 complaint: "left and right and left and right"). A reversal is the view
+// turning against its last steady turn; the course's own bends account for a few.
+{
+  const env = environment(60); toTravel(env);
+  let last = env.nav.state.yaw, dir = 0, reversals = 0, run = 0;
+  for (let i = 0; i < 60 * 200 && tourStatus() === 'travel'; i++) {
+    env.tick(); const yaw = env.nav.state.yaw, rate = Math.atan2(Math.sin(yaw - last), Math.cos(yaw - last)) * 60; last = yaw;
+    const d = Math.abs(rate) > .12 ? Math.sign(rate) : 0;
+    if (d) { run++; if (run > 20 && d !== dir) { if (dir) reversals++; dir = d; } } else run = 0;
+  }
+  assert.equal(tourStatus(), 'dwell', 'reached the anchor');
+  assert.ok(reversals <= 4, `the view turns one way at a time on the way in (${reversals} reversals)`);
+  window.oceanTour.stop(); env.nav.destroy();
+  console.log(`PASS: on the way to the anchor the view turns one way at a time (${reversals} reversals).`);
+}

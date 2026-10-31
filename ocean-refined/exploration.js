@@ -90,7 +90,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   // to a fraction of itself, and guideScoot runs the scooter for the visitor to see. A leg's end or any takeover clears all three.
   // The glance moves from one subject to the next as one eased pan: its point blends from where it was looking to the new
   // subject (glanceT over glanceFor seconds, eased in and out), and it fades in and out the same way (glanceFade, GLANCE_FADE s).
-  let glanceOn=false,glanceWeight=0,glanceFade=0,glanceT=1,glanceFor=1,paceScale=1,paceGoal=1,guideScoot=false,wasLeading=false;
+  let glanceOn=false,glanceWeight=0,glanceFade=0,glanceFadeFor=GLANCE_FADE,glanceT=1,glanceFor=1,paceScale=1,paceGoal=1,guideScoot=false,wasLeading=false;
   const glancePoint=new THREE.Vector3(),glanceFrom=new THREE.Vector3(),glanceTo=new THREE.Vector3(),glanceSeen=new THREE.Vector3();
   // tetherTop: a ceiling (world y) the swim may not rise above, set by the guided dive while its welcome lets the visitor try
   // the controls, so rising cannot carry them out of it and up to the surface. Infinity is no tether.
@@ -237,16 +237,18 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   // A fly-by's subject while the leg swims on (null lets the view go back to the course), its pace as a fraction of the cruise,
   // and the scooter run by the guide. They only act while a leg is under way.
   // follow: the same subject has moved (an animal swimming by), so the target moves with it without starting a new pan.
-  function glance(point,follow=false){
-    if(!point){glanceOn=false;wake();return;}
+  // fade: how long the view takes to come round to it and, later, back (s); a calm look is slower than a fly-by's.
+  function glance(point,follow=false,fade=GLANCE_FADE){
+    if(!point){glanceOn=false;glanceFadeFor=fade;wake();return;}
     const at=coordinate(point);
     if(follow&&glanceOn){glanceTo.set(at[0],at[1],at[2]);wake();return;}
+    glanceFadeFor=fade;
     if(glanceWeight>.05){
       // From the subject in view to the next: longer for a bigger turn, as a pan (PAN_BASE, PAN_PER_RADIAN) is.
       glanceFrom.copy(glancePoint);glanceTo.set(at[0],at[1],at[2]);
       scratchA.subVectors(glanceFrom,glanceSeen.set(base.x,base.y-8,base.z));scratchB.subVectors(glanceTo,glanceSeen);
       const turn=scratchA.lengthSq()>1e-6&&scratchB.lengthSq()>1e-6?scratchA.angleTo(scratchB):0;
-      glanceFor=clamp(PAN_BASE+turn*PAN_PER_RADIAN,PAN_MIN,PAN_MAX);glanceT=0;
+      glanceFor=clamp(PAN_BASE+turn*PAN_PER_RADIAN,PAN_MIN,PAN_MAX)*Math.max(1,fade/GLANCE_FADE);glanceT=0;
     }else{glanceFrom.set(at[0],at[1],at[2]);glanceTo.copy(glanceFrom);glancePoint.copy(glanceFrom);glanceT=1;}
     glanceOn=true;wake();
   }
@@ -446,7 +448,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
       // --- autopilot: where to swim and where to look ---
       let steering=false,autoLook=false,goalYaw=look.yaw,goalPitch=0;
       // A fly-by eases in and out: the glance over about a second and a half, the pace a little slower so the view leads the brake.
-      paceScale+=(paceGoal-paceScale)*(1-Math.exp(-dt*1.1));glanceFade=clamp(glanceFade+(glanceOn&&hasDest?1:-1)*dt/GLANCE_FADE,0,1);glanceWeight=easeInOut(glanceFade);
+      paceScale+=(paceGoal-paceScale)*(1-Math.exp(-dt*1.1));glanceFade=clamp(glanceFade+(glanceOn&&hasDest?1:-1)*dt/glanceFadeFor,0,1);glanceWeight=easeInOut(glanceFade);
       if(glanceT<1){glanceT=Math.min(1,glanceT+dt/glanceFor);glancePoint.lerpVectors(glanceFrom,glanceTo,easeInOut(glanceT));}else glancePoint.copy(glanceTo);
       if(traveling){delta.copy(dest).sub(base);if(delta.length()<settings.travelArrival){hasDest=false;docking=true;dockTime=0;}}
       if((hasDest||docking)&&submerged&&!suspended){

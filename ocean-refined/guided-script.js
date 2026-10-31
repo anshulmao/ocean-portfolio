@@ -55,32 +55,35 @@ export const STEPS = [
     short: 'My portfolio, as a reef. Try the controls as we swim in.',
     // The reef rising ahead, the barracuda wheel off to the right, the wreck down to the left.
     pan: [[-22, -18, -30], [-36, -20, -44], [18, -21, -39], [-22, -16, -36]] },
-  // Across the far side of the reef first (the west), then in to the anchor, squarely in front of it with the nurse shark
-  // lined up behind it.
+  // The reef is still a way off, so the scooter comes first. Then out to the right of the anchor (the west), with the
+  // barracuda wheel off to the left, over the pink whipray and past the brain coral dome, and round to the anchor from the
+  // north, squarely in front of it with the nurse shark lined up behind it. Each subject 15-18 m off, so it reads whole, and
+  // far enough apart that the view hands one to the next without hurrying.
   { key: 'about', kind: 'stop', landmark: 'about', opens: 'glance', place: `About · The Anchor · ${depth(-9)}`, signal: '#7ff0cf',
     view: { behind: 'sleeper', near: [-19, -12.6, -22], distance: 10, rise: 2 },
     title: 'This anchor is me', line: 'Open it for my portfolio at a glance: who I am and where everything lives.',
     via: [
-      { at: [-18, -13, -46], key: 'barracuda', title: 'A barracuda wheel', line: 'Young barracuda turning slowly in mid-water.',
-        look: [-36, -20, -44] },
-      { at: [-16, -15, -28], key: 'grotto', title: 'A limestone grotto', line: 'Stone ribs over the sand, and sea fans at the door.',
-        look: [-35, -27, -30] },
-      { at: [-28, -12, -12], key: 'whipray', title: 'A pink whipray', line: 'It glides low over the sand by the cleaning reef.',
-        look: { resident: 'whipray', near: [-41, -23, -16] } },
-      { at: [-22, -9, 2], key: 'brain-coral', title: 'The brain coral dome', line: 'A giant moray keeps a den at its foot.',
+      { at: [-28, -12, -56], key: 'scooter', title: 'The scooter', line: 'The reef is a way off yet. Let’s take the scooter.',
+        scooter: true, teach: 'scooter', wait: 'scooter', hold: 5, slow: .7 },
+      [-40, -13, -52],
+      { at: [-52, -14, -44], key: 'barracuda', title: 'A barracuda wheel', line: 'Young barracuda turning slowly in mid-water.',
+        look: [-36, -20, -44], hold: 6 },
+      [-54, -14, -34],
+      { at: [-56, -13, -22], key: 'whipray', title: 'A pink whipray', line: 'It glides low over the sand by the cleaning reef.',
+        look: { resident: 'whipray', near: [-41, -23, -16] }, hold: 6 },
+      { at: [-58, -10, -4], key: 'brain-coral', title: 'The brain coral dome', line: 'A giant moray keeps a den at its foot.',
         look: [-42, -16, -2], hold: 6 },
-      [-16, -6, 4],
+      // Round the north of the anchor, to come in to it from in front.
+      [-52, -8, 10], [-38, -6, 14], [-24, -6, 10], [-16, -6, 4],
     ] },
-  // Round the anchor to the nurse shark asleep behind it, then right across the reef shelf on the scooter, by the table coral
-  // tower, straight down to the pillar coral cathedral's open front, down the east side to the gully, through the limestone arch
+  // Round the anchor to the nurse shark asleep behind it, then across the reef shelf, by the table coral tower, straight down to the pillar coral cathedral's open front, down the east side to the gully, through the limestone arch
   // (reef.js: the arch at 20, -72) and over the lantern garden to the treasure: the deepest stop comes first, as on a real dive.
   { key: 'experience', kind: 'stop', landmark: 'experience', view: [-13.5, -43.2, -74.2], teach: 'computer', lead: 30, place: `Experience · The Treasure · ${depth(-45)}`, signal: '#ffcf7a',
     title: 'The treasure', line: 'This is where you’ll find my experience.',
     via: [
       { orbit: { around: 'about', radius: 11, turn: 110, rise: 2.5 }, at: [-6, -7, -20], key: 'nurse', title: 'A nurse shark, asleep',
         line: 'Nurse sharks rest on the sand by day. Let it be.', look: { resident: 'sleeper', near: [-19, -12.6, -22] }, hold: 8, slow: .45, reach: 4 },
-      { at: [6, -9, -24], key: 'scooter', title: 'The scooter', line: 'Across the reef shelf. The deep end is out there; we’ll get to it.',
-        scooter: true, teach: 'scooter', wait: 'scooter', hold: 4, slow: .7 },
+      [6, -9, -24],
       { at: [22, -12, -14], key: 'tower', title: 'The table coral tower', line: 'Plates of coral stacked up a leaning stone trunk.',
         look: [38, -15.5, -8], hold: 6 },
       // Straight down from the tower to look in at the cathedral's open side, which faces the wreck (hero-formations.js
@@ -90,7 +93,12 @@ export const STEPS = [
       [28, -17.5, -19], [32, -21, -24], [34.5, -22.5, -29],
       { at: [35, -23, -35], key: 'cathedral', title: 'The pillar coral cathedral', line: 'Organ-pipe columns in a horseshoe.',
         look: [48, -23.5, -28], hold: 6, reach: 9 },
-      [37, -27.5, -47], [38, -32, -54], [32, -37, -57], [24, -40, -58.5], [21, -43.5, -60],
+      // Down to the arch: a glimpse, with no caption and no slowing, out past the gully's edge into the deep blue to the
+      // south (it stays off the diver's side as the swim turns west for the arch), rather than the gully floor ahead the
+      // whole way. One look between the cathedral and the arch, so the view is never turned twice in quick succession.
+      [37, -27.5, -47],
+      { at: [38, -32, -54], key: 'open-water-glimpse', look: [36, -44, -84], hold: 7, slow: 1, reach: 6 },
+      [32, -37, -57], [24, -40, -58.5], [21, -43.5, -60],
       { at: [20, -46.4, -62.6], key: 'arch', title: 'Through the arch', line: 'A limestone arch over the gully. In we go.',
         look: [20, -48, -72], teach: 'lamp', wait: 'lamp', hold: 6 },
       [20, -49, -66], [20, -51, -70], [20, -51.6, -79],
