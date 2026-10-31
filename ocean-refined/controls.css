@@ -5,7 +5,7 @@
    mouse, a trackpad or a gamepad never sees it. Everything else on the water is a drag to look.
    The deck's geometry sits on the root so what stands above the keys can read it: --keys-bottom and --keys-top are
    where the keys start and end, measured up from the bottom of the view. The touch prompt (hud.css) rests on --keys-top. */
-:root{--deck-bottom:calc(64px + var(--o-safe-b));--key:clamp(44px,12.4vw,50px);--key-gap:6px;--stick:104px;--key-cols:2;--key-rows:2;
+:root{--deck-bottom:calc(64px + var(--o-safe-b));--key:clamp(44px,12.4vw,50px);--key-gap:6px;--stick:104px;--key-cols:2;--key-rows:3;
   --keys-bottom:calc(var(--deck-bottom) + 4px);--keys-top:calc(var(--keys-bottom) + var(--key-rows)*var(--key) + (var(--key-rows) - 1)*var(--key-gap))}
 html .swim-controls.touch-deck{
   position:fixed;inset:0;z-index:var(--o-z-controls);display:none;grid-template-columns:none;gap:0;pointer-events:none;
@@ -26,9 +26,11 @@ html[data-input="touch"] .swim-controls.touch-deck:not([hidden]){display:block}
 .touch-stick[data-held="true"] .touch-stick-knob{background:#8ff4ff59}
 
 /* Four keys in two rows: flashlight beside rise, scooter beside sink, so rise and sink sit under the right thumb. The
-   interact key is not drawn: on touch the prompt itself is the action (hud.css), right above these keys. */
+   camera has a row of its own above them, over the flashlight. The interact key is not drawn: on touch the prompt
+   itself is the action (hud.css), right above these keys. */
 .touch-actions{position:absolute;right:max(12px,var(--o-safe-r));bottom:var(--keys-bottom);display:grid;grid-template-columns:repeat(var(--key-cols),var(--key));gap:var(--key-gap);pointer-events:auto}
 .touch-actions [data-action="interact"]{display:none}
+.touch-actions [data-photo]{grid-column:1/-1;justify-self:start}
 .touch-key{display:grid;place-items:center;width:var(--key);height:var(--key);padding:0;border:1px solid var(--holo-dim);border-radius:50%;background:var(--holo-fill);color:var(--holo-ink);box-shadow:inset 0 0 12px #5fe9ff14;touch-action:none;cursor:pointer}
 .touch-key svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;filter:var(--holo-halo);pointer-events:none}
 .touch-key--hold{border-radius:14px}
@@ -39,23 +41,23 @@ html[data-input="touch"] .swim-controls.touch-deck:not([hidden]){display:block}
 
 /* Wide touch screens (tablets, phones on their side) keep the desktop console in the bottom right corner: the keys stand above it. */
 @media(min-width:601px){:root{--deck-bottom:calc(28px + var(--o-safe-b));--key:48px;--keys-bottom:calc(132px + var(--o-safe-b))}}
-@media(min-width:601px) and (max-height:550px){:root{--keys-bottom:calc(118px + var(--o-safe-b));--key:44px;--key-cols:4;--key-rows:1}}
+@media(min-width:601px) and (max-height:550px){:root{--keys-bottom:calc(118px + var(--o-safe-b));--key:44px;--key-cols:4;--key-rows:2}}
 /* Very narrow phones: the ring and the keys shrink a step so the two corners never meet. */
 @media(max-width:350px){:root{--stick:92px;--key:44px;--key-gap:4px}.touch-stick{width:132px}.touch-stick-base{left:var(--stick-x,54px)}}
 /* Phones (the query of the layout tokens in tokens.css): the whole deck stands in the controls zone at the foot of the
-   view, under the sheet. Upright, the four keys make one row (flashlight, scooter, rise, sink), the prompt rests on
-   them and the stick's corner narrows so the two never meet; on its side the corners sit beside the sheet and the
-   keys keep their square. */
+   view, under the sheet. Upright, the four keys make one row (flashlight, scooter, rise, sink) with the camera over the
+   flashlight, the prompt rests on them and the stick's corner narrows so the two never meet; on its side the corners
+   sit beside the sheet and the keys keep their square. */
 @media(max-width:599px),(pointer:coarse) and (max-height:499px){
   :root{--deck-bottom:calc(var(--o-pad) + var(--o-safe-b));--key:44px;--keys-bottom:var(--deck-bottom)}
   .touch-stick{left:max(4px,var(--o-safe-l))}
 }
 @media(max-width:599px){
-  :root{--key-cols:4;--key-rows:1}
+  :root{--key-cols:4;--key-rows:2}
   .touch-stick{width:min(164px,40vw)}
   .touch-actions [data-lamp]{order:1}.touch-actions [data-swim="KeyE"]{order:2}.touch-actions [data-swim="Space"]{order:3}.touch-actions [data-swim="ShiftLeft"]{order:4}
 }
-@media(pointer:coarse) and (max-height:499px){:root{--key-cols:2;--key-rows:2}}
+@media(pointer:coarse) and (max-height:499px){:root{--key-cols:2;--key-rows:3}}
 /* While touch is in use the water and the deck never scroll, zoom or select (the deck and its keys set touch-action themselves; panels still scroll). */
 html[data-input="touch"] body[data-submerged="true"]{overscroll-behavior:none}
 html[data-input="touch"] #world{touch-action:none}

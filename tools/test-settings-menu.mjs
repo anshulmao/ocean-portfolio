@@ -8,7 +8,7 @@ try{
  await page.goto(process.env.OCEAN_TEST_URL||'http://127.0.0.1:4210/ocean-refined/',{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>window.oceanDiagnostics?.ready,null,{timeout:120000});
  report.openingSunAltitude=await page.evaluate(()=>oceanDiagnostics.openingSunAltitude);
- assert.ok(report.openingSunAltitude<0&&report.openingSunAltitude>-4,'Start just before sunrise');
+ assert.ok(report.openingSunAltitude>10,'Start in daylight');
  const defaults=await page.evaluate(()=>({brightness:oceanControls.settings.brightnessBoost,aim:oceanControls.settings.mouseSensitivity,mode:oceanControls.settings.keyboardMode,preset:oceanControls.settings.preset}));
  assert.deepEqual(defaults,{brightness:80,aim:.0019,mode:'strafe',preset:'responsive'});
  assert.equal(await page.locator('#motion').count(),0);
@@ -33,7 +33,11 @@ try{
   await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>oceanControls.weather.locked),false);
   await page.locator('#weather-glyph').click();assert.equal(await page.evaluate(()=>oceanControls.weather.target),'clear');
   await page.locator('#weather-glyph').click();assert.equal(await page.evaluate(()=>oceanControls.weather.target),'rain');
+  // Sound is on by default; mute turns it off and back on.
+  assert.equal(await page.evaluate(()=>oceanAudio.enabled),true);
   await page.locator('#sound-volume').fill('40');
+  await page.locator('#sound-mute').click();
+  assert.equal(await page.evaluate(()=>oceanAudio.enabled),false);
   await page.locator('#sound-mute').click();
   assert.equal(await page.evaluate(()=>oceanAudio.enabled),true);
   await page.locator('#sound-mute').click();

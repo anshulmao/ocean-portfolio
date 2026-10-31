@@ -7,8 +7,8 @@ export const EVENT_PROPERTIES = {
   // The profile card on the surface diver (diver-profile.js), and how it was reached.
   profile_opened:['input'],
   // The guided dive (guided-dive.js): a funnel by step, and how each tour ended.
-  tour_started:['from'], tour_step:['step','index'], tour_taken_over:['step','index'], tour_rejoined:['step','index'],
-  tour_ended:['step','index','how'],
+  tour_started:['from','tour_version'], tour_step:['step','index','tour_version'], tour_taken_over:['step','index','tour_version'], tour_rejoined:['step','index','tour_version'],
+  tour_ended:['step','index','how','tour_version'],
 };
 export function eventProperties(event, properties = {}) {
   if (!Object.hasOwn(EVENT_PROPERTIES,event)) return null;

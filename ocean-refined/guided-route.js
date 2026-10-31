@@ -10,6 +10,15 @@ export function planGuidedRoute(start, goal, { via = [], floor = () => -Infinity
   if (via.length) {
     const scenic = checked(via);
     if (scenic.length) return scenic;
+    // One blocked stretch must not cost the whole scenic route (it once sent the tour straight past the arch): plan it
+    // stretch by stretch, each finding its own way round, and leave out a waypoint that cannot be reached at all.
+    const joined = []; let from = start;
+    for (const [i, point] of [...via, goal].entries()) {
+      const part = planGuidedRoute(from, point, { floor, clear, clearance });
+      if (part.length) { joined.push(...part); from = part.at(-1); }
+      else if (i === via.length) { joined.length = 0; break; }
+    }
+    if (joined.length) return joined;
   }
   const dx = goal[0] - start[0], dz = goal[2] - start[2], span = Math.hypot(dx, dz);
   // A wide, gentle bow lets the reef pass across the view. Try either side when
