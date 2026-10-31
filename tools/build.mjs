@@ -30,6 +30,8 @@ if(broken.length)throw Error('Scripts failed to parse:\n'+broken.map(([rel,run])
 // Runtime-injected stylesheets.
 for(const name of ['ambient-audio.css','expedition-interactions.css','controls.css','waterline-splash.css','safety-rating.css'])await copy(name);
 await copy('favicon.svg');await tree('assets/fonts');await tree('assets/portfolio',f=>!f.endsWith('.md'));await tree('assets/prepared/charts',f=>!f.endsWith('.png'));
+// Only the prepared sound clips ship; their sources stay in the repository (tools/prepare-audio.mjs cuts them).
+await tree('assets/audio/clips');
 const active=['anchor.glb','sunken_ship_low_poly.glb','treasure_chest.glb','anchor-economy.glb','sunken_ship_low_poly-economy.glb','treasure_chest-economy.glb','coral_waterverbruik_gezond.glb','coral_landbouw_gezond.glb','coral_anker_kleur.glb','coral_uitstoot_gezond.glb','coral_visnet_gezond_fish.glb','manifest.json','CREDITS.md'];
 for(const f of active)await copy('assets/models/'+f);
 await tree('assets/models/user-sets/sets/creature-set',f=>/\.(?:glb|json|md)$/i.test(f));await tree('assets/models/user-sets/sets/coral-set',f=>/\.(?:glb|json|md)$/i.test(f));

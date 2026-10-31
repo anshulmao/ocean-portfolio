@@ -33,10 +33,17 @@ const THUNDER = { delay: [.7, 2.8], attack: .45, tail: 6.5 };
 const WHALE = { first: [25, 60], gap: [65, 130], below: 12 };
 const SURF = { gap: [3.5, 9] }, FISH = { gap: [5, 16], below: 2.5 };
 const CALLS = {
-  whale: { range: 130, near: 35, level: .08, calls: [[['upcall', 'moan', 'groan'], [6, 14]]] },
-  orcas: { range: 100, near: 22, level: .09, calls: [[['orcaA', 'orcaB'], [2.5, 7]], [['clicksB'], [5, 11]]] },
-  dolphins: { range: 70, near: 12, level: .1, calls: [[['clicksA', 'clicksB'], [.8, 3]], [['whistleA', 'whistleB', 'whistleC'], [1.8, 5.5]]] }
+  whale: { range: 130, near: 35, level: .08, calls: [[['upcall', 'moan', 'groan'], [6, 14], ['whale0', 'whale1']]] },
+  orcas: { range: 100, near: 22, level: .09, calls: [[['orcaA', 'orcaB'], [2.5, 7]], [['clicksB'], [5, 11], ['clicks0', 'clicks1']]] },
+  dolphins: { range: 70, near: 12, level: .1, calls: [[['clicksA', 'clicksB'], [.8, 3], ['clicks0', 'clicks1']], [['whistleA', 'whistleB', 'whistleC'], [1.8, 5.5], ['whistleA', 'whistleB', 'whistleC', 'chitter']]] }
 };
+// RECORDED: real recordings, cut by tools/prepare-audio.mjs into assets/audio/clips/ (their sources and licence are in
+// assets/audio/CREDITS.md): whole breath cycles from a dive, a sea bed under the water, dolphin clicks and chatter,
+// whale calls and thunder. A call kind in CALLS lists, third, the recordings it uses instead of its synthesised calls.
+// Each recording takes over from its synthesised counterpart once it has loaded; until then, or if it cannot load, the
+// synthesis plays. breaths: how many cycles there are; level: their gains on the mix; lap: seconds two breaths overlap.
+const RECORDED = { breaths: 7, level: { breath: .05, sea: .14, thunder: .18, far: .03 }, lap: .12 };
+const CLIPS = [...Array.from({ length: RECORDED.breaths }, (_, i) => `breath${i}`), 'clicks0', 'clicks1', 'chitter', 'whale0', 'whale1', 'thunder0', 'thunder1', 'sea'];
 const DUCK = { gain: .35, cutoff: 700 };
 const FADE = { in: .3, out: .07 };
 const TICK = 100, GLIDE = .12, LOW = 24000;
@@ -222,6 +229,9 @@ function build(ctx, whole = false) {
   for (const node of [inA, inB, exLP]) { node.channelCount = 1; node.channelCountMode = 'explicit'; }
   wire(white, inA, rough); wire(white, inB, inBLevel, rough); wire(rough, inhale, reg); wire(brownA, roughness, rough.gain);
   wire(white, exLP, flutter, exhale, reg); wire(flutterOsc, flutterDepth, flutter.gain); wire(bubbleLoop, bubbles, reg); wire(reg, water);
+  // The recordings: breaths into the regulator, the sea bed and far whales through the water, thunder through the air.
+  const breaths = gain(1), seaLoop = later(), sea = gain(), far = gain(RECORDED.level.far), peal = gain();
+  wire(breaths, reg); wire(seaLoop, sea, waterLP); wire(far, waterLP); wire(peal, airLP);
   const splashLP = filter('lowpass', 6000, -3), splash = gain();
   wire(white, splashLP, splash, bus);
 
@@ -250,10 +260,34 @@ function build(ctx, whole = false) {
   };
   if (whole) while (draw());
   return { ctx, buffers, draw, open, count, limiter, master, bus, duck, airLP, air, waterLP, water, windBP, waveLP, rainBP, thunderLP, droneBP, humB, rushBP, motorTone, motorLP,
-    reg, inA, inB, exLP, flutterOsc, bubbleLoop, splashLP, surgeLP, washBP, voices,
-    layers: { wind, wave, rain, patter, thunder, drone, tone: hum, rush, motor, inhale, exhale, bubbles, splash, surge, wash, fizz, ...Object.fromEntries(Object.entries(voices).map(([id, voice]) => [id, voice.level])) },
+    reg, inA, inB, exLP, flutterOsc, bubbleLoop, splashLP, surgeLP, washBP, voices, seaLoop, far, recorded: [],
+    layers: { wind, wave, rain, patter, thunder, drone, tone: hum, rush, motor, inhale, exhale, bubbles, splash, surge, wash, fizz, breaths, sea, peal, ...Object.fromEntries(Object.entries(voices).map(([id, voice]) => [id, voice.level])) },
     aim: new Map(), breathAt: 0, pace: 1 };
 }
+
+// 2b. The recordings, fetched and decoded after the click that turned the sound on (the offline render waits for them).
+// The sea bed is folded into a seamless loop and started as it arrives; one that cannot be fetched or decoded is left out.
+function record(g) {
+  return Promise.all(CLIPS.map(name => fetch(`assets/audio/clips/${name}.mp3`)
+    .then(response => { if (!response.ok) throw Error(response.status); return response.arrayBuffer(); })
+    .then(data => g.ctx.decodeAudioData(data))
+    .then(buffer => {
+      if (name === 'sea') { g.seaLoop.buffer = seamless(g.ctx, buffer); g.seaLoop.start(0, Math.random() * g.seaLoop.buffer.duration); }
+      else g.buffers[name] = buffer;
+      g.recorded.push(name);
+    }).catch(() => {})));
+}
+// A loop whose end runs into its start: its last `lap` seconds are faded in under its first, so the seam cannot be heard.
+function seamless(ctx, buffer, lap = 1) {
+  const n = Math.round(lap * buffer.sampleRate), length = buffer.length - n, out = ctx.createBuffer(buffer.numberOfChannels, length, buffer.sampleRate);
+  for (let c = 0; c < buffer.numberOfChannels; c++) {
+    const from = buffer.getChannelData(c), to = out.getChannelData(c);
+    to.set(from.subarray(0, length));
+    for (let i = 0; i < n; i++) to[i] = from[i] * Math.sin(i / n * PI / 2) + from[length + i] * Math.cos(i / n * PI / 2);
+  }
+  return out;
+}
+const has = (g, name) => g.recorded.includes(name);
 
 // 3. Steering. Continuous parameters follow the scene: s is { under, depth,
 // wind, rain, storm, speed, scooter, open, first, breathing }. Gusts, swell and the
@@ -286,7 +320,10 @@ function steer(g, s, at, glide = GLIDE) {
   if (s.under < .002) return;
   set(g.waterLP.frequency, lerp(5200, 1300, deep));
   set(g.droneBP.frequency, lerp(260, 140, deep) * (1 + .16 * Math.sin(at * .11 + 2 * Math.sin(at * .037))));
-  set(L.drone.gain, LEVEL.drone * (1 - .2 * deep) * (.85 + .15 * Math.sin(at * .071 + 1)));
+  // Once the recorded sea is playing it carries the bed, and the synthesised drone only colours it.
+  const recordedSea = has(g, 'sea');
+  set(L.drone.gain, LEVEL.drone * (recordedSea ? .35 : 1) * (1 - .2 * deep) * (.85 + .15 * Math.sin(at * .071 + 1)));
+  set(L.sea.gain, recordedSea ? RECORDED.level.sea * (1 - .3 * deep) : 0);
   set(L.tone.gain, LEVEL.tone * (.45 + .55 * deep) * (.6 + .4 * Math.sin(at * .09)));
   set(g.humB.detune, 8 * Math.sin(at * .05));
   set(g.rushBP.frequency, 320 + 520 * pace);
@@ -306,6 +343,7 @@ function steer(g, s, at, glide = GLIDE) {
 // follow it. Each inhale opens with the valve's tick, swells and tapers; each
 // exhale bursts, flutters, and leaves its bubbles trailing after it.
 function breathe(g, effort, until) {
+  if (CLIPS.some(name => name.startsWith('breath') && has(g, name))) return breatheRecorded(g, effort, until);
   const r = Math.random, a = g.layers.inhale.gain, x = g.layers.exhale.gain, b = g.layers.bubbles.gain;
   while (g.breathAt < until) {
     const t = g.breathAt; g.pace = clamp(g.pace + (r() - .5) * .12, .85, 1.2);
@@ -327,10 +365,30 @@ function breathe(g, effort, until) {
     g.breathAt = outEnd + .15 + .3 * r() + pause;
   }
 }
+// Recorded breathing: whole cycles from the dive recording follow one another in random order, never the same one twice
+// running, each overlapping the last by RECORDED.lap seconds on an equal-power fade so the water under them runs on
+// unbroken. Each is a little faster or slower and a little stronger or softer than recorded; finning hard quickens them.
+const FADE_IN = Float32Array.from({ length: 32 }, (_, i) => Math.sin(i / 31 * PI / 2)), FADE_OUT = FADE_IN.slice().reverse();
+function breatheRecorded(g, effort, until) {
+  const cycles = CLIPS.filter(name => name.startsWith('breath') && has(g, name));
+  while (g.breathAt < until) {
+    const choices = cycles.length > 1 ? cycles.filter(name => name !== g.lastBreath) : cycles, name = g.lastBreath = pick(choices);
+    const t = g.breathAt, rate = lerp(1, 1.18, effort) * (.95 + .1 * Math.random()), length = g.buffers[name].duration / rate, lap = RECORDED.lap;
+    const level = RECORDED.level.breath * (Math.random() < BREATH.shallow ? .7 : .85 + .15 * Math.random()) * lerp(1, 1.15, effort);
+    const node = g.ctx.createBufferSource(), envelope = g.ctx.createGain();
+    node.buffer = g.buffers[name]; node.playbackRate.value = rate; node.connect(envelope).connect(g.layers.breaths);
+    envelope.gain.setValueCurveAtTime(FADE_IN.map(v => v * level), t, lap); envelope.gain.setValueCurveAtTime(FADE_OUT.map(v => v * level), t + length - lap, lap);
+    node.onended = () => { node.disconnect(); envelope.disconnect(); }; node.start(t); node.stop(t + length);
+    g.breathAt = t + length - lap;
+  }
+}
 // Event envelopes are chains of exponential approaches: each starts from wherever the parameter is, so one
 // event landing on another never steps.
 // Thunder: a slow swell, three rolls, a long tail, and a filter that closes as it travels.
 function thunder(g, at, power = 1) {
+  // A recorded clap, a little higher or lower each time, when one has loaded.
+  const claps = ['thunder0', 'thunder1'].filter(name => has(g, name));
+  if (claps.length) { g.layers.peal.gain.setValueAtTime(RECORDED.level.thunder * (.5 + .5 * power), at); play(g, pick(claps), g.layers.peal, .85 + .25 * Math.random(), at); return; }
   const a = g.layers.thunder.gain, f = g.thunderLP.frequency, peak = LEVEL.thunder * (.5 + .5 * power), rise = THUNDER.attack;
   let t = at + rise, level = peak;
   a.cancelScheduledValues(at); f.cancelScheduledValues(at);
@@ -375,9 +433,10 @@ function listen(g, at, seen, ear) {
     aim(g, voice.pan.pan, clamp(side * .9, -.9, .9), at, .25);
     aim(g, voice.lp.frequency, lerp(16000, 2200, (d / kind.range) ** .7) * (behind > .3 ? .7 : 1), at, .3);
     aim(g, voice.level.gain, kind.level * Math.min(1, voice.near), at, .4);
-    kind.calls.forEach(([names, gap], i) => {
+    kind.calls.forEach(([names, gap, recorded = []], i) => {
+      const heard = recorded.filter(name => g.buffers[name]);
       if (!voice.next[i]) voice.next[i] = at + span(gap) * .4;
-      else if (at >= voice.next[i]) { play(g, pick(names), voice.input, .92 + .16 * Math.random()); voice.next[i] = at + span(gap); }
+      else if (at >= voice.next[i]) { play(g, pick(heard.length ? heard : names), voice.input, .92 + .16 * Math.random()); voice.next[i] = at + span(gap); }
     });
   }
 }
@@ -429,7 +488,12 @@ function tick() {
   // Far whales call now and then from out of sight, but keep quiet while one is passing.
   if (hearing && scene.depth > WHALE.below && !graph.voices.whale.near) {
     if (!whaleAt) whaleAt = now + span(WHALE.first);
-    else if (now >= whaleAt) { play(graph, Math.random() < .5 ? 'whaleA' : 'whaleB', graph.waterLP, .82 + .36 * Math.random()); whaleAt = now + span(WHALE.gap); }
+    else if (now >= whaleAt) {
+      // A recorded call, slowed and deepened by distance, when one has loaded.
+      const far = ['whale0', 'whale1'].filter(name => has(graph, name));
+      if (far.length) play(graph, pick(far), graph.far, .7 + .2 * Math.random()); else play(graph, Math.random() < .5 ? 'whaleA' : 'whaleB', graph.waterLP, .82 + .36 * Math.random());
+      whaleAt = now + span(WHALE.gap);
+    }
   }
   primed = true;
 }
@@ -443,7 +507,7 @@ function start(fromGesture = false) {
     if (!(navigator.userActivation ? navigator.userActivation.hasBeenActive : fromGesture)) { arm(); return; }
     try { ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'playback' }); graph = build(ctx); }
     catch { try { ctx?.close().catch(() => {}); } catch {} ctx = graph = null; return; }
-    drawLater();
+    drawLater(); record(graph);
   }
   clearTimeout(sleeping);
   if (ctx.state === 'running') { run(); return; }
@@ -539,14 +603,16 @@ if (read('ocean-sound-hint') !== '1') addEventListener('oceanmediumchange', hint
 // QA hooks. render(): the same graph offline for a scene state (an object, or a function of time for a whole dive),
 // optionally only the named layer or layers and with events ([name, time, value]), so levels and clicks can be
 // measured without listening; whole: false builds the graph the way the enabling click does, leaving the deferred
-// buffers undrawn, so that click's cost can be timed. probe(): an analyser on the live output.
-function render(seconds = 6, state = {}, { solo = null, events = [], rate = 44100, level = volume, whole = true } = {}) {
+// buffers undrawn, so that click's cost can be timed; recorded: false leaves the recordings out, to hear the synthesis
+// they stand in for. probe(): an analyser on the live output.
+async function render(seconds = 6, state = {}, { solo = null, events = [], rate = 44100, level = volume, whole = true, recorded = true } = {}) {
   const offline = new OfflineAudioContext(2, Math.round(seconds * rate), rate), g = build(offline, whole), still = { under: 0, depth: 0, wind: .18, rain: 0, storm: 0, speed: 0, scooter: 0, open: false, first: false, breathing: 1 };
   g.master.gain.value = MASTER * loudness(level); g.breathAt = .3;
+  if (recorded) await record(g);
   if (solo) for (const [name, node] of Object.entries(g.layers)) if (![solo].flat().includes(name)) node.disconnect();
   // An animal call event's value is where its animal is, as [distance (m), side (-1 left to 1 right)]: the voice is set
   // there for the whole render and the call is played through it.
-  const voiceOf = name => Object.keys(CALLS).find(id => CALLS[id].calls.some(([names]) => names.includes(name)));
+  const voiceOf = name => Object.keys(CALLS).find(id => CALLS[id].calls.some(([names, , heard = []]) => names.includes(name) || heard.includes(name)));
   for (const [name, , value] of events) {
     const id = voiceOf(name), voice = g.voices[id];
     if (!id) continue;
@@ -581,7 +647,7 @@ window.oceanAudio = {
     return { enabled, volume, breathing, context: ctx?.state ?? 'none', running: Boolean(timer), waiting: armed, paused: held, reducedMotion: calm.matches, nodes: graph?.count ?? 0, tick: TICK,
       master: graph ? round(graph.master.gain.value) : 0, air: graph ? round(graph.air.gain.value) : 0, water: graph ? round(graph.water.gain.value) : 0, mix: graph ? round(graph.bus.gain.value) : 0,
       airCutoff: graph ? Math.round(graph.airLP.frequency.value) : 0, waterCutoff: graph ? Math.round(graph.waterLP.frequency.value) : 0, mixCutoff: graph ? Math.round(graph.duck.frequency.value) : 0,
-      limiting: graph ? round(graph.limiter.reduction) : 0, layers, scene: { ...scene } };
+      limiting: graph ? round(graph.limiter.reduction) : 0, recorded: graph ? [...graph.recorded] : [], layers, scene: { ...scene } };
   },
   render, probe
 };
