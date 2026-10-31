@@ -1,20 +1,13 @@
-/* The dive summary (dive-summary.js): a button on the right once the diver is back at the surface, and the logbook
-   page it opens. Projected light like the rest of the instruments: thin glowing edges, a dense tint for reading,
+/* The dive summary (dive-summary.js): a button beside Guided dive once the diver is back at the surface, and the
+   logbook page it opens. Projected light like the rest of the instruments: thin glowing edges, a dense tint for reading,
    and no backdrop blur over the canvas. Motion: the page comes up in --journey-standard on --journey-in and leaves
    in --motion-exit on --journey-out; its sections follow 60 ms apart; hovers answer within --motion-hover. */
 
-/* The way in. */
-.ds-open{position:fixed;right:max(var(--pad,24px),env(safe-area-inset-right));top:50%;translate:0 -50%;z-index:6;display:grid;justify-items:start;gap:6px;min-height:44px;padding:12px 16px 12px 14px;border:1px solid var(--holo-dim);border-radius:3px;background:#06283acc;color:var(--holo-ink);font:inherit;text-align:left;cursor:pointer;box-shadow:inset 0 0 22px #5fe9ff17,var(--holo-glow);text-shadow:var(--holo-text-glow);transition:translate var(--motion-hover) var(--journey-ease),border-color var(--motion-hover) var(--journey-ease),opacity var(--journey-standard) var(--journey-in)}
-.ds-open[hidden]{display:none}
-.ds-open:hover{border-color:var(--holo-strong);translate:-3px -50%}
-.ds-open:active{translate:-1px -50%}
-.ds-open:focus-visible{outline:2px solid var(--holo-focus,var(--holo-strong));outline-offset:3px}
-.ds-open b{font:500 15px/1 var(--holo-font)}
-.ds-open small{font:500 10px/1 var(--holo-mono);letter-spacing:.06em;color:var(--holo-strong)}
-.ds-open i{position:absolute;right:-4px;top:-4px;width:9px;height:9px;border-radius:50%;background:var(--holo-mint);box-shadow:0 0 0 0 #7ff0cf88;animation:ds-ping 2.2s var(--motion-sine) infinite}
-.ds-open[data-seen="true"] i{display:none}
-@keyframes ds-ping{70%,100%{box-shadow:0 0 0 10px #7ff0cf00}}
-body:is([data-submerged="true"],[data-menu="open"],[data-movement-panel="open"],[data-clear-ui="true"],[data-dialog="open"],[data-profile="open"]) .ds-open,body:has(dialog[open]) .ds-open{visibility:hidden;pointer-events:none}
+/* The way in: a third button beside Dive in and Guided dive, in the guided button's style (surface.css). Its badge
+   is mint while the summary is new. */
+.portfolio-actions .ds-open[hidden]{display:none}
+.portfolio-actions .ds-open svg{fill:none}
+.portfolio-actions .ds-open[data-seen="false"] small{background:color-mix(in srgb,var(--holo-mint,#7ff0cf) 32%,transparent);color:var(--ink)}
 
 /* The page. */
 dialog.ds{--holo:#8ff4ff;--holo-strong:#c9fbff;--holo-dim:#8ff4ff66;--holo-faint:#8ff4ff24;--holo-ink:#eefdff;--holo-mint:#7ff0cf;--holo-amber:#ffcf7a;--holo-coral:#ff9d8a;--holo-text-glow:0 0 2px #021d2ab8,0 0 9px #5fe9ff70;--holo-focus:#f2feff;
@@ -161,7 +154,7 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
 .ds-foot div{display:flex;gap:8px;flex-wrap:wrap}
 
 @media (prefers-reduced-motion:reduce){
-  dialog.ds[open],dialog.ds[open] .ds-step,dialog.ds[data-closing="true"],.ds-detail[data-swap="true"] :is(.art img,.copy),.ds-open i{animation:none}
+  dialog.ds[open],dialog.ds[open] .ds-step,dialog.ds[data-closing="true"],.ds-detail[data-swap="true"] :is(.art img,.copy){animation:none}
   .postcard,.species{transition:none}
 }
 @media (max-width:860px){
@@ -177,7 +170,5 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
   .ds-tiles dd{font-size:20px}
   .ds-cards{grid-auto-columns:92%;scroll-padding:0 4%;padding:6px 4% 12px}
   .ds-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .ds-open{top:auto;bottom:calc(84px + env(safe-area-inset-bottom));translate:0 0}
-  .ds-open:hover,.ds-open:active{translate:0 0}
   .ds :is(.holo-chip){min-height:44px}
 }

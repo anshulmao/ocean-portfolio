@@ -31,10 +31,11 @@ const SITE_DEPTH = { about: 9, experience: 21, projects: 47 };
 // The planner's chart covers x -62..62 and z -105..35 (dive-plan.js).
 const mapX = x => (x + 62) / 124 * 100, mapY = z => (z + 105) / 140 * 100;
 
+// The way in sits with the hero's calls to action, after Guided dive, and takes its style (surface.css .guided-button).
 const button = document.createElement('button');
-button.type = 'button'; button.className = 'ds-open'; button.hidden = true;
+button.type = 'button'; button.className = 'guided-button ds-open'; button.hidden = true;
 button.setAttribute('aria-haspopup', 'dialog'); button.setAttribute('aria-controls', 'dive-summary');
-button.innerHTML = '<i aria-hidden="true"></i><b>Dive summary</b><small></small>';
+button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg><span>Dive summary</span><small></small>';
 const dialog = document.createElement('dialog');
 dialog.className = 'ds'; dialog.id = 'dive-summary'; dialog.setAttribute('aria-labelledby', 'ds-title');
 dialog.innerHTML = `<div class="ds-inner">
@@ -73,7 +74,9 @@ dialog.innerHTML = `<div class="ds-inner">
   </section>
   <footer class="ds-foot ds-step" style="--i:5"><p></p><div></div></footer>
 </div>`;
-document.body.append(button, dialog);
+document.body.append(dialog);
+const guidedButton = document.getElementById('guided-dive');
+if (guidedButton) guidedButton.after(button); else (document.querySelector('.portfolio-actions') || document.body).append(button);
 
 let record = null, photos = [], current = 0, selected = null, filter = 'dive', closing = 0;
 // Sites found: those the journey has found this session, and any this dive reached.
@@ -318,7 +321,7 @@ function open() {
   dialog.scrollTop = 0; delete dialog.dataset.closing;
   window.oceanControls?.setInterfaceOpen?.(true);
   dialog.showModal(); document.body.dataset.summary = 'true';
-  button.dataset.seen = 'true'; button.setAttribute('aria-expanded', 'true');
+  button.dataset.seen = 'true'; button.setAttribute('aria-expanded', 'true'); $('small', button).textContent = clock(record.time);
   track('dive_summary_opened');
   return true;
 }
@@ -343,7 +346,8 @@ button.addEventListener('click', open);
 addEventListener('oceandivelog', ({ detail }) => {
   record = detail;
   const seen = Object.keys(detail.seen).length;
-  $('small', button).textContent = `${clock(detail.time)} · ${detail.maxDepth.toFixed(1)} m · ${seen} species`;
+  $('small', button).textContent = 'New';
+  button.setAttribute('aria-label', `Dive summary: ${clock(detail.time)}, ${detail.maxDepth.toFixed(1)} metres, ${seen} species`);
   button.hidden = false; button.dataset.seen = 'false'; button.setAttribute('aria-expanded', 'false');
 });
 window.oceanDiveSummary = { open, close, get isOpen() { return dialog.open; }, get record() { return record; } };

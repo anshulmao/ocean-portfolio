@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import {launchBrowser} from './browser.mjs';
 
-// The dive summary end to end: a real dive to the Anchor with a photo, back to the surface, the button on the right,
+// The dive summary end to end: a real dive to the Anchor with a photo, back to the surface, the button beside Guided dive,
 // the log page (numbers, profile, chart, postcard, field guide), sharing the photo with a note, keyboard and focus,
 // desktop and phone, and the button gone on the next dive. The photo intake is answered here; nothing is sent.
 const browser = await launchBrowser({headless: true});
@@ -38,14 +38,14 @@ try {
   assert.ok(during.samples > 10, 'The profile is sampled');
   await page.evaluate(() => { oceanControls.surface({instant: true}); oceanJourney.tick(.1); });
   await open.waitFor({state: 'visible'});
-  assert.match(await open.innerText(), /Dive summary[\s\S]*\d\d:\d\d · [\d.]+ m · \d+ species/);
+  assert.match(await open.innerText(), /Dive summary\s*New/);
   assert.equal(await dialog.evaluate(node => node.open), false, 'Surfacing never opens the page by itself');
 
   for (const [name, width, height] of [['desktop', 1440, 900], ['phone', 390, 844]]) {
     await page.setViewportSize({width, height});
     const box = await open.boundingBox();
     assert.ok(box.x >= 0 && box.x + box.width <= width, 'Button inside the viewport');
-    if (name === 'desktop') assert.ok(box.x > width / 2, 'Button on the right');
+    assert.equal(await open.evaluate(node => node.previousElementSibling?.id), 'guided-dive', 'Button sits after Guided dive');
     await open.click();
     await page.waitForFunction(() => document.querySelector('#dive-summary').open);
     await page.waitForTimeout(800);
@@ -90,5 +90,5 @@ try {
   await page.waitForFunction(() => oceanDiagnostics.submerged, null, {timeout: 60000});
   assert.equal(await open.isVisible(), false, 'Hidden on the next dive');
   assert.deepEqual(errors, []);
-  console.log(`PASS: real dive (seen: ${during.seen.join(', ') || 'none'}); button on the right; log page on desktop and phone; photo shared with a note; filters; focus; next-dive cleanup.`);
+  console.log(`PASS: real dive (seen: ${during.seen.join(', ') || 'none'}); button beside Guided dive; log page on desktop and phone; photo shared with a note; filters; focus; next-dive cleanup.`);
 } finally { await browser.close(); }
