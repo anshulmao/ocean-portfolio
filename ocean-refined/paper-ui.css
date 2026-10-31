@@ -343,3 +343,16 @@ html body #landmark-dialog[open]{animation-timing-function:var(--p-spring)}
 }
 html body #general-brightness .movement-field+.movement-field{margin-top:20px}
 html body #general-brightness .movement-field{padding-bottom:0}
+
+/* 14. Round 3 (critic): controls stay visible on the tone cards, the plan card hugs its content, and the depth pill reads as a gauge. */
+html body #settings-general-content :is(.theme-control,.weather-picker)>button:not(#_){background:var(--o-surface-1)}
+html body #settings-general-content :is(.theme-control,.weather-picker)>button:not(#_):hover{background:var(--o-surface-2)}
+html body #settings-general-content :is(.theme-control,.weather-picker)>button:not(#_):is([aria-pressed="true"],[data-current="true"]){background:var(--p-action);color:var(--p-action-ink)}
+html body #settings-general-content input[type="number"]{background:var(--o-surface-1)}
+html body #settings-general-content .settings-subgroup>:first-child{margin-top:0}
+html body #settings-general-content .settings-subgroup{padding-top:20px}
+html body .plan-info{align-self:start;align-content:start}
+html body .plan-info .plan-art{height:56px;margin:0 0 4px}
+html body .plan-info .plan-art svg{margin:0}
+.paper-depth{position:relative;flex:none;width:44px;height:6px;margin-left:6px;border-radius:3px;background:var(--o-surface-2)}
+.paper-depth b{position:absolute;left:0;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:var(--p-action);translate:calc(var(--p,0) * 32px) 0;transition:translate 240ms ease-out}

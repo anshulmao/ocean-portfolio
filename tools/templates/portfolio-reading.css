@@ -579,3 +579,5 @@ body{color:var(--o-ink)}
 
 .reading-porthole-marker{font-size:13px;letter-spacing:0}
 .reading-resume-preview>span{font-size:13px}
+.reading-more-work summary>span,.reading-more-work summary>span:last-child{font-size:15px;color:var(--o-ink)}
+.reading-more-work summary>span:last-child{color:var(--o-ink-2)}

@@ -46,10 +46,10 @@ document.addEventListener('pointermove', event => {
 }, {passive: true});
 
 // Bubbles leave the Dive button as the dive begins: a handful, each its own size, drift and pace.
-function bubbles(el) {
+function bubbles(el, count = 9) {
   const box = el.getBoundingClientRect(), layer = document.createElement('div');
   layer.className = 'paper-bubbles'; layer.setAttribute('aria-hidden', 'true');
-  for (let i = 0; i < 9; i++) {
+  for (let i = 0; i < count; i++) {
     const b = document.createElement('i'), size = 5 + Math.random() * 11;
     b.style.cssText = `left:${box.left + 14 + Math.random() * (box.width - 28)}px;top:${box.top + box.height * .35}px;width:${size}px;height:${size}px;` +
       `--dx:${(Math.random() - .5) * 46}px;--dy:${-(70 + Math.random() * 110)}px;animation-delay:${Math.random() * 220}ms;animation-duration:${900 + Math.random() * 700}ms`;
@@ -140,3 +140,19 @@ function reading() {
   update();
 }
 reading();
+
+// The depth pill is a gauge: a bubble rides a short track as the real depth readout changes (0 to 40 m), and a bubble leaves the pill
+// each time the diver passes another 5 m. The readout itself belongs to the world; this only watches it.
+const readout = document.querySelector('#depth-value'), pill = document.querySelector('.scene-footer .location');
+if (readout && pill) {
+  const track = document.createElement('i'), dot = document.createElement('b');
+  track.className = 'paper-depth'; track.setAttribute('aria-hidden', 'true'); track.append(dot); pill.append(track);
+  let band = 0;
+  new MutationObserver(() => {
+    const metres = parseFloat(readout.textContent) || 0;
+    dot.style.setProperty('--p', Math.min(1, metres / 40).toFixed(3));
+    const now = Math.floor(metres / 5);
+    if (now > band && !reduce.matches) bubbles(pill, 3);
+    band = now;
+  }).observe(readout, {childList: true, characterData: true, subtree: true});
+}

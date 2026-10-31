@@ -62,3 +62,18 @@ logbook sidebar, the gauge riding over the marquee, micro labels under 13 px, a 
 Declined: reordering the plan dialog on phones (it would move the site-map board, which is out of scope); a count-up depth pill on the
 dive HUD (the dive computer and depth gauge are out of scope and unreviewable headless); the wave-wipe between the HUD and the
 static page (a larger change, needs a real GPU to judge).
+
+## Round 3 (same critic)
+
+Colour 4 [3] (the sky tint), Finish 4 [3]; Concept, Category, Hierarchy, Typography, Consistency and Copy stay at 4; Richness 3, Rhythm 3,
+Signature 3, Motion 3 (motion judged from the description). 8 of 12 lines at 4 or above (67%): not done. Its night renders predated the
+round-3 fixes, so the night numbering and caption gap it reported were already fixed.
+
+### What round 4 did
+
+- The depth pill is a gauge: a bubble rides a short track as the real depth readout changes, and a bubble leaves the pill every 5 m.
+- Settings chips and value boxes sit on a tone step again (they had vanished inside the tone cards); more air under "Lighting".
+- The plan card hugs its content with a small anchor; "More experiments" is 15 px and readable.
+
+Declined again: a phone reorder of the plan dialog and the diver's idle bob (both live in the parts that are out of scope: the site-map
+board and the 3D scene); the hero button already has a repeating ripple ring.
