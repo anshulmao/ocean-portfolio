@@ -1,0 +1,359 @@
+/* Paper UI: the white theme of the diver's profile card (diver-profile.css), carried over the rest of the world interface
+   and shaped by the taste skill (design-taste-frontend): flat tone steps instead of glass, glow, gradients and hairlines;
+   sentence-case labels at a readable size; one typeface; one accent; round controls. Loaded after every other stylesheet,
+   so it restates the hologram tokens on the pieces it dresses and turns the ornaments off.
+
+   Left as they were, on purpose: the dive computer (#dive-computer, the air gauge and console, the depth gauge, the
+   compass tape, the calm-dive readouts), the reef map and the plan dialog's site-map board, and the 3D world. They keep
+   the projected-light look (hologram.css). Everything is drawn from the --o- tokens, so night swaps the whole set. */
+
+:root{
+  --p-action:#123e47;--p-action-ink:#fff;--p-accent:var(--o-accent-ink);
+  --p-mint:#0b6a56;--p-amber:#8a5200;--p-coral:#a3341f;--p-violet:#5a3fa0;
+  /* Only what floats (a menu, a dialog, a card over the scene) casts a shadow. */
+  --p-float:0 24px 50px -22px #052c3a73,0 4px 14px -6px #052c3a33;
+  --p-r-card:18px;--p-r-field:10px;
+}
+:root[data-theme="night"]{--p-action:var(--o-sunlit);--p-action-ink:#04202b;--p-mint:#6ff0dc;--p-amber:#ffd84f;--p-coral:#ff9d8a;--p-violet:#c9b6ff;--p-float:0 24px 50px -22px #0009,0 4px 14px -6px #0006}
+
+/* 1. The pieces that wear the theme. Each restates the hologram tokens in ink on paper, so every rule written
+      against them (hud.css, journey.css, dive-plan.css, archive.css...) follows without being rewritten. */
+html body :is(.surface-nav,.settings-toggle,.settings-menu,.capture-hint,.interact-prompt,.ascent-status,.status,.archive-toggle,.dive-computer-toggle,.quiet-ui-toggle,.quiet-ui-restore,.quiet-ui-computer,.view-controls,.explore-back,.scene-footer,.tour-card,.journey-toast,.zone-card,.dive-summary,.expedition-tools,.expedition-notice,.expedition-dialog,.holo-chip,.lamp-notice,.plan-info,.plan-overview,.arc-reading,#landmark-dialog,dialog.ocean-dialog,dialog.dive-prompt,dialog.arc-lightbox){
+  --holo:var(--o-ink-2);--holo-strong:var(--o-ink);--holo-ink:var(--o-ink);--holo-dim:var(--o-line);--holo-faint:transparent;
+  --holo-tint:var(--o-surface-0);--holo-tint-solid:var(--o-surface-0);--holo-fill:var(--o-surface-1);--holo-fill-hover:var(--o-surface-2);
+  --holo-fill-on:var(--o-surface-2);--holo-focus:var(--o-ink);--holo-glow:none;--holo-text-glow:none;--holo-halo:none;
+  --holo-mint:var(--p-mint);--holo-amber:var(--p-amber);--holo-coral:var(--p-coral);--holo-violet:var(--p-violet);
+  --holo-font:var(--o-display);--holo-mono:var(--o-display);
+  color-scheme:light;text-shadow:none;
+}
+:root[data-theme="night"] body :is(.surface-nav,.settings-toggle,.settings-menu,.capture-hint,.interact-prompt,.ascent-status,.status,.archive-toggle,.dive-computer-toggle,.quiet-ui-toggle,.quiet-ui-restore,.quiet-ui-computer,.view-controls,.explore-back,.scene-footer,.tour-card,.journey-toast,.zone-card,.dive-summary,.expedition-tools,.expedition-notice,.expedition-dialog,.holo-chip,.lamp-notice,.plan-info,.plan-overview,.arc-reading,#landmark-dialog,dialog.ocean-dialog,dialog.dive-prompt,dialog.arc-lightbox){color-scheme:dark}
+
+/* 2. Surfaces: a flat tone, soft corners, a shadow only where it floats. No brackets, scanlines, lanyard holes or pencils. */
+html body :is(.settings-menu,.capture-hint,.interact-prompt,.ascent-status,.status,.tour-card,.journey-toast,.zone-card,.dive-summary,.expedition-notice,.lamp-notice,.expedition-dialog,dialog.dive-prompt,.plan-info,.plan-overview){
+  background:var(--o-surface-0);border:0;border-radius:var(--p-r-card);box-shadow:var(--p-float);color:var(--o-ink);font-family:var(--o-display);text-shadow:none;
+}
+html body :is(.settings-menu,.capture-hint,.interact-prompt,.ascent-status,.status,.tour-card,.journey-toast,.zone-card,.dive-summary,.expedition-notice,.lamp-notice,.expedition-dialog,dialog.dive-prompt,.plan-info,.plan-overview)::before,
+html body :is(.settings-menu,.capture-hint,.interact-prompt,.ascent-status,.status,.tour-card,.dive-summary,.expedition-dialog,dialog.dive-prompt,.plan-info,.plan-overview,.arc-reading)::after{display:none}
+html body .holo:is(.arc-reading,.plan-overview,.plan-info)::before{display:none}
+html body .holo:is(.arc-reading,.plan-overview,.plan-info){background:var(--o-surface-0);border:0;border-radius:var(--p-r-card);box-shadow:none;color:var(--o-ink);text-shadow:none}
+html body :is(.slate-hand,.tour-title,.dive-summary header .holo-label,.dive-prompt h2){text-decoration:none;rotate:none;letter-spacing:-.01em}
+html body :is(.settings-menu,#landmark-dialog,.tour-card,.plan-info,.plan-overview,.dive-summary,dialog.dive-prompt,.expedition-dialog) .holo-label{font:500 14px/1.3 var(--o-display);letter-spacing:0;text-transform:none;color:var(--o-ink)}
+html body :is(.settings-menu,#landmark-dialog,.tour-card,.plan-info,.plan-overview,.dive-summary) .holo-value{font:500 15px/1 var(--o-display);letter-spacing:0;font-variant-numeric:tabular-nums}
+
+/* 3. Controls: pills. Secondary controls sit on a tone step; the primary action is the one solid fill. */
+html body :is(.settings-toggle,.menu-toggle,.time-cycle,.settings-close,.movement-close,.camera-toggle,.motion-control,.movement-toggle,.credits-toggle,.archive-toggle,.dive-computer-toggle,.quiet-ui-toggle,.quiet-ui-restore,.quiet-ui-computer,.explore-back,.holo-chip,.settings-surface,.weather-glyph),
+html body :is(.view-controls,.movement-actions,.weather-picker,.theme-control,.movement-preset-row)>button{
+  border:0;border-radius:var(--o-r-pill);background:var(--o-surface-1);color:var(--o-ink);font:500 14px/1.2 var(--o-display);letter-spacing:0;text-transform:none;text-shadow:none;box-shadow:none;
+}
+html body :is(.settings-toggle,.menu-toggle,.settings-close,.time-cycle,.quiet-ui-toggle,.archive-toggle,.dive-computer-toggle,.explore-back){background:var(--o-surface-0);box-shadow:var(--p-float)}
+html body :is(.settings-toggle,.menu-toggle,.time-cycle,.settings-close,.movement-close,.camera-toggle,.motion-control,.movement-toggle,.credits-toggle,.archive-toggle,.dive-computer-toggle,.quiet-ui-toggle,.quiet-ui-restore,.quiet-ui-computer,.explore-back,.holo-chip,.settings-surface):hover,
+html body :is(.view-controls,.movement-actions,.weather-picker,.theme-control,.movement-preset-row)>button:hover{background:var(--o-surface-2);border:0;color:var(--o-ink)}
+html body :is(.settings-toggle,.menu-toggle,.camera-toggle,.motion-control,.movement-toggle,.credits-toggle,.archive-toggle,.dive-computer-toggle,.time-cycle):is([aria-pressed="true"],[aria-expanded="true"]),
+html body :is(.weather-picker,.theme-control,.movement-preset-row)>button:is([aria-pressed="true"],[aria-checked="true"],[data-current="true"]){background:var(--p-action);color:var(--p-action-ink);border:0}
+html body :is(.holo-chip--go,.settings-surface){background:var(--p-action);color:var(--p-action-ink)}
+html body :is(.holo-chip--go,.settings-surface):hover{background:var(--p-action);filter:brightness(1.12)}
+html body :is(.settings-toggle,.menu-toggle,.settings-close,.time-cycle,.weather-glyph) svg,html body .map-expand svg{filter:none}
+html body .settings-toggle{width:44px;height:44px;padding:0;display:grid;place-items:center}
+html body :is(.settings-menu,.interact-prompt,.dive-computer-toggle) kbd{border:0;border-radius:6px;background:var(--o-surface-2);color:var(--o-ink-2);font:500 11px/1 var(--o-display)}
+html body :is(.settings-toggle,.settings-close,.time-cycle,.camera-toggle,.motion-control,.movement-toggle,.credits-toggle,.archive-toggle,.dive-computer-toggle,.quiet-ui-toggle,.quiet-ui-restore,.explore-back,.holo-chip,.view-controls>button,.touch-key):focus-visible{outline:2px solid var(--o-ink);outline-offset:3px}
+
+/* 4. Masthead: a plain wordmark and plain links, no strip around them. */
+html body .wordmark{font:500 20px/1.1 var(--o-display);letter-spacing:-.01em;text-transform:none}
+html body .wordmark span{display:block;margin-top:4px;font:400 13px/1.2 var(--o-display);letter-spacing:0;opacity:.8}
+html body .surface-nav{gap:4px;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
+html body .surface-nav a{padding:10px 14px;border-radius:var(--o-r-pill);font:500 15px/1 var(--o-display);letter-spacing:0;text-transform:none;color:var(--o-ink);transition:background-color 160ms var(--ease)}
+html body .surface-nav a:hover{background:color-mix(in srgb,var(--o-surface-0) 70%,transparent)}
+html body .surface-nav a:focus-visible{outline:2px solid var(--o-ink);outline-offset:2px}
+
+/* 5. The hero. */
+html body:not([data-submerged="true"]) .hero .surface-copy .eyebrow,html body .hero .deep-copy .eyebrow,html body .hero .eyebrow{font:500 16px/1.4 var(--o-display);letter-spacing:0;text-transform:none;color:var(--o-ink-2)}
+html body .hero .eyebrow span{display:none}
+html body:not([data-submerged="true"]) .portfolio-actions :is(.dive-button,.guided-button){border:0;box-shadow:none;letter-spacing:0}
+html body:not([data-submerged="true"]) .portfolio-actions .dive-button{background:var(--p-action);color:var(--p-action-ink)}
+html body:not([data-submerged="true"]) .portfolio-actions .guided-button{background:var(--o-surface-0);color:var(--o-ink)}
+html body:not([data-submerged="true"]) .portfolio-actions .guided-button:not(:disabled):hover{background:var(--o-surface-1)}
+html body .guided-button small{background:var(--o-surface-2);color:var(--o-ink-2)}
+html body .portfolio-links .hero-link+.hero-link::before{display:none}
+html body .portfolio-links .hero-link{padding:0 18px 0 0;margin-right:6px}
+
+/* 6. The settings panel: sections are tone steps, not ruled lines. */
+html body .settings-menu{width:min(360px,calc(100vw - 32px));overflow:hidden}
+html body .settings-head{padding:14px 12px 6px 20px}
+html body .settings-head .holo-label{font-size:20px;letter-spacing:-.01em}
+html body .settings-body{padding:0 12px 14px;scrollbar-color:var(--o-surface-2) transparent}
+html body .settings-group{margin:8px 0 0;padding:14px 16px;border:0;border-radius:14px;background:var(--o-surface-1)}
+html body .settings-folder>summary{min-height:28px;color:var(--o-ink);font:500 16px/1.3 var(--o-display);letter-spacing:0;text-transform:none}
+html body .settings-folder>summary::after{font:400 20px/1 var(--o-display);color:var(--o-ink-2)}
+html body .settings-subgroup,html body #settings-general-content>.settings-subgroup{border:0}
+html body .settings-subgroup h3.holo-label,html body .time-title{font:500 14px/1.3 var(--o-display);letter-spacing:0;text-transform:none;color:var(--o-ink)}
+html body .time-labels,html body .sky-clock,html body #time-reading,html body .settings-menu output{font-family:var(--o-display);letter-spacing:0;color:var(--o-ink-2)}
+html body #time-reading{font-size:18px;font-weight:500;color:var(--o-ink)}
+html body .holo-switch small{color:var(--o-ink-2)}
+html body .settings-menu :is(input[type="number"],input[type="text"],select){border:0;border-radius:var(--p-r-field);background:var(--o-surface-0);color:var(--o-ink);font-family:var(--o-display)}
+html body .settings-menu :is(input[type="number"],input[type="text"],select):focus-visible{outline:2px solid var(--o-ink);outline-offset:2px}
+html body .theme-control>button,html body .weather-picker>button{border-radius:var(--o-r-pill);min-height:38px}
+/* Sliders: a soft track and one round thumb. */
+html body :is(#time-slider,.movement-field input[type="range"])::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:var(--o-surface-2)}
+html body :is(#time-slider,.movement-field input[type="range"])::-webkit-slider-thumb{width:20px;height:20px;margin-top:-7px;border:3px solid var(--o-surface-0);border-radius:50%;background:var(--p-action);box-shadow:none}
+html body :is(#time-slider,.movement-field input[type="range"])::-moz-range-track{height:6px;border-radius:3px;background:var(--o-surface-2)}
+html body :is(#time-slider,.movement-field input[type="range"])::-moz-range-thumb{width:14px;height:14px;border:3px solid var(--o-surface-0);border-radius:50%;background:var(--p-action)}
+html body #time-orb{box-shadow:none}
+html body .holo-switch i{border:0;border-radius:12px;background:var(--o-surface-2)}
+html body .holo-switch i::before{background:var(--o-surface-0);box-shadow:none}
+html body .holo-switch input:checked+i{background:var(--p-action)}
+html body .holo-switch input:checked+i::before{background:var(--p-action-ink);box-shadow:none}
+html body .weather-picker>button[data-current="true"]::after{box-shadow:none}
+html body .lock-pip{box-shadow:none}
+
+/* 7. Small HUD notices over the scene. */
+html body :is(.capture-hint,.interact-prompt,.status,.ascent-status){padding:12px 20px}
+html body .capture-hint strong{font:500 15px/1.2 var(--o-display);letter-spacing:0}
+html body .capture-hint span{font:400 13px/1.45 var(--o-display);color:var(--o-ink-2)}
+html body .ascent-status{font:500 14px/1.2 var(--o-display);letter-spacing:0}
+html body .status{font:400 14px/1.45 var(--o-display)}
+html body .interact-prompt kbd{background:var(--p-action);color:var(--p-action-ink)}
+html body .scene-footer{color:var(--o-ink)}
+html body .scene-footer .location,html body .scene-footer .look-hint{font-family:var(--o-display);letter-spacing:0;text-transform:none;font-size:13px}
+html body .view-controls>button{min-width:44px;min-height:44px;box-shadow:var(--p-float)}
+
+/* 8. Slates, toasts and the guided tour card. */
+html body .tour-card{padding:18px 20px}
+html body .tour-card .tour-kicker,html body .tour-card .tour-count{font:500 13px/1.3 var(--o-display);letter-spacing:0;text-transform:none;color:var(--o-ink-2)}
+html body .tour-card .tour-title{font:500 20px/1.2 var(--o-display);letter-spacing:-.01em;color:var(--o-ink)}
+html body .tour-card .tour-body,html body .journey-toast span,html body .zone-card small{color:var(--o-ink-2);font-family:var(--o-display)}
+html body .tour-keys kbd{border:0;background:var(--o-surface-2);color:var(--o-ink)}
+html body .zone-card strong,html body .journey-toast strong{font-family:var(--o-display);letter-spacing:0;text-transform:none;color:var(--o-ink)}
+html body .zone-card small,html body .journey-toast small{letter-spacing:0;text-transform:none}
+html body .dive-summary dt,html body .plan-info dt{font:400 13px/1.3 var(--o-display);letter-spacing:0;text-transform:none;color:var(--o-ink-2)}
+html body .dive-summary dd,html body .plan-info dd{font-family:var(--o-display);letter-spacing:0;color:var(--o-ink)}
+
+/* 9. Dialogs: the logbook, the credits and the plan dialog's frame. */
+html body dialog.ocean-dialog{background:var(--o-surface-0);border:0;border-radius:var(--p-r-card);box-shadow:var(--p-float);color:var(--o-ink)}
+html body :is(dialog.ocean-dialog,#landmark-dialog,dialog.expedition-dialog,dialog.arc-lightbox)::backdrop{background:#052c3a8c;backdrop-filter:none}
+html body dialog.ocean-dialog:not(#landmark-dialog)::before,html body dialog.ocean-dialog:not(#landmark-dialog)::after{display:none}
+html body .dialog-close{border:0;border-radius:50%;background:var(--o-surface-1);color:var(--o-ink);box-shadow:none}
+html body .dialog-close:hover{background:var(--o-surface-2)}
+html body .credits-dialog .eyebrow{font:500 14px/1.3 var(--o-display);letter-spacing:0;text-transform:none;color:var(--o-ink-2)}
+html body .credits-dialog a{color:var(--o-ink)}
+html body :is(.plan-info p,.plan-overview p,.plan-kicker){font-family:var(--o-display);letter-spacing:0;text-transform:none;color:var(--o-ink-2)}
+html body .plan-info h3{color:var(--o-ink);font-family:var(--o-display);letter-spacing:-.02em}
+
+/* The logbook: paper shell, one accent for every section. */
+html body #landmark-dialog{
+  --sig:var(--p-accent);--sig-soft:var(--o-surface-1);--sig-line:var(--o-line);--sig-ink:var(--p-action-ink);
+  --arc-text:var(--o-ink);--arc-muted:var(--o-ink-2);--arc-shell:var(--o-surface-0);--arc-paper:var(--o-surface-0);--arc-solid:var(--o-surface-1);--arc-rule:transparent;--arc-field:var(--o-surface-1);
+  border:0;border-radius:var(--p-r-card);background:var(--o-surface-0);box-shadow:var(--p-float);color:var(--o-ink);
+}
+html body #landmark-dialog:is([data-section],[data-section="about"],[data-section="experience"],[data-section="projects"],[data-section="resume"]){--sig:var(--p-accent);--sig-soft:var(--o-surface-1);--sig-line:var(--o-line);--sig-ink:var(--p-action-ink)}
+html body #landmark-dialog::before,html body #landmark-dialog::after,html body #landmark-dialog .arc-scan{display:none}
+html body #landmark-dialog .arc-reading,html body #landmark-dialog .arc-reading.holo{background:var(--o-surface-0);border:0}
+html body #landmark-dialog .arc-index{background:var(--o-surface-1)}
+html body #landmark-dialog :is(.arc-header,.arc-footer,.arc-body){border:0}
+
+/* 10. Logbook: sentence case, no tracked labels, no outlined boxes. :not(#_) lifts these above the id-scoped rules of archive.css. */
+html body #landmark-dialog *:not(#_){text-transform:none}
+html body #landmark-dialog *:not(#_):not(:is(h1,h2,h3,h4,h5,h6)){letter-spacing:0}
+html body #landmark-dialog #landmark-title:not(#_){font:500 20px/1.2 var(--o-display);letter-spacing:-.01em;color:var(--o-ink)}
+html body #landmark-dialog :is(.arc-tool,.arc-pager button,.dialog-return,.arc-expand,.arc-flip,.arc-back,.arc-more-toggle,.arc-links a,.arc-linklike,.arc-actions>*,.arc-cert-more):not(#_){border:0;border-radius:var(--o-r-pill);background:var(--o-surface-1);color:var(--o-ink);font:500 14px/1.2 var(--o-display);box-shadow:none}
+html body #landmark-dialog :is(.arc-tool,.arc-pager button,.dialog-return,.arc-expand,.arc-flip,.arc-back,.arc-more-toggle,.arc-links a,.arc-linklike,.arc-actions>*,.arc-cert-more):not(#_):hover{background:var(--o-surface-2);color:var(--o-ink)}
+html body #landmark-dialog :is(.arc-links li:first-child a,.arc-action--primary):not(#_){background:var(--p-action);color:var(--p-action-ink)}
+html body #landmark-dialog :is(.arc-links li:first-child a,.arc-action--primary):not(#_):hover{background:var(--p-action);filter:brightness(1.12)}
+html body #landmark-dialog .dialog-close:not(#_){border:0;border-radius:50%;background:var(--o-surface-1);color:var(--o-ink)}
+html body #landmark-dialog .dialog-close:not(#_):hover{background:var(--o-surface-2)}
+html body #landmark-dialog kbd:not(#_){border:0;border-radius:6px;background:var(--o-surface-2);color:var(--o-ink-2);font:500 11px/1 var(--o-display)}
+html body #landmark-dialog .arc-variant select:not(#_){border:0;border-radius:var(--p-r-field);background:var(--o-surface-1);color:var(--o-ink);font:400 14px/1.2 var(--o-display)}
+html body #landmark-dialog .arc-emblem:not(#_){border:0;border-radius:50%;background:var(--o-surface-1);color:var(--o-ink)}
+html body #landmark-dialog .arc-index:not(#_){border:0;background:var(--o-surface-1)}
+html body #landmark-dialog .arc-rail-name:not(#_){font:500 15px/1.2 var(--o-display);color:var(--o-ink)}
+html body #landmark-dialog .arc-rail-name small:not(#_){font:400 13px/1.2 var(--o-display);color:var(--o-ink-2)}
+html body #landmark-dialog .arc-rail-section:not(#_)[aria-current]{background:var(--o-surface-0);border:0;border-radius:12px;box-shadow:none}
+html body #landmark-dialog .arc-rail-entries button:not(#_){border:0;border-radius:10px;color:var(--o-ink)}
+html body #landmark-dialog .arc-rail-entries button:not(#_)[aria-current="page"],html body #landmark-dialog .arc-rail-entries button:not(#_):hover{background:var(--o-surface-0)}
+html body #landmark-dialog .arc-rail-entries .holo-label:not(#_),html body #landmark-dialog .arc-rail-no:not(#_){color:var(--o-ink-2);font:400 13px/1.3 var(--o-display)}
+html body #landmark-dialog .arc-find:not(#_){border:0;border-radius:14px;background:var(--o-surface-1);overflow:hidden}
+html body #landmark-dialog .arc-find:not(#_):is(:hover,:focus-visible){background:var(--o-surface-2)}
+html body #landmark-dialog .arc-find-kind:not(#_){font:400 13px/1.3 var(--o-display);color:var(--o-ink-2)}
+html body #landmark-dialog .arc-find-status:not(#_){border:0;border-radius:var(--o-r-pill);background:var(--o-surface-2);color:var(--o-ink);font:500 13px/1.2 var(--o-display);padding:5px 12px}
+html body #landmark-dialog .arc-find strong:not(#_),html body #landmark-dialog .arc-page h3:not(#_){color:var(--o-ink)}
+html body #landmark-dialog :is(.arc-media img,.arc-thumb img,.arc-thumb):not(#_){border-radius:12px}
+html body #landmark-dialog :is(.arc-strap,.arc-stamp,.arc-draft):not(#_){border:0;background:var(--o-surface-1);color:var(--o-ink-2);font:500 13px/1.3 var(--o-display)}
+html body #landmark-dialog :is(.arc-header,.arc-footer):not(#_){background:var(--o-surface-0);border:0}
+html body #landmark-dialog .arc-crumbs button:not(#_){color:var(--o-ink-2)}
+html body #landmark-dialog .arc-crumbs li[aria-current]:not(#_){color:var(--o-ink)}
+html body #landmark-dialog :is(.arc-block>h4,.arc-block>h4::after):not(#_){color:var(--o-ink);border-color:transparent;background:none}
+
+/* The surface footer: the location reads as a sentence, not a tracked code. */
+html body .scene-footer .location{font:500 14px/1 var(--o-display);letter-spacing:0}
+html body .scene-footer .location #scene-location,html body .scene-footer .location #depth-value{text-transform:lowercase}
+html body .scene-footer .location #scene-location::first-letter{text-transform:uppercase}
+html body .location-dot{box-shadow:none}
+html body .look-hint{font:400 13px/1 var(--o-display);letter-spacing:0;opacity:1;color:var(--o-ink)}
+html body:is([data-submerged="true"],[data-exploring="true"]) .scene-footer .look-hint{color:var(--o-ink)}
+html body .view-controls>button{border-radius:50%}
+html body #landmark-dialog .arc-rail-name small:not(#_){text-transform:lowercase}
+html body #landmark-dialog .arc-rail-name small:not(#_)::first-letter{text-transform:uppercase}
+
+/* The plan dialog's cards: ink drawings and no site colours on paper (the colours stay on the site-map board). */
+html body .plan-info .plan-art{color:var(--o-ink);border:0}
+html body .plan-overview li b{display:none}
+html body .plan-overview li em{font:500 13px/1 var(--o-display);color:var(--o-ink-2)}
+html body .plan-overview li+li::before{color:var(--o-ink-2)}
+
+/* Settings, the long tail: the control tuning fields, the return button, the credits copy. */
+html body .settings-menu.holo:not(#_){background:var(--o-surface-0)}
+html body .movement-intro,html body .movement-field p,html body .credits-dialog .dialog-copy{color:var(--o-ink-2);font-family:var(--o-display);font-size:13px;line-height:1.5}
+html body .movement-panel select option{background:var(--o-surface-0);color:var(--o-ink)}
+html body #settings-surface-now:not(#_){background:var(--p-action);color:var(--p-action-ink);border:0;box-shadow:none;border-radius:var(--o-r-pill)}
+html body .movement-field label,html body .movement-field legend{font-family:var(--o-display);letter-spacing:0;text-transform:none;color:var(--o-ink)}
+html body .movement-field :is(input[type="number"],input[type="text"],select){border:0;border-radius:var(--p-r-field);background:var(--o-surface-0);color:var(--o-ink);font-family:var(--o-display)}
+html body .movement-save-status{font-family:var(--o-display);letter-spacing:0;text-transform:none;color:var(--o-ink-2)}
+html body .key-reference dt kbd{background:var(--o-surface-2)}
+
+/* Remaining tracked-caps labels in the dressed pieces: sentence case at a readable size. */
+html body :is(.movement-fields summary,.movement-presets legend){font:500 15px/1.3 var(--o-display);letter-spacing:0;text-transform:none;color:var(--o-ink)}
+html body .movement-preset-note,html body .movement-presets p{color:var(--o-ink-2);font-family:var(--o-display);font-size:13px}
+html body :is(.zone-card small,.journey-toast small,.plan-total){font:500 13px/1.3 var(--o-display);letter-spacing:0;text-transform:none;color:var(--o-ink-2)}
+html body .tour-card footer button:not(#_){border:0;border-radius:var(--o-r-pill);background:var(--o-surface-1);color:var(--o-ink);font:500 14px/1.2 var(--o-display);letter-spacing:0;text-transform:none;box-shadow:none}
+html body .tour-card footer button:not(#_):hover{background:var(--o-surface-2)}
+html body .tour-card footer [data-tour="exit"]:not(#_){background:none;color:var(--o-ink-2)}
+html body .tour-card footer button:not(#_):is([data-tour="next"],[data-tour="rejoin"],[data-tour="surface"],[data-tour="read"]){background:var(--p-action);color:var(--p-action-ink)}
+html body .tour-card footer kbd:not(#_){border:0;background:var(--o-surface-2);border-radius:6px;font:500 11px/1 var(--o-display)}
+
+/* 11. Finish, round 2 (critic): the settings layout, a readable hint line, one accent in the logbook, a 13 px floor. */
+html body .weather-track{display:none}
+html body :is(.weather-picker,.theme-control){grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+html body :is(.weather-picker,.theme-control)>button{min-height:42px;padding:8px 12px;font-size:14px;gap:8px;background:var(--o-surface-0)}
+html body :is(.weather-picker,.theme-control)>button svg{width:18px;height:18px}
+html body :is(.weather-picker,.theme-control)>button:hover{background:var(--o-surface-2)}
+html body :is(.weather-picker,.theme-control)>button:is([aria-pressed="true"],[data-current="true"]){background:var(--p-action);color:var(--p-action-ink)}
+html body .weather-picker>button[data-current="true"]::after{display:none}
+html body .time-labels{font-size:12px;margin:2px 0 12px}
+html body .sky-clock{font-size:13px;line-height:1.4;margin-top:12px}
+html body .movement-field p,html body .holo-switch small,html body .movement-intro{font-size:13px}
+html body .movement-field{padding-bottom:8px}
+html body #settings-general-content .settings-subgroup{padding:18px 0 4px}
+html body .settings-menu :is(h3.holo-label,.settings-inline-control){margin-bottom:6px}
+html body .settings-body{padding-bottom:28px;mask-image:linear-gradient(#000 calc(100% - 28px),transparent);-webkit-mask-image:linear-gradient(#000 calc(100% - 28px),transparent)}
+html body #weather-settings .settings-inline-control{align-items:flex-start}
+html body #settings-weather-title output{display:inline;margin:0 0 0 8px;color:var(--o-ink-2)}
+
+/* The hint line and the four sky-look arrows: on paper like everything else. */
+html body .scene-footer .look-hint{padding:9px 16px;border-radius:var(--o-r-pill);background:var(--o-surface-0);box-shadow:var(--p-float);font:400 13px/1 var(--o-display);letter-spacing:0;opacity:1;color:var(--o-ink)}
+html body .view-controls:not(#_){opacity:1}
+html body .view-controls>button{background:var(--o-surface-0);color:var(--o-ink);opacity:1}
+html body .view-controls>button:hover{background:var(--o-surface-1)}
+html body .scene-footer .location{padding:9px 16px;border-radius:var(--o-r-pill);background:var(--o-surface-0);box-shadow:var(--p-float)}
+
+/* Logbook: one accent. The sidebar drops its tags; the progress track is a row of soft pills in the accent. */
+html body #landmark-dialog :is([data-group],[data-go],[data-section]){--tab:var(--p-accent);--tab-soft:var(--o-surface-1)}
+html body #landmark-dialog .arc-rail-name small:not(#_){display:none}
+html body #landmark-dialog .arc-progress-track i:not(#_){height:6px;width:14px;border-radius:3px;background:var(--o-surface-2)}
+html body #landmark-dialog .arc-progress-track i[data-state="seen"]:not(#_){background:var(--p-accent);opacity:.5}
+html body #landmark-dialog .arc-progress-track i[data-state="current"]:not(#_){background:var(--p-accent);opacity:1;transform:scaleX(1.8)}
+html body #landmark-dialog .arc-rail-no:not(#_){display:none}
+
+/* 12. Motion. Springs, not fades: things arrive with a little overshoot, settle, and answer the pointer. Only opacity and the
+   translate, scale and rotate properties move, and none of it runs for visitors who ask for reduced motion. */
+:root{
+  /* A damped spring (zeta .62): overshoots about 8 percent, settles in about half a second. The pop variant (zeta .5) is livelier. */
+  --p-spring:linear(0,.116 4.2%,.36 8.3%,.618 12.5%,.829 16.7%,.973 20.8%,1.052 25%,1.081 29.2%,1.08 33.3%,1.062 37.5%,1.04 41.7%,1.021 45.8%,1.006 50%,.998 54.2%,.994 58.3%,.993 62.5%,.994 66.7%,.996 70.8%,.998 75%,.999 79.2%,1 83.3%,1);
+  --p-spring-pop:linear(0,.104 4.2%,.34 8.3%,.61 12.5%,.849 16.7%,1.023 20.8%,1.124 25%,1.162 29.2%,1.153 33.3%,1.118 37.5%,1.075 41.7%,1.034 45.8%,1.002 50%,.983 54.2%,.974 58.3%,.974 62.5%,.979 66.7%,.986 70.8%,.993 75%,.999 79.2%,1.002 83.3%,1);
+}
+.paper-ripple,.paper-bubbles{pointer-events:none}
+@media(prefers-reduced-motion:no-preference){
+@keyframes paper-pop{from{opacity:0;scale:.9;translate:0 var(--m-rise,12px)}}
+@keyframes paper-rise{from{opacity:0;translate:0 14px}}
+@keyframes paper-sheet{from{opacity:0;scale:.965;translate:0 36px}}
+@keyframes paper-card{from{opacity:0;scale:.84}}
+@keyframes paper-ripple{from{opacity:.22;scale:0}to{opacity:0;scale:1}}
+@keyframes paper-bubble{0%{opacity:0;scale:.4;translate:0 0}12%{opacity:1}100%{opacity:0;scale:1.15;translate:var(--dx) var(--dy)}}
+
+/* Panels and notices arrive with a spring from where they belong, replacing the hologram's flicker. */
+html body :is(.settings-menu,.dive-computer-toggle,.archive-toggle,.capture-hint,.ascent-status,.interact-prompt):not([hidden]):not(#_){animation:paper-pop 560ms var(--p-spring) var(--m-delay,0ms) backwards}
+html body .settings-menu{transform-origin:calc(100% - 28px) 0}
+html body .settings-menu:not([hidden]) .settings-head,html body .settings-menu:not([hidden]) .settings-body>*{animation:paper-rise 600ms var(--p-spring) calc(90ms + var(--i,0) * 55ms) backwards}
+html body .settings-body>:nth-child(1){--i:1}html body .settings-body>:nth-child(2){--i:2}html body .settings-body>:nth-child(3){--i:3}html body .settings-body>:nth-child(4){--i:4}html body .settings-body>:nth-child(5){--i:5}
+html body .diver-profile{transform-origin:var(--tail,50%) 100%;animation:paper-card 620ms var(--p-spring-pop) both}
+html body .diver-profile>:not(.diver-profile-tail):not(.diver-profile-close){animation:paper-rise 560ms var(--p-spring) calc(70ms + var(--i,0) * 50ms) backwards}
+html body .diver-profile>:nth-child(2){--i:1}html body .diver-profile>:nth-child(3){--i:2}html body .diver-profile>:nth-child(4){--i:3}html body .diver-profile>:nth-child(5){--i:4}html body .diver-profile>:nth-child(6){--i:5}
+html body #landmark-dialog[open]{animation:paper-sheet 640ms var(--p-spring) backwards}
+html body #landmark-dialog[open] .arc-index{animation:paper-rise 560ms var(--p-spring) 120ms backwards}
+html body #landmark-dialog .arc-page>*{animation:paper-rise 560ms var(--p-spring) calc(60ms + var(--i,0) * 45ms) backwards}
+html body #landmark-dialog .arc-page>:nth-child(1){--i:0}html body #landmark-dialog .arc-page>:nth-child(2){--i:1}html body #landmark-dialog .arc-page>:nth-child(3){--i:2}html body #landmark-dialog .arc-page>:nth-child(4){--i:3}html body #landmark-dialog .arc-page>:nth-child(n+5){--i:4}
+html body #landmark-dialog :is(.arc-find,.arc-reel-find,.arc-proof,.arc-contacts a):not(#_){animation:paper-rise 600ms var(--p-spring) calc(160ms + var(--k,0) * 55ms) backwards}
+html body #landmark-dialog :is(.arc-find,.arc-reel-find,.arc-proof):nth-child(1){--k:0}html body #landmark-dialog :is(.arc-find,.arc-reel-find,.arc-proof):nth-child(2){--k:1}html body #landmark-dialog :is(.arc-find,.arc-reel-find,.arc-proof):nth-child(3){--k:2}html body #landmark-dialog :is(.arc-find,.arc-reel-find,.arc-proof):nth-child(4){--k:3}html body #landmark-dialog :is(.arc-find,.arc-reel-find,.arc-proof):nth-child(5){--k:4}html body #landmark-dialog :is(.arc-find,.arc-reel-find,.arc-proof):nth-child(n+6){--k:5}
+html body dialog.dive-plan[open] .plan-info,html body dialog.dive-plan[open] .plan-overview{animation-timing-function:var(--p-spring)}
+
+/* Every control answers: it lifts on hover, squashes under the finger and springs back. */
+html body :is(.dive-button,.guided-button,.settings-toggle,.menu-toggle,.settings-close,.motion-control,.camera-toggle,.credits-toggle,.archive-toggle,.dive-computer-toggle,.quiet-ui-toggle,.explore-back,.holo-chip,.hero-link,.surface-nav a,.view-controls>button,.theme-control>button,.weather-picker>button,.movement-preset-row>button,.tour-card footer button,.diver-profile-actions button):not(#_){transition:translate 420ms var(--p-spring),scale 360ms var(--p-spring-pop),background-color 160ms var(--ease),color 160ms var(--ease),filter 160ms var(--ease)}
+html body :is(.dive-button,.guided-button,.settings-toggle,.menu-toggle,.settings-close,.motion-control,.camera-toggle,.credits-toggle,.archive-toggle,.dive-computer-toggle,.quiet-ui-toggle,.explore-back,.holo-chip,.surface-nav a,.view-controls>button,.theme-control>button,.weather-picker>button,.movement-preset-row>button,.tour-card footer button,.diver-profile-actions button):not(:disabled):not(#_):hover{translate:var(--mx,0px) calc(var(--my,0px) - 2px)}
+html body :is(.dive-button,.guided-button,.settings-toggle,.menu-toggle,.settings-close,.motion-control,.camera-toggle,.credits-toggle,.archive-toggle,.dive-computer-toggle,.quiet-ui-toggle,.explore-back,.holo-chip,.surface-nav a,.view-controls>button,.theme-control>button,.weather-picker>button,.movement-preset-row>button,.tour-card footer button,.diver-profile-actions button,.touch-key):not(:disabled):not(#_):active{scale:.94;translate:0 1px;transition-duration:90ms,90ms,160ms,160ms,160ms}
+html body .hero-link:not(#_):hover{translate:0 -1px}
+html body .settings-toggle:not(#_)[aria-expanded="true"] svg,html body .menu-toggle:not(#_)[aria-expanded="true"] svg{rotate:90deg}
+html body :is(.settings-toggle,.menu-toggle) svg{transition:rotate 520ms var(--p-spring-pop)}
+html body :is(.settings-menu,.dive-computer-toggle,.archive-toggle) .hud-icon{transition:rotate 420ms var(--p-spring-pop)}
+.paper-ripple{position:absolute;inset:0;border-radius:inherit;overflow:hidden;z-index:0}
+.paper-ripple i{position:absolute;translate:-50% -50%;border-radius:50%;background:currentColor;opacity:0;scale:0;animation:paper-ripple 640ms cubic-bezier(.2,.7,.2,1) forwards}
+.paper-bubbles{position:fixed;inset:0;z-index:80;overflow:hidden}
+.paper-bubbles i{position:absolute;border-radius:50%;background:#ffffff8c;border:1.5px solid #ffffffe6;opacity:0;animation:paper-bubble 1.2s cubic-bezier(.3,.6,.4,1) both}
+
+/* Switches and sliders: the thumb springs, the track answers. */
+html body .holo-switch i{transition:background-color 200ms var(--ease)}
+html body .holo-switch i::before{transition:translate 480ms var(--p-spring-pop),background-color 200ms var(--ease),scale 200ms var(--p-spring)}
+html body .holo-switch:active i::before{scale:1.25 1}
+html body :is(#time-slider,.movement-field input[type="range"])::-webkit-slider-thumb{transition:scale 260ms var(--p-spring-pop)}
+html body :is(#time-slider,.movement-field input[type="range"]):active::-webkit-slider-thumb{scale:1.3}
+html body :is(#time-slider,.movement-field input[type="range"])::-moz-range-thumb{transition:scale 260ms var(--p-spring-pop)}
+html body :is(#time-slider,.movement-field input[type="range"]):active::-moz-range-thumb{scale:1.3}
+
+/* Logbook: cards lift, the picture drifts inside, rail rows slide. */
+html body #landmark-dialog :is(.arc-find,.arc-reel-find):not(#_){transition:translate 420ms var(--p-spring),background-color 200ms var(--ease)}
+html body #landmark-dialog :is(.arc-find,.arc-reel-find):not(#_):is(:hover,:focus-visible){translate:0 -5px}
+html body #landmark-dialog :is(.arc-find,.arc-reel-find):is(:hover,:focus-visible) .arc-thumb img{transform:scale(1.06)}
+html body #landmark-dialog .arc-thumb img{transition:transform 700ms var(--p-spring)}
+html body #landmark-dialog :is(.arc-rail-section,.arc-rail-entries button):not(#_){transition:background-color 180ms var(--ease),translate 360ms var(--p-spring)}
+html body #landmark-dialog :is(.arc-rail-section,.arc-rail-entries button):not(#_):hover{translate:4px 0}
+html body #landmark-dialog .arc-progress-track i:not(#_){transition:transform 420ms var(--p-spring-pop),background-color 200ms var(--ease),opacity 200ms var(--ease)}
+}
+@media(prefers-reduced-motion:reduce){.paper-ripple,.paper-bubbles{display:none}}
+
+/* 13. Round 2 (critic): spacing, leftovers, a sky-tinted paper, and a calmer motion budget. */
+html body .movement-field p{margin:2px 0 16px}
+html body .movement-field:last-child p{margin-bottom:4px}
+html body .settings-body{mask-image:linear-gradient(#000 calc(100% - 18px),transparent);-webkit-mask-image:linear-gradient(#000 calc(100% - 18px),transparent);padding-bottom:22px}
+html body #settings-general-content>.settings-subgroup{margin-top:12px;padding:16px;border-radius:14px;background:var(--o-surface-0)}
+html body #settings-general-content>.settings-subgroup:first-child{margin-top:4px}
+html body #landmark-dialog .arc-rail-entries .holo-label:not(#_){display:none}
+html body #landmark-dialog .arc-rail-entries button:not(#_){grid-template-columns:minmax(0,1fr) 13px}
+html body .plan-head p,html body .plan-head .holo-label{font-family:var(--o-display);font-size:14px;letter-spacing:0;text-transform:none}
+html body .plan-info .plan-art{height:64px;padding-bottom:0}
+
+/* The paper takes a little of the sky: dawn warms it, dusk cools it, and it changes with the time of day. Night swaps the whole set instead. */
+html[data-sky-preset="dawn"]{--p-sky:#ff9f7a}
+html[data-sky-preset="dusk"]{--p-sky:#b98ad8}
+html[data-sky-preset="day"]{--p-sky:#6fd0e0}
+:root:not([data-theme="night"]):is([data-sky-preset="dawn"],[data-sky-preset="dusk"],[data-sky-preset="day"]) body :is(.settings-menu,.capture-hint,.interact-prompt,.status,.tour-card,.journey-toast,.zone-card,.dive-summary,.plan-info,.plan-overview,#landmark-dialog,.scene-footer .look-hint,.scene-footer .location,.diver-profile,.guided-button,.settings-toggle,.view-controls>button){
+  --o-surface-0:color-mix(in srgb,#f3fbfa 91%,var(--p-sky));--o-surface-1:color-mix(in srgb,#e2f4f1 90%,var(--p-sky));--o-surface-2:color-mix(in srgb,#c9ece6 88%,var(--p-sky));
+}
+html body :is(.settings-menu,.tour-card,#landmark-dialog,.plan-info,.plan-overview,.scene-footer .look-hint,.scene-footer .location){transition:background-color 700ms ease}
+@media(prefers-reduced-motion:no-preference){
+/* Calmer: small controls skip the lift (the squash and the ripple are enough), and the button lean is capped. */
+html body :is(.settings-close,.theme-control>button,.weather-picker>button,.movement-preset-row>button,.view-controls>button,.tour-card footer button):not(:disabled):not(#_):hover{translate:0 0}
+html body #landmark-dialog[open]{animation-timing-function:var(--p-spring)}
+}
+html body #general-brightness .movement-field+.movement-field{margin-top:20px}
+html body #general-brightness .movement-field{padding-bottom:0}
+
+/* 14. Round 3 (critic): controls stay visible on the tone cards, the plan card hugs its content, and the depth pill reads as a gauge. */
+html body #settings-general-content :is(.theme-control,.weather-picker)>button:not(#_){background:var(--o-surface-1)}
+html body #settings-general-content :is(.theme-control,.weather-picker)>button:not(#_):hover{background:var(--o-surface-2)}
+html body #settings-general-content :is(.theme-control,.weather-picker)>button:not(#_):is([aria-pressed="true"],[data-current="true"]){background:var(--p-action);color:var(--p-action-ink)}
+html body #settings-general-content input[type="number"]{background:var(--o-surface-1)}
+html body #settings-general-content .settings-subgroup>:first-child{margin-top:0}
+html body #settings-general-content .settings-subgroup{padding-top:20px}
+html body .plan-info{align-self:start;align-content:start}
+html body .plan-info .plan-art{height:56px;margin:0 0 4px}
+html body .plan-info .plan-art svg{margin:0}
+.paper-depth{position:relative;flex:none;width:44px;height:6px;margin-left:6px;border-radius:3px;background:var(--o-surface-2)}
+.paper-depth b{position:absolute;left:0;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:var(--p-action);translate:calc(var(--p,0) * 32px) 0;transition:translate 240ms ease-out}
+html body #settings-general-content .settings-subgroup>h3.holo-label:first-child,html body #settings-general-content .settings-subgroup>.settings-inline-control:first-child{padding-top:6px}

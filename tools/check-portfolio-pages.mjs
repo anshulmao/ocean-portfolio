@@ -17,7 +17,7 @@ export async function checkPortfolioPages({out,content,siteURL}){
     assert.equal([...html.matchAll(/<h1(?:\s|>)/g)].length,1,'Expected one page heading: '+file);
     assert.ok(/<html lang="en">/.test(html)&&/<main id="main">/.test(html),'Missing document landmarks: '+file);
     for(const script of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)){
-      if (script[1].includes('type="module"') && /src="(?:\.\/|\.\.\/\.\.\/)analytics\.js"/.test(script[1])) continue;
+      if (script[1].includes('type="module"') && /src="(?:\.\/|\.\.\/\.\.\/)(?:analytics|paper-motion)\.js"/.test(script[1])) continue;
       assert.ok(script[1].includes('type="application/ld+json"'),'Unexpected reading-page script: '+file);
       const schema=JSON.parse(script[2]);
       assert.ok((Array.isArray(schema)?schema:[schema]).some(item=>item['@type']==='Person'&&item.name==='Anshul Ramprasad'),'Missing accurate Person data: '+file);
