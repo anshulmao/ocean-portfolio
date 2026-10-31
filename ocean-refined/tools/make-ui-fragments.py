@@ -1,12 +1,12 @@
 # Regenerates ocean-refined/ui-components/*.html from the markup that ships:
 # index.html for everything the page declares, and the template strings in
-# dive-plan.js / guided-dive.js for the components those modules build.
+# dive-plan.js / guided-dive.js / dive-summary.js for the components those modules build.
 # Usage, from the kit root: python ocean-refined/tools/make-ui-fragments.py ocean-refined
 import io, re, sys, os
 
 root = sys.argv[1]
 read = lambda name: io.open(os.path.join(root, name), encoding='utf-8').read()
-html, plan_js, tour_js, icons_js = read('index.html'), read('dive-plan.js'), read('guided-dive.js'), read('ui-icons.js')
+html, plan_js, tour_js, icons_js, summary_js = read('index.html'), read('dive-plan.js'), read('guided-dive.js'), read('ui-icons.js'), read('dive-summary.js')
 
 def element(source, start):
     """The whole element whose opening tag begins at the first occurrence of `start`."""
@@ -126,9 +126,10 @@ add('dive-planner', 'Dive planner: site map signboard, site card and dive overvi
 prompt = template(plan_js, "const prompt = node('dialog', 'dive-prompt holo holo--reading', ", "'")
 add('dive-link-prompt', 'Prompt shown for a link that opens onto a dive (#anchor, #wreck, #treasure)', 'dive-plan.js', 'styles.css, hologram.css, motion.css, dive-plan.css', 'dive-plan.js',
     '<dialog class="dive-prompt holo holo--reading" aria-labelledby="dive-prompt-title">' + prompt + '</dialog>')
-summary = template(plan_js, "const summary = node('aside', 'dive-summary holo holo--reading', ", "'")
-add('dive-summary', 'Dive summary card, shown back at the surface', 'dive-plan.js', 'styles.css, hologram.css, motion.css, dive-plan.css', 'dive-plan.js, journey.js (oceandiveend)',
-    '<aside class="dive-summary holo holo--reading" aria-label="Dive summary" data-show="false" inert>' + summary + '</aside>', 'dive-plan.js sets data-show="true" and removes inert when a dive ends.')
+summary = template(summary_js, "dialog.innerHTML = ", '`').replace('${NOTE_WORDS}', '40')
+add('dive-summary', 'Dive summary: the logbook page opened from the button beside Guided dive after a dive', 'dive-summary.js (built at load; the button goes after #guided-dive, the page is appended to <body>)', 'styles.css, hologram.css, motion.css, surface.css (button), dive-plan.css (chip recipe), dive-summary.css',
+    'dive-summary.js, dive-log.js, field-guide.js, prepared-charts.js', '<button type="button" class="guided-button ds-open" aria-haspopup="dialog" aria-controls="dive-summary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg><span>Dive summary</span><small>New</small></button>' + chr(10) + '<dialog class="ds" id="dive-summary" aria-labelledby="ds-title">' + summary + '</dialog>',
+    'dive-summary.js fills every section from the dive log when a dive ends (oceandivelog) and opens the page from the button.')
 at = tour_js.index("card.innerHTML = ")
 pieces = re.findall(r"'((?:[^'\\]|\\.)*)'", tour_js[at:tour_js.index(';', tour_js.index('</footer>', at))])
 add('tour-card', 'Guided dive caption card', 'guided-dive.js (built at load and appended to <body>)', 'styles.css, hologram.css, motion.css, journey.css, dive-plan.css (button recipe)', 'guided-dive.js, journey.js',

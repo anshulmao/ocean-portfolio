@@ -1,6 +1,42 @@
-<!-- Dive summary card, shown back at the surface
-     Source: dive-plan.js
-     Styles: styles.css, hologram.css, motion.css, dive-plan.css
-     Scripts: dive-plan.js, journey.js (oceandiveend)
-     dive-plan.js sets data-show="true" and removes inert when a dive ends. -->
-<aside class="dive-summary holo holo--reading" aria-label="Dive summary" data-show="false" inert><header><p class="holo-label">Dive summary</p><button type="button" class="summary-close" aria-label="Dismiss the dive summary">×</button></header><dl><div><dt>Sites found</dt><dd class="sum-found"></dd></div><div><dt>Max depth</dt><dd class="sum-depth"></dd></div><div><dt>Dive time</dt><dd class="sum-time"></dd></div></dl><p class="sum-note" role="status"></p><button type="button" class="holo-chip sum-log">Open the logbook <span aria-hidden="true">→</span></button></aside>
+<!-- Dive summary: the logbook page opened from the button beside Guided dive after a dive
+     Source: dive-summary.js (built at load; the button goes after #guided-dive, the page is appended to <body>)
+     Styles: styles.css, hologram.css, motion.css, surface.css (button), dive-plan.css (chip recipe), dive-summary.css
+     Scripts: dive-summary.js, dive-log.js, field-guide.js, prepared-charts.js
+     dive-summary.js fills every section from the dive log when a dive ends (oceandivelog) and opens the page from the button. -->
+<button type="button" class="guided-button ds-open" aria-haspopup="dialog" aria-controls="dive-summary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg><span>Dive summary</span><small>New</small></button>
+<dialog class="ds" id="dive-summary" aria-labelledby="ds-title"><div class="ds-inner">
+  <header class="ds-head ds-step" style="--i:0"><div><p class="holo-label ds-kicker"></p><h2 id="ds-title"></h2><p class="ds-sub"></p></div>
+    <button type="button" class="holo-chip ds-close">Close <kbd>Esc</kbd></button></header>
+  <section class="ds-stats ds-step" style="--i:1" aria-label="Dive numbers">
+    <dl class="ds-tiles"></dl>
+    <figure class="ds-panel ds-profile"><div class="ds-label"><span class="holo-label">Dive profile</span><span class="ds-average"></span></div>
+      <svg viewBox="0 0 640 200" role="img"></svg>
+      <figcaption><span><i style="--c:#7ff0cf"></i>Dive site</span><span><i style="--c:#eefdff"></i>Photo</span><span><i style="--c:#7ff0cf55"></i>Safety stop</span></figcaption></figure>
+  </section>
+  <div class="ds-row">
+    <section class="ds-panel ds-step" style="--i:2" aria-labelledby="ds-sites-title">
+      <div class="ds-label"><span class="holo-label" id="ds-sites-title">Sites checklist</span><span class="ds-sites-count"></span></div>
+      <div class="ds-map"><canvas width="372" height="420" aria-hidden="true"></canvas></div>
+      <ul class="ds-checks"></ul><ul class="ds-features" aria-label="Reef features"></ul>
+    </section>
+    <section class="ds-panel ds-step ds-photos" style="--i:3" aria-labelledby="ds-photos-title" aria-roledescription="carousel">
+      <div class="ds-label"><span class="holo-label" id="ds-photos-title">Postcards from the reef</span><span class="ds-count" aria-live="polite"></span></div>
+      <div class="ds-cards" tabindex="0" aria-label="Your photos. Swipe, or use the arrow keys."></div>
+      <div class="ds-carousel-bar"><div class="ds-dots"></div><div class="ds-arrows"><button type="button" class="holo-chip" data-step="-1" aria-label="Previous photo">←</button><button type="button" class="holo-chip" data-step="1" aria-label="Next photo">→</button></div></div>
+      <div class="ds-photo-actions"><button type="button" class="holo-chip ds-download">Download <span aria-hidden="true">↓</span></button><button type="button" class="holo-chip holo-chip--go ds-share-open" aria-expanded="false" aria-controls="ds-share">Share with Anshul <span aria-hidden="true">→</span></button></div>
+      <form class="ds-share" id="ds-share" hidden>
+        <label for="ds-note">Add a note <small>(optional, up to 40 words)</small></label>
+        <textarea id="ds-note" rows="3" maxlength="400" placeholder="A favourite moment from the dive…"></textarea>
+        <div class="meta"><span>Only this photo and your note are sent, privately to Anshul. Your other photos stay on this device and are gone when you close the tab.</span><output for="ds-note">0 / 40</output></div>
+        <div class="row"><button type="submit" class="holo-chip holo-chip--go">Send privately</button><button type="button" class="holo-chip ds-share-cancel">Cancel</button></div>
+      </form>
+      <p class="ds-status" role="status"></p>
+    </section>
+  </div>
+  <section class="ds-panel ds-step" style="--i:4" aria-labelledby="ds-guide-title">
+    <div class="ds-label"><span class="holo-label" id="ds-guide-title">Field guide · what you saw</span><span class="ds-filter" role="group" aria-label="Show"></span></div>
+    <article class="ds-detail" aria-live="polite"></article>
+    <div class="ds-grid"></div>
+  </section>
+  <footer class="ds-foot ds-step" style="--i:5"><p></p><div></div></footer>
+</div></dialog>

@@ -8,6 +8,7 @@ import { PORTFOLIO_CONTENT, PORTFOLIO_MEDIA, COPY_VARIANTS } from './portfolio-c
 import { icon } from './ui-icons.js';
 import { openLightbox, closeLightbox, lightboxOpen } from './archive-lightbox.js';
 import {track as trackEvent} from './analytics.js';
+import { diveLogPage } from './dive-log-page.js';
 
 const panel = document.querySelector('#landmark-dialog');
 const page = panel.querySelector('#archive-page');
@@ -24,6 +25,8 @@ export const SECTIONS = {
   experience: { hash: 'log', label: 'Experience', short: 'Experience', site: 'THE TREASURE', line: 'Explore the chapters of my journey.' },
   projects: { hash: 'finds', label: 'Projects', short: 'Projects', site: 'THE WRECK', line: 'Discover what I’ve been building.' },
   resume: { hash: 'resume', label: 'Résumé', short: 'Résumé', site: 'THE LOGBOOK', line: 'The work, on one page.' },
+  // The visit's own dives, kept by the dive log (dive-log-page.js).
+  dives: { hash: 'dives', label: 'Dive log', short: 'Dives', site: 'THIS VISIT', icon: 'computer', line: 'Your dives on this visit.' },
 };
 const media = PORTFOLIO_MEDIA;
 // Images carry their pixel size and decode off the main thread; the stylesheet still decides the box each one is
@@ -177,6 +180,7 @@ function sequence() {
   list.push({ section: 'projects', id: CATALOGUE, slug: null, aliases: ['all'], code: 'ALL', title: 'Selected work', glyph: 'grid' });
   for (const find of finds()) list.push({ section: 'projects', id: find.entry.id, slug: find.entry.id, code: `FIND ${pad(find.number)}`, mark: pad(find.number), title: find.entry.title, icon: find.entry.id });
   content.resume.entries.forEach((entry, index) => list.push({ section: 'resume', id: entry.id, slug: index ? entry.id : null, aliases: index ? [] : ['card'], code: 'PDF', title: content.resume.entries.length === 1 ? SECTIONS.resume.label : entry.title, icon: 'resume' }));
+  list.push({ section: 'dives', id: 'dives', slug: null, code: 'LOG', title: SECTIONS.dives.label, icon: 'computer' });
   list.forEach((stop, index) => { stop.index = index; stop.hash = SECTIONS[stop.section].hash + (stop.slug ? `/${stop.slug}` : ''); });
   return cachedStops = list;
 }
@@ -524,6 +528,7 @@ function render(stop) {
   if (section === 'about') return stop.index === stopsFor('about')[0].index ? renderProfile() : renderRules(id);
   if (section === 'experience') return renderDive(id);
   if (section === 'resume') return renderCard(id);
+  if (section === 'dives') return diveLogPage();
   return id === CATALOGUE ? renderCatalogue() : renderFind(id);
 }
 
@@ -559,7 +564,7 @@ function buildRail() {
     const stops = stopsFor(id), meta = SECTIONS[id];
     return el('li', { 'data-group': id },
       el('button', { type: 'button', class: 'arc-rail-section', 'data-section': id, 'aria-label': meta.label },
-        id === GLANCE ? glyph('compass') : icon(id),
+        id === GLANCE ? glyph('compass') : icon(meta.icon || id),
         el('span', { class: 'arc-rail-name' }, el('span', { class: 'arc-tab-long', text: meta.label }), el('span', { class: 'arc-tab-short', 'aria-hidden': 'true', text: meta.short }), el('small', { text: meta.site })),
         id !== GLANCE && el('small', { class: 'arc-rail-no', 'aria-hidden': 'true', text: pad(number) })),
       stops.length > 1 && el('ol', { class: 'arc-rail-entries', id: `archive-rail-${id}` }, stops.map(stop =>
@@ -640,7 +645,8 @@ export function show(id = sectionId, entry = null, options = {}) {
   }
   const anchor = options.anchor || (id === 'about' && String(entry).toLowerCase() === 'contact' ? '#arc-contact' : null);
   sectionId = stop.section; entryId = stop.id; position = stop.index;
-  if (key !== rendered || options.force) {
+  // The Dive log changes with every dive, so it is drawn afresh each time it is shown.
+  if (key !== rendered || options.force || stop.section === 'dives') {
     const inside = page.contains(document.activeElement) && !options.focus;
     const nodes = [...render(stop), stop.section !== GLANCE && turner(stop)].flat().filter(Boolean);
     // Entry motion is CSS: the page says which way it was turned and each block carries its place in the stagger.

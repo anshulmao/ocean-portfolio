@@ -6,8 +6,8 @@ import { onFrame, say } from './journey.js';
 import { startTour, tourPlan, tourStatus, DIVE_IN } from './guided-dive.js';
 
 // Plan your dive: the surface entry points, the site map signboard, starting a
-// dive at a chosen site, links that open straight onto a dive, and the summary
-// card on the way back up. Everything here reads the scene through oceanControls.
+// dive at a chosen site, and links that open straight onto a dive. The summary
+// on the way back up is dive-summary.js. Everything here reads the scene through oceanControls.
 const $ = selector => document.querySelector(selector);
 const controls = () => window.oceanControls, ready = () => Boolean(window.oceanDiagnostics?.ready && controls());
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
@@ -121,16 +121,7 @@ plan.id = 'dive-plan'; plan.setAttribute('aria-labelledby', 'dive-plan-title');
 // A link that opens onto a dive asks once, so the browser has a gesture for the mouse capture.
 const prompt = node('dialog', 'dive-prompt holo holo--reading', '<p class="holo-label">Dive link</p><h2 id="dive-prompt-title"></h2><p class="prompt-note"></p><div><button type="button" class="holo-chip holo-chip--go" data-go>Start dive <span aria-hidden="true">→</span></button><button type="button" class="holo-chip" data-skip>Not now</button></div>');
 prompt.setAttribute('aria-labelledby', 'dive-prompt-title');
-const summary = node('aside', 'dive-summary holo holo--reading', '<header><p class="holo-label">Dive summary</p><button type="button" class="summary-close" aria-label="Dismiss the dive summary">×</button></header><dl><div><dt>Sites found</dt><dd class="sum-found"></dd></div><div><dt>Max depth</dt><dd class="sum-depth"></dd></div><div><dt>Dive time</dt><dd class="sum-time"></dd></div></dl><p class="sum-note" role="status"></p><button type="button" class="holo-chip sum-log">Open the logbook <span aria-hidden="true">→</span></button>');
-summary.id = 'dive-summary';
-summary.setAttribute('aria-label', 'Dive summary'); summary.dataset.show = 'false'; summary.inert = true;
-// After a dive the way back to its summary is one of the hero's links (index.html .portfolio-links), not a chip over the hero.
-const summaryToggle = node('button', 'dive-summary-toggle hero-link', 'Last dive');
-summaryToggle.type = 'button'; summaryToggle.hidden = true;
-summaryToggle.setAttribute('aria-controls', summary.id);
-summaryToggle.setAttribute('aria-expanded', 'false');
-document.body.append(plan, prompt, summary);
-($('.portfolio-links') || document.body).append(summaryToggle);
+document.body.append(plan, prompt);
 const marks = plan.querySelector('.plan-marks'), info = plan.querySelector('.plan-info');
 let charted = false, opener = null, pending = null, linkHandled = false, linkAction = null, held = false;
 // The scene's controls are suspended while a dialog is up. Releasing is done in step with the action that follows,
@@ -206,7 +197,7 @@ plan.querySelector('.plan-start').addEventListener('click', () => startAt(select
 plan.querySelector('.plan-tour').addEventListener('click', () => { closePlan(true); guided(); });
 $('#plan-dive').addEventListener('click', () => openPlan());
 $('#guided-dive').addEventListener('click', guided);
-function guided() { pending = null; hideSummary(); if (!startTour()) say('Guided dive', 'The ocean is still getting ready. Try again in a moment.', '#8ff4ff', 2600); }
+function guided() { pending = null; window.oceanDiveSummary?.close(true); if (!startTour()) say('Guided dive', 'The ocean is still getting ready. Try again in a moment.', '#8ff4ff', 2600); }
 
 // Start at a site: the dive begins on the water above it, then the autopilot descends to its viewpoint.
 export function startAt(site) {
@@ -214,7 +205,7 @@ export function startAt(site) {
   if (typeof site === 'string') site = sites.find(item => item.id === site);
   if (!site || !ready()) return false;
   const view = viewpoint(site), mode = api.getMode();
-  closePlan(true); hideSummary(); window.oceanTour?.stop();
+  closePlan(true); window.oceanDiveSummary?.close(true); window.oceanTour?.stop();
   if (mode === 'surface') { if (!api.startDive({ at: view.point })) return false; }
   else if (mode !== 'diver') return false;
   pending = { site, stage: 'dive', time: 0, inputs: 0, still: 0 };
@@ -271,37 +262,4 @@ prompt.querySelector('[data-skip]').addEventListener('click', () => prompt.close
 prompt.addEventListener('close', release);
 addEventListener('hashchange', readLink);
 
-// Keep the surface quiet: the last dive's details are available on demand.
-function hideSummary() {
-  summary.dataset.show = 'false'; summary.inert = true; delete document.body.dataset.summary;
-  summaryToggle.setAttribute('aria-expanded', 'false');
-}
-summaryToggle.addEventListener('click', () => {
-  if (summary.dataset.show === 'true') { hideSummary(); return; }
-  summary.dataset.show = 'true'; summary.inert = false; document.body.dataset.summary = 'true';
-  summaryToggle.setAttribute('aria-expanded', 'true');
-});
-addEventListener('oceandiveend', event => {
-  const { time, maxDepth, found } = event.detail;
-  if (time < 4) return;
-  summary.querySelector('.sum-found').textContent = `${found} / 3`;
-  summary.querySelector('.sum-depth').textContent = `${maxDepth.toFixed(1)} m`;
-  summary.querySelector('.sum-time').textContent = `${String(Math.floor(time / 60)).padStart(2, '0')}:${String(Math.floor(time % 60)).padStart(2, '0')}`;
-  summary.querySelector('.sum-note').textContent = found === 3 ? 'All three sites found. The whole story is in the logbook.' : found ? 'There is more down there. The lights mark what is left.' : 'Three lights mark the sites. Follow one next time.';
-  hideSummary(); summaryToggle.hidden = false;
-});
-addEventListener('oceanmediumchange', () => {
-  if (window.oceanDiagnostics?.submerged) { hideSummary(); summaryToggle.hidden = true; }
-});
-summary.querySelector('.summary-close').addEventListener('click', () => { hideSummary(); summaryToggle.focus(); });
-addEventListener('keydown', event => {
-  if (event.key === 'Escape' && summary.dataset.show === 'true' && !$('dialog[open]')) {
-    hideSummary(); summaryToggle.focus();
-  }
-});
-summary.querySelector('.sum-log').addEventListener('click', () => {
-  if (window.oceanArchive?.open) window.oceanArchive.open('experience'); else $('#archive-toggle')?.click();
-  // The archive only opens underwater in some builds: say so rather than do nothing.
-  if ($('dialog[open]')) hideSummary(); else summary.querySelector('.sum-note').textContent = 'The logbook opens underwater. Dive in and press F at any site.';
-});
 window.oceanPlan = { open: openPlan, close: closePlan, startAt, get sites() { return sites; }, viewpoint, get pending() { return pending; } };

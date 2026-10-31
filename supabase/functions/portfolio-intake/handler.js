@@ -1,4 +1,5 @@
 const MAX_PHOTO = 1024 * 1024;
+const NOTE_WORDS = 40, NOTE_CHARS = 400;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const DEFAULT_ORIGINS = ['https://anshul-portfolio-rho.vercel.app', 'http://127.0.0.1:4190', 'http://localhost:4190'];
 
@@ -11,6 +12,17 @@ export function validateFeedback(input) {
   if (consent && (typeof name !== 'string' || name.length > 100 || typeof email !== 'string' || email.length > 254 || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))) throw Error('Please check your contact details.');
   return {id: input.id, rating: input.rating, feedback: input.feedback.trim(), depth_meters: input.depthMeters,
     contact_consent: consent, contact_name: consent ? name.trim() || null : null, contact_email: consent ? email.trim() || null : null};
+}
+
+// A shared photo's optional note arrives URI-encoded in x-photo-note: up to NOTE_WORDS words and NOTE_CHARS characters.
+export function readPhotoNote(header) {
+  if (header == null || header === '') return null;
+  let text;
+  try { text = decodeURIComponent(header); } catch { throw Error('Invalid note.'); }
+  text = text.replace(/[\u0000-\u001f\u007f]+/g, ' ').trim();
+  if (!text) return null;
+  if (text.length > NOTE_CHARS || (text.match(/\S+/g) || []).length > NOTE_WORDS) throw Error(`Keep your note to ${NOTE_WORDS} words.`);
+  return text;
 }
 
 async function readLimited(request, limit) {
@@ -45,7 +57,7 @@ export function createIntakeHandler({url, secret, publicKey, origins = DEFAULT_O
   return async request => {
     const origin = request.headers.get('origin');
     const headers = {'Content-Type': 'application/json', 'Cache-Control': 'no-store', Vary: 'Origin'};
-    if (origins.includes(origin)) Object.assign(headers, {'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'content-type, apikey, x-request-id'});
+    if (origins.includes(origin)) Object.assign(headers, {'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'content-type, apikey, x-request-id, x-photo-note'});
     const respond = (status, body) => new Response(JSON.stringify(body), {status, headers});
     if (!origins.includes(origin)) return respond(403, {error: 'This site is not allowed to submit.'});
     if (request.method === 'OPTIONS') return new Response(null, {status: 204, headers});
@@ -66,7 +78,9 @@ export function createIntakeHandler({url, secret, publicKey, origins = DEFAULT_O
       } else {
         const id = request.headers.get('x-request-id');
         if (!UUID.test(id || '') || request.headers.get('content-type') !== 'image/jpeg' || bytes.length < 4 || bytes[0] !== 255 || bytes[1] !== 216 || bytes.at(-2) !== 255 || bytes.at(-1) !== 217) return respond(400, {error: 'Share a JPEG reef photo, up to 1 MB.'});
-        record = {id, storage_path: `${id}.jpg`, bytes: bytes.length};
+        let note;
+        try { note = readPhotoNote(request.headers.get('x-photo-note')); } catch (error) { return respond(400, {error: error.message}); }
+        record = {id, storage_path: `${id}.jpg`, bytes: bytes.length, ...(note ? {note} : {})};
       }
       // The daily global ceiling bounds abuse even if forwarded IP headers are spoofed.
       // Only an HMAC is persisted, never a raw address.

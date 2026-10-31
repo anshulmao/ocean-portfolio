@@ -17,6 +17,7 @@ create table public.portfolio_photos (
   created_at timestamptz not null default now(),
   storage_path text not null unique,
   bytes integer not null check (bytes between 4 and 1048576),
+  note text check (length(note) <= 400),
   status text not null default 'private' check (status in ('private','approved','archived'))
 );
 create table public.portfolio_intake_limits (

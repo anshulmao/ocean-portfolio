@@ -38,7 +38,6 @@ assert.ok(!s.movement.open && !s.menu.hidden, 'nested controls close first');
 s.press(); assert.ok(s.menu.hidden, 'next Escape closes Settings');
 for (const guard of [
   s => {s.overlays.add('dialog[open]');},
-  s => {s.overlays.add('.dive-summary[data-show="true"]');},
   s => {s.nav.returnPhase = 'offer';},
   s => {s.nav.returnPhase = 'stop';},
   s => {s.document.body.dataset.clearUi = 'true';},

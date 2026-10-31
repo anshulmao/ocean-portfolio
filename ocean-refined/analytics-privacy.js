@@ -3,7 +3,7 @@ export const EVENT_PROPERTIES = {
   portfolio_section_opened:['section','project_id'], project_opened:['project_id','experience'],
   project_link_clicked:['destination'], resume_clicked:['action'], contact_clicked:['channel'],
   dive_started:[], dive_completed:[], feedback_started:[], feedback_saved:['rating'],
-  reef_photo_downloaded:[], reef_photo_shared:[], artifact_collected:['artifact_id'],
+  reef_photo_taken:[], reef_photo_downloaded:[], reef_photo_shared:[], dive_summary_opened:[], artifact_collected:['artifact_id'],
   // The profile card on the surface diver (diver-profile.js), and how it was reached.
   profile_opened:['input'],
   // The guided dive (guided-dive.js): a funnel by step, and how each tour ended.

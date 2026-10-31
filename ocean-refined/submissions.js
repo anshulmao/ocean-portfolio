@@ -12,6 +12,11 @@ async function submit(kind, body, headers = {}) {
 export function sendFeedback(record) {
   return submit('feedback', JSON.stringify(record), {'Content-Type':'application/json'});
 }
-export function sendPhoto(blob) {
-  return submit('photo', blob, {'Content-Type':'image/jpeg', 'x-request-id':crypto.randomUUID()});
+// A shared reef photo may carry a short note (up to NOTE_WORDS words), sent URI-encoded in a header beside the JPEG.
+export const NOTE_WORDS = 40;
+export const wordCount = text => (String(text).match(/\S+/g) || []).length;
+export function sendPhoto(blob, note = '', id = crypto.randomUUID()) {
+  const text = String(note).trim(), headers = {'Content-Type':'image/jpeg', 'x-request-id':id};
+  if (text) headers['x-photo-note'] = encodeURIComponent(text);
+  return submit('photo', blob, headers);
 }
