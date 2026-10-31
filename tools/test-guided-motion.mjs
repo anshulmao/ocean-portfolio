@@ -665,3 +665,17 @@ console.log('PASS: a stall, a pause or a takeover and rejoin partway keeps the s
   env.nav.destroy();
 }
 console.log('PASS: going under faces the reef, whatever the surface faced.');
+
+// F at a site opens it, though the stop's viewpoint stands beyond the landmark's own reach (the anchor's is 10 m off):
+// the tour opens it as Read it does. Under way, F opens nothing.
+{
+  const env = environment(60, { residents: { sleeper: [-17, terrainHeightAt(-17, -19) + .45, -19] } });
+  const opened = []; window.oceanArchive = { isOpen: false, open: id => opened.push(id) };
+  toTravel(env);
+  key('KeyF'); assert.deepEqual(opened, [], 'F under way opens nothing');
+  for (let i = 0; i < 400 && !(tourStatus() === 'dwell' && env.state.tour.key === 'about'); i++) { window.oceanTour.next(); env.tick(.5); }
+  const about = STEPS.find(step => step.key === 'about');
+  key('KeyF'); assert.deepEqual(opened, [about.opens ?? about.landmark], 'F at the anchor opens About, as Read it does');
+  window.oceanTour.stop(); env.nav.destroy(); delete window.oceanArchive;
+}
+console.log('PASS: F at a site opens it from the stop’s viewpoint.');

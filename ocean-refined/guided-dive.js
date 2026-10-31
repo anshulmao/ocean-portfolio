@@ -657,6 +657,9 @@ addEventListener('keydown', event => {
   else if (event.code === 'KeyN' && touring()) { event.preventDefault(); next(); }
   else if (event.code === 'KeyN' && status === 'done') { event.preventDefault(); surface(); }
   else if (event.code === 'KeyP' && status === 'travel') { event.preventDefault(); togglePause(); }
+  // F at a site: its stop viewpoint can stand further off than the landmark's own reach (landmark-interactions.js), so
+  // when that prompt is not up, the tour opens the site itself, as Read it does.
+  else if (event.code === 'KeyF' && status === 'dwell' && STEPS[index].landmark && !document.querySelector('#interact-prompt:not([hidden])')) { event.preventDefault(); read(); }
 });
 window.oceanTour = { start: startTour, stop, rejoin, next, plan: tourPlan, get status() { return status; }, STEPS, STOPS, get tried() { return [...used]; },
   // The archive asks: At a glance carries the welcome only on the tour (SPEC D6), and a site opens the page its step names.
