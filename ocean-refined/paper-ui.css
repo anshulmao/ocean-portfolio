@@ -356,3 +356,4 @@ html body .plan-info .plan-art{height:56px;margin:0 0 4px}
 html body .plan-info .plan-art svg{margin:0}
 .paper-depth{position:relative;flex:none;width:44px;height:6px;margin-left:6px;border-radius:3px;background:var(--o-surface-2)}
 .paper-depth b{position:absolute;left:0;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:var(--p-action);translate:calc(var(--p,0) * 32px) 0;transition:translate 240ms ease-out}
+html body #settings-general-content .settings-subgroup>h3.holo-label:first-child,html body #settings-general-content .settings-subgroup>.settings-inline-control:first-child{padding-top:6px}

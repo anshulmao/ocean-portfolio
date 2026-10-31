@@ -77,3 +77,12 @@ round-3 fixes, so the night numbering and caption gap it reported were already f
 
 Declined again: a phone reorder of the plan dialog and the diver's idle bob (both live in the parts that are out of scope: the site-map
 board and the 3D scene); the hero button already has a repeating ripple ring.
+
+## Round 4 (same critic)
+
+9 of 12 lines at 4 or above (75%; the bar is 80%): Concept, Category, Hierarchy, Typography, Colour, Rhythm, Finish, Consistency and Copy
+at 4; Richness, Signature and Motion at 3. Nothing below 3. Not done by the stop rule, one line short. The critic's own verdict: the
+static polish is exhausted, and the three remaining lines are things a still cannot prove. Motion, richness and the depth gauge need
+to be judged running, on a real GPU. Remaining defects it listed: the dive HUD was not reviewable headless; the logbook has no scroll
+cue under cards 04 to 06; the phone hero's lower part is empty; the plan dialog's dark board next to the pale card is the one
+deliberate jolt (out of scope by request).
