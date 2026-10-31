@@ -1,4 +1,4 @@
-import { onFrame } from './journey.js';
+import { onFrame, SITES } from './journey.js';
 import { toDisplayDepth } from './depth-metrics.js';
 import { LANDMARKS } from './reef.js';
 import { SPECIES_OF_MODEL } from './field-guide.js';
@@ -7,11 +7,7 @@ import { SPECIES_OF_MODEL } from './field-guide.js';
 // swum, the sites and reef features passed, the species seen and the photos taken; when the diver surfaces it hands
 // the whole record over as `oceandivelog`. Photos stay in this page's memory only: nothing is stored on the device,
 // and a photo leaves it only when the diver shares it (submissions.js).
-export const SITES = {
-  about: { name: 'The Anchor', signal: '#7ff0cf' },
-  experience: { name: 'The Wreck', signal: '#ffcf7a' },
-  projects: { name: 'The Treasure', signal: '#c9a2ff' }
-};
+export { SITES };
 // Reef features as the site map charts them, until the scene's own list is available; the arch is not a formation.
 const CHARTED = [['Table coral tower', 38, -8, 6], ['Brain coral dome', -42, -2, 8], ['Pillar coral cathedral', 48, -28, 8], ['Kelp grove', -50, -52, 8.5], ['Giant clam', -9, -54, 3.5], ['Soft coral spire', 50, -72, 6], ['Lantern garden', 8, -86, 6.5]];
 const ARCH = ['The arch', 20, -72, 6];

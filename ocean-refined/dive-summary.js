@@ -27,7 +27,8 @@ const HINT = {
   reef: 'Something lives around the coral. Slow down near the formations.',
   floor: 'Something lives on the sea floor. Look down as you cross the sand.'
 };
-const SITE_DEPTH = { about: 9, experience: 21, projects: 47 };
+// Each site's depth as the planner gives it (dive-plan.js), with its values as a fallback.
+const siteDepth = id => window.oceanPlan?.sites?.find(site => site.id === id)?.depth ?? { about: 9, experience: 47, projects: 21 }[id];
 // The planner's chart covers x -62..62 and z -105..35 (dive-plan.js).
 const mapX = x => (x + 62) / 124 * 100, mapY = z => (z + 105) / 140 * 100;
 
@@ -155,7 +156,7 @@ function paintSites() {
   $('.ds-checks', dialog).innerHTML = LANDMARKS.map(({ id }) => {
     const visit = record.sites[id], ticked = found.has(id);
     const note = visit ? `Reached at ${clock(visit.t)} · ${visit.depth.toFixed(0)} m` : found.has(id) ? 'Found on an earlier dive' : 'Still down there';
-    return `<li data-done="${ticked}" style="--signal:${SITES[id].signal}">${ticked ? tick : ring}<span><b>${SITES[id].name}</b><small>${esc(PORTFOLIO_CONTENT[id]?.title || '')} · ${note}</small></span><em>${SITE_DEPTH[id]} m</em></li>`;
+    return `<li data-done="${ticked}" style="--signal:${SITES[id].signal}">${ticked ? tick : ring}<span><b>${SITES[id].name}</b><small>${esc(PORTFOLIO_CONTENT[id]?.title || '')} · ${note}</small></span><em>${siteDepth(id)} m</em></li>`;
   }).join('');
   const list = features();
   $('.ds-features', dialog).innerHTML = list.map(([name]) => `<li data-done="${done(name)}">${esc(name)}</li>`).join('');
@@ -293,9 +294,10 @@ $('.ds-filter', dialog).addEventListener('click', event => {
 
 // --- The page ------------------------------------------------------------------------------------------------------
 function paintFoot() {
-  const found = foundSites(), next = LANDMARKS.find(item => !found.has(item.id));
+  // The next site to suggest is the shallowest one not found yet.
+  const found = foundSites(), next = LANDMARKS.filter(item => !found.has(item.id)).sort((a, b) => siteDepth(a.id) - siteDepth(b.id))[0];
   const last = Object.entries(record.sites).sort((a, b) => b[1].t - a[1].t)[0]?.[0] || 'about';
-  $('.ds-foot p', dialog).textContent = next ? `${SITES[next.id].name} is still down there at ${SITE_DEPTH[next.id]} m. Its light is waiting.` : 'All three sites found. The whole story is in the logbook.';
+  $('.ds-foot p', dialog).textContent = next ? `${SITES[next.id].name} is still down there at ${siteDepth(next.id)} m. Its light is waiting.` : 'All three sites found. The whole story is in the logbook.';
   $('.ds-foot div', dialog).innerHTML = `<button type="button" class="holo-chip" data-log="${last}">Open the logbook <span aria-hidden="true">→</span></button>` +
     (next ? `<button type="button" class="holo-chip holo-chip--go" data-dive="${next.id}">Dive to ${SITES[next.id].name} <span aria-hidden="true">→</span></button>` : '<button type="button" class="holo-chip holo-chip--go" data-plan>Choose a dive site <span aria-hidden="true">→</span></button>');
 }

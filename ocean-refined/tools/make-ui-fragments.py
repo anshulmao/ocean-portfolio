@@ -127,8 +127,8 @@ prompt = template(plan_js, "const prompt = node('dialog', 'dive-prompt holo holo
 add('dive-link-prompt', 'Prompt shown for a link that opens onto a dive (#anchor, #wreck, #treasure)', 'dive-plan.js', 'styles.css, hologram.css, motion.css, dive-plan.css', 'dive-plan.js',
     '<dialog class="dive-prompt holo holo--reading" aria-labelledby="dive-prompt-title">' + prompt + '</dialog>')
 summary = template(summary_js, "dialog.innerHTML = ", '`').replace('${NOTE_WORDS}', '40')
-add('dive-summary', 'Dive summary: the logbook page opened from the button on the right after a dive', 'dive-summary.js (built at load and appended to <body>)', 'styles.css, hologram.css, motion.css, dive-plan.css (button recipe), dive-summary.css',
-    'dive-summary.js, dive-log.js, field-guide.js, prepared-charts.js', '<button type="button" class="ds-open" aria-haspopup="dialog" aria-controls="dive-summary"><i aria-hidden="true"></i><b>Dive summary</b><small></small></button>' + chr(10) + '<dialog class="ds" id="dive-summary" aria-labelledby="ds-title">' + summary + '</dialog>',
+add('dive-summary', 'Dive summary: the logbook page opened from the button beside Guided dive after a dive', 'dive-summary.js (built at load; the button goes after #guided-dive, the page is appended to <body>)', 'styles.css, hologram.css, motion.css, surface.css (button), dive-plan.css (chip recipe), dive-summary.css',
+    'dive-summary.js, dive-log.js, field-guide.js, prepared-charts.js', '<button type="button" class="guided-button ds-open" aria-haspopup="dialog" aria-controls="dive-summary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg><span>Dive summary</span><small>New</small></button>' + chr(10) + '<dialog class="ds" id="dive-summary" aria-labelledby="ds-title">' + summary + '</dialog>',
     'dive-summary.js fills every section from the dive log when a dive ends (oceandivelog) and opens the page from the button.')
 at = tour_js.index("card.innerHTML = ")
 pieces = re.findall(r"'((?:[^'\\]|\\.)*)'", tour_js[at:tour_js.index(';', tour_js.index('</footer>', at))])

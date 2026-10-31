@@ -7,7 +7,8 @@ import { announce, clearAnnouncements } from './announce.js';
 // The journey layer turns free swimming into a light quest: three lights to
 // find, a pointer to the next one, and a title card for each depth chapter.
 // It only reads the public controls and diagnostics, like the other HUD files.
-const SITES = {
+// The three lights, by portfolio section (the dive summary names them from here too).
+export const SITES = {
   about: { name: 'The Anchor', signal: '#7ff0cf' },
   experience: { name: 'The Treasure', signal: '#ffcf7a' },
   projects: { name: 'The Wreck', signal: '#c9a2ff' }
