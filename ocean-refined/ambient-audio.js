@@ -449,7 +449,8 @@ const $ = selector => document.querySelector(selector), calm = matchMedia('(pref
 const read = key => { try { return localStorage.getItem(key); } catch { return null; } };
 const write = (key, value) => { try { localStorage.setItem(key, value); } catch {} };
 const GESTURES = ['pointerdown', 'keydown', 'touchend', 'click'], scene = { under: 0, depth: 0, wind: .18, rain: 0, storm: 0, speed: 0, scooter: 0, open: false, first: false, breathing: 1 };
-let enabled = read('ocean-sound') === 'on', volume = clamp(Number(read('ocean-sound-volume') ?? .7) || 0, 0, 1);
+// On unless the visitor turned it off; the browser still holds it back until their first click or key (start, arm).
+let enabled = read('ocean-sound') !== 'off', volume = clamp(Number(read('ocean-sound-volume') ?? .7) || 0, 0, 1);
 // The breathing's own level, on top of the volume: the whole regulator (inhale, valve, exhale and bubbles). Full unless set.
 let breathing = clamp(Number(read('ocean-sound-breathing') ?? 1), 0, 1);
 if (Number.isNaN(breathing)) breathing = 1;

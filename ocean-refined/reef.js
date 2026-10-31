@@ -6,8 +6,9 @@ import { valueTexture } from './shaders.js';
 
 export const LANDMARKS = [
   { id: 'about', title: 'About', description: 'Shallow reef · 8 m', position: [-12, -8, -15] },
-  { id: 'experience', title: 'Experience', description: 'Mid-depth wreck · 23 m', position: [18, -23, -39] },
-  { id: 'projects', title: 'Projects', description: 'Deep ledge · 45 m', position: [-18, -45, -82] }
+  // Experience lives in the treasure on the deep ledge, Projects in the wreck (swapped 31 Oct 2026).
+  { id: 'experience', title: 'Experience', description: 'Deep ledge · 45 m', position: [-18, -45, -82] },
+  { id: 'projects', title: 'Projects', description: 'Mid-depth wreck · 23 m', position: [18, -23, -39] }
 ];
 
 // Horizontal coordinates are world coordinates; vertical limits are camera

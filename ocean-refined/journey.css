@@ -47,6 +47,9 @@ body:is([data-clear-ui="true"],[data-safety-stop="true"]) :is(.zone-card,.journe
 .waypoint[data-show="true"]{opacity:.94}
 /* A message is the louder voice: the chip steps back while one is up, so they never stack. */
 body[data-announce="on"] .waypoint[data-show="true"]{opacity:0}
+/* A landmark's floating label steps back while an announcement is up too (on every screen, as on a phone): arriving at a
+   site, its "Found" toast and its label would otherwise sit on top of each other. */
+body[data-announce="on"] #reef-labels{visibility:hidden}
 .waypoint i{width:9px;height:9px;background:var(--signal,#7ff0cf);transform:rotate(45deg)}
 /* The marker breathes only while the chip is on screen. */
 .waypoint[data-show="true"] i{animation:journey-breathe 2.6s ease-in-out infinite}
@@ -71,8 +74,9 @@ body[data-announce="on"] .waypoint[data-show="true"]{opacity:0}
    adds the headline, the caption and every action. Its fill is nearly opaque: nothing behind it reads through the
    words. On a desktop it keeps the lower right corner, above the dive console and clear of the prompt in the middle;
    while the full computer face is up it stands above that. */
-section.tour-card.holo{--holo-tint-solid:#05222ff2}
-section.tour-card{position:fixed;right:var(--pad,24px);bottom:150px;z-index:var(--o-z-sheet);display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head actions";align-items:center;column-gap:12px;box-sizing:border-box;width:min(calc(100vw - 2*var(--o-pad)),440px);max-height:calc(100dvh - 2*var(--o-pad));padding:6px 12px 6px 22px;opacity:0;translate:0 14px;visibility:hidden;transition:opacity 250ms var(--journey-out),translate 250ms var(--journey-out),visibility 0s 250ms}
+/* A light tint, as the depth card has: the water shows through and the text glow carries the words. */
+section.tour-card.holo{--holo-tint-solid:#05222f73}
+section.tour-card{position:fixed;right:var(--pad,24px);bottom:calc(22px + var(--o-safe-b));z-index:var(--o-z-sheet);display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head actions";align-items:center;column-gap:12px;box-sizing:border-box;width:min(calc(100vw - 2*var(--o-pad)),440px);max-height:calc(100dvh - 2*var(--o-pad));padding:6px 12px 6px 22px;opacity:0;translate:0 14px;visibility:hidden;transition:opacity 250ms var(--journey-out),translate 250ms var(--journey-out),visibility 0s 250ms}
 section.tour-card[data-show="true"]{opacity:1;translate:0 0;visibility:visible;transition:opacity var(--journey-standard) var(--journey-in),translate var(--journey-standard) var(--journey-in)}
 section.tour-card[data-sheet="expanded"]{grid-template-areas:"head head" "title title" "body body" "pace pace" "actions actions";padding:6px 18px 14px 22px}
 body[data-computer-open="true"][data-camera="third"] section.tour-card{bottom:292px}
@@ -99,7 +103,22 @@ body:is([data-clear-ui="true"],[data-safety-stop="true"]) section.tour-card{visi
 .tour-keys kbd{padding:2px 5px;border:1px solid var(--holo-dim);border-radius:2px;font:500 9px/1 var(--holo-mono);letter-spacing:0}
 .tour-keys li[data-next="true"]{border-color:var(--signal,var(--holo-strong));opacity:1}
 .tour-keys li[data-done="true"]{border-color:var(--signal,var(--holo));opacity:1}
-.tour-keys li[data-done="true"]::after{content:"✓";margin-left:2px;color:var(--signal,var(--holo))}
+/* A control tried: its key presses in, the chip flashes, and a tick draws on beside it (guided-dive.js TICK, cheerHTML).
+   Only the one just done animates; the rest show their tick still. Fly-by captions and stop tips use the same press and tick. */
+.tour-tick{flex:none;width:11px;height:11px;margin-left:1px;fill:none;stroke:var(--signal,var(--holo));stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;vertical-align:-1px}
+.tour-tick path{stroke-dasharray:1;stroke-dashoffset:0}
+.tour-cheer{display:inline-flex;align-items:center;gap:7px;color:var(--signal,var(--holo-strong))}
+.tour-cheer kbd{display:inline-block;padding:2px 5px;border:1px solid var(--signal,var(--holo-strong));border-radius:2px;font:500 9.5px/1 var(--holo-mono);letter-spacing:0}
+.tour-cheer .tour-tick{width:13px;height:13px}
+.tour-keys li[data-fresh="true"]{animation:tour-flash 900ms var(--journey-ease)}
+:is(.tour-keys li[data-fresh="true"],.tour-cheer) kbd{display:inline-block;animation:tour-press 420ms var(--journey-ease)}
+:is(.tour-keys li[data-fresh="true"],.tour-cheer) .tour-tick path{stroke-dashoffset:1;animation:tour-draw 360ms 260ms var(--journey-in) forwards}
+.tour-cheer .tour-tick{animation:tour-pop 420ms 220ms var(--journey-in) both}
+@keyframes tour-press{0%,100%{transform:none}30%{transform:translateY(1.5px) scale(.86);background:var(--signal,var(--holo-strong));color:#04161d;box-shadow:inset 0 1px 3px #0006}}
+@keyframes tour-draw{to{stroke-dashoffset:0}}
+@keyframes tour-pop{0%{transform:scale(.6)}60%{transform:scale(1.18)}100%{transform:none}}
+@keyframes tour-flash{0%{box-shadow:0 0 0 0 var(--signal,#7ff0cf);background:color-mix(in srgb,var(--signal,#7ff0cf) 22%,transparent)}100%{box-shadow:0 0 0 10px transparent;background:transparent}}
+@media (prefers-reduced-motion:reduce){:is(.tour-keys li,.tour-cheer) :is(kbd,.tour-tick,.tour-tick path),.tour-keys li{animation:none!important;stroke-dashoffset:0!important}}
 :is(.tour-keys,.tour-teach)[hidden]{display:none}
 /* Look there (look-indicator.js): a ring on an animal worth turning for, or an arrow at the screen's edge pointing the
    way to turn. Moved with a transform each frame; never takes a pointer. */
@@ -129,10 +148,33 @@ body[data-clear-ui="true"] .look-there{visibility:hidden}
 .tour-card footer [data-tour="exit"]{margin-left:auto;border-color:#0000;background:none}
 .tour-card footer :is([data-tour="rejoin"],[data-tour="surface"],[data-tour="read"]){border-color:var(--signal,var(--holo))}
 .tour-card[data-sheet="collapsed"] footer button{border-color:var(--signal,var(--holo))}
+/* A fly-by's caption (guided-dive.js): a title and a line over the water, with no card, only a scrim that fades out to the
+   right. Top centre under the top bar; on a phone, top left under the depth chip, clear of the compass. */
+.tour-caption{position:fixed;top:calc(var(--o-under-bar) + 8px);left:50%;z-index:var(--o-z-announce);display:grid;gap:3px;box-sizing:border-box;width:max-content;max-width:min(520px,calc(100vw - 2*var(--o-pad)));padding:10px 40px 11px 16px;border-left:2px solid var(--signal,var(--holo));background:linear-gradient(90deg,color-mix(in srgb,var(--holo-tint-solid) 45%,#0000) 55%,#0000);color:var(--holo-ink);font-family:var(--holo-font);text-shadow:var(--holo-text-glow);pointer-events:none;opacity:0;translate:-50% -6px;transition:opacity 400ms var(--journey-out),translate 400ms var(--journey-out)}
+.tour-caption[data-show="true"]{opacity:1;translate:-50% 0;transition:opacity 500ms var(--journey-in),translate 500ms var(--journey-in)}
+.tour-caption b{font-size:19px;font-weight:500;line-height:1.2}
+.tour-caption span{font-size:14px;line-height:1.4;opacity:.86}
+.tour-caption small{margin-top:3px;font-size:12.5px;line-height:1.4;color:var(--signal,var(--holo-strong))}
+.tour-caption small[hidden]{display:none}
+body:is([data-clear-ui="true"],[data-safety-stop="true"]) .tour-caption{visibility:hidden}
+/* A fly-by's caption names what is in view: the landmark labels stand back meanwhile, off the shot and the deck. */
+body[data-tour-flyby="true"] #reef-labels{visibility:hidden}
+@media (prefers-reduced-motion:reduce){.tour-caption,.tour-caption[data-show="true"]{translate:-50% 0}}
+/* A fly-by teaching a control rings its key on the touch deck; the scooter key reads as held while the guide runs it. */
+body[data-tour-teach="scooter"] .touch-actions [data-swim="KeyE"],body[data-tour-teach="photo"] .touch-actions [data-photo],body[data-tour-teach="lamp"] .touch-actions [data-lamp]{border-color:var(--holo-strong);animation:journey-ping 1.4s var(--journey-out) infinite}
+body[data-guide-scooter="true"] .touch-actions [data-swim="KeyE"]{background:var(--holo-fill-on)}
+/* Tried while a fly-by asked for it: the deck key presses in and flashes once (the caption shows the tick). */
+body[data-tour-cheer="scooter"] .touch-actions [data-swim="KeyE"],body[data-tour-cheer="photo"] .touch-actions [data-photo],body[data-tour-cheer="lamp"] .touch-actions [data-lamp]{border-color:var(--signal,var(--holo-strong));animation:tour-flash 900ms var(--journey-ease),tour-tap 420ms var(--journey-ease)}
+@keyframes tour-tap{0%,100%{transform:none}30%{transform:scale(.9)}}
+@media (prefers-reduced-motion:reduce){body:is([data-tour-teach],[data-tour-cheer]) .touch-actions .touch-key{animation:none}}
+/* On a desktop the tour card takes the bottom-right corner, where the Ahead card sits: the tour names the sites itself. */
+body:is([data-tour="intro"],[data-tour="travel"],[data-tour="dwell"],[data-tour="done"]) .calm-ahead{display:none!important}
 .tour-fade{position:fixed;inset:0;z-index:var(--o-z-labels);pointer-events:none;background:#04303f;opacity:0;transition:opacity var(--journey-standard) var(--journey-ease)}
 .tour-fade[data-on="true"]{opacity:1;transition:opacity 200ms var(--journey-out)}
 /* The tour narrates each landmark itself, so the generic prompt to click in stays out of its way. */
-body:is([data-tour="intro"],[data-tour="travel"],[data-tour="look"],[data-tour="dwell"]) .waypoint{opacity:0}
+body:is([data-tour="intro"],[data-tour="travel"],[data-tour="dwell"]) .waypoint{opacity:0}
+/* The settings menu stands over the scene on every screen: the Ahead chip waits behind it. */
+body[data-menu="open"] .waypoint{visibility:hidden}
 /* The guided dive's opening (guided-dive.js): the surface copy steps aside while the camera moves in on the diver. */
 body[data-prelude="on"] :is(.masthead,.hero,.scene-footer,.capture-hint){opacity:0;visibility:hidden;pointer-events:none;transition:opacity .6s,visibility 0s .6s}
 /* Key caps mean nothing without a keyboard. */
@@ -148,6 +190,14 @@ html[data-input="touch"] .tour-card footer kbd{display:none}
   .zone-card small{font-size:9px;letter-spacing:.16em}
   .zone-card strong{font-size:24px}
   .zone-card b{width:104px}
+  /* The fly-by caption under the depth chip, left, short of the compass; and while the tour leads or its ending is up,
+     Back to the surface gives its place up (the tour's own Exit and Surface stay), so the top of the water is the caption's. */
+  .tour-caption{left:var(--o-pad);max-width:calc(100vw - 2*var(--o-pad) - 112px);padding:8px 28px 9px 12px;translate:0 -6px}
+  .tour-caption[data-show="true"]{translate:0 0}
+  .tour-caption b{font-size:16px}
+  .tour-caption span{font-size:13px;line-height:1.35}
+  .tour-caption small{font-size:12px}
+  body:is([data-tour="intro"],[data-tour="travel"],[data-tour="dwell"],[data-tour="done"])[data-submerged="true"] .dive-button{visibility:hidden}
   section.tour-card,body[data-computer-open="true"][data-camera="third"] section.tour-card{left:var(--o-pad);right:var(--o-pad);bottom:var(--o-sheet-bottom);width:auto;max-height:var(--o-sheet-max);padding:0 8px 0 18px;column-gap:8px}
   section.tour-card[data-sheet="expanded"]{padding:0 14px 10px 18px}
   .tour-head{min-height:var(--o-tap)}

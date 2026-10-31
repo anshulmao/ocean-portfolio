@@ -9,8 +9,8 @@ import { announce, clearAnnouncements } from './announce.js';
 // It only reads the public controls and diagnostics, like the other HUD files.
 const SITES = {
   about: { name: 'The Anchor', signal: '#7ff0cf' },
-  experience: { name: 'The Wreck', signal: '#ffcf7a' },
-  projects: { name: 'The Treasure', signal: '#c9a2ff' }
+  experience: { name: 'The Treasure', signal: '#ffcf7a' },
+  projects: { name: 'The Wreck', signal: '#c9a2ff' }
 };
 const ZONES = [
   { until: 16, title: 'Sunlit shallows', place: 'Coral gardens', range: '0 – 11 m' },
@@ -89,6 +89,16 @@ function target(id) {
   if (placed) for (let i = 0; i < placed.length; i++) if (placed[i].id === id && placed[i].position) return point.fromArray(placed[i].position);
   return point.fromArray(CHARTED[id]);
 }
+// The capture hint ("Click to swim") sits low and centred until the visitor clicks in; the chip keeps above it. Its top is
+// measured once for each viewport size.
+let hint = null, hintClear = { size: '', bottom: 0 };
+function clearOfHint(width, height) {
+  hint ??= document.getElementById('capture-hint');
+  if (!hint || hint.hidden) return 0;
+  const size = `${width}x${height}`;
+  if (hintClear.size !== size) hintClear = { size, bottom: Math.max(0, height - hint.getBoundingClientRect().top + 8) };
+  return hintClear.bottom;
+}
 function showWaypoint(value) { if (chip.shown !== value) { chip.shown = value; waypoint.dataset.show = String(value); } }
 function updateWaypoint(controls, player) {
   const camera = controls.getCamera();
@@ -127,7 +137,7 @@ function updateWaypoint(controls, player) {
   // Keep the whole chip on screen, whatever its label length.
   const halfWidth = chip.halfWidth, halfHeight = chip.halfHeight, width = viewport.width, height = viewport.height;
   // Stay clear of the HUD columns: buttons and depth scale on the left, map and air bar on the right, tape on top.
-  const wide = width > 600, insetLeft = wide ? 236 : 104, insetRight = wide ? 160 : 8, insetTop = wide ? 104 : 372, insetBottom = wide ? 56 : 270;
+  const wide = width > 600, insetLeft = wide ? 236 : 104, insetRight = wide ? 160 : 8, insetTop = wide ? 104 : 372, insetBottom = Math.max(wide ? 56 : 270, clearOfHint(width, height));
   // Placed to the half pixel, and moved only when that changes.
   const left = Math.round(Math.min(width - insetRight - halfWidth, Math.max(insetLeft + halfWidth, (x * .5 + .5) * width)) * 2) / 2;
   const top = Math.round(Math.min(height - insetBottom - halfHeight, Math.max(insetTop + halfHeight, (-y * .5 + .5) * height)) * 2) / 2;

@@ -17,9 +17,10 @@ export const markerBox = () => shown ? box : null;
 // The marker keeps to the band between the compass at the top and the guide's card and controls at the bottom, so its
 // name never sits on the HUD. Measured once a size, since the HUD only moves when the window does.
 addEventListener('resize', () => { band = null; });
-// The instruments that sit inside that band at the sides (the reef map, the air gauge and the dive computer on a phone):
-// the marker steps down below any it would cover. Their boxes are read a few times a second, not every frame.
-const HUD = '.reef-map,.air-gauge,.dive-computer,.settings-toggle';
+// The instruments that sit inside that band at the sides (the reef map, the air gauge and the dive computer on a phone,
+// and the touch deck's stick and keys in landscape): the marker steps below any it would cover, or above it where the band
+// has no room below, or else in toward the middle. Their boxes are read a few times a second, not every frame.
+const HUD = '.reef-map,.air-gauge,.dive-computer,.settings-toggle,.touch-actions,.touch-stick';
 let hud = [], hudAt = -1;
 function instruments() {
   const now = performance.now();
@@ -44,13 +45,20 @@ export function pointAt(camera, subject, text = '') {
   let x = behind ? -at.x : at.x, y = behind ? -at.y : at.y;
   const onScreen = !behind && Math.abs(x) < EDGE_X && Math.abs(y) < EDGE_Y;
   if (!onScreen) { const reach = Math.max(Math.abs(x) / EDGE_X, Math.abs(y) / EDGE_Y, 1e-6); x /= reach; y /= reach; }
-  const [high, low] = safeBand(), left = (x * .5 + .5) * innerWidth;
+  const [high, low] = safeBand();
+  let left = (x * .5 + .5) * innerWidth;
   let top = Math.min(low, Math.max(high, (-y * .5 + .5) * innerHeight));
   node.dataset.edge = String(!onScreen); node.dataset.side = x > .3 ? 'left' : 'right';
   if (text !== shownLabel) { shownLabel = text; label.textContent = text; labelWidth = label.offsetWidth || 0; }
   // The ring is 36 px round its point; the name sits 26 px off to one side (journey.css .look-there).
-  const right = node.dataset.side !== 'left', from = right ? left - 24 : left - 32 - labelWidth, to = right ? left + 32 + labelWidth : left + 24;
-  for (const r of instruments()) if (from < r.right && to > r.left && top - 24 < r.bottom && top + 24 > r.top) top = Math.min(low, Math.max(top, r.bottom + 26));
+  const right = node.dataset.side !== 'left';
+  let from = right ? left - 24 : left - 32 - labelWidth, to = right ? left + 32 + labelWidth : left + 24;
+  for (const r of instruments()) {
+    if (!(from < r.right && to > r.left && top - 24 < r.bottom && top + 24 > r.top)) continue;
+    if (r.bottom + 26 <= low) top = Math.max(top, r.bottom + 26);
+    else if (r.top - 26 >= high) top = r.top - 26;
+    else { const shift = (r.left + r.right) / 2 > innerWidth / 2 ? r.left - 8 - to : r.right + 8 - from; left += shift; from += shift; to += shift; }
+  }
   box[0] = from; box[1] = top - 24; box[2] = to; box[3] = top + 24;
   node.style.transform = `translate(${left.toFixed(1)}px, ${top.toFixed(1)}px)`;
   node.style.setProperty('--turn', `${(Math.atan2(-y, x) * 180 / Math.PI + 45).toFixed(1)}deg`);

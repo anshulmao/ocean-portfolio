@@ -4,8 +4,9 @@ import { seededRandom } from './assets.js';
 const TAU = Math.PI * 2;
 const SITES = {
   about: { x: -12, z: -15, color: '#7ff0cf' },
-  experience: { x: 18, z: -39, color: '#ffcf7a' },
-  projects: { x: -18, z: -82, color: '#c9a2ff' }
+  // Experience is the treasure on the deep ledge, Projects the wreck.
+  experience: { x: -18, z: -82, color: '#ffcf7a' },
+  projects: { x: 18, z: -39, color: '#c9a2ff' }
 };
 
 const beaconVertex = /* glsl */ `
@@ -138,9 +139,9 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
         rock(x, floor(x, z) + s * .2, z, [s * 1.2, s * .7, s], [random(), random() * TAU, random()], i % 2 ? '#8496ab' : '#a3b1bf');
       }
     }
-    // Experience: cargo and spars thrown clear of the hull on its far side.
-    placing = 'experience';
-    { const { at, yaw } = frame('experience');
+    // Projects (the wreck): cargo and spars thrown clear of the hull on its far side.
+    placing = 'projects';
+    { const { at, yaw } = frame('projects');
       [[-10.5, 3.2, 0], [-11.6, 2.4, 0], [-10.9, 4.4, 1], [-12.6, -3.8, 1], [-9.6, -6.2, 0], [-4.5, 12.6, 1]].forEach(([a, b, lying], i) => {
         const [x, z] = at(a, b), y = floor(x, z), s = .95 + (i % 3) * .12;
         if (lying) barrel(x, y + .36 * s, z, [s, s, s], [Math.PI / 2, 0, i * 1.3]);
@@ -160,9 +161,9 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
         for (let n = 0; n < 4; n++) { const [bx, bz] = at(a + 1 + (n % 2) * .24, b + .6 + Math.floor(n / 2) * .24); ball(bx, floor(bx, bz) + .1, bz); }
       }
     }
-    // Projects: the chests have spilled, and a horseshoe of stone cradles them.
-    placing = 'projects';
-    { const { at } = frame('projects'), origin = frames.projects, centers = [[origin.x, origin.z], origin.second || [origin.x + 2.9, origin.z - 1.35]];
+    // Experience (the treasure): the chests have spilled, and a horseshoe of stone cradles them.
+    placing = 'experience';
+    { const { at } = frame('experience'), origin = frames.experience, centers = [[origin.x, origin.z], origin.second || [origin.x + 2.9, origin.z - 1.35]];
       const middle = [(centers[0][0] + centers[1][0]) / 2 - origin.x, (centers[0][1] + centers[1][1]) / 2 - origin.z];
       for (let i = 0, coins = economy ? 90 : 170; i < coins; i++) {
         const [ox, oz] = centers[i % 2], angle = random() * TAU, radius = .7 + Math.pow(random(), 1.6) * 2.6;

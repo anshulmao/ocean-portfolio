@@ -31,7 +31,7 @@ export const movementDefaults = Object.freeze({
   "cameraDistance": 8.2,
   "cameraHeight": 2.2,
   "cameraResponse": 16,
-  "cameraFov": 47,
+  "cameraFov": 52,
   "cameraLookAhead": 4,
   "diveResponse": 0.95,
   "surfaceReturnResponse": 3,

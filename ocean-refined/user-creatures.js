@@ -41,6 +41,8 @@ const TAU = Math.PI * 2, { clamp, smoothstep } = THREE.MathUtils;
 const turnTo = (from, to) => Math.atan2(Math.sin(to - from), Math.cos(to - from));
 const ease = (dt, rate) => 1 - Math.exp(-dt * rate);
 const rr = (a, b) => a + Math.random() * (b - a);
+// A passing visitor rises no steeper than 30° over the diver (tan 30°), swimming up to DEEPEN m under its band to keep to it.
+const RISE = Math.tan(Math.PI / 6), DEEPEN = 12;
 const swimTime = { value: 0 };
 
 // A species drawn as instances bends from the shoulders back, each fish on its own beat (aBeat). The shape of the
@@ -64,7 +66,8 @@ transformed.x += uSwimShape.y * (pow(setAlong, uSwimShape.z) * sin(uSwimShape.w 
 export function createUserCreatures({ terrainHeightAt = () => -40, collisions = null, economy = false, sites = {} } = {}) {
   const root = new THREE.Group(); root.name = 'Creature set';
   const pair = value => Array.isArray(value) ? value[economy ? 1 : 0] : value;
-  const diagnostics = { loading: {}, ready: false, loaded: 0, loadedSpecies: 0, failed: 0, species: 0, errors: [], visitors: 0, visitorCount: 0, schoolFish: 0, schoolCount: 0, schoolDrawCalls: 0, encounters: { active: [], history: [] } };
+  // sentinel: where the wreck's barracuda is, and how often a diver has crowded it into bolting.
+  const diagnostics = { sentinel: { at: null, darts: 0 }, loading: {}, ready: false, loaded: 0, loadedSpecies: 0, failed: 0, species: 0, errors: [], visitors: 0, visitorCount: 0, schoolFish: 0, schoolCount: 0, schoolDrawCalls: 0, encounters: { active: [], history: [] } };
   const gltfs = new Map(), facts = new Map(), actors = [], groups = [], kinds = new Map(), herds = [];
   let clock = 0, frame = 0;
 
@@ -287,18 +290,24 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     }
   }
   // course (the guided dive's own call): angle and side fix the line of the pass, pass its distance from the diver, y its
-  // depth, and ahead starts it that many metres short of its closest approach instead of out beyond the haze.
+  // depth, and ahead starts it that many metres short of its closest approach instead of out beyond the haze. from, when given,
+  // is the point the pass is measured from (a fly-by's spot on the route) rather than where the diver is when it is called.
   function begin(e, player, view, course = null) {
     // A kind with `across` swims parallel to the reef, across its face (the reef deepens towards -z, so that is east or west),
     // its line kept out over the deep shelf at z `across` or deeper, never in over the shallows.
     const across = !course && e.across !== undefined;
     const range = view ? Math.min(view.range, 130) : 110, R = range + e.length + 12, angle = course?.angle ?? (across ? (Math.random() < .5 ? 1 : -1) * Math.PI / 2 : rr(0, TAU)), sideOf = course?.side ?? (Math.random() < .5 ? 1 : -1);
-    const dx = Math.sin(angle), dz = Math.cos(angle), nx = dz * sideOf, nz = -dx * sideOf, pass = course?.pass ?? rr(...e.pass), px = player?.x ?? 0, pz = player?.z ?? -30;
+    const dx = Math.sin(angle), dz = Math.cos(angle), nx = dz * sideOf, nz = -dx * sideOf, px = course?.from?.[0] ?? player?.x ?? 0, pz = course?.from?.[2] ?? player?.z ?? -30;
+    // Seen from straight below, a great animal is only its belly. A pass rises no steeper than RISE over the diver: the animal
+    // swims up to DEEPEN metres under its band and, if that is not enough, its line runs further out. The guided dive's own
+    // course sets both itself.
+    let pass = course?.pass ?? rr(...e.pass), y0 = course?.y ?? rr(...e.depth);
+    if (!course && player && y0 - player.y > pass * RISE) { y0 = Math.max(player.y + pass * RISE, y0 - DEEPEN); pass = Math.max(pass, (y0 - player.y) / RISE); }
     const cx = across ? px : px + nx * pass, cz = across ? Math.min(pz - pass, e.across) : pz + nz * pass;
     // The gentle bow in the line; one swimming across the reef bows out to sea, never in over the shallows.
     const bow = rr(-1, 1) * e.bulge * R;
     e.path = { sx: cx - dx * R, sz: cz - dz * R, ex: cx + dx * R, ez: cz + dz * R, nx, nz, len: 2 * R, bulge: across ? -Math.sign(nz) * Math.abs(bow) : bow };
-    e.u = course?.ahead === undefined ? 0 : clamp(.5 - course.ahead / e.path.len, 0, .5); e.y0 = course?.y ?? rr(...e.depth); e.next = clock + rr(4, 8);
+    e.u = course?.ahead === undefined ? 0 : clamp(.5 - course.ahead / e.path.len, 0, .5); e.y0 = y0; e.next = clock + rr(4, 8);
     for (const c of e.cast) { c.actor.active = true; c.actor.started = false; play(c.actor, 'swim', 0); }
     for (const r of e.riders) { r.actor.active = true; r.actor.started = false; }
     if (e.school) e.school.active = true;
@@ -380,7 +389,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
 
   // --- Residents ------------------------------------------------------------------------------------------------
   const spotted = [], dens = [];
-  let sentinel = null, grazers = null;
+  let sentinel = null, grazers = null, whipray = null;
   // Dens: out from the formation's middle, through its rock, to the first open ground beyond it: the den mouth, with
   // the body back in the rock. A heading that never crosses rock, or only reaches open ground far out (a gap in a ring
   // of columns, say), would leave the eel lying on bare sand, so headings nearest the authored one are tried first.
@@ -403,7 +412,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       herds.push(grazers);
     }
     const w = RESIDENTS.whipray;
-    if (gltfs.has(w.species)) { const a = actor(w.species); if (a) herds.push({ route: route(...w.loop), height: over(w.height, -4), speed: w.speed, pace: 1, members: [{ actor: a, ...member(0, 0, 0, { drift: .6, bob: .12 }) }], look: 6, bank: .12 }); }
+    if (gltfs.has(w.species)) { const a = actor(w.species); if (a) whipray = a; if (a) herds.push({ route: route(...w.loop), height: over(w.height, -4), speed: w.speed, pace: 1, members: [{ actor: a, ...member(0, 0, 0, { drift: .6, bob: .12 }) }], look: 6, bank: .12 }); }
     const s = RESIDENTS.bluespots;
     if (gltfs.has(s.species)) for (const [x, z] of s.spots.slice(0, economy ? s.lean : s.spots.length)) {
       const a = actor(s.species, { clip: 'rest' }); if (!a) continue;
@@ -467,14 +476,14 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       const cx = Math.cos(s.phase), sz = Math.sin(s.phase);
       C.set(s.home.x + cx * rx, s.home.y + Math.sin(clock * .21 + s.drift) * .5, s.home.z + sz * rz); C.y = Math.max(C.y, cover(C.x, C.z) + 2.5);
       let yaw = s.hover > 0 ? (d < 24 ? Math.atan2(player.x - a.pos.x, player.z - a.pos.z) : a.yaw) : Math.atan2(-sz * rx * s.turn, cx * rz * s.turn);
-      if (s.dart <= 0 && s.calm <= 0 && d < 6) { s.dart = 1; s.hover = 0; s.away.copy(a.pos).sub(player).setY(0).normalize().multiplyScalar(16).add(a.pos); s.away.y = s.home.y + 2; play(a, 'strike', .15, true, 'fast'); }
+      if (s.dart <= 0 && s.calm <= 0 && d < 6) { diagnostics.sentinel.darts++; s.dart = 1; s.hover = 0; s.away.copy(a.pos).sub(player).setY(0).normalize().multiplyScalar(16).add(a.pos); s.away.y = s.home.y + 2; play(a, 'strike', .15, true, 'fast'); }
       if (s.dart > 0) {
         s.dart -= dt / 6; const out = s.dart > .75;
         if (out) { C.copy(s.away); a.ease = 3; } else a.ease = .8;
         yaw = Math.atan2(C.x - a.pos.x, C.z - a.pos.z);
         if (s.dart <= 0) { s.calm = 6; s.cruise = rr(14, 22); play(a, 'swim', 1.2); a.ease = 1.2; }
       }
-      place(a, C, yaw, 0, 0, dt);
+      place(a, C, yaw, 0, 0, dt); diagnostics.sentinel.at = a.pos;
     }
     for (const d of dens) {
       const a = d.actor; d.rest -= dt;
@@ -699,7 +708,8 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     seek(id, u) { const e = casts.get(id); if (!e?.path) return false; e.u = u; for (const c of e.cast) c.actor.started = false; for (const r of e.riders) r.actor.started = false; return true; }
   };
   // Where a resident that stays put actually settled (sand() can move it well away from its wished-for spot): the guided dive frames it from here.
-  const residentAt = id => resting[id] ?? null;
+  // Where a resident is: one lying still where it settled, or the whipray where it glides now (the guided dive follows it).
+  const residentAt = id => resting[id] ?? (id === 'whipray' && whipray ? [whipray.pos.x, whipray.pos.y, whipray.pos.z] : null);
   // The guided dive brings one encounter in on a course of its own, and points out the visitors passing: where each lead animal is now.
   function encounter(id, player, view, course) { const e = casts.get(id); if (!e?.cast.length) return false; const s = slots.find(item => item.slot === e.slot); if (s.active) end(s.active); begin(e, player, view, course); s.active = e; return true; }
   const visitors = () => slots.filter(s => s.active?.path && s.active.cast[0]?.actor.started).map(s => { const p = s.active.cast[0].actor.pos; return { id: s.active.id, x: p.x, y: p.y, z: p.z }; });
