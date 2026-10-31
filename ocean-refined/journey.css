@@ -154,6 +154,8 @@ body[data-clear-ui="true"] .look-there{visibility:hidden}
 .tour-caption small{margin-top:3px;font-size:12.5px;line-height:1.4;color:var(--signal,var(--holo-strong))}
 .tour-caption small[hidden]{display:none}
 body:is([data-clear-ui="true"],[data-safety-stop="true"]) .tour-caption{visibility:hidden}
+/* A fly-by's caption names what is in view: the landmark labels stand back meanwhile, off the shot and the deck. */
+body[data-tour-flyby="true"] #reef-labels{visibility:hidden}
 @media (prefers-reduced-motion:reduce){.tour-caption,.tour-caption[data-show="true"]{translate:-50% 0}}
 /* A fly-by teaching a control rings its key on the touch deck; the scooter key reads as held while the guide runs it. */
 body[data-tour-teach="scooter"] .touch-actions [data-swim="KeyE"],body[data-tour-teach="photo"] .touch-actions [data-photo],body[data-tour-teach="lamp"] .touch-actions [data-lamp]{border-color:var(--holo-strong);animation:journey-ping 1.4s var(--journey-out) infinite}

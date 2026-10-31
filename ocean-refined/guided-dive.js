@@ -323,7 +323,8 @@ function paintCaption(fingers) {
   if (tip) document.body.dataset.tourTeach = id; else delete document.body.dataset.tourTeach;
   if (on && sight.scooter) document.body.dataset.guideScooter = 'true'; else delete document.body.dataset.guideScooter;
   if (key === captionShown) return tip;
-  captionShown = key; caption.dataset.show = String(on);
+  // While a fly-by's caption names its subject, the floating landmark labels step back (journey.css).
+  captionShown = key; caption.dataset.show = String(on); document.body.dataset.tourFlyby = String(on);
   if (!on) return tip;
   const small = caption.querySelector('small');
   caption.querySelector('b').textContent = sight.title; caption.querySelector('span').textContent = sight.line;
