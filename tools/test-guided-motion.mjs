@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
-import { createExploration } from '../ocean-refined/exploration.js';
+import { createExploration, REEF_HEART, SURFACE_START } from '../ocean-refined/exploration.js';
 import { defaults } from '../ocean-refined/movement-settings.js';
 import { LANDMARKS, terrainHeightAt, createReef } from '../ocean-refined/reef.js';
 import { planGuidedRoute } from '../ocean-refined/guided-route.js';
@@ -164,9 +164,9 @@ const keyup = code => window.dispatchEvent({ type: 'keyup', code, target: { clos
   env.tick(1);
   assert.equal(env.state.tour.tip, 'Try it, 3 of 4: Press C to open your dive computer.');
   document.body.dataset.computerOpen = 'true'; env.tick(.1); delete document.body.dataset.computerOpen;
-  assert.equal(env.state.tour.tip, '✓ Dive computer', 'a control done is ticked'); env.tick(1.3);
+  assert.equal(env.state.tour.tip, '✓ Dive computer', 'a control done is ticked'); env.tick(1.6);
   assert.equal(env.state.tour.tip, 'Try it, 4 of 4: Press V to see yourself in third person.');
-  env.nav.togglePerspective(); env.tick(1.5);
+  env.nav.togglePerspective(); env.tick(1.7);
   assert.equal(env.state.tour.tip, 'That’s the controls. Press N to start the tour.');
   assert.equal(tourStatus(), 'intro', 'trying the controls never hands the dive over, nor starts the tour');
   assert.deepEqual(window.oceanTour.tried.sort(), ['computer', 'swim', 'updown', 'view']);
@@ -185,6 +185,8 @@ const keyup = code => window.dispatchEvent({ type: 'keyup', code, target: { clos
   assert.ok(!env.nav.state.guideScooter, 'the guide does not run it while it waits for the visitor');
   key('KeyE'); env.tick(.6); keyup('KeyE'); env.tick(.1);
   assert.equal(env.state.tour.flyTip, '', 'gone once used');
+  assert.equal(document.body.dataset.tourCheer, 'scooter', 'and ticked in the caption, its deck key flashing');
+  env.tick(1.6); assert.equal(document.body.dataset.tourCheer, undefined, 'for a moment');
   assert.equal(tourStatus(), 'travel', 'the scooter speeds the guide, it does not take over');
   env.tick(2.5);
   assert.notEqual(env.state.tour.sight, 'scooter', 'and once tried, the fly-by goes on');
@@ -258,8 +260,10 @@ for (const hz of [30, 60, 120]) {
   env.state.landmarksReady = true; env.tick(.1);
   assert.equal(tourStatus(), 'intro');
   assert.equal(window.oceanTour.welcome !== null, true, 'At a glance carries the welcome while the tour is on');
-  const yaw0 = env.nav.state.yaw; let swing = 0;
-  for (let t = 0; t < 12; t += .25) { env.tick(.25); swing = Math.max(swing, Math.abs(Math.atan2(Math.sin(env.nav.state.yaw - yaw0), Math.cos(env.nav.state.yaw - yaw0)))); }
+  // How far the look sweeps across the reef, side to side.
+  const yaw0 = env.nav.state.yaw; let low = 0, high = 0;
+  for (let t = 0; t < 12; t += .25) { env.tick(.25); const turned = Math.atan2(Math.sin(env.nav.state.yaw - yaw0), Math.cos(env.nav.state.yaw - yaw0)); low = Math.min(low, turned); high = Math.max(high, turned); }
+  const swing = high - low;
   assert.equal(tourStatus(), 'intro', 'the welcome has no automatic advance');
   assert.ok(swing > .8, `the welcome looks around the reef (${swing.toFixed(2)} rad)`);
   window.oceanTour.next();
@@ -648,3 +652,16 @@ for (const interruption of ['stall', 'pause', 'takeover']) {
   window.oceanTour.stop(); env.nav.destroy();
 }
 console.log('PASS: a stall, a pause or a takeover and rejoin partway keeps the swim through the arch.');
+
+// Going under: whatever the surface faced (the sun, at another time of day), the dive turns to the heart of the reef.
+{
+  const env = environment(60, { surface: true });
+  for (const surfaceYaw of [0, Math.PI / 2, Math.PI]) {
+    env.nav.frameSky(surfaceYaw); env.nav.startDive();
+    const forward = [-Math.sin(env.nav.state.yaw), -Math.cos(env.nav.state.yaw)], to = [REEF_HEART[0] - SURFACE_START[0], REEF_HEART[1] - SURFACE_START[1]];
+    const off = Math.acos((forward[0] * to[0] + forward[1] * to[1]) / Math.hypot(...to));
+    assert.ok(off < .02, `facing ${surfaceYaw.toFixed(2)} at the surface, the dive faces the reef (${off.toFixed(3)} rad off)`);
+  }
+  env.nav.destroy();
+}
+console.log('PASS: going under faces the reef, whatever the surface faced.');

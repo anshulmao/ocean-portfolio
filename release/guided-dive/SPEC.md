@@ -49,6 +49,8 @@ Every stop is approached on the line from its subject, so the diver arrives faci
 
 1. The visitor clicks **Show me around** while bobbing in open water.
 2. The camera eases in on the diver, and the diver dives in, the view going to first person on the way down.
+3. Going under, the view turns to the heart of the reef (the anchor, `exploration.js` REEF_HEART), whatever the surface
+   view faced.
 
 ### 1. Welcome: drifting in
 
@@ -124,6 +126,9 @@ Every stop is approached on the line from its subject, so the diver arrives faci
 | V (view) | The ending (desktop) | "Press V to see yourself against the reef." |
 | G (rejoin) | First takeover | "You have the controls. G to rejoin." |
 
+- **Tried while asked for:** the key chip presses in and a tick draws on beside the control's name, for 1.5 s, before the
+  next is asked for. Same press and tick for the welcome's chips, a fly-by's caption (the lamp, the scooter, the camera)
+  and a stop's tip. On touch, the deck key flashes too. Reduced motion shows the tick without the animation.
 - A hint the visitor has already used is skipped. The guide running the scooter doesn't count as the visitor trying it.
 - On touch, the deck key a fly-by teaches rings while its tip shows.
 
@@ -427,3 +432,8 @@ stops.
   - **Surfacing:** N at the ending surfaces, with the safety stop. The safety-stop banner is gone.
   - **Desktop:** the tour card sits bottom right; it and the captions are see-through with a slight tint.
   - `tour_version` is now 7.
+- **Round 7, the owner's follow-up:**
+  - **Going under faces the reef:** the dive turns to the anchor as it goes under, whatever the surface view faced. A test
+    checks it from three surface headings.
+  - **Press and tick:** trying a control the tour is asking for presses its key in and draws a tick on: the welcome's
+    chips, the lamp and scooter fly-bys (and the camera), and the stops' tips. CHEER is now 1.5 s.

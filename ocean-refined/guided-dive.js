@@ -52,7 +52,7 @@ const CONTROLS = {
 // On a phone the computer and the view live in the menu, not on the deck, so the welcome asks only for what the deck has and
 // no later beat teaches them there (DESK).
 const PRIMER = { keys: ['swim', 'updown', 'computer', 'view'], touch: ['swim', 'updown'] }, DESK = new Set(['computer', 'view']);
-const CHEER = 1.2, MOVED = 1.2;
+const CHEER = 1.5, MOVED = 1.2;
 // CEILING: in the welcome the visitor may swim anywhere, up and down included, but no higher than this (world y), so rising
 // cannot carry them out of the tour and up to the surface. Only Skip (or Start) leaves the welcome.
 const CEILING = -3.5;
@@ -134,8 +134,10 @@ function orbitOf(item, after) {
   const path = Array.from({ length: points }, (_, k) => at(sign, k + 1));
   return [{ ...item, at: path[0] }, ...path.slice(1)];
 }
-// cheer: the control just done in the welcome, shown ticked for CHEER seconds before the next is asked for.
-let cheer = null, cheerFor = 0, keysShown = '';
+// cheer: the control just done where the tour was teaching it (a welcome chip, a fly-by's caption, a stop's tip), shown
+// pressed and ticked for CHEER seconds before the next is asked for. tipShown: what the tip holds, so a repaint leaves the
+// tick's animation running.
+let cheer = null, cheerFor = 0, keysShown = '', tipShown = '';
 // roaming: the visitor is swimming about in the welcome (the drift waits for them). starting: Start pressed, waiting on the assets.
 let roaming = false, starting = false, introFor = 0; const start = new THREE.Vector3();
 // used: the controls tried on this tour. seen: what they last read, to notice a change.
@@ -264,21 +266,25 @@ function notice(api) {
   seen = now;
   if (used.size === before) return;
   const done = [...used].at(-1);
-  if (status === 'intro' && primer().includes(done)) { cheer = done; cheerFor = CHEER; }
+  // Ticked where it was being asked for: the welcome's chips, the fly-by under way, or the stop reached.
+  const asked = status === 'intro' ? primer() : status === 'travel' ? [sight?.teach] : status === 'dwell' || status === 'done' ? [STEPS[index]?.teach] : [];
+  if (asked.includes(done)) { cheer = done; cheerFor = CHEER; }
   paint();
 }
 // The welcome's controls, as key buttons ticked once done with the one to try next lit, and one prompt at a time; a beat's
 // one tip. All worded for the input in hand.
 const primer = () => touch() ? PRIMER.touch : PRIMER.keys, primerLeft = () => primer().filter(id => !used.has(id));
+// The tick: its key pressed in, then the check drawn on (journey.css tour-press, tour-draw). Built from constants only.
+const TICK = '<svg class="tour-tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.4 6.5 5 9l4.7-5.6" pathLength="1"/></svg>';
+const cheerHTML = (id, fingers) => `<span class="tour-cheer">${fingers ? '' : `<kbd>${CONTROLS[id].key}</kbd>`}${TICK}${fingers ? CONTROLS[id].touch : CONTROLS[id].name}</span>`;
 function paintKeys(fingers) {
   const list = part('.tour-keys'), next = primerLeft()[0];
   list.hidden = status !== 'intro';
   const shown = list.hidden ? '' : primer().map(id => `${id}:${used.has(id)}`).join() + next + fingers;
   if (shown && shown !== keysShown) list.replaceChildren(...primer().map(id => {
     const control = CONTROLS[id], item = document.createElement('li');
-    item.dataset.done = String(used.has(id)); item.dataset.next = String(id === next);
-    if (fingers) item.textContent = control.touch;
-    else { const key = document.createElement('kbd'); key.textContent = control.key; item.append(key, control.name); }
+    item.dataset.done = String(used.has(id)); item.dataset.next = String(id === next); item.dataset.fresh = String(id === cheer);
+    item.innerHTML = (fingers ? control.touch : `<kbd>${control.key}</kbd>${control.name}`) + (used.has(id) ? TICK : '');
     item.setAttribute('aria-label', `${fingers ? control.touch : `${control.key}: ${control.name}`}${used.has(id) ? ', done' : ''}`);
     return item;
   }));
@@ -286,27 +292,33 @@ function paintKeys(fingers) {
 }
 function paintControls(step, fingers) {
   const tip = part('.tour-teach'), input = fingers ? 1 : 0;
-  let text = '';
+  let text = '', html = '';
   paintKeys(fingers);
   if (status === 'intro' && starting) text = 'Getting the reef ready…';
   else if (status === 'intro') {
     const left = primerLeft(), next = left[0];
+    if (cheer) html = cheerHTML(cheer, fingers);
     text = cheer ? `✓ ${CONTROLS[cheer].name}`
       : next ? `Try it, ${primer().length - left.length + 1} of ${primer().length}: ${CONTROLS[next].try[input]}`
       : fingers ? 'That’s the controls. Tap Start for the tour.' : 'That’s the controls. Press N to start the tour.';
   } else {
     // A stop or the ending teaches once it is reached; a fly-by teaches in its own caption.
-    const id = step.teach;
-    if ((status === 'dwell' || status === 'done') && id && !used.has(id) && !(fingers && DESK.has(id))) text = CONTROLS[id]?.tip?.[input] ?? '';
+    const id = step.teach, here = status === 'dwell' || status === 'done';
+    if (here && id && cheer === id) { html = cheerHTML(id, fingers); text = `✓ ${CONTROLS[id].name}`; }
+    else if (here && id && !used.has(id) && !(fingers && DESK.has(id))) text = CONTROLS[id]?.tip?.[input] ?? '';
   }
-  tip.hidden = !text; tip.textContent = text; card.dataset.tip = String(Boolean(text));
+  if ((html || text) !== tipShown) { tipShown = html || text; if (html) tip.innerHTML = html; else tip.textContent = text; }
+  tip.hidden = !text; card.dataset.tip = String(Boolean(text));
   return text;
 }
 // The fly-by's caption: its title, its line and the control it teaches, if that has not been tried.
 let captionShown = '';
 function paintCaption(fingers) {
   const id = sight?.teach, on = status === 'travel' && Boolean(sight) && !paused, tip = on && id && !used.has(id) ? CONTROLS[id]?.tip?.[fingers ? 1 : 0] ?? '' : '';
-  const key = on ? `${sight.key}:${tip}` : '';
+  // Tried while it was asked for: the caption shows it pressed and ticked, and the deck key flashes.
+  const cheering = on && id && cheer === id;
+  if (cheering) document.body.dataset.tourCheer = id; else delete document.body.dataset.tourCheer;
+  const key = on ? `${sight.key}:${tip}:${cheering}` : '';
   // The deck key it teaches calls the thumb to it, and the scooter key reads as held while the guide runs the scooter.
   if (tip) document.body.dataset.tourTeach = id; else delete document.body.dataset.tourTeach;
   if (on && sight.scooter) document.body.dataset.guideScooter = 'true'; else delete document.body.dataset.guideScooter;
@@ -315,7 +327,8 @@ function paintCaption(fingers) {
   if (!on) return tip;
   const small = caption.querySelector('small');
   caption.querySelector('b').textContent = sight.title; caption.querySelector('span').textContent = sight.line;
-  small.textContent = tip; small.hidden = !tip;
+  if (cheering) small.innerHTML = cheerHTML(id, fingers); else small.textContent = tip;
+  small.hidden = !tip && !cheering;
   return tip;
 }
 function setBar(value) { const rounded = Math.round(value * 250) / 250; if (rounded !== barShown) { barShown = rounded; bar.style.transform = `scaleX(${rounded})`; } }

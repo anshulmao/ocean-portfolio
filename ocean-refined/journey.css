@@ -100,7 +100,22 @@ body:is([data-clear-ui="true"],[data-safety-stop="true"]) section.tour-card{visi
 .tour-keys kbd{padding:2px 5px;border:1px solid var(--holo-dim);border-radius:2px;font:500 9px/1 var(--holo-mono);letter-spacing:0}
 .tour-keys li[data-next="true"]{border-color:var(--signal,var(--holo-strong));opacity:1}
 .tour-keys li[data-done="true"]{border-color:var(--signal,var(--holo));opacity:1}
-.tour-keys li[data-done="true"]::after{content:"✓";margin-left:2px;color:var(--signal,var(--holo))}
+/* A control tried: its key presses in, the chip flashes, and a tick draws on beside it (guided-dive.js TICK, cheerHTML).
+   Only the one just done animates; the rest show their tick still. Fly-by captions and stop tips use the same press and tick. */
+.tour-tick{flex:none;width:11px;height:11px;margin-left:1px;fill:none;stroke:var(--signal,var(--holo));stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;vertical-align:-1px}
+.tour-tick path{stroke-dasharray:1;stroke-dashoffset:0}
+.tour-cheer{display:inline-flex;align-items:center;gap:7px;color:var(--signal,var(--holo-strong))}
+.tour-cheer kbd{display:inline-block;padding:2px 5px;border:1px solid var(--signal,var(--holo-strong));border-radius:2px;font:500 9.5px/1 var(--holo-mono);letter-spacing:0}
+.tour-cheer .tour-tick{width:13px;height:13px}
+.tour-keys li[data-fresh="true"]{animation:tour-flash 900ms var(--journey-ease)}
+:is(.tour-keys li[data-fresh="true"],.tour-cheer) kbd{display:inline-block;animation:tour-press 420ms var(--journey-ease)}
+:is(.tour-keys li[data-fresh="true"],.tour-cheer) .tour-tick path{stroke-dashoffset:1;animation:tour-draw 360ms 260ms var(--journey-in) forwards}
+.tour-cheer .tour-tick{animation:tour-pop 420ms 220ms var(--journey-in) both}
+@keyframes tour-press{0%,100%{transform:none}30%{transform:translateY(1.5px) scale(.86);background:var(--signal,var(--holo-strong));color:#04161d;box-shadow:inset 0 1px 3px #0006}}
+@keyframes tour-draw{to{stroke-dashoffset:0}}
+@keyframes tour-pop{0%{transform:scale(.6)}60%{transform:scale(1.18)}100%{transform:none}}
+@keyframes tour-flash{0%{box-shadow:0 0 0 0 var(--signal,#7ff0cf);background:color-mix(in srgb,var(--signal,#7ff0cf) 22%,transparent)}100%{box-shadow:0 0 0 10px transparent;background:transparent}}
+@media (prefers-reduced-motion:reduce){:is(.tour-keys li,.tour-cheer) :is(kbd,.tour-tick,.tour-tick path),.tour-keys li{animation:none!important;stroke-dashoffset:0!important}}
 :is(.tour-keys,.tour-teach)[hidden]{display:none}
 /* Look there (look-indicator.js): a ring on an animal worth turning for, or an arrow at the screen's edge pointing the
    way to turn. Moved with a transform each frame; never takes a pointer. */
@@ -143,7 +158,10 @@ body:is([data-clear-ui="true"],[data-safety-stop="true"]) .tour-caption{visibili
 /* A fly-by teaching a control rings its key on the touch deck; the scooter key reads as held while the guide runs it. */
 body[data-tour-teach="scooter"] .touch-actions [data-swim="KeyE"],body[data-tour-teach="photo"] .touch-actions [data-photo],body[data-tour-teach="lamp"] .touch-actions [data-lamp]{border-color:var(--holo-strong);animation:journey-ping 1.4s var(--journey-out) infinite}
 body[data-guide-scooter="true"] .touch-actions [data-swim="KeyE"]{background:var(--holo-fill-on)}
-@media (prefers-reduced-motion:reduce){body[data-tour-teach] .touch-actions .touch-key{animation:none}}
+/* Tried while a fly-by asked for it: the deck key presses in and flashes once (the caption shows the tick). */
+body[data-tour-cheer="scooter"] .touch-actions [data-swim="KeyE"],body[data-tour-cheer="photo"] .touch-actions [data-photo],body[data-tour-cheer="lamp"] .touch-actions [data-lamp]{border-color:var(--signal,var(--holo-strong));animation:tour-flash 900ms var(--journey-ease),tour-tap 420ms var(--journey-ease)}
+@keyframes tour-tap{0%,100%{transform:none}30%{transform:scale(.9)}}
+@media (prefers-reduced-motion:reduce){body:is([data-tour-teach],[data-tour-cheer]) .touch-actions .touch-key{animation:none}}
 /* On a desktop the tour card takes the bottom-right corner, where the Ahead card sits: the tour names the sites itself. */
 body:is([data-tour="intro"],[data-tour="travel"],[data-tour="dwell"],[data-tour="done"]) .calm-ahead{display:none!important}
 .tour-fade{position:fixed;inset:0;z-index:var(--o-z-labels);pointer-events:none;background:#04303f;opacity:0;transition:opacity var(--journey-standard) var(--journey-ease)}

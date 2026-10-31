@@ -8,6 +8,8 @@ import {routeTarget,smoothRoute,distance as routeDistance} from './cinematic-rou
 
 // Where the site starts, at the surface: well out over the deep end, near above the treasure, the reef ahead (x, z).
 export const SURFACE_START = [-18, -90];
+// The heart of the reef (the anchor). Going under, the view turns to it whatever the surface view faced.
+export const REEF_HEART = [-12, -15];
 
 // The swimming model. Everything that moves is eased by a critically damped follower that is exact over a step of
 // any length, so the same input gives the same swim at 30, 60 or 120 updates a second:
@@ -293,6 +295,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     // The guided dive goes in first person whatever the saved view is; the setting itself is left alone, so V still toggles from here.
     const options=pendingDive;pendingDive=null;if(options?.perspective==='first'||options?.perspective==='third')state.perspective=options.perspective;
     if(options?.at){const at=coordinate(options.at);base.x=clamp(at[0],-bounds.x,bounds.x);base.z=clamp(at[2]??0,bounds.zMin,bounds.zMax);}
+    const dx=REEF_HEART[0]-base.x,dz=REEF_HEART[1]-base.z;if(Math.hypot(dx,dz)>12){look.yaw=state.yaw=Math.atan2(-dx,-dz);snapBody();}
     offset.copy(base);
     if(options?.capture===false){captureRequired=false;state.exploring=true;}else recapture();wake();}
   function describeBody(pitch){moveOptions.radius=settings.collisionRadius;moveOptions.length=settings.collisionLength;moveOptions.yaw=body.yaw;moveOptions.pitch=pitch;moveOptions.padding=settings.collisionPadding;moveOptions.step=settings.collisionStep;moveOptions.iterations=settings.collisionIterations;}
