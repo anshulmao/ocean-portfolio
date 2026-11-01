@@ -1,11 +1,9 @@
-<!-- Dive Explorer: the diver's records (profile, dive log, salvage finds, C-card)
-     Source: index.html; section icons, entry index and records are rendered by archive.js
-     Styles: styles.css, hologram.css, motion.css, archive.css
-     Scripts: archive.js, landmark-interactions.js, portfolio-content.js, ui-icons.js, vendor/gsap.min.js (entrance only) -->
+<!-- The portfolio sheet: About, Experience, Projects, Résumé and the visit's Dive log, one section at a time
+     Source: index.html; each section's page is rendered by archive.js from portfolio-content.js
+     Styles: tokens.css, styles.css, motion.css, archive.css
+     Scripts: archive.js, landmark-interactions.js, portfolio-content.js, ui-icons.js -->
 <dialog id="landmark-dialog" class="ocean-dialog dive-explorer" aria-labelledby="landmark-title">
-  <div class="arc-scan" aria-hidden="true"></div>
-  <header class="arc-header"><div class="arc-identity"><span class="arc-emblem" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" class="hud-icon"><rect x="4" y="6" width="15" height="12" rx="3"/><path d="M8 6V2.5h7V6M8 18v3.5h7V18M19 9.5h1.6M19 14.5h1.6M7.5 10h4.5M7.5 14h3M15.5 9.5v5"/></svg></span><div><h2 id="landmark-title">Dive Explorer</h2><nav id="archive-crumbs" class="arc-crumbs" aria-label="You are here"></nav></div></div><div class="arc-tools"><button id="archive-copy" class="arc-tool" type="button"><span>Copy link</span></button><button id="archive-print" class="arc-tool" type="button"><span>Print</span></button><button class="dialog-close" type="button" aria-label="Close Dive Explorer">×</button></div></header>
-  <div class="arc-body"><nav id="explorer-index" class="arc-index" aria-label="Records contents"></nav><div class="arc-reading holo holo--reading"><article id="archive-page" class="arc-page" tabindex="0" aria-label="Record"><!-- archive.js renders the record here from portfolio-content.js --></article></div></div>
-  <footer class="arc-footer"><label class="arc-variant">Reading style <select id="copy-variant"><option value="baseline">Baseline copy</option><option value="concise">Concise draft</option><option value="story">Story draft</option><option value="technical">Technical draft</option></select></label><div class="arc-pager"><button id="archive-prev" type="button"><span>Previous</span></button><div class="arc-progress"><span id="entry-number"></span><span id="archive-progress" class="arc-progress-track" aria-hidden="true"></span></div><button id="archive-next" type="button"><span>Next</span></button></div><button class="dialog-return" type="button"><span id="archive-return-label">Return to the reef</span> <kbd>Esc</kbd></button></footer>
+  <header class="arc-header"><div class="arc-place"><span class="arc-place-dot" aria-hidden="true"></span><h2 id="landmark-title">About</h2><span id="archive-place" class="arc-place-site">The anchor</span></div><button class="dialog-close" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true" class="hud-icon"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>
+  <article id="archive-page" class="arc-page" tabindex="0" aria-label="Portfolio"><!-- archive.js renders the section here from portfolio-content.js --></article>
   <p id="archive-live" class="arc-live" role="status" aria-live="polite"></p>
 </dialog>
