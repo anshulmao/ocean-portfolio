@@ -276,6 +276,13 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 #landmark-dialog .arc-versions a:hover{background:#ffffff08;color:#fff}
 #landmark-dialog .arc-versions a .hud-icon{width:16px;height:16px;color:var(--muted)}
 
+/* Wide screens: the résumé is the page, so it takes most of the sheet and stays in view while its actions scroll. */
+@media(min-width:981px){
+  #landmark-dialog .arc-view:has(.arc-resume){max-width:none}
+  #landmark-dialog .arc-resume{grid-template-columns:minmax(0,560px) minmax(0,1fr);gap:56px}
+  #landmark-dialog .arc-resume .arc-media--document{position:sticky;top:0}
+}
+
 /* 9. The end of a page: the way out, and where the rest is */
 #landmark-dialog .arc-foot{display:flex;flex-wrap:wrap;align-items:center;gap:18px 28px;margin-top:56px;padding-top:28px;border-top:1px solid var(--rule)}
 #landmark-dialog .arc-elsewhere{max-width:52ch;font:400 14px/1.5 var(--font);color:var(--muted)}
