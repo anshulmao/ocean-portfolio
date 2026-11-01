@@ -13,6 +13,7 @@ Audited from `main` at `5b32c72271d4ab586a3596eac06749bfc4fd1eb8`.
 - Bring the existing service browser test into CI. Repair its obsolete immediate-photo-download expectation against the documented dive-log flow: capture stays local, download stays local, opening Share stays local, explicit Send uploads exactly one JPEG with its note. Keep contact opt-in, retained input on failure, same-ID retry and analytics opt-out checks. All backend/analytics traffic is intercepted at synthetic `.invalid` domains; unexpected requests are blocked.
 - Fix the toast overlap in production: `data-announce` remains set during the outgoing 300ms fade, instead of exposing world labels over it. New clock-controlled queue tests check fade, blocking, replacement, expiry and clear behavior.
 - Fix cloud fish banking in production: use the change in actual heading, including diver avoidance, rather than the unperturbed loop's heading. The reef audit's bank tolerance remains unchanged.
+- A seeded resident-only audit still passed with the old bank formula: that broad audit is not sufficient regression coverage for the original intermittent failure. Add a focused browser test that loads the production models without the world renderer, puts a diver into/out of a cloud, and checks the sign of every meaningful bank at 30/60/120 Hz. The fixed code checks 3,683 / 8,799 / 17,606 turns with zero wrong banks; restoring the old formula failed with 244 wrong banking frames at 30 Hz. The production formula passed at all three rates.
 - Reset the reef audit's creature simulation after async loading/rendering stops. A page-level random seed alone did not fix the simulation's starting time or intervening random consumption. The audit now starts a fresh production creature system at t=0 against the real terrain/collision world, with recorded seeds. Missing procedural-reef instrumentation now fails rather than silently dropping that coverage.
 - Remove the layout script's silent success when desktop pointer lock was not obtained. An invalid profile also fails instead of running zero profiles.
 
@@ -24,7 +25,8 @@ Audited from `main` at `5b32c72271d4ab586a3596eac06749bfc4fd1eb8`.
 | `npm run test:build` | Clean build, complete model pack, compressed models, caches, shipped styles/scripts/audio, static links and metadata, deployment output | Build/unit job |
 | `npm run smoke` | Built navigation, deep links, every reading page/project and its images, with/without JS | Browser job |
 | `npm run test:services:browser` | Real frontend/SDK with mocked I/O: feedback error/retry, consent, local capture/download, explicit photo sharing, analytics opt-out | Browser job |
-| `npm run check` | All four rows above; builds once | Local equivalent of fast jobs |
+| `npm run test:banking` | Production cloud-fish motion while a diver enters/leaves; all actual turns bank inward at three frame rates | Browser job |
+| `npm run check` | All five rows above; builds once | Local equivalent of fast jobs |
 | `npm run test:layout -- --only=phone` | Touch targets, overlap, overflow and remaining ocean view across visitor states | Layout matrix; also landscape and desktop |
 | `npm run audit:reef -- --quick` | Coral placement, body/seabed/reef clearance, swimming/banking, six encounters, school avoidance/cohesion, 30/60/120 Hz | Reef job |
 | `npm run audit:reef -- --quality=both` | Longer durations and three encounter locations in both qualities | Manual release check |
@@ -49,6 +51,7 @@ Paths are relative to the indicated directory. “Historical” means retained f
 | `test-navigation-clock.mjs` | Keep in unit: real navigation/return integrator at 30/60/120 Hz; braking, stop, skip, expiry, ascent acceleration and collision path. |
 | `test-settings-escape.mjs` | Keep: real listener and overlay priority. Source-slicing harness is brittle; replace with a normal import if HUD input is next refactored. No snapshot of exact code is asserted. |
 | `test-announcements.mjs` | New unit regression: fade-zone ownership and queue behavior under a controlled clock. |
+| `test-cloud-banking.mjs` | New focused browser regression: real models and motion on a synthetic coral site, no WebGL or real server; fails if the old planned-loop bank returns. |
 | `test-return-route.mjs` | New unit: promote useful return-planning assertions from the standalone return-controls browser script. |
 | `test-mobile-layout.mjs` | Keep full profile matrix: surface, profile, summary, reading, dive, landmark, settings and guided states; desktop crosshair flow must actually run. |
 | `test-services-browser.mjs` | Repair and promote to CI; see privacy contract above. |
@@ -102,7 +105,8 @@ Other source-level suites: `ocean-refined/depth-map-check.mjs`, `test-expedition
 
 - Baseline services: 8 passed. Baseline unit: 16 scripts passed. Updated fast suite: 8 service tests and 21 unit tests passed; new announce test fails on the original immediate-label-release behavior.
 - Built output validates 13 reading/design pages, 525 local references and 76 images; model membership matches all 45 current runtime species.
-- Updated mocked service browser checks and smoke passed locally. The audit covers a fixture/real frontend and SDK, not a deployed database or storage policy.
+- Negative controls: releasing labels at the start of the toast fade fails the new queue test; restoring planned-loop banking fails the dedicated bank test (244 wrong frames at 30 Hz); removing every WattMana project link fails the smoke contract while the independent project-page check still runs. All mutations were restored.
+- Final `npm run check` passed locally on Windows with Node 24.18.0, including mocked service browser checks, smoke with/without JS and focused banking. All three full layout profiles passed: 14 states each, 42 total, zero script errors or failed states. CI targets Ubuntu and Node 22; a local result alone does not establish that runner result or its speed. The audit covers a fixture/real frontend and SDK, not a deployed database or storage policy.
 - Updated quick reef audit passed locally: 91 colonies, 16 procedural reef families, six encounters, schools and three frame rates, zero findings. All original geometry and bank limits remain.
 - The three legacy Node failures above were observed, not assumed. Other historical/manual scripts were inspected, not all executed.
 - Real touch hardware, Safari/WebKit, real network performance, Data Saver end-to-end, live database/RLS, and a full standard-quality release audit are not established by this PR's Chromium CI. Keep those claims separate.

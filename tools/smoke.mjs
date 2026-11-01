@@ -68,30 +68,30 @@ try {
   const expectedProjects = PORTFOLIO_CONTENT.projects.entries.map(entry => new URL(`projects/${entry.id}/index.html`, base).href).sort();
   await check('reading page renders at desktop and phone widths', async () => {
     for (const javaScriptEnabled of [true, false]) {
-    for (const viewport of [{width: 1440, height: 900}, {width: 390, height: 844}]) {
-      const {page, problems} = await open('./profile.html', viewport, {javaScriptEnabled});
-      assert.equal(await page.locator('h1').count(), 1, 'profile has no heading');
-      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `profile scrolls sideways at ${viewport.width}px`);
-      const projects = await page.locator('a[href*="projects/"]').evaluateAll(links => [...new Set(links.map(link => link.href).filter(href => /\/projects\/[^/]+\/(?:index\.html)?$/.test(href)).map(href => href.endsWith('/') ? href + 'index.html' : href))]);
-      assert.deepEqual(projects.sort(), expectedProjects, 'profile must link every published project');
-      assert.deepEqual(problems, []);
-      await page.close();
-    }
+      for (const viewport of [{width: 1440, height: 900}, {width: 390, height: 844}]) {
+        const {page, problems} = await open('./profile.html', viewport, {javaScriptEnabled});
+        assert.equal(await page.locator('h1').count(), 1, 'profile has no heading');
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `profile scrolls sideways at ${viewport.width}px`);
+        const projects = await page.locator('a[href*="projects/"]').evaluateAll(links => [...new Set(links.map(link => link.href).filter(href => /\/projects\/[^/]+\/(?:index\.html)?$/.test(href)).map(href => href.endsWith('/') ? href + 'index.html' : href))]);
+        assert.deepEqual(projects.sort(), expectedProjects, 'profile must link every published project');
+        assert.deepEqual(problems, []);
+        await page.close();
+      }
     }
   });
 
   await check('every project page renders', async () => {
     for (const javaScriptEnabled of [true, false]) {
-    for (const url of expectedProjects) {
-      const {page, problems} = await open(url, undefined, {javaScriptEnabled});
-      assert.equal(await page.locator('h1').count(), 1, `${url} has no heading`);
-      // Pictures below the fold load lazily: ask for every one now, so "not loaded yet" is not read as broken.
-      await page.locator('img').evaluateAll(images => images.forEach(image => { image.loading = 'eager'; }));
-      await page.waitForFunction(() => [...document.images].every(image => image.complete), null, {timeout: 20000});
-      assert.deepEqual(await page.locator('img').evaluateAll(images => images.filter(image => !image.complete || !image.naturalWidth).map(image => image.src)), [], `${url} has broken images`);
-      assert.deepEqual(problems, [], url);
-      await page.close();
-    }
+      for (const url of expectedProjects) {
+        const {page, problems} = await open(url, undefined, {javaScriptEnabled});
+        assert.equal(await page.locator('h1').count(), 1, `${url} has no heading`);
+        // Pictures below the fold load lazily: ask for every one now, so "not loaded yet" is not read as broken.
+        await page.locator('img').evaluateAll(images => images.forEach(image => { image.loading = 'eager'; }));
+        await page.waitForFunction(() => [...document.images].every(image => image.complete), null, {timeout: 20000});
+        assert.deepEqual(await page.locator('img').evaluateAll(images => images.filter(image => !image.complete || !image.naturalWidth).map(image => image.src)), [], `${url} has broken images`);
+        assert.deepEqual(problems, [], url);
+        await page.close();
+      }
     }
   });
 } finally {
