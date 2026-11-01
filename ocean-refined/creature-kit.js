@@ -120,6 +120,7 @@ function layout(spec, size) {
   const [W, H] = size, slots = new Map(), swatches = new Map(), PAD = 3;
   const finKeys = [];
   for (const fin of spec.fins || []) for (const key of fin.mirror || fin.plane !== 'side' ? [`${fin.name}|U`, `${fin.name}|D`] : [`${fin.name}|U`]) if (!finKeys.includes(key)) finKeys.push(key);
+  for (const limb of spec.limbs || []) { const key = `limb|${limb.slot || limb.name}`; if (!finKeys.includes(key)) finKeys.push(key); }
   for (const cap of ['front', 'back']) finKeys.push(`cap|${cap}`);
   const bodyTop = spec.tail ? .6 : .66, tailTop = spec.tail ? .68 : bodyTop, finTop = .95;
   const rect = (x0, y0, x1, y1) => ({ x0: Math.round(x0 * W) + PAD, y0: Math.round(y0 * H) + PAD, x1: Math.round(x1 * W) - PAD, y1: Math.round(y1 * H) - PAD });
@@ -138,7 +139,7 @@ function swatch(lay, colour) {
   return [(r.x0 + s.index * cell + cell / 2) / lay.W, (r.y0 + r.y1) / 2 / lay.H];
 }
 
-function paintSkin(spec, lay, body, tail, fins) {
+function paintSkin(spec, lay, body, tail, fins, limbs) {
   const { W, H } = lay, data = new Uint8Array(W * H * 4), rgb = {}, paint = spec.paint, p = V();
   const put = (x, y, colour) => { asColor(colour).getRGB(rgb, THREE.SRGBColorSpace); const o = (y * W + x) * 4; data[o] = rgb.r * 255 + .5; data[o + 1] = rgb.g * 255 + .5; data[o + 2] = rgb.b * 255 + .5; data[o + 3] = 255; };
   // A painted band reaches past its slot by the inset, so filtering at the edge picks up the same colour.
@@ -156,6 +157,8 @@ function paintSkin(spec, lay, body, tail, fins) {
   for (const [key, r] of lay.slots) {
     const [name, face] = key.split('|');
     if (name === 'cap') fill(r, (u, v) => paint({ part: spec.rig.kind === 'ray' ? 'disc' : 'spine', cap: face, lat: u * 2 - 1, h: v * 2 - 1, t: face === 'front' ? body.t0 : body.t1, a: 0, side: 1, p: V(), L: spec.length }));
+    // A limb's slot: u from root to tip, s once round it from the top (h is 1 on top, -1 underneath).
+    else if (name === 'limb') { const limb = limbs.get(face); fill(r, (u, v) => (limb?.paint || paint)({ part: 'limb', name: face, u, s: v, a: v * TAU, h: Math.cos(v * TAU), lat: Math.sin(v * TAU), side: 1, t: 0, p: V(), L: spec.length })); }
     else { const fin = fins.get(name); fill(r, (u, v) => (fin?.paint || paint)({ part: 'fin', name, u, s: v, up: face === 'U' ? 1 : -1, side: 1, h: 0, t: fin?.root?.[0] ?? .5, L: spec.length })); }
   }
   // Spots are painted last, each a soft-edged disc measured on the skin itself, so they stay round on any body.
@@ -291,6 +294,8 @@ function addExtras(out, spec, body, lod, lay) {
   const sides = item => item.mirror === false ? [1] : [1, -1];
   for (const eye of spec.eyes && lod < 2 ? [].concat(spec.eyes) : []) for (const side of sides(eye)) {
     const [t, a] = eye.at, f = surfaceFrame(body, t, a * DEG * side), r = eye.r, skin = skinOf(eye.chain || 'spine');
+    // out: an eye that stands off the skin, on a stalk (a crab's) or a turret.
+    if (eye.out) f.p.addScaledVector(f.n, eye.out);
     const q = new THREE.Quaternion().setFromUnitVectors(V(0, 1, 0), f.n);
     if (eye.ring && !lod) addSolid(out, OCT, V().copy(f.p).addScaledVector(f.n, -r * .5), V(r * 1.55, r * .62, r * 1.55), q, swatch(lay, eye.ring), skin);
     addSolid(out, lod ? OCT : ICO1, V().copy(f.p).addScaledVector(f.n, -r * .35), V(r, r * .75, r), q, swatch(lay, eye.color || '#0d1418'), skin);
@@ -306,6 +311,74 @@ function addExtras(out, spec, body, lod, lay) {
   }
   // The inside of the mouth: dark, so a jaw that opens shows a throat rather than the far side of the head.
   if (spec.mouth && !lod) { const m = spec.mouth, c = body.center(m.t); c.y += m.drop ?? 0; addSolid(out, ICO, c, V(...m.size), null, swatch(lay, m.color || '#2a1717'), skinOf('spine')); }
+}
+
+// --- Limbs: arms, legs, claws -------------------------------------------------------------------------------------
+// A limb is a tapered tube along a path of points (fractions of the length, given for the left side, +X), with a bone
+// at every point but the last, so it bends where the path bends: an octopus's or cuttlefish's arms, a crab's legs and
+// claws, a sea star's arms. r: the radius at each point, or one number that tapers to `tip`; wide and flat stretch the
+// cross-section across and up; K: its sides; sub: rings between two points. The root sits inside the body and is left
+// open; the tip closes to a point unless `tip` keeps it open, when it is capped. The limb's root rides on the body.
+// studs: small solids on its skin, [{ u, a, r, h, color, round }]: u along it, a degrees round it from the top.
+// Bones are named name_1, name_2... (with _L/_R when mirrored); limbHandles() lists them for writing clips.
+const limbNames = (limb, side) => limb.path.slice(0, -1).map((_, k) => `${limb.name}_${k + 1}${limb.mirror ? (side > 0 ? '_L' : '_R') : ''}`);
+const limbRadii = limb => Array.isArray(limb.r) ? limb.r : limb.path.map((_, k) => lerp(limb.r, limb.tip ?? 0, k / (limb.path.length - 1)));
+/** Every limb's bones and the axes that move it, for clips: lift raises it, swing sweeps it round, twist rolls it. */
+export function limbHandles(spec) {
+  const list = [];
+  for (const limb of spec.limbs || []) for (const side of limb.mirror ? [1, -1] : [1]) {
+    const a = V(...limb.path[0]), b = V(...limb.path[1]); a.x *= side; b.x *= side;
+    const d = b.sub(a).normalize(), flat = V(d.x, 0, d.z); if (flat.lengthSq() < 1e-4) flat.set(0, 0, 1); flat.normalize();
+    list.push({ name: limb.name, slot: limb.slot || limb.name, side, bones: limbNames(limb, side), dir: d.toArray(), lift: V().crossVectors(flat, V(0, 1, 0)).normalize().toArray(), swing: [0, 1, 0], twist: d.toArray(), tag: limb.tag });
+  }
+  return list;
+}
+function limbWeights(names, i, f) {
+  // Each bone holds its own stretch; across a joint the two either side share it, so a bend is not a crease.
+  if (f < .35) { const b = .5 + .5 * smoothstep(f, 0, .35); return i ? { w: [[names[i], b], [names[i - 1], 1 - b]], share: 0 } : { w: [[names[i], b]], share: 1 - b }; }
+  if (f > .65 && i < names.length - 1) { const b = .5 + .5 * (1 - smoothstep(f, .65, 1)); return { w: [[names[i], b], [names[i + 1], 1 - b]], share: 0 }; }
+  return { w: [[names[i], 1]], share: 0 };
+}
+function addLimb(out, limb, side, rig, lod, lay) {
+  const pts = limb.path.map(p => V(p[0] * side, p[1], p[2])), n = pts.length, names = limbNames(limb, side), radii = limbRadii(limb);
+  const boned = limb.bones !== false;
+  if (boned) names.forEach((name, k) => { if (!rig.index.has(name)) rig.add(name, k ? rig.index.get(names[k - 1]) : (rig.index.get(limb.parent || 'root') ?? 0), pts[k].clone()); });
+  const curve = n > 2 ? new THREE.CatmullRomCurve3(pts, false, 'centripetal') : null;
+  const at = (i, f) => curve ? curve.getPoint(Math.min(1, (i + f) / (n - 1))) : V().lerpVectors(pts[0], pts[1], f);
+  const sub = lod ? 1 : (limb.sub ?? 2), K = lod > 1 ? 3 : lod ? Math.max(3, (limb.K ?? 5) - 2) : (limb.K ?? 5);
+  const samples = [];
+  for (let i = 0; i < n - 1; i++) for (let j = 0; j < sub; j++) samples.push([i, j / sub]);
+  samples.push([n - 2, 1]);
+  const wide = limb.wide ?? 1, flat = limb.flat ?? 1, slot = lay.slots.get(`limb|${limb.slot || limb.name}`);
+  const skinAt = (i, f) => { if (!boned) return skinOf(limb.chain || 'spine', { at: pts[0] }); const { w, share } = limbWeights(names, i, f); return skinOf(limb.chain || 'spine', { at: pts[0], weights: w, share }); };
+  // Frames carried along the path (parallel transport), so the tube does not twist on itself.
+  const P = samples.map(([i, f]) => at(i, f)), T = P.map((p, k) => V().subVectors(P[Math.min(k + 1, P.length - 1)], P[Math.max(k - 1, 0)]).normalize());
+  const N = [], B = [];
+  let ref = V(...(limb.up || [0, 1, 0])); if (Math.abs(ref.dot(T[0])) > .95) ref = V(0, 0, 1);
+  N[0] = ref.addScaledVector(T[0], -ref.dot(T[0])).normalize();
+  for (let k = 1; k < P.length; k++) { const m = V().copy(N[k - 1]).addScaledVector(T[k], -N[k - 1].dot(T[k])); N[k] = m.lengthSq() > 1e-8 ? m.normalize() : N[k - 1].clone(); }
+  for (let k = 0; k < P.length; k++) B[k] = V().crossVectors(T[k], N[k]).multiplyScalar(side);
+  const rad = ([i, f]) => lerp(radii[i], radii[i + 1], f);
+  const ringPoint = (k, a, scale = 1) => { const r = rad(samples[k]) * scale; return V().copy(P[k]).addScaledVector(N[k], Math.cos(a) * r * flat).addScaledVector(B[k], Math.sin(a) * r * wide); };
+  const rings = samples.map((s, k) => Array.from({ length: K }, (_, j) => ringPoint(k, j / K * TAU)));
+  const uv = (k, j) => uvIn(slot, lay.W, lay.H, (samples[k][0] + samples[k][1]) / (n - 1), j / K), o = V();
+  for (let k = 0; k < rings.length - 1; k++) {
+    const sa = skinAt(...samples[k]), sb = skinAt(...samples[k + 1]);
+    for (let j = 0; j < K; j++) {
+      const j1 = (j + 1) % K, a = rings[k][j], b = rings[k][j1], c = rings[k + 1][j1], d = rings[k + 1][j];
+      o.copy(a).add(b).add(c).add(d).multiplyScalar(.25).sub(V().copy(P[k]).add(P[k + 1]).multiplyScalar(.5));
+      out.tri(a, b, c, uv(k, j), uv(k, j + 1), uv(k + 1, j + 1), o, sa, sa, sb);
+      out.tri(a, c, d, uv(k, j), uv(k + 1, j + 1), uv(k + 1, j), o, sa, sb, sb);
+    }
+  }
+  const last = rings.length - 1, end = rings[last];
+  if (rad(samples[last]) > 1e-5) { const s = skinAt(...samples[last]), c = P[last]; for (let j = 0; j < K; j++) out.tri(c, end[j], end[(j + 1) % K], uv(last, j), uv(last, j), uv(last, j + 1), T[last], s, s, s); }
+  if (lod > 1 && !limb.keep) return;
+  for (const stud of limb.studs || []) {
+    const q = stud.u * (n - 1), i = Math.min(n - 2, Math.floor(q)), f = q - i, k = clamp(Math.round(stud.u * (samples.length - 1)), 0, samples.length - 1);
+    const a = (stud.a ?? 0) * DEG, base = ringPoint(k, a), dir = V().subVectors(base, P[k]).normalize(), h = stud.h ?? stud.r * 2;
+    addSolid(out, stud.round ? (lod ? ICO : ICO1) : OCT, base.addScaledVector(dir, h * .45), V(stud.r, h, stud.r), new THREE.Quaternion().setFromUnitVectors(V(0, 1, 0), dir), swatch(lay, stud.color || '#2a1717'), skinAt(i, f));
+  }
 }
 
 // --- Skeletons ----------------------------------------------------------------------------------------------------
@@ -544,7 +617,9 @@ export function buildCreature(spec, { lod = 0, paint = true } = {}) {
     skin = { lay, full, fullTail, fins, texture: null };
     // Every plain colour the solids will ask for, whatever level of detail is built first.
     for (const item of [...[].concat(spec.eyes || []), ...(spec.lumps || []), ...(spec.mouth ? [spec.mouth] : [])]) for (const colour of [item.ring, item.color || (item.r ? '#0d1418' : '#2a1717')]) if (colour) swatch(lay, colour);
+    for (const limb of spec.limbs || []) for (const stud of limb.studs || []) swatch(lay, stud.color || '#2a1717');
     swatch(lay, '#eef6f8');
+    skin.limbs = new Map((spec.limbs || []).map(limb => [limb.slot || limb.name, limb]));
     skins.set(spec, skin);
   }
   const lay = skin.lay;
@@ -559,10 +634,12 @@ export function buildCreature(spec, { lod = 0, paint = true } = {}) {
     }
     addFin(out, fin, fin.on === 'tail' && tail ? tail : body, side, lod, lay);
   }
+  // A speck in a crowd keeps only the limbs that make its outline (keep), with no bones of the rest.
+  for (const limb of spec.limbs || []) for (const side of limb.mirror ? [1, -1] : [1]) if (lod < 2 || limb.keep) addLimb(out, limb, side, rig, lod, lay);
   addExtras(out, spec, body, lod, lay);
   // Painted after every swatch the solids asked for is known.
   // paint: false builds the shape alone, for a page that takes its skin from the exported file.
-  if (!skin.texture && paint) skin.texture = paintSkin(spec, lay, skin.full, skin.fullTail, skin.fins);
+  if (!skin.texture && paint) skin.texture = paintSkin(spec, lay, skin.full, skin.fullTail, skin.fins, skin.limbs);
 
   const count = out.verts.length, position = new Float32Array(count * 3), normal = new Float32Array(count * 3), uv = new Float32Array(count * 2);
   const skinIndex = new Uint16Array(count * 4), skinWeight = new Float32Array(count * 4), n = V(), ab = V(), ac = V();
@@ -572,8 +649,13 @@ export function buildCreature(spec, { lod = 0, paint = true } = {}) {
       const p = out.verts[i + k], o = (i + k) * 3, s = out.skins[i + k];
       position[o] = p.x * L; position[o + 1] = p.y * L; position[o + 2] = p.z * L; n.toArray(normal, o); uv[(i + k) * 2] = out.uvs[i + k][0]; uv[(i + k) * 2 + 1] = out.uvs[i + k][1];
       const base = (rig.chains[s.chain] || rig.chains.spine)(s.at || p), list = [];
-      for (const [id, w] of base) list.push([id, w * (1 - (s.bone ? s.f : 0))]);
-      if (s.bone && s.f > 0) list.push([rig.index.get(s.bone), s.f]);
+      if (s.weights) {                    // a limb: its own bones, and near the root a share of the body it grows from
+        if (s.share > 1e-4) for (const [id, w] of base) list.push([id, w * s.share]);
+        for (const [name, w] of s.weights) list.push([rig.index.get(name), w * (1 - s.share)]);
+      } else {
+        for (const [id, w] of base) list.push([id, w * (1 - (s.bone ? s.f : 0))]);
+        if (s.bone && s.f > 0) list.push([rig.index.get(s.bone), s.f]);
+      }
       list.sort((a, b) => b[1] - a[1]); list.length = Math.min(list.length, 4);
       const sum = list.reduce((acc, item) => acc + item[1], 0) || 1;
       list.forEach(([id, w], slot) => { skinIndex[(i + k) * 4 + slot] = id; skinWeight[(i + k) * 4 + slot] = w / sum; });
@@ -587,7 +669,7 @@ export function buildCreature(spec, { lod = 0, paint = true } = {}) {
   geometry.setAttribute('skinWeight', new THREE.BufferAttribute(skinWeight, 4));
   geometry.computeBoundingBox(); geometry.computeBoundingSphere();
 
-  const helpers = { swim: options => swimClip(rig, options), ray: options => rayClip(rig, options), turn: (swim, side, options) => turnClip(rig, swim, side, options), burst: options => burstClip(rig, options), act: actionClip, rig };
+  const helpers = { swim: options => swimClip(rig, options), ray: options => rayClip(rig, options), turn: (swim, side, options) => turnClip(rig, swim, side, options), burst: options => burstClip(rig, options), act: actionClip, rig, limbs: limbHandles(spec) };
   const clips = (spec.clips ? spec.clips(helpers) : []).map(def => makeClip(def, rig, L));
   const material = new THREE.MeshStandardMaterial({ name: `${spec.id} skin`, map: skin.texture, roughness: spec.roughness ?? .7, metalness: 0, flatShading: true });
   const size = geometry.boundingBox.getSize(V());

@@ -821,9 +821,531 @@ const smallFish = [
     } })
 ];
 
-/** Every species in the set, largest first, sized for the site (see siteLength). */
-export const SPECIES = [rightWhale, whaleShark, orca(false), orca(true), whipray, dolphin, nurse, blacktip, tuna, barracuda, bumphead, trevally, bluespot, remora, flyingFish, moray, ribbonEel, gardenEel, ...smallFish]
-  .map(spec => ({ ...spec, realLength: spec.real, length: siteLength(spec.real), ...(spec.span ? { span: Math.round(spec.span * siteLength(spec.real) / spec.real * 100) / 100, realSpan: spec.span } : {}) }))
+// --- Reef residents with limbs, a shell or spines, and two more sharks ---------------------------------------------
+// The animals the reef used to draw in code (living-world.js, underwater-life.js), remade here so they are models like
+// the rest of the set and count in the dive log. Those that live on the bottom keep the size the reef gave them (site:
+// a length in metres, not siteLength): they are judged against the sand and the coral round them, not the schooling fish.
+
+// A clip for an animal that moves by its limbs. each(limb, j) returns the turns for the j-th bone of a limb (from its
+// root), written with the limb's own axes: limb.lift raises it, limb.swing sweeps it round, limb.side is 1 on the left.
+function limbClip(k, { name, duration, loop = true, each = () => [], bones = {}, root, filter = () => true }) {
+  const out = {}; for (const [bone, parts] of Object.entries(bones)) out[bone] = [...parts];
+  k.limbs.forEach((limb, index) => { if (filter(limb)) limb.bones.forEach((bone, j) => { const parts = each(limb, j, index); if (parts?.length) out[bone] = [...(out[bone] || []), ...parts]; }); });
+  return k.act({ name, duration, loop, bones: out, root });
+}
+const DEGREES = Math.PI / 180;
+// Radial limbs (a sea star's or an octopus's arms): one limb a direction, round from +Z.
+const radial = (count, offset, make) => Array.from({ length: count }, (_, k) => { const a = (k + offset) / count * Math.PI * 2; return make(Math.sin(a), Math.cos(a), k, a); });
+
+const greenTurtle = {
+  id: 'green-turtle', name: 'Green sea turtle', scientific: 'Chelonia mydas', real: 1, group: 'turtle',
+  note: 'A domed olive shell of fused plates streaked with amber, a small rounded head, long paddle forelimbs and short rear flippers.',
+  body: { K: 12, ex: .9, maxGap: .07, stations: [
+    [0, 0, 0, 0, .004], [.02, .032, .028, .022, .004], [.06, .052, .05, .036, .004], [.12, .056, .05, .038, .002], [.17, .045, .042, .036],
+    [.22, .17, .09, .05], [.3, .27, .145, .055], [.45, .315, .165, .06], [.6, .3, .155, .058], [.74, .24, .12, .05], [.85, .14, .07, .035], [.92, .05, .03, .02], [.965, 0, .004, .004]] },
+  fins: [
+    // The forelimbs are the engine: long, curved paddles, held a little below the shell's rim.
+    { name: 'pectoral', mirror: true, bone: 'pectoral', root: [.25, 100, .3], span: [1, -.12, .08], chord: [0, 0, -1], thick: .016, hinge: .04, stiff: .3,
+      outline: [[0, 0], [-.012, .07], [-.006, .19], [.03, .32], [.085, .43], [.12, .42], [.115, .3], [.1, .16], [.085, .05], [.075, 0]] },
+    { name: 'pelvic', mirror: true, bone: 'pelvic', root: [.8, 112, .3], span: [.7, -.18, -.68], chord: [0, 0, -1], thick: .009, hinge: .04, stiff: .3,
+      outline: [[0, 0], [-.004, .06], [.03, .12], [.08, .135], [.1, .08], [.085, 0]] }
+  ],
+  eyes: { at: [.055, 62], r: .0105, ring: '#3a3a26' },
+  paint: c => {
+    const skin = '#7a7652', pale = '#e6dcb5';
+    if (!body(c)) {
+      // Large scales on the flippers, outlined in pale skin, a pale trailing edge.
+      const scale = ss(Math.abs(Math.sin(c.u * 26) * Math.sin(c.s * 18)), .82, .95);
+      return blend(blend(c.up < 0 ? '#c9bf98' : skin, pale, scale * .5), pale, ss(c.u, .82, 1) * .45);
+    }
+    if (c.cap) return '#5d5940';
+    const shell = ss(c.t, .2, .24) * (1 - ss(c.t, .89, .93)), plastron = ss(-c.h, .35, .55);
+    if (shell < .5) {
+      // Head and tail: scaled skin, the large plates on top of the head picked out in pale lines.
+      const plates = ss(Math.abs(Math.sin(c.t * 120) * Math.sin(c.a * 5)), .75, .9);
+      return mottle(blend(blend(grade(c.h, [[-1, '#e7dfbc'], [-.2, '#b7ae84'], [.3, skin], [1, '#66623f']]), pale, plates * .45 * ss(c.h, -.2, .2)), '#e9e1c2', ss(-c.h, .2, .6) * .7), c, .06, 30);
+    }
+    if (plastron > .5) return mottle(blend('#e9e1bd', '#d8c993', ss(Math.abs(Math.sin(c.p.z * 40)), .9, 1) * .6), c, .04, 30);
+    // The carapace: a row of plates down the spine, four either side, and a rim of small ones; each plate streaked
+    // amber from its centre, its seams dark.
+    const x = Math.abs(c.p.x), z = c.p.z, rim = 1 - ss(c.h, .12, .3);
+    const off = x > .075 ? .5 : 0, zz = (z + 1) / .15 + off, dz = Math.abs(zz - Math.round(zz)) * .15, lineX = Math.min(Math.abs(x - .075), Math.abs(x - .2));
+    const seam = (1 - ss(Math.min(lineX, dz), .004, .011)) * (1 - rim) + (1 - ss(Math.abs(c.h - .21), .01, .025));
+    const streak = ss(noise(Math.atan2(zz - Math.round(zz), (x - (x > .2 ? .26 : x > .075 ? .14 : 0)) * 6) * 2.2 + x * 9, Math.round(zz) * 3.1 + (x > .075 ? 5 : 0)) * 1.25, .55, .9);
+    let col = blend('#5b4e2f', '#a07a3c', streak * .75);
+    col = blend(col, '#7d6a3e', rim);
+    return mottle(blend(col, '#2d2716', Math.min(1, seam) * .8), c, .07, 26);
+  },
+  rig: { root: .45, head: .13, spine: [.9, .95] },
+  // A turtle rows with its forelimbs: down and back in a power stroke that twists the paddle, then a slow recovery.
+  clips: k => {
+    const stroke = (amp, period, name, extra = {}) => k.swim({ name, period, amp: .02, mode: 'carangiform', recoil: 0, roll: .008, heave: .008, pose: {
+      pectoral_L: [{ axis: Z, amp, phase: 0, skew: .5, bias: amp * .35 }, { axis: X, amp: amp * .45, phase: .25 }, { axis: Y, amp: amp * .35, phase: .1, bias: .1 }],
+      pectoral_R: [{ axis: Z, amp: -amp, phase: 0, skew: .5, bias: -amp * .35 }, { axis: X, amp: amp * .45, phase: .25 }, { axis: Y, amp: -amp * .35, phase: .1, bias: -.1 }],
+      pelvic_L: [{ axis: Y, amp: .18, phase: .35 }, { axis: Z, amp: .1, phase: .5 }], pelvic_R: [{ axis: Y, amp: -.18, phase: .35 }, { axis: Z, amp: -.1, phase: .5 }],
+      head: [{ axis: X, amp: .035, phase: .4 }], ...extra } });
+    const swim = stroke(.55, 3.4, 'swim');
+    return [swim, stroke(.62, 1.8, 'fast'),
+      // Gliding between strokes: forelimbs swept back along the shell, a slow paddle of the rear flippers.
+      k.swim({ name: 'idle', period: 6, amp: .01, mode: 'carangiform', recoil: 0, roll: .006, heave: .006, pose: {
+        pectoral_L: [{ axis: Y, bias: .75 }, { axis: Z, amp: .06, bias: -.08 }], pectoral_R: [{ axis: Y, bias: -.75 }, { axis: Z, amp: -.06, bias: .08 }],
+        pelvic_L: [{ axis: Y, amp: .12 }], pelvic_R: [{ axis: Y, amp: -.12 }], head: [{ axis: Y, amp: .08, phase: .2 }] } }),
+      k.turn(swim, 1, { curve: .15, bank: .22 }), k.turn(swim, -1, { curve: .15, bank: .22 }),
+      // Resting on the sand: limbs out flat, the head lifting now and then to look round.
+      k.swim({ name: 'rest', period: 7, amp: 0, mode: 'carangiform', recoil: 0, roll: 0, heave: .002, pose: {
+        pectoral_L: [{ axis: Z, bias: -.2 }, { axis: Y, bias: .25 }], pectoral_R: [{ axis: Z, bias: .2 }, { axis: Y, bias: -.25 }], head: [{ axis: X, amp: .08, bias: -.04, skew: .6 }, { axis: Y, amp: .12, freq: 1 }] } })];
+  }
+};
+
+const puffer = {
+  id: 'white-spotted-puffer', name: 'White-spotted puffer', scientific: 'Arothron hispidus', real: .4, site: 1.3, group: 'fish',
+  note: 'A round grey-brown fish freckled with white, a white belly, dark rings round the base of its pectorals, and a beak of fused teeth.',
+  body: { K: 12, maxGap: .08, stations: [
+    [0, 0, 0, 0, -.012], [.02, .07, .05, .06, -.012], [.06, .13, .12, .12, -.006], [.15, .19, .2, .2], [.3, .22, .24, .24], [.45, .21, .22, .22], [.6, .16, .16, .15], [.71, .09, .09, .085], [.785, .045, .045, .045]] },
+  fins: [
+    { name: 'dorsal', plane: 'side', root: [.6], thick: .005, embed: .3, outline: [[0, 0], [.015, .07], [.05, .11], [.09, .07], [.11, 0]] },
+    { name: 'anal', plane: 'side', down: true, root: [.61], thick: .005, embed: .3, outline: [[0, 0], [.015, .065], [.05, .1], [.09, .06], [.1, 0]] },
+    { name: 'pectoral', mirror: true, bone: 'pectoral', root: [.28, 92, .2], span: [.8, .15, -.58], chord: [0, -.9, -.4], thick: .004, hinge: .05, stiff: .4, outline: [[0, 0], [0, .06], [.035, .1], [.075, .085], [.08, 0]] },
+    { name: 'caudal', plane: 'side', root: [.77, 0], thick: .006, core: [.09, 0], outline: [[0, -.03], [0, .03], [.06, .09], [.15, .105], [.2, .05], [.21, 0], [.2, -.05], [.15, -.105], [.06, -.09]] }
+  ],
+  eyes: { at: [.13, 58], r: .03, ring: '#e4ddc4' },
+  lumps: [{ at: [.006, 90], size: [.022, .012, .016], color: '#efe6cc', keep: true }],
+  spots(random) {
+    const list = [];
+    for (let i = 0; i < 190; i++) list.push({ t: .04 + random() * .74, a: random() * 150, r: .011 + random() * .006, color: '#f4f1e6' });
+    return list;
+  },
+  paint: c => {
+    if (!body(c)) return finNoise(blend('#8c8676', '#d9d3c0', ss(c.s, .7, 1) * .4), c, .06);
+    if (c.cap) return '#6f6a5b';
+    let col = grade(c.h, [[-1, '#f3f0e6'], [-.42, '#efebe0'], [-.22, '#9d9884'], [.3, '#7c7764'], [1, '#68634f']]);
+    // Dark rings round the pectoral's base, and round the eye.
+    const ring = Math.hypot((c.t - .28) * 4.2, (c.h - .02) * .9), eye = Math.hypot((c.t - .13) * 4.2, (c.h - .5) * .9);
+    col = blend(col, '#2a2822', Math.max(band(Math.sin(ring * 34), .55, 1.1, .2) * (1 - ss(ring, .2, .26)), band(eye, .13, .16, .01) * .7) * ss(c.h, -.35, -.15));
+    return mottle(col, c, .07, 22);
+  },
+  rig: { root: .36, head: .14, spine: [.56, .68, .76] },
+  swimShader: { amp: .05, waves: .6, power: 2.4 },
+  clips: k => swimmerClips(k,
+    // Puffers scull with their dorsal and anal fins and row with the pectorals; the tail is a rudder until they hurry.
+    { name: 'swim', period: .9, amp: .22, mode: 'thunniform', follow: .05, pectoral: .45, pectoralMode: 'row', roll: .02, heave: .01 },
+    { name: 'fast', period: .45, amp: .65, mode: 'carangiform', follow: .1, pectoral: .3 },
+    { name: 'idle', period: 1.7, amp: .06, mode: 'thunniform', pectoral: .5, pectoralMode: 'row', roll: .03, heave: .012 },
+    { burst: { duration: .7, power: .7 }, turn: { curve: .45, bank: .1 }, extra: [
+      // Blown up, it can only scull: fins working fast, the body turning slowly. The swelling itself is the scene's (scale).
+      k.swim({ name: 'puff', period: .5, amp: .02, mode: 'thunniform', pectoral: .6, pectoralMode: 'row', roll: .05, heave: .006 })] })
+};
+
+// Arms that taper to points, gathered into a cone ahead of the head: a cuttlefish's (eight; the two tentacles stay hidden).
+const cuttleArms = radial(8, .5, (sx, cy, k) => {
+  const x = sx * .052, y = cy * .046 - .006;
+  return { name: `arm${k + 1}`, slot: 'arm', parent: 'head', K: 5, r: [.024, .019, .012, .0035], path: [[x * .9, y * .9, .49], [x * .8, y * .75 - .004, .56], [x * .48, y * .45 - .01, .64], [x * .2, y * .18 - .014, .71]] };
+});
+const cuttlefish = {
+  id: 'broadclub-cuttlefish', name: 'Broadclub cuttlefish', scientific: 'Sepia latimanus', real: .5, group: 'cephalopod',
+  note: 'An oval mantle fringed by a rippling fin, big W-pupilled eyes and a cone of arms; it flickers brown, cream and white as it watches.',
+  body: { K: 12, maxGap: .07, stations: [
+    [0, .062, .055, .052], [.04, .095, .08, .075], [.12, .118, .088, .08], [.2, .1, .078, .072], [.26, .145, .1, .09], [.45, .168, .114, .1], [.65, .155, .105, .094], [.82, .112, .08, .072], [.94, .05, .04, .036], [1, 0, .004, .004]] },
+  fins: [1, 2, 3].map(k => ({ name: `skirt${k}`, mirror: true, bone: `skirt${k}`, root: [[.25, .48, .71][k - 1], 92, .12], span: [1, -.06, 0], chord: [0, 0, -1], thick: .003, hinge: .02, stiff: .35,
+    outline: k < 3 ? [[0, 0], [.006, .045], [.06, .06], [.17, .06], [.226, .045], [.232, 0]] : [[0, 0], [.006, .045], [.08, .05], [.18, .03], [.25, 0]] })),
+  limbs: cuttleArms,
+  eyes: { at: [.105, 74], r: .024, ring: '#d9c58e', out: .006 },
+  spots(random) {
+    const list = [];
+    for (let i = 0; i < 36; i++) list.push({ t: .25 + random() * .65, a: random() * 80, r: .012 + random() * .012, color: '#efe6d2', rough: .6, opacity: .85 });
+    return list;
+  },
+  paint: c => {
+    if (c.part === 'limb') return blend(blend('#8f6a4b', '#e6d6b8', band(Math.sin(c.u * 22), .3, 1.1, .3) * .6), '#f0e4cc', ss(-c.h, .2, .7));
+    if (!body(c)) return finNoise(blend('#d7c6a3', '#f4ecd8', ss(c.s, .6, 1)), c, .06);
+    if (c.cap) return '#6e5038';
+    // Mottled zebra bands across the back, fading to a pale belly; the head darker round the eyes.
+    const bands = ss(Math.sin((c.t * 15 + noise(c.t * 9, c.a * 3) * 1.6) * Math.PI), -.2, .6) * ss(c.h, .05, .4);
+    let col = grade(c.h, [[-1, '#f1e7d2'], [-.3, '#e5d4b4'], [0, '#a98663'], [1, '#7d5a3e']]);
+    col = blend(col, '#5a3d29', bands * .55);
+    return mottle(col, c, .1, 18);
+  },
+  rig: { root: .42, head: .14, spine: [.62, .82] },
+  clips: k => {
+    // The fin round the mantle ripples in a wave from front to back (left and right in step), the arms curl a little.
+    const fin = (period, amp, back = 1) => Object.fromEntries([1, 2, 3].flatMap(n => ['L', 'R'].map(s => [`skirt${n}_${s}`, [{ axis: Z, amp: amp * (s === 'L' ? 1 : -1), phase: n * .27 * back }]])));
+    const arms = (amp, period) => limbClip(k, { name: '', duration: period, each: (limb, j, i) => [{ axis: limb.lift, amp: amp * (j + 1) * .5, phase: i * .08 + j * .14 }] }).bones;
+    const clip = (name, duration, finAmp, armAmp, extra = {}, back = 1) => k.act({ name, duration, loop: true, bones: { ...arms(armAmp), ...fin(duration, finAmp, back), ...extra }, root: { y: [.004, .2], z: [.002 * back, .1, 2] } });
+    return [clip('swim', 1.1, .42, .05), clip('hover', 1.6, .3, .07, { head: [{ axis: X, amp: .03, phase: .3 }] }), clip('fast', .55, .55, .02),
+      // Backing away from something too close: the wave runs tail to head.
+      clip('back', .8, .5, .03, {}, -1),
+      // A warning: the first pair of arms raised high and the rest splayed, held, then lowered.
+      // Hunting: it creeps up, then the arms flare open as it lunges and snaps shut on the prey.
+      k.act({ name: 'strike', duration: 1.1, bones: { ...limbClip(k, { name: '', duration: 1.1, each: (limb, j) => [{ axis: limb.lift, amp: 0, bias: j ? .2 : .45, env: [[0, 0], [.25, .1], [.4, 1], [.62, -.2], [1, 0]] }] }).bones, ...fin(.3, .5) },
+        root: { z: { bias: .06, env: [[0, 0], [.25, -.3], [.42, 1], [.7, .3], [1, 0]] } } }),
+      k.act({ name: 'flash', duration: 2.4, bones: { ...limbClip(k, { name: '', duration: 2.4, each: (limb, j, i) => [{ axis: limb.lift, amp: 0, bias: (i === 3 || i === 4 ? .5 : -.15) * (j ? .6 : 1), env: [[0, 0], [.2, 1], [.75, 1], [1, 0]] }] }).bones, ...fin(.6, .4) } })];
+  }
+};
+
+// An octopus is drawn crawling: mantle raised behind its eyes and leading (+Z, the way it jets), arms sprawled round it.
+const octopusArms = radial(8, .5, (sx, cz, k) => {
+  const reach = .44 + .07 * Math.sin(k * 2.1), curl = .3 + .15 * Math.sin(k * 1.3), points = [];
+  for (let i = 0; i <= 4; i++) { const s = i / 4, a = Math.atan2(sx, cz) + curl * s * s, r = .04 + reach * s; points.push([Math.sin(a) * r, .035 + .03 * Math.sin(Math.PI * s) - .08 * s ** 1.6, -.14 + Math.cos(a) * r]); }
+  return { name: `arm${k + 1}`, slot: 'arm', parent: 'root', K: 6, wide: 1.1, flat: .8, r: [.05, .04, .028, .015, .003], path: points };
+});
+const octopus = {
+  id: 'day-octopus', name: 'Day octopus', scientific: 'Octopus cyanea', real: 1, site: 1.3, group: 'cephalopod',
+  note: 'A baggy mantle above two turret eyes and eight arms lined with pale suckers; its skin takes the colour and texture of the rock it sits on.',
+  body: { K: 10, maxGap: .05, stations: [
+    [.25, 0, 0, 0, .13], [.27, .07, .065, .055, .13], [.32, .115, .11, .09, .125], [.39, .12, .115, .092, .11], [.45, .095, .09, .072, .095],
+    [.5, .078, .07, .06, .08], [.545, .085, .078, .062, .07], [.6, .075, .052, .06, .055], [.64, .05, .032, .042, .045]] },
+  limbs: octopusArms,
+  eyes: { at: [.545, 60], r: .021, ring: '#e9d9a6', out: .012 },
+  lumps: [0, 1, 2].map(n => ({ at: [.3 + n * .06, 20 + n * 25], size: [.012, .01, .014], color: '#b89a7c', mirror: true })),
+  paint: c => {
+    // Painted as a light, warm stone colour: on the reef the scene tints it to its rock, or flushes it red.
+    if (c.part === 'limb') {
+      const sucker = band(Math.sin(c.u * 70), .4, 1.1, .2) * ss(-c.h, .35, .65);
+      return blend(blend(mottle(tone('#b8957a'), { t: c.u, a: c.a }, .14, 24), '#efdcc8', ss(-c.h, .15, .5)), '#fbefe2', sucker * .7);
+    }
+    if (c.cap) return '#a07f66';
+    const blotch = ss(noise(c.p.x * 40 + 3, c.p.z * 40) + noise(c.p.y * 50, c.p.z * 30) * .5, .75, 1.1);
+    return mottle(blend(blend(grade(c.h, [[-1, '#e7d2be'], [-.2, '#c2a184'], [1, '#a9876b']]), '#efe0cf', blotch * .55), '#6f4d3a', ss(noise(c.p.x * 70, c.p.z * 70), .78, .9) * .5), c, .12, 20);
+  },
+  rig: { root: .55, head: .38, spine: [.63] },
+  clips: k => {
+    const ripple = (name, duration, amp, swing, extra = {}) => limbClip(k, { name, duration, bones: extra,
+      each: (limb, j, i) => [{ axis: limb.lift, amp: amp * (.4 + j * .35), phase: i * .125 + j * .18 }, { axis: limb.swing, amp: swing * (j + 1) * .5, phase: i * .125 + j * .2 + .25 }] });
+    // Jetting: arms swept back behind it together, streaming, the mantle squeezing.
+    const behind = limb => Math.atan2(Math.sin(Math.PI - Math.atan2(limb.dir[0], limb.dir[2])), Math.cos(Math.PI - Math.atan2(limb.dir[0], limb.dir[2])));
+    return [ripple('rest', 5, .05, .04, { head: [{ axis: X, amp: .05, phase: .2 }] }), ripple('swim', 1.8, .2, .12, { head: [{ axis: X, amp: .04 }] }),
+      ripple('alert', 2.4, .06, .03, { head: [{ axis: X, amp: .03, bias: -.22 }] }),
+      limbClip(k, { name: 'jet', duration: .9, bones: { head: [{ axis: X, amp: .06, phase: 0 }] },
+        each: (limb, j) => [{ axis: limb.swing, amp: 0, bias: j ? 0 : behind(limb) * .8 }, { axis: limb.lift, amp: .12 * j, bias: j ? .05 : .18, phase: .2 * j }] })];
+  }
+};
+
+// A crab is drawn standing: legs bent at the knee, tips on the ground, claws carried in front.
+const crabLegs = (pairs, front, spacing, reach = 1, height = 1) => Array.from({ length: pairs }, (_, k) => {
+  const ang = (k - (pairs - 1) / 2) * .42 - .12, dx = Math.cos(ang), dz = -Math.sin(ang), root = [.48, -.06, front - k * spacing];
+  const p1 = [root[0] + dx * .42 * reach, root[1] + .2 * height, root[2] + dz * .42 * reach], p2 = [p1[0] + dx * .4 * reach, p1[1] - .1 * height, p1[2] + dz * .4 * reach];
+  return { name: `leg${k + 1}`, slot: 'leg', mirror: true, K: 5, flat: .72, r: [.1, .088, .062, 0], path: [root, p1, p2, [p2[0] + dx * .2 * reach, p2[1] - .42 * height, p2[2] + dz * .2 * reach]] };
+});
+const spottedCrab = {
+  id: 'spotted-reef-crab', name: 'Spotted reef crab', scientific: 'Carpilius maculatus', real: .15, site: .14, group: 'crab',
+  note: 'A smooth domed shell the colour of cream, set with eleven round red spots, and heavy claws tipped in black.',
+  body: { K: 14, maxGap: .1, stations: [[0, .3, .1, .08, 0], [.05, .5, .18, .13], [.2, .66, .28, .18], [.4, .72, .32, .2], [.6, .68, .3, .19], [.8, .52, .22, .16], [.95, .3, .12, .1], [1, .1, .05, .04]] },
+  limbs: [...crabLegs(4, .08, .13, .85),
+    { name: 'claw', slot: 'claw', mirror: true, K: 6, flat: .72, wide: 1.1, r: [.07, .075, .095, .12, 0], path: [[.36, -.05, .3], [.6, .06, .5], [.56, .04, .76], [.33, .0, .92], [.13, -.02, 1]] }],
+  eyes: { at: [.03, 28], r: .042, color: '#2a0d0b', out: .035, glint: true },
+  eyeshine: [.2, .18, .5],
+  spots: () => [
+    { t: .12, a: 0, r: .1, color: '#b8322a', mirror: false }, { t: .14, a: 38, r: .085, color: '#b8322a' }, { t: .2, a: 70, r: .06, color: '#b8322a' },
+    { t: .42, a: 0, r: .11, color: '#b8322a', mirror: false }, { t: .38, a: 36, r: .1, color: '#b8322a' }, { t: .46, a: 72, r: .07, color: '#b8322a' },
+    { t: .72, a: 0, r: .09, color: '#b8322a', mirror: false }, { t: .7, a: 42, r: .08, color: '#b8322a' }],
+  paint: c => {
+    if (c.part === 'limb') return c.name === 'claw' ? blend(blend('#e8c79c', '#f3e2c4', ss(-c.h, .1, .5)), '#17110f', ss(c.u, .84, .9)) : blend(blend('#dba57a', '#c2604a', band(Math.sin(c.u * 9), .7, 1.1, .2) * .5), '#f0dcc0', ss(-c.h, .2, .6));
+    if (c.cap) return '#d7b38a';
+    return mottle(grade(c.h, [[-1, '#f2e5cc'], [-.2, '#ead4ad'], [1, '#f0dcb4']]), c, .04, 20);
+  },
+  rig: { root: .5, spine: [.95] },
+  clips: k => {
+    // Sideways at a scuttle: the legs of each side step in two alternating sets, the far side out of step with the near.
+    const step = (limb, j) => { const n = +limb.name.slice(3), phase = (n % 2) * .5 + (limb.side > 0 ? .25 : 0); return j === 0 ? [{ axis: limb.lift, amp: .22, phase, skew: .5 }, { axis: limb.swing, amp: .14 * limb.side, phase: phase + .25 }] : j === 1 ? [{ axis: limb.lift, amp: -.14, phase: phase + .1 }] : []; };
+    const claws = (bias, amp = .05) => limb => limb.name === 'claw' ? [{ axis: limb.lift, amp, bias }] : [];
+    return [limbClip(k, { name: 'walk', duration: .55, each: (limb, j) => limb.name === 'claw' ? (j === 0 ? [{ axis: limb.lift, amp: .04, phase: .3 }] : []) : step(limb, j), root: { y: [.006, .1, 2], x: [.004, .2] } }),
+      limbClip(k, { name: 'idle', duration: 3.2, each: (limb, j, i) => limb.name === 'claw' ? (j === 3 ? [{ axis: limb.swing, amp: .12 * limb.side, phase: .3 }] : []) : j === 0 ? [{ axis: limb.lift, amp: .02, phase: i * .17 }] : [] }),
+      // Claws up and open towards a threat (or a lamp), the body raised on its legs.
+      limbClip(k, { name: 'guard', duration: 1.4, each: (limb, j) => limb.name === 'claw' ? [{ axis: limb.lift, amp: j === 0 ? .06 : .03, bias: j === 0 ? .45 : j === 1 ? -.2 : 0, phase: j * .2 }] : j === 1 ? [{ axis: limb.lift, amp: 0, bias: -.12 }] : [], root: { y: [.01, 0] } })];
+  }
+};
+
+const hermit = {
+  id: 'hermit-crab', name: 'White-spotted hermit crab', scientific: 'Dardanus megistos', real: .2, site: .17, group: 'crab',
+  note: 'Red legs and claws peppered with black-ringed white spots, carried about in a borrowed spiral shell.',
+  // The body is the shell, aperture forward; the crab's legs and claws come out of it.
+  body: { K: 10, ex: .95, maxGap: .08, stations: [[0, .3, .28, .24, .02], [.12, .36, .36, .3, .04], [.32, .34, .37, .28, .08], [.52, .27, .31, .22, .13], [.7, .17, .22, .15, .19], [.86, .08, .12, .08, .24], [1, 0, .01, .01, .3]] },
+  limbs: [...crabLegs(2, .5, .12, .8, .9).map(limb => ({ ...limb, path: limb.path.map(([x, y, z]) => [x - .2, y - .1, z]) })),
+    { name: 'claw', slot: 'claw', mirror: true, K: 6, flat: .8, r: [.06, .07, .085, .1, 0], path: [[.12, -.06, .46], [.26, .02, .62], [.24, .0, .78], [.12, -.04, .88], [.04, -.06, .93]] },
+    { name: 'stalk', slot: 'stalk', mirror: true, K: 4, sub: 1, tip: .035, r: [.02, .02, .036], path: [[.06, .1, .48], [.08, .22, .56], [.1, .3, .6]] }],
+  eyeshine: [.1, .3, .6],
+  paint: c => {
+    if (c.part === 'limb') {
+      if (c.name === 'stalk') return blend('#c64a33', '#0f1012', ss(c.u, .7, .8));
+      const dots = ss(Math.sin(c.u * 34) * Math.sin(c.a * 3 + c.u * 7), .78, .92);
+      return blend(blend('#b8372a', '#e46a43', ss(c.h, 0, .8) * .4), '#f6efe4', dots);
+    }
+    if (c.cap) return blend('#2a1d16', '#c99b74', ss(Math.hypot(c.lat, c.h), .8, .95));
+    // Spiral bands of the shell.
+    const whorl = ss(Math.sin(c.t * 34 + c.a * 1.0), .2, .6);
+    return mottle(blend('#e2cda6', '#8d5c3a', whorl * .7), c, .1, 16);
+  },
+  rig: { root: .4, spine: [.9] },
+  clips: k => {
+    const step = (limb, j) => { const n = +limb.name.slice(3), phase = (n % 2) * .5 + (limb.side > 0 ? .25 : 0); return j === 0 ? [{ axis: limb.lift, amp: .25, phase, skew: .5 }, { axis: limb.swing, amp: .2 * limb.side, phase: phase + .25 }] : []; };
+    return [limbClip(k, { name: 'walk', duration: .9, each: (limb, j) => limb.name.startsWith('leg') ? step(limb, j) : [], root: { y: [.01, .1, 2], x: [.008, .2] } }),
+      limbClip(k, { name: 'idle', duration: 3.5, each: (limb, j, i) => limb.name === 'stalk' ? [{ axis: limb.swing, amp: .25, phase: limb.side * .2 }] : limb.name === 'claw' && j === 3 ? [{ axis: limb.lift, amp: .1, phase: i * .2 }] : [] }),
+      limbClip(k, { name: 'guard', duration: 1.4, each: (limb, j) => limb.name === 'claw' ? [{ axis: limb.lift, amp: .05, bias: j === 0 ? .35 : 0 }] : [] }),
+      // Pulled back into its shell: legs and claws tucked, eyes down.
+      limbClip(k, { name: 'hide', duration: 2, each: (limb, j) => j ? [] : [{ axis: limb.lift, amp: 0, bias: limb.name === 'stalk' ? -.8 : .5 }, { axis: limb.swing, amp: 0, bias: -.5 * limb.side }] })];
+  }
+};
+
+// Sea stars: a small central disc and five arms flat on the sand.
+const starArms = (inner, reach, r, flat, studs = []) => radial(5, 0, (sx, cz, k) => ({
+  name: `arm${k + 1}`, slot: 'arm', parent: 'root', K: 6, flat, keep: true, r, studs,
+  path: [[sx * inner, .012, cz * inner], [sx * reach * .38, .01, cz * reach * .38], [sx * reach * .7, .006, cz * reach * .7], [sx * reach, .002, cz * reach]]
+}));
+const starClips = (k, curl = .1) => [
+  limbClip(k, { name: 'idle', duration: 9, each: (limb, j, i) => [{ axis: limb.lift, amp: curl * j * .5, phase: i * .21 + j * .1 }, { axis: limb.swing, amp: curl * .3 * j, phase: i * .21 + .3 }] }),
+  // Gliding over the sand on its tube feet: one arm leads, the others ripple.
+  limbClip(k, { name: 'swim', duration: 4, each: (limb, j, i) => [{ axis: limb.lift, amp: curl * .8 * j, phase: i * .2 + j * .15 }] })];
+const blueStar = {
+  id: 'blue-sea-star', name: 'Blue sea star', scientific: 'Linckia laevigata', real: .3, site: .85, group: 'echinoderm', swimShader: { amp: 0, waves: 0, power: 1 },
+  note: 'Five long, round-tipped arms of an even, startling blue, lying out in the open on sand and coral rubble.',
+  body: { K: 10, maxGap: .04, stations: [[.42, 0, 0, 0, .01], [.44, .055, .04, .018, .01], [.5, .075, .05, .02, .01], [.56, .055, .04, .018, .01], [.58, 0, 0, 0, .01]] },
+  limbs: starArms(.03, .48, [.048, .042, .032, .017], .72),
+  paint: c => {
+    if (c.part === 'limb') return mottle(blend(blend('#2f6bd0', '#5e95e6', ss(c.u, .85, 1) * .6), '#9db5dc', ss(-c.h, .25, .6)), { t: c.u, a: c.a }, .1, 40);
+    if (c.cap) return '#2f6bd0';
+    return mottle(blend('#2a63c6', '#9db5dc', ss(-c.h, .3, .7)), c, .1, 40);
+  },
+  rig: { root: .5, spine: [.56] },
+  clips: k => starClips(k, .1)
+};
+const chipStar = {
+  id: 'chocolate-chip-sea-star', name: 'Chocolate chip sea star', scientific: 'Protoreaster nodosus', real: .25, site: .7, group: 'echinoderm', swimShader: { amp: 0, waves: 0, power: 1 },
+  note: 'A thick, sandy-orange star studded along every arm with dark brown knobs, like chips in a biscuit.',
+  body: { K: 10, maxGap: .04, stations: [[.37, 0, 0, 0, .02], [.39, .12, .085, .03, .02], [.5, .165, .11, .035, .02], [.61, .12, .085, .03, .02], [.63, 0, 0, 0, .02]] },
+  limbs: starArms(.06, .48, [.11, .085, .056, .026], .55, [{ u: .25, r: .022, h: .05, color: '#3a2416' }, { u: .5, r: .02, h: .045, color: '#3a2416' }, { u: .72, r: .016, h: .035, color: '#3a2416' }, { u: .38, a: 55, r: .014, h: .03, color: '#4a2f1c' }, { u: .38, a: -55, r: .014, h: .03, color: '#4a2f1c' }]),
+  lumps: [{ at: [.5, 0], size: [.022, .03, .022], color: '#3a2416', mirror: false, sharp: true, keep: true, lift: .4 }, ...[0, 1, 2, 3, 4].map(n => ({ at: [.44 + (n % 2) * .12, 40 + n * 6], size: [.016, .022, .016], color: '#3a2416', sharp: true, keep: true, lift: .4 }))],
+  paint: c => {
+    if (c.part === 'limb') return mottle(blend(blend('#d99a52', '#ecc58f', band(Math.sin(c.u * 18), .5, 1.1, .3) * .4), '#f0e2c8', ss(-c.h, .2, .6)), { t: c.u, a: c.a }, .08, 30);
+    if (c.cap) return '#d99a52';
+    return mottle(blend('#d38f48', '#f0e2c8', ss(-c.h, .3, .7)), c, .08, 30);
+  },
+  rig: { root: .5, spine: [.6] },
+  clips: k => starClips(k, .06)
+};
+
+// Long-spined urchin: a dark test bristling with needles longer than itself, five white spots and an orange ring on top.
+const urchinSpines = (() => {
+  const list = [], count = 54;
+  for (let i = 0; i < count; i++) {
+    const v = (i + .5) / count, t = .4 + .2 * v, a = ((i * 137.508) % 360) - 180;
+    if (Math.abs(a) > 165 && Math.abs(t - .5) < .06) continue;   // none straight down into the sand
+    list.push({ at: [t, a], size: [.006, .17 + .05 * Math.sin(i * 1.7), .006], color: i % 7 ? '#120e15' : '#3a2f44', sharp: true, keep: true, mirror: false, lift: .95, turn: [((i * 53) % 21 - 10), 0, ((i * 31) % 17 - 8)] });
+  }
+  return list;
+})();
+const urchin = {
+  id: 'long-spined-urchin', name: 'Long-spined sea urchin', scientific: 'Diadema setosum', real: .5, site: 1, group: 'echinoderm', swimShader: { amp: 0, waves: 0, power: 1 },
+  note: 'A black ball of needles twice its width, with five white spots and a ring of orange round the vent on top.',
+  body: { K: 12, maxGap: .03, stations: [[.38, 0, 0, 0, 0], [.4, .075, .07, .04], [.45, .11, .1, .06], [.5, .12, .11, .065], [.55, .11, .1, .06], [.6, .075, .07, .04], [.62, 0, 0, 0]] },
+  lumps: urchinSpines,
+  spots: () => [{ t: .5, a: 0, r: .03, color: '#e8642a', mirror: false }, { t: .5, a: 0, r: .014, color: '#1a1420', mirror: false },
+    ...[0, 1, 2, 3, 4].map(n => ({ t: .5 + .055 * Math.cos(n * 1.2566), a: 45 * Math.sin(n * 1.2566), r: .012, color: '#e6e3ee', mirror: false }))],
+  paint: c => c.cap ? '#1a1420' : mottle(grade(c.h, [[-1, '#2a2230'], [1, '#1b1620']]), c, .1, 30),
+  rig: { root: .5, spine: [.58] },
+  clips: k => [k.act({ name: 'idle', duration: 8, loop: true, bones: { root: [{ axis: Y, amp: .03 }, { axis: X, amp: .01, phase: .3 }] } })]
+};
+
+const whitetip = {
+  id: 'whitetip-reef-shark', name: 'Whitetip reef shark', scientific: 'Triaenodon obesus', real: 1.6, group: 'shark',
+  note: 'Slim and grey with a broad, blunt snout; the first dorsal fin and the top of the tail are tipped in brilliant white.',
+  body: { K: 10, ey: .86, maxGap: .08, stations: [
+    [0, .008, .004, .004, -.006], [.02, .032, .01, .01, -.006], [.06, .046, .022, .022, -.004], [.14, .055, .042, .04], [.26, .058, .054, .05], [.4, .054, .055, .05],
+    [.54, .042, .045, .041], [.66, .027, .03, .028], [.75, .015, .019, .017], [.79, .009, .013, .012]] },
+  fins: [
+    { name: 'dorsal', plane: 'side', root: [.42], thick: .007, outline: [[0, 0], [.03, .045], [.058, .08], [.08, .1], [.094, .094], [.094, .035], [.112, .006], [.096, 0]] },
+    { name: 'dorsal2', plane: 'side', root: [.63], thick: .004, outline: [[0, 0], [.02, .03], [.038, .042], [.046, .012], [.06, 0]] },
+    { name: 'pectoral', mirror: true, bone: 'pectoral', root: [.25, 118, .3], span: [.74, -.38, -.56], chord: [0, -.2, -1], thick: .007, hinge: .08, stiff: .6,
+      outline: [[0, 0], [.01, .05], [.028, .1], [.048, .13], [.06, .124], [.066, .06], [.07, 0]] },
+    { name: 'pelvic', mirror: true, root: [.55, 152, .3], span: [.45, -.82, -.35], thick: .004, outline: [[0, 0], [.014, .03], [.032, .04], [.044, .012], [.042, 0]] },
+    { name: 'anal', plane: 'side', down: true, root: [.645], thick: .004, outline: [[0, 0], [.016, .028], [.034, .032], [.04, .008], [.052, 0]] },
+    { name: 'caudal', plane: 'side', root: [.775, 0], thick: .006, outline: [[0, -.006], [0, .012], [.05, .055], [.12, .12], [.2, .19], [.222, .18], [.19, .1], [.13, .03], [.07, 0]] },
+    { name: 'caudal', plane: 'side', root: [.775, 0], thick: .005, outline: [[0, .006], [0, -.012], [.04, -.045], [.08, -.085], [.1, -.082], [.088, -.03], [.07, 0]] }
+  ],
+  eyes: { at: [.064, 80], r: .0065, ring: '#c3c6bd' },
+  spots(random) { const list = []; for (let i = 0; i < 16; i++) list.push({ t: .2 + random() * .5, a: 55 + random() * 50, r: .006 + random() * .006, color: '#4c5157', opacity: .7 }); return list; },
+  paint: c => {
+    const grey = '#7c8288', white = '#f4f5f2';
+    if (!body(c)) {
+      if (c.name === 'dorsal') return blend(grey, white, ss(c.s, .68, .76));
+      if (c.name === 'caudal') return blend(grey, white, ss(c.s, .7, .8) * ss(c.u, .45, .6) * (c.s > 0 ? 1 : 1));
+      return blend(c.up < 0 ? '#d9dcd8' : grey, '#5d6268', ss(c.s, .8, 1) * .4);
+    }
+    return mottle(grade(c.h, [[-1, '#f3f2ec'], [-.3, '#e9e8e1'], [-.12, '#9aa0a4'], [.35, grey], [1, '#6b7177']]), c, .05, 26);
+  },
+  rig: { root: .32, head: .15, spine: [.42, .54, .65, .74, .8, .9] },
+  clips: k => swimmerClips(k,
+    { name: 'swim', period: 1.7, amp: .78, mode: 'anguilliform', pectoral: .03, follow: .1, recoil: 1.3 },
+    { name: 'fast', period: .8, amp: .95, mode: 'subcarangiform', pectoral: .02, follow: .1 },
+    { name: 'idle', period: 2.6, amp: .45, mode: 'subcarangiform', pectoral: .04 },
+    { turn: { curve: .8, bank: .18 }, extra: [
+      // Whitetips can pump water over their gills, so they lie still on the sand by day: only the breath moves.
+      k.swim({ name: 'rest', period: 4.4, amp: .05, mode: 'anguilliform', pectoral: .02, recoil: 0, roll: .004, heave: .0012,
+        pose: { spine_2: { axis: Y, bias: .08 }, spine_3: { axis: Y, bias: .14 }, spine_4: { axis: Y, bias: .18 }, spine_5: { axis: Y, bias: .16 }, pectoral_L: { axis: Z, bias: .25 }, pectoral_R: { axis: Z, bias: -.25 } } })] })
+};
+
+const hammerhead = {
+  id: 'scalloped-hammerhead', name: 'Scalloped hammerhead', scientific: 'Sphyrna lewini', real: 3, group: 'shark',
+  note: 'A head drawn out into a flat, notched blade with an eye at each end, a tall sickle dorsal fin and a long upper tail.',
+  body: { K: 10, maxGap: .07, stations: [
+    [0, .1, .006, .006, -.002], [.012, .135, .008, .009, -.002], [.03, .128, .009, .01, -.002], [.05, .042, .022, .02], [.1, .05, .038, .034], [.2, .056, .056, .05], [.33, .058, .064, .058],
+    [.46, .05, .06, .054], [.58, .036, .044, .04], [.68, .022, .028, .026], [.75, .012, .017, .015], [.78, .008, .012, .011]] },
+  fins: [
+    { name: 'dorsal', plane: 'side', root: [.34], thick: .007, outline: [[0, 0], [.025, .06], [.05, .12], [.075, .165], [.092, .16], [.09, .06], [.115, .006], [.096, 0]] },
+    { name: 'dorsal2', plane: 'side', root: [.655], thick: .004, outline: [[0, 0], [.012, .022], [.026, .028], [.03, .008], [.04, 0]] },
+    { name: 'pectoral', mirror: true, bone: 'pectoral', root: [.24, 118, .3], span: [.78, -.36, -.5], chord: [0, -.2, -1], thick: .006, hinge: .08, stiff: .6,
+      outline: [[0, 0], [.01, .045], [.03, .09], [.055, .118], [.064, .11], [.066, .05], [.068, 0]] },
+    { name: 'pelvic', mirror: true, root: [.55, 150, .3], span: [.45, -.82, -.35], thick: .004, outline: [[0, 0], [.012, .03], [.03, .04], [.04, .012], [.038, 0]] },
+    { name: 'anal', plane: 'side', down: true, root: [.63], thick: .004, outline: [[0, 0], [.016, .03], [.034, .036], [.04, .01], [.05, 0]] },
+    { name: 'caudal', plane: 'side', root: [.765, 0], thick: .006, outline: [[0, -.006], [0, .012], [.06, .06], [.14, .13], [.23, .2], [.255, .19], [.22, .12], [.15, .04], [.08, 0]] },
+    { name: 'caudal', plane: 'side', root: [.765, 0], thick: .005, outline: [[0, .006], [0, -.012], [.04, -.05], [.075, -.09], [.095, -.085], [.08, -.03], [.07, 0]] }
+  ],
+  eyes: { at: [.016, 90], r: .007, ring: '#b8b4a2' },
+  paint: c => {
+    const bronze = '#7f7d70';
+    if (!body(c)) return blend(c.up < 0 && c.name === 'pectoral' ? '#e2e0d6' : bronze, '#3f3e38', ss(c.s, .78, 1) * (c.name === 'pectoral' && c.up < 0 ? .7 : .25));
+    if (c.cap) return '#6c6a5e';
+    return mottle(grade(c.h, [[-1, '#f2f0e8'], [-.3, '#e9e6dc'], [-.1, '#a3a092'], [.35, bronze], [1, '#6e6c60']]), c, .05, 26);
+  },
+  rig: { root: .3, head: .1, spine: [.4, .52, .63, .72, .78, .88] },
+  clips: k => swimmerClips(k,
+    // The hammer sweeps from side to side as it swims, scanning the sand.
+    { name: 'swim', period: 2, amp: .62, mode: 'subcarangiform', pectoral: .025, follow: .1, recoil: 2 },
+    { name: 'fast', period: .95, amp: .85, mode: 'subcarangiform', pectoral: .02, follow: .1, recoil: 1.6 },
+    { name: 'idle', period: 3, amp: .4, mode: 'subcarangiform', pectoral: .03, recoil: 1.8 },
+    { turn: { curve: .75, bank: .22 } })
+};
+
+// --- More reef fish, and two great rays ------------------------------------------------------------------------------
+const clownfish = { ...reefFish({ id: 'clownfish', name: 'Ocellaris clownfish', scientific: 'Amphiprion ocellaris', real: .08, D: .2, W: .075, tail: 'round', dorsal: .42, dorsalFrom: .2, anal: .38, eye: [.1, 60, .021], period: .26, amp: .65, pectoral: .35,
+  note: 'Bright orange with three white bars, each edged in black, living among the stinging tentacles of its anemone.',
+  paint: c => {
+    if (!body(c)) return blend(blend('#f27a1f', '#121212', ss(c.s, .78, .86)), '#f6f2e8', ss(c.s, .93, .98));
+    // Three white bars: behind the eye, a middle one bulging forward, and one round the tail stock; each edged in black.
+    const bars = [[.17 - c.h * .015, .23], [.44 - Math.cos(c.h * 1.4) * .035, .52], [.735, .77]];
+    let white = 0, edge = 0;
+    for (const [a, b] of bars) { white = Math.max(white, band(c.t, a, b, .006)); edge = Math.max(edge, band(c.t, a - .018, b + .018, .004)); }
+    return blend(blend('#f47a1f', '#141414', edge), '#f8f6ef', white);
+  } }), site: .14, group: 'fish' };
+
+const yellowTang = { ...reefFish({ id: 'yellow-tang', name: 'Yellow tang', scientific: 'Zebrasoma flavescens', real: .18, D: .42, W: .05, snout: .07, tail: 'round', dorsal: .48, dorsalFrom: .13, anal: .42, eye: [.12, 56, .016], period: .42, amp: .45,
+  note: 'A disc of lemon yellow with a long snout, and a white scalpel at the base of its tail.',
+  paint: c => {
+    if (!body(c)) return blend('#f4cf1b', '#ffe46a', ss(c.s, .8, 1) * .5);
+    const scalpel = 1 - ss(Math.hypot((c.t - .72) * 9, c.h * 1.6), .55, .75);
+    return blend(grade(c.h, [[-1, '#f8da3a'], [1, '#f1c30f']]), '#f7f4ea', scalpel);
+  } }), group: 'fish' };
+
+const triggerfish = { ...reefFish({ id: 'picasso-triggerfish', name: 'Picasso triggerfish', scientific: 'Rhinecanthus aculeatus', real: .25, D: .28, W: .065, snout: .07, tail: 'round', dorsal: .32, dorsalFrom: .36, anal: .32, eye: [.17, 52, .015], period: .5, amp: .3, pectoral: .45,
+  note: 'As if painted by hand: blue and black bars across the eye, a yellow line from its lips, black wedges and white streaks behind.',
+  // It swims by rippling the soft dorsal and anal fins, the tail held almost still.
+  extraFins: [{ name: 'trigger', plane: 'side', root: [.27], thick: .004, embed: .2, outline: [[0, 0], [.01, .09], [.03, .1], [.05, .02], [.06, 0]] }],
+  paint: c => {
+    if (!body(c)) return c.name === 'caudal' ? blend('#d8cdb4', '#191919', ss(c.s, .55, .75) * .4) : c.name === 'pectoral' ? '#e8a23b' : '#d6ccb6';
+    let col = grade(c.h, [[-1, '#f5f1e6'], [-.3, '#ebe4d2'], [.1, '#c7b996'], [1, '#a99a77']]);
+    // Behind: a black wedge on the flank with three white streaks across it, and black rows on the tail stock.
+    const wedge = ss(c.t, .5, .54) * (1 - ss(c.t, .74, .78)) * band(c.h + (c.t - .5) * 1.4, -.55, .25, .05);
+    col = blend(col, '#17181b', wedge);
+    col = blend(col, '#f4f2ea', wedge * band(Math.sin((c.t * 22 + c.h * 3) * Math.PI), .7, 1.1, .15));
+    // In front: bars of blue and black across the eye and over the brow, and a yellow line back from the lips.
+    const head = 1 - ss(c.t, .2, .26), bars = Math.sin((c.t * 30 - c.h * 2.4) * Math.PI);
+    col = blend(col, bars > .3 ? '#2f6fd6' : bars < -.4 ? '#141518' : col, head * ss(c.h, -.15, .1) * .9);
+    col = blend(col, '#f0a52c', band(c.h + (c.t - .02) * 1.6, -.36, -.26, .02) * (1 - ss(c.t, .2, .3)));
+    return blend(col, '#e2462b', band(c.t, .005, .04, .006) * ss(-c.h, -.2, 0));
+  } }), group: 'fish' };
+
+const lionfish = { ...reefFish({ id: 'lionfish', name: 'Red lionfish', scientific: 'Pterois volitans', real: .35, D: .2, W: .075, snout: .02, tail: 'round', dorsal: .25, dorsalFrom: .46, anal: .3, eye: [.1, 62, .018, '#c4402a'], period: .8, amp: .3, pectoral: .1,
+  note: 'Banded red and white from snout to tail, with fans for pectoral fins and a mane of venomous spines it turns towards a threat.',
+  extraFins: [
+    // The fans: wide pectorals of long rays and thin membrane, spread like wings when it hunts or warns.
+    { name: 'fan', mirror: true, bone: 'fan', root: [.25, 105, .2], span: [.3, -.78, -.55], chord: [.1, .55, -.83], thick: .003, hinge: .04, stiff: .3, keep: true,
+      outline: [[0, 0], [-.04, .1], [-.03, .24], [.02, .38], [.09, .46], [.17, .45], [.24, .36], [.28, .22], [.26, .1], [.15, 0]] },
+    // The mane: long dorsal spines with membrane only at their bases.
+    { name: 'spines', plane: 'side', root: [.2], thick: .003, embed: .15, core: [.12, .08],
+      outline: [[0, 0], [.012, .34], [.03, .07], [.05, .38], [.07, .07], [.09, .36], [.11, .07], [.13, .32], [.15, .06], [.17, .26], [.19, .05], [.21, .18], [.24, .03], [.26, 0]] },
+    { name: 'tentacle', mirror: true, root: [.07, 40, .1], span: [.2, 1, .2], thick: .002, outline: [[0, 0], [.004, .05], [.012, .06], [.012, 0]] }],
+  paint: c => {
+    const bands = ss(Math.sin((c.t * (c.part === 'fin' ? 0 : 26) + (c.part === 'fin' ? c.s * 14 : 0)) * Math.PI), -.15, .2);
+    if (!body(c)) {
+      if (c.name === 'fan') return blend(blend('#f4ece4', '#a5372a', band(Math.sin(c.s * 13), .1, 1.1, .25) * .85), '#5e1c14', band(Math.sin(c.u * 70), .85, 1.1, .05) * .5);
+      if (c.name === 'spines') return blend('#f4ebe2', '#9b2e21', bands);
+      return blend('#f1e6da', '#a3392a', band(Math.sin(c.u * 24 + c.s * 10), .6, 1.1, .2) * .7);
+    }
+    return mottle(blend(blend('#f6ece2', '#9f3324', bands), '#f8f1ea', ss(-c.h, .5, .8) * .6), c, .05, 24);
+  },
+  extra: k => [
+    // Hovering, fans out and gently fanning, spines raised.
+    k.swim({ name: 'hover', period: 2.8, amp: .06, mode: 'carangiform', pectoral: .12, pectoralMode: 'row', roll: .015, heave: .008, pose: { fan_L: [{ axis: Y, bias: -.15 }, { axis: Z, amp: .12, bias: .1 }], fan_R: [{ axis: Y, bias: .15 }, { axis: Z, amp: -.12, bias: -.1 }] } }),
+    // The warning: head down, spines tilted at the diver, the fans thrown wide.
+    k.swim({ name: 'threat', period: 1.6, amp: .05, mode: 'carangiform', pectoral: .1, roll: .03, pose: { root: { axis: X, bias: .22 }, fan_L: [{ axis: Y, bias: -.5 }, { axis: Z, amp: .08, bias: .35 }], fan_R: [{ axis: Y, bias: .5 }, { axis: Z, amp: -.08, bias: -.35 }] } })] }), group: 'fish' };
+
+const humphead = { ...reefFish({ id: 'humphead-wrasse', name: 'Humphead wrasse', scientific: 'Cheilinus undulatus', real: 1.5, D: .165, W: .08, K: 12, snout: .05, tail: 'round', dorsal: .3, dorsalFrom: .22, anal: .3, eye: [.1, 56, .012, '#d3b45a'], period: 1.1, amp: .38, pectoral: .3,
+  note: 'A green-blue giant as long as a diver, with a bulging forehead, thick lips and a face scribbled with lines.',
+  paint: c => {
+    if (!body(c)) return blend('#2f7e86', '#9fd6c3', band(Math.sin(c.u * 26 + c.s * 6), .6, 1.1, .2) * .5);
+    // Each scale with a dark bar across it, and wavy yellow-green lines scribbled behind the eye.
+    let col = grade(c.h, [[-1, '#8cc8b3'], [-.3, '#4f9c95'], [.3, '#2f7c83'], [1, '#22656e']]);
+    col = blend(col, '#1b4d55', band(Math.sin(c.t * 120) * Math.sin(c.a * 14), .7, 1.1, .1) * .5);
+    const face = 1 - ss(c.t, .2, .28), lines = band(Math.sin((c.h * 9 + Math.sin(c.t * 50) * .4) * Math.PI), .75, 1.1, .1);
+    return mottle(blend(col, '#c8c56a', face * lines * .8), c, .05, 20);
+  } }), group: 'fish', school: false,
+  lumps: [{ at: [.09, 0], size: [.06, .05, .09], color: '#2a7079', mirror: false, keep: true, lift: -.2 }, { at: [.012, 115], size: [.03, .016, .022], color: '#b9a668' }],
+  rig: { root: .36, head: .17, spine: [.5, .62, .72, .79] } };
+
+const manta = {
+  id: 'manta-ray', name: 'Reef manta ray', scientific: 'Mobula alfredi', real: 3, group: 'ray', span: 3.6,
+  note: 'Black above with pale chevrons on its shoulders, white below; it flies on wings wider than a car, steering with two rolled horns either side of its mouth.',
+  body: { K: 12, shape: raySection(.22), maxGap: .04, stations: [
+    [0, .075, .012, .01], [.03, .1, .02, .014], [.08, .2, .03, .02], [.14, .38, .04, .026], [.19, .46, .044, .027], [.23, .44, .043, .026], [.29, .3, .04, .025], [.35, .16, .034, .022], [.41, .07, .026, .018], [.45, .03, .02, .014], [.47, .006, .008, .006]] },
+  tail: { K: 4, maxGap: .1, stations: [[.42, .016, .014, .012], [.5, .012, .012, .01], [.62, .007, .007, .006], [.75, 0, 0, 0]] },
+  fins: [{ name: 'horn', mirror: true, bone: 'horn', root: [.012, 80, .05], span: [.25, -.25, .93], chord: [1, 0, 0], thick: .006, hinge: .1, stiff: .4, outline: [[0, 0], [-.012, .04], [-.006, .085], [.012, .1], [.03, .07], [.03, 0]] }],
+  eyes: { at: [.04, 82], r: .007, glint: false },
+  paint: c => {
+    if (c.part === 'tail') return '#1c2126';
+    if (!body(c)) return c.up < 0 ? '#e8ebe8' : '#22272c';
+    if (c.cap) return '#2a2f34';
+    // Below: white, with a dark margin to the wings and a few dark spots between the gills.
+    if (c.h < -.05) return blend(blend('#eef0ec', '#3a3f45', ss(edgeOf(c), .82, .97)), '#2b3035', 1 - ss(Math.hypot((Math.abs(c.p.x) - .04) * 30, (c.p.z - .25) * 30), .5, .7));
+    // Above: black, a pale chevron on each shoulder sweeping back from behind the head.
+    const ax = Math.abs(c.p.x), chevron = band(ax - (c.p.z - .26) * -1.1, .06, .2, .03) * band(c.p.z, .22, .4, .03) * (1 - ss(edgeOf(c), .55, .7));
+    return mottle(blend('#1d2227', '#d6dbdc', chevron), c, .05, 18);
+  },
+  rig: { kind: 'ray', centre: .19, halfSpan: .46, ribs: [40, 90, 140], radii: [.3, .68], tail: [.5, .6, .7] },
+  clips: k => rayClips(k,
+    // Mantas fly: the wings beat together, slow and deep, the tips trailing.
+    { name: 'swim', period: 4.4, amp: .62, wave: .05, skew: .2, tail: .05, heave: .02 },
+    { name: 'glide', period: 7, amp: .16, wave: .08, tail: .04, heave: .006 },
+    { name: 'rest', period: 6, amp: .1, wave: .1, tail: .03 }, [
+      // Feeding, a manta somersaults: a slow loop back over itself, wings beating through it.
+      k.act({ name: 'loop', duration: 7, bones: Object.fromEntries(k.rig.bones.filter(b => b.axis).map(b => [b.name, [{ axis: b.axis, amp: b.ring ? .5 : .3, freq: 2, phase: b.rib * .05 }]])),
+        root: { y: { bias: .4, env: [[0, 0], [.5, 1], [1, 0]] }, z: { bias: -.25, env: [[0, 0], [.25, -.5], [.5, 0], [.75, .5], [1, 0]] } } })
+    ].map(def => ({ ...def, bones: { ...def.bones, root: [{ axis: X, amp: 0, bias: -Math.PI * 2, env: [[0, 0], [1, 1]] }] } })))
+};
+
+const eagleRay = {
+  id: 'spotted-eagle-ray', name: 'Spotted eagle ray', scientific: 'Aetobatus narinari', real: 2, group: 'ray', span: 1.9,
+  note: 'Pointed wings dark as ink and dotted white, a duck-billed head, and a whip of a tail three times its body.',
+  body: { K: 12, shape: raySection(.28), maxGap: .03, stations: [
+    [0, 0, 0, 0, -.004], [.01, .016, .011, .01, -.004], [.04, .03, .02, .016, -.002], [.06, .05, .025, .018], [.1, .18, .03, .02], [.14, .3, .034, .022], [.17, .34, .034, .022], [.2, .27, .032, .021], [.24, .14, .03, .02], [.27, .06, .024, .016], [.29, .02, .018, .012], [.3, .004, .006, .005]] },
+  tail: { K: 4, maxGap: .1, stations: [[.26, .014, .013, .011], [.32, .01, .01, .009], [.5, .006, .006, .005], [.75, .0035, .0035, .0035], [.92, .002, .002, .002], [1, 0, 0, 0]] },
+  eyes: { at: [.042, 70], r: .006, glint: false },
+  spots(random) { const list = []; for (let i = 0; i < 90; i++) list.push({ t: .05 + random() * .24, a: 5 + random() * 80, r: .004 + random() * .004, color: '#f3f4ef' }); return list; },
+  paint: c => {
+    if (c.part === 'tail') return blend('#1c2430', '#3b4552', ss(c.t, .6, 1));
+    if (c.cap) return '#1d2531';
+    return c.h < -.05 ? blend('#f2f3ee', '#5a6370', ss(edgeOf(c), .85, 1)) : mottle(tone('#1b2431'), c, .06, 22);
+  },
+  rig: { kind: 'ray', centre: .15, halfSpan: .34, ribs: [42, 90, 135], radii: [.3, .68], tail: [.36, .52, .7, .86] },
+  clips: k => rayClips(k,
+    { name: 'swim', period: 2.6, amp: .55, wave: .12, skew: .25, tail: .08, heave: .015 },
+    { name: 'glide', period: 5, amp: .15, wave: .1, tail: .1, heave: .006 },
+    { name: 'rest', period: 4, amp: .08, wave: .15, tail: .05 })
+};
+
+/** Every species in the set, largest first, sized for the site (see siteLength; site, where given, is a length in metres). */
+export const SPECIES = [rightWhale, whaleShark, orca(false), orca(true), whipray, dolphin, nurse, blacktip, tuna, barracuda, bumphead, trevally, bluespot, remora, flyingFish, moray, ribbonEel, gardenEel, ...smallFish,
+  hammerhead, whitetip, greenTurtle, cuttlefish, puffer, octopus, urchin, blueStar, chipStar, hermit, spottedCrab,
+  clownfish, yellowTang, triggerfish, lionfish, humphead, manta, eagleRay]
+  .map(spec => { const length = spec.site ?? siteLength(spec.real); return { ...spec, realLength: spec.real, length, ...(spec.span ? { span: Math.round(spec.span * length / spec.real * 100) / 100, realSpan: spec.span } : {}) }; })
   .sort((a, b) => b.length - a.length);
 export const speciesById = id => SPECIES.find(species => species.id === id);
 

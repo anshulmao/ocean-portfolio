@@ -110,6 +110,15 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
     E.set(-pitch, yaw, roll, 'YXZ'); Q.setFromEuler(E); M.compose(P.set(x, y, z), Q, S.set(sx, sy, sz)); mesh.setMatrixAt(i, M); mesh.userData.dm = true;
   }
   const conceal = (mesh, i) => { mesh.setMatrixAt(i, kit.ZERO_MATRIX); mesh.userData.dm = true; };
+  // Animals the creature set draws from its own models (user-creatures.js adopts them): this file keeps their behaviour
+  // and writes each one's pose to its puppet every frame it is simulated. on: false while its group sleeps. Until the
+  // set has loaded (or if it cannot), adopted stays false and the animal is drawn here as before.
+  //   action: what it is doing, for the model's clip (rest, swim, walk, guard, hide, jet, alert, puff); rate: how fast.
+  //   puff: how blown up a puffer is (0..1); tint: the colour an octopus has taken; eye: where a crab's eyes shine.
+  //   rise: how far the sand the model stands on lies above floor() here (the set's drawn seabed), for the eyeshine.
+  const puppets = [];
+  const puppet = (species, extra = {}) => { const p = { species, on: false, adopted: false, x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, scale: 1, action: 'swim', rate: 1, puff: 0, tint: null, eye: null, ...extra }; puppets.push(p); return p; };
+  const posePuppet = (p, x, y, z, yaw, pitch, roll, action, extra) => { p.on = true; p.x = x; p.y = y; p.z = z; p.yaw = yaw; p.pitch = pitch; p.roll = roll; p.action = action; if (extra) Object.assign(p, extra); };
   function life(mesh, i, phase, state, drive, kind) { const a = mesh.userData.life, o = i * 4; a[o] = phase; a[o + 1] = state; a[o + 2] = drive; a[o + 3] = kind; mesh.userData.dl = true; }
   function drive(mesh, i, state, amount) { const a = mesh.userData.life, o = i * 4; if (a[o + 1] !== state || a[o + 2] !== amount) { a[o + 1] = state; a[o + 2] = amount; mesh.userData.dl = true; } }
   const colour = new THREE.Color();
@@ -250,7 +259,7 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
     }
     mesh.userData.dm = true; mesh.computeBoundingSphere(); mesh.boundingSphere.radius += .2;
     const top = cy + .62, clowns = [];
-    for (let k = 0; k < residents; k++) clowns.push({ slot: fishNew(1, k ? '#ff8a35' : '#f96f22', '#f6f2e6'), size: .125 - k * .02, ph: random() * TAU, w: rr(.7, 1.1), yaw: random() * TAU, mode: 0, t: 0, timer: rr(.6, 2) + k * 1.5, vx: 0, vy: 0, vz: 0 });
+    for (let k = 0; k < residents; k++) clowns.push({ puppet: puppet('clownfish'), slot: fishNew(1, k ? '#ff8a35' : '#f96f22', '#f6f2e6'), size: .125 - k * .02, ph: random() * TAU, w: rr(.7, 1.1), yaw: random() * TAU, mode: 0, t: 0, timer: rr(.6, 2) + k * 1.5, vx: 0, vy: 0, vz: 0 });
     let tuck = 0;
     group(name, cx, top, cz, 1.6, { interest: 9, draw: 30, far: .28, meshes: [mesh], shared: fish, update(dt) {
       const d = Math.hypot(me.x - cx, me.y - top, me.z - cz), reach = underwater > .5 && d < 4.6 && d > 1.5;
@@ -269,9 +278,11 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
           if (amount > .02) { x += c.vx * amount; y += c.vy * amount; z += c.vz * amount; face = Math.atan2(c.vx, c.vz) + (c.mode === 3 ? Math.PI * (1 - amount) : 0); }
         }
         c.yaw += turnTo(c.yaw, face) * ease(dt, 9);
-        fishPose(c.slot, x, y, z, c.yaw, 0, 0, c.size, 1.15, 1.3, .3 + amount * .7, 0);
+        // Drawn by the creature set once it has loaded (a clownfish model 14 cm long is scale 1).
+        if (c.puppet.adopted) { conceal(fish, c.slot); posePuppet(c.puppet, x, y, z, c.yaw, 0, 0, amount > .3 ? 'fast' : 'swim', { scale: c.size / .14, rate: 1 + amount * .6 }); }
+        else fishPose(c.slot, x, y, z, c.yaw, 0, 0, c.size, 1.15, 1.3, .3 + amount * .7, 0);
       }
-    }, conceal() { for (let k = 0; k < clowns.length; k++) conceal(fish, clowns[k].slot); } });
+    }, conceal() { for (let k = 0; k < clowns.length; k++) { conceal(fish, clowns[k].slot); clowns[k].puppet.on = false; } } });
     site(id, name, cx, cy, cz, 1.5, 'resident', note);
   }
   yield;
@@ -329,7 +340,7 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
   // --- Pufferfish: inflates when crowded -----------------------------------------------
   function puffer(id, tx, tz, up, note) {
     const [hx, hz] = settle(tx, tz, 1.5, 12, 2), hy = coverAt(hx, hz) + up, slot = fishNew(4, '#e0cf8c', '#4d3b28');
-    const s = { a: random() * TAU, puff: 0, target: 0, calm: 0, ox: 0, oz: 0, x: hx, y: hy, z: hz, yaw: 0, spin: 0, last: 1e9 };
+    const s = { a: random() * TAU, puff: 0, target: 0, calm: 0, ox: 0, oz: 0, x: hx, y: hy, z: hz, yaw: 0, spin: 0, last: 1e9, puppet: puppet('white-spotted-puffer') };
     group('Pufferfish', hx, hy, hz, 4, { interest: 11, draw: 34, far: .3, shared: fish, update(dt, g) {
       const d = Math.hypot(me.x - s.x, me.y - s.y, me.z - s.z), closing = s.last > 1e8 || dt <= 0 ? 0 : (s.last - d) / dt; s.last = d;
       if (s.target === 0 && underwater > .5 && (d < 2.7 || (d < 4.4 && closing > 1.3))) { s.target = 1; s.calm = 0; emit('puffer-inflate', s.x, s.y, s.z, 1); }
@@ -345,8 +356,9 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
       s.spin += dt * s.puff * .5;
       s.yaw += turnTo(s.yaw, Math.atan2(-Math.sin(s.a), Math.cos(s.a) * .7) + s.spin) * ease(dt, 3);
       s.x = x; s.y = y; s.z = z; g.sphere.center.set(x, y, z);
-      fishPose(slot, x, y, z, s.yaw, -.1 * s.puff, Math.sin(time * 1.7) * .25 * s.puff, .28, 1.05, 1.25, .25 * (1 - s.puff) + .05, s.puff);
-    }, conceal() { conceal(fish, slot); s.last = 1e9; } });
+      if (s.puppet.adopted) { conceal(fish, slot); posePuppet(s.puppet, x, y, z, s.yaw, -.1 * s.puff, Math.sin(time * 1.7) * .25 * s.puff, s.puff > .25 ? 'puff' : 'swim', { puff: s.puff, rate: .6 + (1 - s.puff) * .4 }); }
+      else fishPose(slot, x, y, z, s.yaw, -.1 * s.puff, Math.sin(time * 1.7) * .25 * s.puff, .28, 1.05, 1.25, .25 * (1 - s.puff) + .05, s.puff);
+    }, conceal() { conceal(fish, slot); s.last = 1e9; s.puppet.on = false; } });
     site(id, 'Pufferfish', hx, hy, hz, 4, 'behaviour', note);
     return s;
   }
@@ -445,7 +457,7 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
 
   // --- Octopus: matches its rock, flushes when noticed, jets away behind ink if rushed ----------------
   yield;
-  const octopus = { perch: 0, next: 0, x: 0, y: 0, z: 0, yaw: 1, pitch: 0, mode: 'rest', t: 0, flush: 0, jet: 0, calm: 0, last: 1e9, fx: 0, fy: 0, fz: 0, mx: 0, my: 0, mz: 0, tx: 0, ty: 0, tz: 0, dur: 1, quiet: false, go: false, rush: false, stroll: rr(30, 60), group: null, perches: [] };
+  const octopus = { puppet: puppet('day-octopus'), perch: 0, next: 0, x: 0, y: 0, z: 0, yaw: 1, pitch: 0, mode: 'rest', t: 0, flush: 0, jet: 0, calm: 0, last: 1e9, fx: 0, fy: 0, fz: 0, mx: 0, my: 0, mz: 0, tx: 0, ty: 0, tz: 0, dur: 1, quiet: false, go: false, rush: false, stroll: rr(30, 60), group: null, perches: [] };
   {
     const O = octopus, perches = O.perches;
     [[-11.5, -50], [-9, -60.5], [-12.5, -65.5], [-4, -57.5]].forEach(([px, pz], k) => {
@@ -507,10 +519,10 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
       // Skin: the rock it sits on, flushed toward alarm red; it blanches for a moment where it lands.
       skin.copy(camo).lerp(alarm, O.flush); if (O.mode === 'land' && !O.quiet) skin.lerp(pale, Math.max(0, .6 - O.t * .4));
       if (Math.abs(skin.r - worn.r) + Math.abs(skin.g - worn.g) + Math.abs(skin.b - worn.b) > .004) { worn.copy(skin); mesh.setColorAt(0, skin); mesh.userData.dc = true; }
-      pose(mesh, 0, O.x, O.y, O.z, O.yaw, O.pitch * O.jet, 0, 1.15, 1.15, 1.15);
-      drive(mesh, 0, O.jet, O.flush);
+      if (O.puppet.adopted) { conceal(mesh, 0); posePuppet(O.puppet, O.x, O.y, O.z, O.yaw, O.pitch * O.jet, 0, O.mode === 'jet' ? (O.quiet ? 'swim' : 'jet') : O.mode === 'alert' ? 'alert' : 'rest', { tint: skin, rate: O.mode === 'jet' && !O.quiet ? 1.6 : 1 }); }
+      else { pose(mesh, 0, O.x, O.y, O.z, O.yaw, O.pitch * O.jet, 0, 1.15, 1.15, 1.15); drive(mesh, 0, O.jet, O.flush); }
       g.sphere.center.set(O.x, O.y, O.z); g.busy = O.mode === 'jet';
-    } });
+    }, conceal() { O.puppet.on = false; } });
     site('octopus', 'Octopus territory', perches[0].x, perches[0].y, perches[0].z, 9, 'behaviour', 'An octopus on one of four rocks beyond the giant clam, the colour of the stone until it notices you. Approach slowly and it will let you watch; rush it and it jets to another perch behind a puff of ink.');
   }
 
@@ -611,15 +623,16 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
   for (let k = 0; k < CRABS * 2; k++) motes.set(crabEyes + k, 4, 0, 99, 0, 0, 0, 0, 0, .03, 1, .2 + .05 * (k >> 1) % .3);
   function eyes(c, on, y) {
     if (!on) { motes.toggle(crabEyes + c.i * 2, false); motes.toggle(crabEyes + c.i * 2 + 1, false); return; }
-    const cos = Math.cos(c.yaw), sin = Math.sin(c.yaw), s = c.scale;
-    for (let side = 0; side < 2; side++) { const ox = (side ? .024 : -.024) * s, oz = .046 * s; motes.toggle(crabEyes + c.i * 2 + side, true, c.x + ox * cos + oz * sin, y + .098 * s, c.z - ox * sin + oz * cos); }
+    // Where the eyes sit, a unit crab: [across, up, forward]; the model's own once the creature set draws it.
+    const cos = Math.cos(c.yaw), sin = Math.sin(c.yaw), s = c.scale, [ex, ey, ez] = c.puppet.adopted && c.puppet.eye ? c.puppet.eye : [.024, .098, .046];
+    for (let side = 0; side < 2; side++) { const ox = (side ? ex : -ex) * s, oz = ez * s; motes.toggle(crabEyes + c.i * 2 + side, true, c.x + ox * cos + oz * sin, y + (c.puppet.adopted ? c.puppet.rise || 0 : 0) + ey * s, c.z - ox * sin + oz * cos); }
   }
   function crabPatch(id, name, tx, tz, count, note) {
     const [cx, cz] = settle(tx, tz, 1.5, 12, 2), cy = floor(cx, cz), list = [];
     for (let k = 0; k < count && crabList.length < CRABS; k++) {
       const i = crabList.length, hermit = k % 4 === 3, a = random() * TAU, r = rr(.5, 3.2);
       let x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r; if (solid(x, z)) { x = cx; z = cz; }
-      const c = { i, hermit, x, z, yaw: random() * TAU, tx: x, tz: z, wait: rr(0, 4), walk: 0, claw: 0, scale: hermit ? rr(1.3, 1.7) : rr(1.8, 2.6), still: false, flee: 0, shy: i % 5 === 4, grow: i % 5 === 4 ? 0 : 1, hidden: true };
+      const c = { i, hermit, x, z, yaw: random() * TAU, tx: x, tz: z, wait: rr(0, 4), walk: 0, claw: 0, scale: hermit ? rr(1.3, 1.7) : rr(1.8, 2.6), still: false, flee: 0, shy: i % 5 === 4, grow: i % 5 === 4 ? 0 : 1, hidden: true, puppet: puppet(hermit ? 'hermit-crab' : 'spotted-reef-crab') };
       life(crabs, i, random() * TAU, 0, 0, hermit ? 31 : 30); dress(crabs, i, pick(hermit ? ['#f0c9a0', '#e9b48c'] : ['#ffffff', '#f2c6a8', '#c9a2c8', '#ffd9a0']), '#000000');
       list.push(c); crabList.push(c);
     }
@@ -628,7 +641,7 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
         const c = list[n];
         // By day the shy ones stay under the sand; at dusk they dig themselves out.
         c.grow = clamp(c.grow + (c.shy && night < .35 ? -1 : 1) * dt * .6, 0, 1);
-        if (c.grow <= .01) { if (!c.hidden) { c.hidden = true; c.still = false; conceal(crabs, c.i); eyes(c, false); } continue; }
+        if (c.grow <= .01) { if (!c.hidden) { c.hidden = true; c.still = false; conceal(crabs, c.i); eyes(c, false); } c.puppet.on = false; continue; }
         c.hidden = false;
         const y = floor(c.x, c.z), dx = c.x - me.x, dy = y - me.y, dz = c.z - me.z, d = Math.hypot(dx, dy, dz);
         let lit = false;
@@ -655,11 +668,14 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
         c.claw += ((lit || d < 3 ? 1 : 0) - c.claw) * ease(dt, 5);
         // The eyes only answer the lamp while the crab is still.
         if (moving === c.still) { c.still = !moving; eyes(c, c.still, floor(c.x, c.z)); }
-        const s = c.scale * (.4 + .6 * c.grow);
-        pose(crabs, c.i, c.x, floor(c.x, c.z) - .004 - (1 - c.grow) * .09 * c.scale, c.z, c.yaw, 0, 0, s, s, s);
-        drive(crabs, c.i, c.claw, c.walk);
+        const s = c.scale * (.4 + .6 * c.grow), cy = floor(c.x, c.z) - .004 - (1 - c.grow) * .09 * c.scale;
+        if (c.puppet.adopted) {
+          conceal(crabs, c.i);
+          // A hermit caught in the light pulls back into its shell; a crab raises its claws.
+          posePuppet(c.puppet, c.x, cy, c.z, c.yaw, 0, 0, c.walk > .3 ? 'walk' : c.claw > .5 ? (c.hermit && lit ? 'hide' : 'guard') : 'idle', { scale: s, rate: clamp(pace / (c.hermit ? .09 : .2), .6, 2.4) });
+        } else { pose(crabs, c.i, c.x, cy, c.z, c.yaw, 0, 0, s, s, s); drive(crabs, c.i, c.claw, c.walk); }
       }
-    }, conceal() { for (let n = 0; n < list.length; n++) { const c = list[n]; conceal(crabs, c.i); eyes(c, false); c.still = false; c.hidden = true; } } });
+    }, conceal() { for (let n = 0; n < list.length; n++) { const c = list[n]; conceal(crabs, c.i); eyes(c, false); c.still = false; c.hidden = true; c.puppet.on = false; } } });
     site(id, name, cx, cy, cz, 4.5, 'seabed', note);
   }
   yield;
@@ -949,5 +965,5 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
   lifeSites.length = 0; lifeSites.push(...sites);
   // The bait ball now, as [x, y, z, radius]: the guided dive steers through its middle.
   const baitBall = () => { if (!bait.at) return null; const b = bait.at(new THREE.Vector4()); return [b.x, b.y, b.z, b.w]; };
-  return { root, under, update, counts, sites, events, debug, baitBall };
+  return { root, under, update, counts, sites, events, debug, baitBall, puppets };
 }
