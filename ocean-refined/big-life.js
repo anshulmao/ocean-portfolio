@@ -5,7 +5,7 @@ import { pointAt } from './look-indicator.js';
 // not, is shown the great visitors as they pass, and meets at least one of them. user-creatures.js brings them in on its own
 // schedule; if none of BIG has come by GUARANTEE seconds into a dive, one is called in.
 // NOTED: what the look-there marker points out, with how near one must be to be worth turning for (m).
-const NOTED = { 'whale-shark': ['Whale shark', 90], whale: ['A whale', 110], orcas: ['Orcas', 90], dolphins: ['Dolphins', 50], blacktips: ['Reef sharks', 40] };
+const NOTED = { 'whale-shark': ['Whale shark', 90], whale: ['A whale', 110], orcas: ['Orcas', 90], dolphins: ['Dolphins', 50], blacktips: ['Reef sharks', 40], hammerheads: ['Hammerheads', 60] };
 const BIG = ['whale-shark', 'whale', 'orcas', 'dolphins'], GUARANTEE = 30, SEEN_AFTER = 2.4;
 // pointed: visitors seen on their current pass. marked: the one the marker is on, and how long it has been in view.
 const pointed = new Set();

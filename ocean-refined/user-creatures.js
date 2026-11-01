@@ -3,7 +3,7 @@ import { GLTFLoader } from './vendor/GLTFLoader.js';
 import { clone } from './vendor/SkeletonUtils.js';
 import { floatSkinIndices, turn, modelBytes } from './assets.js';
 import { creatureGeometry, speciesById } from './creature-species.js';
-import { ENCOUNTERS, RESIDENTS, SCHOOLS, WRECK_HEIGHT } from './user-creature-routes.js';
+import { ENCOUNTERS, RESIDENTS, SCHOOLS, SEABED, WRECK_HEIGHT } from './user-creature-routes.js';
 import { fishNavigator } from './fish-navigation.js';
 import { createMorayDenMotion, updateMorayDenMotion } from './moray-resident.js';
 import { terrainHeightAt as reefTerrain, seabedHeightAt } from './reef.js';
@@ -13,8 +13,10 @@ import { terrainHeightAt as reefTerrain, seabedHeightAt } from './reef.js';
 // The great animals are encounters: a whale far out in the blue, a whale shark with its remoras, an orca family, a
 // dolphin pod, a pair of reef sharks, a tuna school. A director brings one in from beyond the haze, lets it pass the
 // diver and swim out of sight, and then nothing of it exists (no drawing, no animation) until it is chosen again.
-// Residents (bumpheads, rays, a sleeping nurse shark, the wreck's barracuda, morays in their dens) live on the reef
-// and cost nothing while out of view. Fish in numbers are instances of the set's own models, one draw call a
+// Residents (bumpheads, rays, a sleeping nurse shark, the wreck's barracuda, morays in their dens, turtles, whitetips,
+// cuttlefish) live on the reef and cost nothing while out of view. Sea stars and urchins lie on the bottom as instances.
+// The pufferfish, the octopus and the crabs keep the behaviour living-world.js gives them; this set only draws them
+// (puppets: that file writes their pose, this one plays the matching clip on the model). Fish in numbers are instances of the set's own models, one draw call a
 // species, swimming in the vertex shader with the same wave their clips were made from.
 //
 // Every model is a GLB from assets/models/user-sets/sets/creature-set (rig, clips, painted skin). Lighter shapes for
@@ -150,8 +152,13 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   const landmark = id => { const s = (sites.landmarks || []).find(item => item.id === id); return s && { x: s.position[0], y: s.position[1], z: s.position[2] }; };
 
   // --- Skinned animals --------------------------------------------------------------------------------------------
-  const lighter = new Map();
-  function actor(species, { clip = 'swim', scale = 1, name = species } = {}) {
+  const lighter = new Map(), bottoms = new Map();
+  /** How far a model reaches below its origin (m, at scale 1): legs, arms or belly, so it stands on what it is put on. */
+  function bottomOf(species) {
+    if (!bottoms.has(species)) { let box = null; gltfs.get(species)?.scene.traverse(n => { if (n.isSkinnedMesh && !box) { n.geometry.computeBoundingBox(); box = n.geometry.boundingBox; } }); bottoms.set(species, box ? -box.min.y : 0); }
+    return bottoms.get(species);
+  }
+  function actor(species, { clip = 'swim', scale = 1, name = species, reach = Infinity } = {}) {
     const gltf = gltfs.get(species), fact = facts.get(species); if (!gltf) return null;
     const model = clone(gltf.scene), wrapper = new THREE.Group(); wrapper.name = `Creature set · ${name}`; wrapper.userData.creatureId = species; wrapper.add(model); wrapper.scale.setScalar(scale);
     let mesh = null; model.traverse(n => { if (n.isSkinnedMesh && !mesh) mesh = n; }); if (!mesh) return null;
@@ -159,7 +166,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     const mixer = new THREE.AnimationMixer(model), actions = {};
     for (const c of gltf.animations) actions[c.name] = mixer.clipAction(c);
     const swim = gltf.animations.find(c => c.name === 'swim') || gltf.animations[0], L = fact.lengthMetres * scale;
-    const a = { species, name, wrapper, mesh, full: mesh.geometry, light: lighter.get(species), mixer, actions, clip: null, after: null, until: 0, L, scale,
+    const a = { species, name, wrapper, mesh, full: mesh.geometry, light: lighter.get(species), mixer, actions, clip: null, after: null, until: 0, L, scale, reach,
       pos: new THREE.Vector3(), yaw: 0, pitch: 0, roll: 0, started: false, ease: 1.6, tick: 0, seen: false, active: true,
       // How far one stroke of the swim clip carries it: the clip runs faster or slower to match the animal's speed.
       stride: .72 * L / swim.duration };
@@ -184,7 +191,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   function present(a, dt, view) {
     if (!a.active) { a.wrapper.visible = a.seen = false; return; }
     let seen = true, d = 0;
-    if (view) { d = view.eye.distanceTo(a.pos); sphere.center.copy(a.pos); sphere.radius = a.L * .7; seen = d - sphere.radius < view.range && view.frustum.intersectsSphere(sphere); }
+    if (view) { d = view.eye.distanceTo(a.pos); sphere.center.copy(a.pos); sphere.radius = a.L * .7; seen = d - sphere.radius < Math.min(view.range, a.reach) && view.frustum.intersectsSphere(sphere); }
     a.wrapper.visible = a.seen = seen;
     if (a.after && clock >= a.until) play(a, a.after, .5);
     a.tick += dt; if (!seen) return;
@@ -388,7 +395,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   }
 
   // --- Residents ------------------------------------------------------------------------------------------------
-  const spotted = [], dens = [];
+  const spotted = [], dens = [], hovering = [];
   let sentinel = null, grazers = null, whipray = null;
   // Dens: out from the formation's middle, through its rock, to the first open ground beyond it: the den mouth, with
   // the body back in the rock. A heading that never crosses rock, or only reaches open ground far out (a gap in a ring
@@ -441,6 +448,70 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
         a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(0, a.yaw, 0, 'YXZ');
       }
       dens.push({ actor: a, rest: 0, motion, pose });
+    }
+    // Turtles, each cruising its own loop; one asleep on the sand.
+    const tu = RESIDENTS.turtles;
+    if (gltfs.has(tu.species)) {
+      for (let i = 0; i < pair(tu.count); i++) {
+        const a = actor(tu.species, { scale: rr(...tu.scale), name: `green turtle ${i + 1}` }); if (!a) continue;
+        herds.push({ route: route(...tu.loops[i % tu.loops.length], { wobble: .1 }), height: over(tu.height, -3), speed: tu.speed, pace: 1, members: [{ actor: a, ...member(0, 0, 0, { drift: .5, bob: .3 }) }], look: 5, bank: .1 });
+      }
+      if (!economy) rest(tu.species, tu.sleeper, 3, .26, 'sleeping turtle');
+    }
+    // Whitetips: one patrolling low over the deep reef, the others lying on the sand.
+    const wt = RESIDENTS.whitetips;
+    if (gltfs.has(wt.species)) {
+      const a = actor(wt.species, { name: 'whitetip reef shark' });
+      if (a) herds.push({ route: route(...wt.patrol.loop, { wobble: .12 }), height: over(wt.patrol.height, -4), speed: wt.patrol.speed, pace: 1, members: [{ actor: a, ...member(0, 0, 0, { drift: .8, bob: .25 }) }], look: 8, bank: .14 });
+      wt.resting.slice(0, economy ? wt.lean : wt.resting.length).forEach((spot, i) => rest(wt.species, spot, 3.5, .32, `resting whitetip ${i + 1}`, rr(.85, 1)));
+    }
+    // Cuttlefish off the side of tall formations, on the side towards the middle of the reef.
+    const cu = RESIDENTS.cuttlefish;
+    if (gltfs.has(cu.species)) for (const name of cu.formations.slice(0, pair(cu.count))) {
+      const f = all.find(item => item.name === name); if (!f) continue;
+      const dx = -f.x, dz = -40 - f.z, d = Math.hypot(dx, dz) || 1, x = f.x + dx / d * (f.radius * 1.2 + 2.5), z = f.z + dz / d * (f.radius * 1.2 + 2.5);
+      const a = actor(cu.species, { clip: 'hover', name: `cuttlefish ${hovering.length + 1}`, reach: 60 }); if (!a) continue;
+      a.pos.set(x, cover(x, z) + cu.height, z); a.yaw = Math.atan2(f.x - x, f.z - z); a.started = true; a.ease = .7;
+      hovering.push({ actor: a, home: new THREE.Vector3(x, 0, z), height: cu.height, drift: rr(0, TAU), flash: 0 });
+    }
+  }
+  // An animal lying still on open sand near a wished-for spot, nose-up or rolled to the slope.
+  function rest(species, near, clear, lift, name, scale = 1) {
+    const a = actor(species, { clip: 'rest', name, scale }); if (!a) return null;
+    const [x, z] = sand(...near, clear); a.yaw = rr(0, TAU); lie(x, z, a.yaw, a.L, lift * scale); a.pos.set(x, LIE.y, z); a.pitch = LIE.pitch; a.roll = LIE.roll; a.started = true;
+    a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(-a.pitch, a.yaw, a.roll, 'YXZ');
+    return a;
+  }
+
+  // --- Puppets: animals whose behaviour is living-world.js's, drawn here ----------------------------------------
+  const puppets = [];
+  function buildPuppets() {
+    for (const p of sites.puppets || []) {
+      if (!gltfs.has(p.species)) continue;
+      const crab = p.species.endsWith('crab'), a = actor(p.species, { clip: p.action, name: `${p.species} (living world)`, reach: crab ? 28 : 45 }); if (!a) continue;
+      // living-world.js sizes its crabs for a 16 cm model: a hermit at 1.5 and a crab at 2.2 are these models at scale 1.
+      const unit = p.species === 'hermit-crab' ? 1.5 : crab ? 2.2 : 1, spec = speciesById(p.species);
+      if (spec?.eyeshine) { const L = facts.get(p.species).lengthMetres; p.eye = [spec.eyeshine[0] * L / unit, (spec.eyeshine[1] * L + bottomOf(p.species)) / unit, spec.eyeshine[2] * L / unit]; }
+      // The octopus wears its own copy of the skin, tinted to the colour living-world.js says it has taken.
+      if (p.species === 'day-octopus') { a.mesh.material = a.mesh.material.clone(); a.tintBase = new THREE.Color('#bf9c80'); }
+      a.active = false; a.started = true; a.puppet = p; a.unit = unit; a.crawls = crab; a.lift = p.species === 'white-spotted-puffer' ? 0 : bottomOf(p.species);
+      puppets.push(a); p.adopted = true;
+    }
+  }
+  function drivePuppets() {
+    for (const a of puppets) {
+      const p = a.puppet; a.active = p.on; if (!p.on) continue;
+      const s = p.scale / a.unit;
+      // Crabs walk on the sand as it is drawn, which can lie above the terrain living-world.js stands them on (a crab
+      // a few centimetres tall vanished into it); how far they dig in at dusk is kept. rise is handed back for the eyeshine.
+      if (a.crawls) p.rise = Math.max(0, bed(p.x, p.z) - terrain(p.x, p.z));
+      a.pos.set(p.x, p.y + (p.rise || 0) + a.lift * s, p.z); a.yaw = p.yaw; a.pitch = p.pitch; a.roll = p.roll;
+      a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(-p.pitch, p.yaw, p.roll, 'YXZ');
+      // A puffer swells round, wider and deeper more than longer.
+      a.wrapper.scale.set(s * (1 + .55 * p.puff), s * (1 + .5 * p.puff), s * (1 + .2 * p.puff)); a.L = facts.get(a.species).lengthMetres * s;
+      if (a.clip !== p.action) play(a, p.action, p.action === 'jet' ? .2 : .45);
+      a.mixer.timeScale = p.rate;
+      if (a.tintBase && p.tint) a.mesh.material.color.setRGB(p.tint.r / a.tintBase.r, p.tint.g / a.tintBase.g, p.tint.b / a.tintBase.b);
     }
   }
   function driveResidents(dt, player) {
@@ -498,6 +569,25 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
         if (dist < a.L * .9 && facing > .5) { play(a, 'strike', .15, true, 'breathe'); d.rest = 7; }
       }
     }
+    // Cuttlefish drift a slow figure of eight off their formation. Within a few body lengths they turn to watch the
+    // diver; closer, they back away still facing them, and a diver who keeps coming gets a flash of raised arms.
+    for (const h of hovering) {
+      const a = h.actor, d = player ? a.pos.distanceTo(player) : Infinity; h.drift += dt * .1; h.flash -= dt;
+      C.set(h.home.x + Math.cos(h.drift) * 2.6, 0, h.home.z + Math.sin(h.drift * 2) * 1.3);
+      let yaw = Math.atan2(C.x - a.pos.x, C.z - a.pos.z), clip = 'hover';
+      if (d < 8) {
+        const ax = a.pos.x - player.x, az = a.pos.z - player.z, al = Math.hypot(ax, az) || 1;
+        yaw = Math.atan2(-ax, -az);
+        if (d < 4.5) { C.set(a.pos.x + ax / al * 2.5, 0, a.pos.z + az / al * 2.5); clip = 'back'; } else C.set(a.pos.x, 0, a.pos.z);
+        if (d < 3.2 && h.flash <= 0) { play(a, 'flash', .3, true, 'hover'); h.flash = 14; }
+      }
+      // Never far from home, and never into the coral.
+      const off = Math.hypot(C.x - h.home.x, C.z - h.home.z); if (off > 9) { C.x = h.home.x + (C.x - h.home.x) * 9 / off; C.z = h.home.z + (C.z - h.home.z) * 9 / off; }
+      C.y = Math.min(-2, cover(C.x, C.z) + h.height);
+      place(a, C, yaw, 0, Math.sin(clock * .4 + h.drift) * .04, dt);
+      if (a.clip !== clip && a.clip !== 'flash') play(a, clip, .7);
+    }
+    drivePuppets();
   }
 
   // --- Schools ----------------------------------------------------------------------------------------------------
@@ -563,6 +653,19 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     shoal(tr.species, route(bait.x - 1, bait.z, tr.radius * .9, tr.radius, { wobble: .1 }), level(bait.y + tr.lift, 1.6, 26), tr.speed, pair(tr.count), tr.spread);
     const ff = SCHOOLS.flyingFish;
     shoal(ff.species, route(...ff.loop, { wobble: .12 }), level(ff.y, .25, 9), ff.speed, pair(ff.count), ff.spread, { pose: ff.pose, drift: .3, bob: .05 });
+    // Sea stars and urchins on the bottom: still instances, each its own small group so it is culled on its own.
+    for (const bed of Object.values(SEABED)) {
+      const n = pair(bed.count);
+      for (let i = 0; i < n; i++) {
+        const species = bed.species[i % bed.species.length]; if (!gltfs.has(species)) continue;
+        let [x, z] = seabedSpot(i, n, bed.phase); if (solid(x, z)) [x, z] = sand(x, z, .6);
+        const g = schoolGroup(species, { kind: 'bed', count: 1, lod: 1, clip: 'idle' }); if (!g) continue;
+        const scale = bed.scale[0] + (bed.scale[1] - bed.scale[0]) * ((i * .618) % 1), yaw = i * 1.7, length = L(species) * scale;
+        lie(x, z, yaw, length, bottomOf(species) * scale);
+        g.centre.set(x, LIE.y, z); g.radius = length * .6;
+        g.members.push({ x, y: LIE.y, z, yaw, pitch: LIE.pitch, roll: LIE.roll, scale, beat: 0 });
+      }
+    }
     // One mesh a species; the groups in sight are packed to its front each frame.
     for (const k of kinds.values()) {
       if (!k.capacity) continue;
@@ -571,6 +674,15 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       k.beats = new THREE.InstancedBufferAttribute(new Float32Array(k.capacity), 1); k.beats.setUsage(THREE.DynamicDrawUsage); mesh.geometry.setAttribute('aBeat', k.beats);
       k.mesh = mesh; root.add(mesh); diagnostics.schoolDrawCalls++;
     }
+  }
+  // Where the reef's sea stars and urchins have always been: a staggered zigzag from the shallows to the deep ledge, kept
+  // off the landmarks' pads and the arch's gully (as underwater-life.js placed them).
+  function seabedSpot(index, count, phase = 0) {
+    let x = Math.sin(index * 2.399 + phase) * (22 + (index % 5) * 6);
+    const z = 25 - ((index + .5) / count) * 123;
+    for (const [px, pz] of [[0, 0], [-12, -15], [18, -39], [-18, -82]]) if (Math.hypot(x - px, z - pz) < 7) x += x < px ? -8 : 8;
+    if (Math.abs(x - 20) < 8 && z < -56 && z > -81) x = 34;
+    return [Math.max(-54, Math.min(54, x)), z];
   }
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(), E = new THREE.Euler(0, 0, 0, 'YXZ');
   function write(k, x, y, z, yaw, pitch, roll, scale, beat) {
@@ -602,7 +714,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       }
       if (g.kind === 'encounter') { const e = casts.get('tuna'); if (!e?.path) continue; onPath(e, e.u - g.spread[0] / 2 / e.path.len, A, T); g.centre.set(A.x, bandHeight(e, A.x, A.z, 0), A.z); g.radius = g.spread[0] + 6; }
       g.shown = true;
-      if (view) { sphere.center.copy(g.centre); sphere.radius = g.radius; g.shown = view.eye.distanceTo(g.centre) - g.radius < view.range * (g.kind === 'cloud' || g.kind === 'burrows' ? .55 : .8) && view.frustum.intersectsSphere(sphere); }
+      if (view) { sphere.center.copy(g.centre); sphere.radius = g.radius; g.shown = view.eye.distanceTo(g.centre) - g.radius < view.range * (g.kind === 'bed' ? .4 : g.kind === 'cloud' || g.kind === 'burrows' ? .55 : .8) && view.frustum.intersectsSphere(sphere); }
       // A hidden school continues navigating (without rendering) so re-entering view cannot teleport it up
       // a different terrain sample. Only the bounded height-grid probes run for these small moving groups.
       // Out of sight it steps every fourth frame with the time gathered since; nothing on screen can stutter.
@@ -640,6 +752,8 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
         const L = facts.get(g.k.species).lengthMetres; let near = 0; if (player) near = 1 - smoothstep(player.distanceTo(g.centre), 5, 11);
         g.sink += (near - g.sink) * ease(dt, near > g.sink ? 2.5 : .35);
         for (const m of g.members) write(k, m.x, m.y - L * (.08 + .4 * g.sink) * m.scale, m.z, m.yaw + Math.sin(t * m.w1 + m.p1) * .4, Math.PI / 2 - .12, 0, m.scale, m.beat);
+      } else if (g.kind === 'bed') {
+        for (const m of g.members) write(k, m.x, m.y, m.z, m.yaw, m.pitch, m.roll, m.scale, m.beat);
       } else if (g.kind === 'encounter') {
         const e = casts.get('tuna');
         for (const m of g.members) { onPath(e, e.u - m.back / e.path.len, A, T); write(k, A.x - T.z * m.side, bandHeight(e, A.x, A.z, 0) + m.up, A.z + T.x * m.side, Math.atan2(T.x, T.z) + Math.sin(t * m.w1 + m.p1) * .05, 0, 0, m.scale, m.beat); }
@@ -670,6 +784,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       if (!gltfs.has(s.species)) continue; timed('school shapes', () => creatureGeometry(s.species, { lod: s.lod ?? 1, pose: s.pose ?? null })); await turn();
     }
     timed('residents', buildResidents); await turn();
+    timed('puppets', buildPuppets); await turn();
     timed('encounters', buildEncounters); await turn();
     timed('schools', buildSchools); await turn();
     diagnostics.loading.total = Math.round(performance.now() - started);

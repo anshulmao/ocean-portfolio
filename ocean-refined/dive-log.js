@@ -65,7 +65,7 @@ function look(controls, player, depth) {
   for (const species of near) {
     const held = (dwell.get(species) || 0) + LOOK; dwell.set(species, held);
     if (held < SEEN_AFTER) continue;
-    const visitor = ['right-whale', 'whale-shark', 'orca', 'bottlenose-dolphin', 'yellowfin-tuna'].includes(species);
+    const visitor = ['right-whale', 'whale-shark', 'orca', 'bottlenose-dolphin', 'yellowfin-tuna', 'scalloped-hammerhead'].includes(species);
     dive.seen[species] = { t: Math.round(dive.time), depth: +depth.toFixed(1), place: placeAt(player.x, player.z, depth, visitor), fresh: !everSeen.has(species) };
     everSeen.add(species); keep('ocean-seen', [...everSeen]);
   }

@@ -1,6 +1,6 @@
 // Field guide portraits (assets/prepared/portraits): one WebP a species, rendered from the creature set's own GLBs so
 // the dive summary shows the animals the diver met, not pictures of other ones. Each model is posed a third of the way
-// into its swim clip, lit from above with a cool rim, framed three-quarters on (rays from above), and cut to the
+// into its swim clip, lit from above with a cool rim, framed three-quarters on (rays, and whatever the field guide says is seen from above, from above), and cut to the
 // pixels it covers at 4:3 on a transparent background; the summary paints the water behind it.
 // Run it again after a change to a creature model or to SPECIES in field-guide.js:
 //   node ocean-refined/tools/prepare-portraits.mjs
@@ -44,7 +44,7 @@ window.render = async () => {
     if (clip) { const mixer = new THREE.AnimationMixer(root); mixer.clipAction(clip).play(); mixer.update(clip.duration * .3); }
     scene.add(root); root.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(root, true), centre = box.getCenter(new THREE.Vector3()), radius = box.getSize(new THREE.Vector3()).length() / 2;
-    const view = (item.id.endsWith('ray') ? new THREE.Vector3(.85, .75, .55) : new THREE.Vector3(1, .2, .5)).normalize();
+    const view = (item.view === 'above' ? new THREE.Vector3(.7, 1.1, .75) : item.id.endsWith('ray') ? new THREE.Vector3(.85, .75, .55) : new THREE.Vector3(1, .2, .5)).normalize();
     camera.position.copy(centre).addScaledVector(view, radius / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)));
     camera.lookAt(centre); camera.updateProjectionMatrix(); renderer.render(scene, camera);
     done[item.id] = crop(); scene.remove(root);

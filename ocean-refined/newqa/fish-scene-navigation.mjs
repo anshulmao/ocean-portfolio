@@ -41,7 +41,7 @@ try {
     }
     return { ready: c.diagnostics.ready, loaded: c.diagnostics.loaded, fish: before.length, moving, maxClimb, maxYaw, minClearance, invalidMatrices, finite: c.diagnostics.finite, maxMorayStep, morayYawDrift };
   });
-  assert.equal(result.loaded, 27);
+  assert.equal(result.loaded, 38);
   assert.ok(result.fish > 70);
   assert.ok(result.maxClimb <= .30001, 'scene fish exceeded climb cap');
   assert.ok(result.maxYaw <= 1.30001, 'scene fish heading snapped');

@@ -303,6 +303,56 @@
    "bytes": 370712
   },
   {
+   "id": "scalloped-hammerhead",
+   "name": "Scalloped hammerhead",
+   "scientific": "Sphyrna lewini",
+   "group": "shark",
+   "lengthMetres": 7.85,
+   "realLengthMetres": 3,
+   "boundsMetres": [
+    2.175,
+    2.378,
+    8.007
+   ],
+   "triangles": 1196,
+   "bones": 10,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 2,
+     "loop": true
+    },
+    {
+     "name": "fast",
+     "seconds": 0.95,
+     "loop": true
+    },
+    {
+     "name": "idle",
+     "seconds": 3,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 2,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 2,
+     "loop": true
+    },
+    {
+     "name": "burst",
+     "seconds": 2.3,
+     "loop": false
+    }
+   ],
+   "note": "A head drawn out into a flat, notched blade with an eye at each end, a tall sickle dorsal fin and a long upper tail.",
+   "file": "scalloped-hammerhead.glb",
+   "bytes": 351740
+  },
+  {
    "id": "bottlenose-dolphin",
    "name": "Bottlenose dolphin",
    "scientific": "Tursiops aduncus",
@@ -526,6 +576,61 @@
    "note": "Every fin dipped in black, the dorsal tip underlined in white, and a pale wedge along the flank.",
    "file": "blacktip-reef-shark.glb",
    "bytes": 376320
+  },
+  {
+   "id": "whitetip-reef-shark",
+   "name": "Whitetip reef shark",
+   "scientific": "Triaenodon obesus",
+   "group": "shark",
+   "lengthMetres": 5.16,
+   "realLengthMetres": 1.6,
+   "boundsMetres": [
+    1.07,
+    1.419,
+    5.145
+   ],
+   "triangles": 1124,
+   "bones": 10,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 1.7,
+     "loop": true
+    },
+    {
+     "name": "fast",
+     "seconds": 0.8,
+     "loop": true
+    },
+    {
+     "name": "idle",
+     "seconds": 2.6,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 1.7,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 1.7,
+     "loop": true
+    },
+    {
+     "name": "burst",
+     "seconds": 1.955,
+     "loop": false
+    },
+    {
+     "name": "rest",
+     "seconds": 4.4,
+     "loop": true
+    }
+   ],
+   "note": "Slim and grey with a broad, blunt snout; the first dorsal fin and the top of the tail are tipped in brilliant white.",
+   "file": "whitetip-reef-shark.glb",
+   "bytes": 364212
   },
   {
    "id": "yellowfin-tuna",
@@ -783,6 +888,56 @@
    "bytes": 312148
   },
   {
+   "id": "green-turtle",
+   "name": "Green sea turtle",
+   "scientific": "Chelonia mydas",
+   "group": "turtle",
+   "lengthMetres": 3.77,
+   "realLengthMetres": 1,
+   "boundsMetres": [
+    4.392,
+    0.848,
+    3.638
+   ],
+   "triangles": 1114,
+   "bones": 8,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 3.4,
+     "loop": true
+    },
+    {
+     "name": "fast",
+     "seconds": 1.8,
+     "loop": true
+    },
+    {
+     "name": "idle",
+     "seconds": 6,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 3.4,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 3.4,
+     "loop": true
+    },
+    {
+     "name": "rest",
+     "seconds": 7,
+     "loop": true
+    }
+   ],
+   "note": "A domed olive shell of fused plates streaked with amber, a small rounded head, long paddle forelimbs and short rear flippers.",
+   "file": "green-turtle.glb",
+   "bytes": 319828
+  },
+  {
    "id": "bluespotted-ray",
    "name": "Bluespotted ribbontail ray",
    "scientific": "Taeniura lymma",
@@ -888,6 +1043,51 @@
    "note": "A slim hitch-hiker with a sucker plate on its crown and an ink stripe edged in white.",
    "file": "remora.glb",
    "bytes": 279476
+  },
+  {
+   "id": "broadclub-cuttlefish",
+   "name": "Broadclub cuttlefish",
+   "scientific": "Sepia latimanus",
+   "group": "cephalopod",
+   "lengthMetres": 2.37,
+   "realLengthMetres": 0.5,
+   "boundsMetres": [
+    0.983,
+    0.507,
+    2.869
+   ],
+   "triangles": 1710,
+   "bones": 34,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 1.1,
+     "loop": true
+    },
+    {
+     "name": "hover",
+     "seconds": 1.6,
+     "loop": true
+    },
+    {
+     "name": "fast",
+     "seconds": 0.55,
+     "loop": true
+    },
+    {
+     "name": "back",
+     "seconds": 0.8,
+     "loop": true
+    },
+    {
+     "name": "flash",
+     "seconds": 2.4,
+     "loop": false
+    }
+   ],
+   "note": "An oval mantle fringed by a rippling fin, big W-pupilled eyes and a cone of arms; it flickers brown, cream and white as it watches.",
+   "file": "broadclub-cuttlefish.glb",
+   "bytes": 567192
   },
   {
    "id": "garden-eel",
@@ -1095,6 +1295,101 @@
    "bytes": 250208
   },
   {
+   "id": "white-spotted-puffer",
+   "name": "White-spotted puffer",
+   "scientific": "Arothron hispidus",
+   "group": "fish",
+   "lengthMetres": 1.3,
+   "realLengthMetres": 0.4,
+   "boundsMetres": [
+    0.655,
+    0.624,
+    1.281
+   ],
+   "triangles": 1118,
+   "bones": 7,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.9,
+     "loop": true
+    },
+    {
+     "name": "fast",
+     "seconds": 0.45,
+     "loop": true
+    },
+    {
+     "name": "idle",
+     "seconds": 1.7,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.9,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.9,
+     "loop": true
+    },
+    {
+     "name": "burst",
+     "seconds": 0.7,
+     "loop": false
+    },
+    {
+     "name": "puff",
+     "seconds": 0.5,
+     "loop": true
+    }
+   ],
+   "note": "A round grey-brown fish freckled with white, a white belly, dark rings round the base of its pectorals, and a beak of fused teeth.",
+   "file": "white-spotted-puffer.glb",
+   "bytes": 312164
+  },
+  {
+   "id": "day-octopus",
+   "name": "Day octopus",
+   "scientific": "Octopus cyanea",
+   "group": "cephalopod",
+   "lengthMetres": 1.3,
+   "realLengthMetres": 1,
+   "boundsMetres": [
+    1.249,
+    0.367,
+    1.317
+   ],
+   "triangles": 1824,
+   "bones": 35,
+   "clips": [
+    {
+     "name": "rest",
+     "seconds": 5,
+     "loop": true
+    },
+    {
+     "name": "swim",
+     "seconds": 1.8,
+     "loop": true
+    },
+    {
+     "name": "alert",
+     "seconds": 2.4,
+     "loop": true
+    },
+    {
+     "name": "jet",
+     "seconds": 0.9,
+     "loop": true
+    }
+   ],
+   "note": "A baggy mantle above two turret eyes and eight arms lined with pale suckers; its skin takes the colour and texture of the rock it sits on.",
+   "file": "day-octopus.glb",
+   "bytes": 566024
+  },
+  {
    "id": "moorish-idol",
    "name": "Moorish idol",
    "scientific": "Zanclus cornutus",
@@ -1295,6 +1590,61 @@
    "bytes": 249076
   },
   {
+   "id": "long-spined-urchin",
+   "name": "Long-spined sea urchin",
+   "scientific": "Diadema setosum",
+   "group": "echinoderm",
+   "lengthMetres": 1,
+   "realLengthMetres": 0.5,
+   "boundsMetres": [
+    1.024,
+    0.963,
+    0.897
+   ],
+   "triangles": 772,
+   "bones": 2,
+   "clips": [
+    {
+     "name": "idle",
+     "seconds": 8,
+     "loop": true
+    }
+   ],
+   "note": "A black ball of needles twice its width, with five white spots and a ring of orange round the vent on top.",
+   "file": "long-spined-urchin.glb",
+   "bytes": 144944
+  },
+  {
+   "id": "blue-sea-star",
+   "name": "Blue sea star",
+   "scientific": "Linckia laevigata",
+   "group": "echinoderm",
+   "lengthMetres": 0.85,
+   "realLengthMetres": 0.3,
+   "boundsMetres": [
+    0.784,
+    0.07,
+    0.746
+   ],
+   "triangles": 510,
+   "bones": 17,
+   "clips": [
+    {
+     "name": "idle",
+     "seconds": 9,
+     "loop": true
+    },
+    {
+     "name": "swim",
+     "seconds": 4,
+     "loop": true
+    }
+   ],
+   "note": "Five long, round-tipped arms of an even, startling blue, lying out in the open on sand and coral rubble.",
+   "file": "blue-sea-star.glb",
+   "bytes": 157256
+  },
+  {
    "id": "anthias",
    "name": "Sea goldie",
    "scientific": "Pseudanthias squamipinnis",
@@ -1448,6 +1798,111 @@
    "note": "Pale sea-glass fish that hang above branching coral in a loose shimmer.",
    "file": "chromis.glb",
    "bytes": 227020
+  },
+  {
+   "id": "chocolate-chip-sea-star",
+   "name": "Chocolate chip sea star",
+   "scientific": "Protoreaster nodosus",
+   "group": "echinoderm",
+   "lengthMetres": 0.7,
+   "realLengthMetres": 0.25,
+   "boundsMetres": [
+    0.649,
+    0.154,
+    0.617
+   ],
+   "triangles": 894,
+   "bones": 17,
+   "clips": [
+    {
+     "name": "idle",
+     "seconds": 9,
+     "loop": true
+    },
+    {
+     "name": "swim",
+     "seconds": 4,
+     "loop": true
+    }
+   ],
+   "note": "A thick, sandy-orange star studded along every arm with dark brown knobs, like chips in a biscuit.",
+   "file": "chocolate-chip-sea-star.glb",
+   "bytes": 222628
+  },
+  {
+   "id": "hermit-crab",
+   "name": "White-spotted hermit crab",
+   "scientific": "Dardanus megistos",
+   "group": "crab",
+   "lengthMetres": 0.17,
+   "realLengthMetres": 0.2,
+   "boundsMetres": [
+    0.372,
+    0.153,
+    0.248
+   ],
+   "triangles": 908,
+   "bones": 26,
+   "clips": [
+    {
+     "name": "walk",
+     "seconds": 0.9,
+     "loop": true
+    },
+    {
+     "name": "idle",
+     "seconds": 3.5,
+     "loop": true
+    },
+    {
+     "name": "guard",
+     "seconds": 1.4,
+     "loop": true
+    },
+    {
+     "name": "hide",
+     "seconds": 2,
+     "loop": true
+    }
+   ],
+   "note": "Red legs and claws peppered with black-ringed white spots, carried about in a borrowed spiral shell.",
+   "file": "hermit-crab.glb",
+   "bytes": 252144
+  },
+  {
+   "id": "spotted-reef-crab",
+   "name": "Spotted reef crab",
+   "scientific": "Carpilius maculatus",
+   "group": "crab",
+   "lengthMetres": 0.14,
+   "realLengthMetres": 0.15,
+   "boundsMetres": [
+    0.376,
+    0.098,
+    0.246
+   ],
+   "triangles": 1372,
+   "bones": 34,
+   "clips": [
+    {
+     "name": "walk",
+     "seconds": 0.55,
+     "loop": true
+    },
+    {
+     "name": "idle",
+     "seconds": 3.2,
+     "loop": true
+    },
+    {
+     "name": "guard",
+     "seconds": 1.4,
+     "loop": true
+    }
+   ],
+   "note": "A smooth domed shell the colour of cream, set with eleven round red spots, and heavy claws tipped in black.",
+   "file": "spotted-reef-crab.glb",
+   "bytes": 325024
   }
  ]
 }

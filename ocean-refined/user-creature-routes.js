@@ -29,7 +29,10 @@ export const ENCOUNTERS = {
         { species: 'bottlenose-dolphin', side: 0, back: 0 }, { species: 'bottlenose-dolphin', side: 4, back: 4 }, { species: 'bottlenose-dolphin', side: -4.5, back: 6 },
         { species: 'bottlenose-dolphin', side: 1.5, back: 11, lean: true }] },
       { id: 'blacktips', pass: [7, 15], depth: [-18, -4], clearance: 3, speed: 1.6, bulge: .35, low: true, across: -30, cast: [
-        { species: 'blacktip-reef-shark', side: 0, back: 0 }, { species: 'blacktip-reef-shark', side: 9, back: 14, scale: .9 }] },
+        { species: 'blacktip-reef-shark', side: 0, back: 0 }, { species: 'blacktip-reef-shark', side: 9, back: 14, scale: .9 }, { species: 'blacktip-reef-shark', side: -6, back: 24, scale: .78, name: 'young blacktip' }] },
+      // Hammerheads come up from the deep shelf in a loose file, sweeping their heads, and go back down the same way.
+      { id: 'hammerheads', pass: [15, 26], depth: [-26, -14], clearance: 4, speed: 1.7, bulge: .2, across: -50, cast: [
+        { species: 'scalloped-hammerhead', side: 0, back: 0 }, { species: 'scalloped-hammerhead', side: 6, back: 10, scale: .9 }, { species: 'scalloped-hammerhead', side: -5, back: 17, scale: .84 }] },
       // A tuna school tears past, fast and in a loose wedge.
       { id: 'tuna', pass: [14, 26], depth: [-18, -10], clearance: 3, speed: 5.2, bulge: .15, across: -40, school: { species: 'yellowfin-tuna', count: [8, 5], spread: [14, 5, 2.5] } }
     ]
@@ -55,7 +58,21 @@ export const RESIDENTS = {
     // The cathedral's columns are too thin to hold a den: a moray there ended up on open sand by the reef's edge.
     { species: 'giant-moray', formation: 'Brain coral dome', angle: 1.5 },
     { species: 'ribbon-eel', formation: 'Table coral tower', angle: 3.6 }
-  ]
+  ],
+  // Green turtles cruise slow loops a few metres over the reef, each its own; one sleeps on the sand.
+  //   loops: [centre x, centre z, x radius, z radius] (where the reef's turtles always swam).
+  turtles: { species: 'green-turtle', loops: [[-24, -6, 8, 6], [34, -39, 9, 7], [-35, -72, 8, 7], [31, 14, 9, 6], [33, -91, 8, 6]], count: [5, 3], height: 3.4, speed: .55, scale: [.8, 1], sleeper: [12, -24] },
+  // Whitetip reef sharks: one patrols the deep reef low over the bottom, two lie resting on the sand by day.
+  whitetips: { species: 'whitetip-reef-shark', patrol: { loop: [-26, -58, 15, 10], height: 2, speed: 1.1 }, resting: [[30, -56], [-42, -90]], lean: 1 },
+  // Cuttlefish hover off the side of tall formations, watching; crowd one and it backs off, then flashes its arms.
+  cuttlefish: { species: 'broadclub-cuttlefish', formations: ['Soft coral spire', 'Brain coral dome', 'Lantern garden'], count: [3, 2], height: 2.4 }
+};
+
+// Animals on the bottom, drawn as instances (one draw call a species) and never moving: sea stars and urchins spread
+// over the whole reef as they always were (a staggered zigzag, kept off the landmarks' pads). count: [standard, economy].
+export const SEABED = {
+  stars: { species: ['chocolate-chip-sea-star', 'chocolate-chip-sea-star', 'blue-sea-star'], count: [60, 35], phase: 0, scale: [.8, 1.2] },
+  urchins: { species: ['long-spined-urchin'], count: [54, 30], phase: 1.17, scale: [.8, 1.1] }
 };
 
 // How tall the wreck stands off the sand, masts and all (m): the animals keep above or round it.

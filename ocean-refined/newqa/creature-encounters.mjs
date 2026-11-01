@@ -34,23 +34,33 @@ const look = async (filter, gap, up = .25) => page.evaluate(([filter, gap, up]) 
 }, [filter, gap, up]);
 const report = { diagnostics, encounters: {}, residents: {} };
 const only = option('only', '');
-for (const id of only ? only.split(',') : ['whale', 'whale-shark', 'orcas', 'dolphins', 'blacktips', 'tuna']) {
+for (const id of only ? only.split(',') : ['whale', 'whale-shark', 'orcas', 'dolphins', 'blacktips', 'hammerheads', 'tuna']) {
   await page.evaluate(id => { const c = window.oceanControls, p = c.getPlayerPosition(); c.creatures.debug.spawn(id, p); c.creatures.debug.seek(id, .5); }, id);
   await sleep(600);
-  const lead = { whale: 'right-whale', 'whale-shark': 'whale-shark', orcas: 'orca', dolphins: 'bottlenose-dolphin', blacktips: 'blacktip-reef-shark', tuna: 'yellowfin-tuna' }[id];
+  const lead = { whale: 'right-whale', 'whale-shark': 'whale-shark', orcas: 'orca', dolphins: 'bottlenose-dolphin', blacktips: 'blacktip-reef-shark', hammerheads: 'scalloped-hammerhead', tuna: 'yellowfin-tuna' }[id];
   // The whale is meant to be seen far off: photograph it from where the diver is, then from closer to check the model.
   if (id === 'whale') { await page.evaluate(() => { const c = window.oceanControls, s = c.creatures.sites().find(s => s.species === 'right-whale'), p = c.getPlayerPosition(); c.place([p.x, p.y, p.z], s.position); }); await sleep(1200); await snap('whale-as-seen'); }
   report.encounters[id] = await look(lead, id === 'whale' ? 1.3 : 1.6);
   await sleep(1500); await snap(`encounter-${id}`);
 }
-for (const [name, filter, gap] of [['bumpheads', 'bumphead-parrotfish', 2], ['whipray', 'pink-whipray', 1.6], ['moray', 'giant-moray', 1.1], ['ribbon-eel', 'ribbon-eel', 1.2], ['sleeper', 'nurse-shark', 1.4], ['sentinel', 'great-barracuda', 2.2], ['bluespot', 'bluespotted-ray', 2], ['anthias', 'anthias', 1.4], ['garden-eels', 'garden-eel', .9], ['fusiliers', 'fusilier', .8], ['wheel', 'shoal', .9], ['trevally', 'giant-trevally', .8], ['butterflies', 'butterflyfish', 3], ['flying-fish', 'flying-fish', 1]]) {
+for (const [name, filter, gap] of [['bumpheads', 'bumphead-parrotfish', 2], ['whipray', 'pink-whipray', 1.6], ['moray', 'giant-moray', 1.1], ['ribbon-eel', 'ribbon-eel', 1.2], ['sleeper', 'nurse-shark', 1.4], ['sentinel', 'great-barracuda', 2.2], ['bluespot', 'bluespotted-ray', 2], ['anthias', 'anthias', 1.4], ['garden-eels', 'garden-eel', .9], ['fusiliers', 'fusilier', .8], ['wheel', 'shoal', .9], ['trevally', 'giant-trevally', .8], ['butterflies', 'butterflyfish', 3], ['flying-fish', 'flying-fish', 1],
+  ['turtle', 'green-turtle', 1.5], ['whitetip', 'whitetip-reef-shark', 1.3], ['cuttlefish', 'broadclub-cuttlefish', 1.8], ['blue-star', 'blue-sea-star', 4], ['chip-star', 'chocolate-chip-sea-star', 4], ['urchin', 'long-spined-urchin', 3]]) {
   report.residents[name] = await look(filter, gap, name === 'garden-eels' ? .5 : .25);
   await sleep(1600); await snap(`resident-${name}`);
 }
+// The pufferfish, octopus and crabs are living-world.js's animals drawn with the set's models: they wake when the diver
+// comes near their site, so the camera goes there first.
+for (const [name, site, species, gap] of [['puffer', 'puffer-shallows', 'white-spotted-puffer', 3], ['octopus', 'octopus', 'day-octopus', 3], ['crabs', 'crabs-shallows', 'spotted-reef-crab', 14]]) {
+  await page.evaluate(id => { const c = window.oceanControls, s = c.life.sites.find(item => item.id === id), [x, y, z] = s.position; c.place([x + 3, y + 2.5, z + 3], [x, y, z]); }, site);
+  await sleep(1200);
+  report.residents[name] = await look(species, gap, .4);
+  await sleep(1400); await snap(`puppet-${name}`);
+}
+report.puppets = await page.evaluate(() => window.oceanControls.life.puppets.reduce((out, p) => { out[p.species] = (out[p.species] || 0) + (p.adopted ? 1 : 0); return out; }, {}));
 report.after = await page.evaluate(() => ({ shown: window.oceanDiagnostics.userCreatures.shown, finite: window.oceanDiagnostics.userCreatures.finite, calls: window.oceanDiagnostics.drawCalls, triangles: window.oceanDiagnostics.triangles }));
 report.errors = [...new Set(errors)];
 writeFileSync(join(out, 'report.json'), JSON.stringify(report, null, 1));
-console.log(JSON.stringify({ out, diagnostics, after: report.after, errors: report.errors }, null, 1));
+console.log(JSON.stringify({ out, diagnostics, puppets: report.puppets, after: report.after, errors: report.errors }, null, 1));
 await browser.close();
 
-if (!diagnostics.ready || diagnostics.loaded !== 27 || diagnostics.failed || !report.after.finite || report.errors.length || Object.values(report.encounters).some(value=>!value) || Object.values(report.residents).some(value=>!value)) process.exitCode=1;
+if (!diagnostics.ready || diagnostics.loaded !== 38 || diagnostics.failed || !report.after.finite || report.errors.length || Object.values(report.encounters).some(value=>!value) || Object.values(report.residents).some(value=>!value)) process.exitCode=1;
