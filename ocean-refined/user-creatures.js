@@ -891,11 +891,14 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
           const fx = g.centre.x + m.hx * tight + x, fz = g.centre.z + m.hz * tight + z;
           // As the cloud draws in and sinks the fish face the way they are actually going, not only round their loop.
           const moved = m.at === frame - 1 && dt > 0 ? Math.hypot(fx - m.lx, fz - m.lz) / dt : 0, facing = moved > .05 ? Math.atan2(fx - m.lx, fz - m.lz) : yaw;
-          m.lx = fx; m.lz = fz; m.at = frame;
+          // Avoiding the diver changes the actual heading. Bank into that
+          // turn, rather than into the loop we would have followed undisturbed.
+          const actualRate = m.at === frame - 1 && dt > 0 && m.facing !== undefined ? turnTo(m.facing, facing) / dt : rate;
+          m.lx = fx; m.lz = fz; m.at = frame; m.facing = facing;
           // The whole fish clears the sand, nose and tail as well as middle (on a steep slope its nose dug in).
           const nx = Math.sin(facing) * m.scale * .35, nz = Math.cos(facing) * m.scale * .35, sand = Math.max(floor(fx, fz), floor(fx + nx, fz + nz), floor(fx - nx, fz - nz));
           write(k, fx, Math.max(g.centre.y - drop + m.hy * tight + .15 * Math.sin(t * m.w2 + m.p2), ground(fx, fz) + .35, sand + .35), fz,
-            facing, clamp(Math.atan2(climb, speed), -.3, .3), clamp(-rate * .07, -.16, .16), m.scale, m.beat);
+            facing, clamp(Math.atan2(climb, speed), -.3, .3), clamp(-actualRate * .07, -.16, .16), m.scale, m.beat);
         }
       } else if (g.kind === 'burrows') {
         // Upright in the sand; as the diver comes over they draw back until only their heads show.

@@ -8,6 +8,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {launchBrowser} from './browser.mjs';
+import {PORTFOLIO_CONTENT} from '../ocean-refined/portfolio-content.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), dist = path.join(root, 'dist');
 const TYPES = {'.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.woff2': 'font/woff2', '.glb': 'model/gltf-binary', '.pdf': 'application/pdf', '.xml': 'application/xml', '.txt': 'text/plain'};
@@ -26,11 +27,11 @@ const server = process.argv[2] ? null : await serve();
 const base = process.argv[2] ? new URL(process.argv[2]).href : `http://127.0.0.1:${server.address().port}/`;
 const browser = await launchBrowser();
 const failures = [];
-const check = async (name, fn) => { try { await fn(); console.log(`ok   ${name}`); } catch (error) { failures.push(name); console.log(`FAIL ${name}\n     ${error.message.split('\n').slice(0, 4).join('\n     ')}`); } };
+const check = async (name, fn) => { try { await fn(); console.log(`ok   ${name}`); } catch (error) { failures.push(name); console.log(`FAIL ${name}\n     ${error.message.split('\n').slice(0, 4).join('\n     ')}`); } finally { for (const context of browser.contexts()) await context.close(); } };
 
 // Script errors and missing same-origin files on any page fail the check that loaded it.
-async function open(url, viewport = {width: 1440, height: 900}) {
-  const page = await browser.newPage({viewport}), problems = [];
+async function open(url, viewport = {width: 1440, height: 900}, options = {}) {
+  const page = await browser.newPage({viewport, ...options}), problems = [];
   page.on('pageerror', error => problems.push(`script error: ${error.message}`));
   page.on('response', response => { const target = new URL(response.url()); if (target.origin === new URL(base).origin && response.status() >= 400) problems.push(`${response.status()} ${target.pathname}`); });
   await page.goto(new URL(url, base).href, {waitUntil: 'load', timeout: 60000});
@@ -43,10 +44,10 @@ try {
     await page.waitForFunction(() => window.oceanArchive && window.oceanLandmarks, null, {timeout: 20000})
       .catch(() => { throw Error(`portfolio modules never loaded (oceanArchive/oceanLandmarks missing)${problems.length ? '; ' + problems.join('; ') : ''}`); });
     const dialog = page.locator('#landmark-dialog');
-    for (const name of ['Work', 'About', 'Experience', 'Résumé']) {
+    for (const [name, section] of [['Work', 'projects'], ['About', 'about'], ['Experience', 'experience'], ['Résumé', 'resume']]) {
       await page.locator('.surface-nav a', {hasText: name}).click();
       await dialog.and(page.locator('[open]')).waitFor({timeout: 5000}).catch(() => { throw Error(`surface nav "${name}" did not open the portfolio`); });
-      assert.ok(await page.evaluate(() => window.oceanArchive.current?.section), `"${name}" opened no section`);
+      assert.equal(await page.evaluate(() => window.oceanArchive.current?.section), section, `"${name}" opened the wrong section`);
       await page.keyboard.press('Escape');
       await page.waitForFunction(() => !document.querySelector('#landmark-dialog').open, null, {timeout: 5000});
     }
@@ -64,29 +65,33 @@ try {
     await page.close();
   });
 
-  let projects = [];
+  const expectedProjects = PORTFOLIO_CONTENT.projects.entries.map(entry => new URL(`projects/${entry.id}/index.html`, base).href).sort();
   await check('reading page renders at desktop and phone widths', async () => {
+    for (const javaScriptEnabled of [true, false]) {
     for (const viewport of [{width: 1440, height: 900}, {width: 390, height: 844}]) {
-      const {page, problems} = await open('./profile.html', viewport);
+      const {page, problems} = await open('./profile.html', viewport, {javaScriptEnabled});
       assert.equal(await page.locator('h1').count(), 1, 'profile has no heading');
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `profile scrolls sideways at ${viewport.width}px`);
-      projects = await page.locator('a[href*="projects/"]').evaluateAll(links => [...new Set(links.map(link => link.href).filter(href => /\/projects\/[^/]+\/(?:index\.html)?$/.test(href)))]);
+      const projects = await page.locator('a[href*="projects/"]').evaluateAll(links => [...new Set(links.map(link => link.href).filter(href => /\/projects\/[^/]+\/(?:index\.html)?$/.test(href)).map(href => href.endsWith('/') ? href + 'index.html' : href))]);
+      assert.deepEqual(projects.sort(), expectedProjects, 'profile must link every published project');
       assert.deepEqual(problems, []);
       await page.close();
     }
-    assert.ok(projects.length > 0, 'profile links to no project pages');
+    }
   });
 
   await check('every project page renders', async () => {
-    for (const url of projects) {
-      const {page, problems} = await open(url);
+    for (const javaScriptEnabled of [true, false]) {
+    for (const url of expectedProjects) {
+      const {page, problems} = await open(url, undefined, {javaScriptEnabled});
       assert.equal(await page.locator('h1').count(), 1, `${url} has no heading`);
       // Pictures below the fold load lazily: ask for every one now, so "not loaded yet" is not read as broken.
       await page.locator('img').evaluateAll(images => images.forEach(image => { image.loading = 'eager'; }));
-      await page.waitForFunction(() => [...document.images].every(image => image.complete), null, {timeout: 20000}).catch(() => {});
+      await page.waitForFunction(() => [...document.images].every(image => image.complete), null, {timeout: 20000});
       assert.deepEqual(await page.locator('img').evaluateAll(images => images.filter(image => !image.complete || !image.naturalWidth).map(image => image.src)), [], `${url} has broken images`);
       assert.deepEqual(problems, [], url);
       await page.close();
+    }
     }
   });
 } finally {

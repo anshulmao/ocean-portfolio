@@ -41,13 +41,15 @@ function show(item) {
 function hide() {
   (current.kind === 'zone' ? splash : note).dataset.show = 'false';
   current = null; resume = now() + GAP;
-  delete document.body.dataset.announce;
+  // The toast remains visible during its 300 ms CSS exit. Keep world labels
+  // out of the announce zone until that fade and the inter-message gap finish.
 }
 function step() {
   const time = now();
   // A sheet opened for reading takes the message down at once rather than letting it sit over the words.
   if (current) { if (time >= until || blocked()) hide(); return; }
   if (time < resume || blocked()) return;
+  delete document.body.dataset.announce;
   while (queue.length && time - queue[0].at > queue[0].stale) queue.shift();
   if (queue.length) show(queue.shift());
 }
@@ -65,6 +67,6 @@ export function announce({ kind = 'note', kicker = '', title = '', text = '', si
   step();
 }
 /** Takes down the message on screen and forgets the ones waiting (a cleared screen, the surface). */
-export function clearAnnouncements() { queue.length = 0; if (current) hide(); resume = 0; }
+export function clearAnnouncements() { queue.length = 0; if (current) hide(); }
 export const announcing = () => Boolean(current);
 onTick(step, 10);
