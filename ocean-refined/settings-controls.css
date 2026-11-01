@@ -1,0 +1,23 @@
+/* Compact settings retain 44px touch targets; spacing comes out of the gutters. */
+html body #settings-menu .settings-body{--settings-gap:4px;--settings-section:8px}
+#settings-menu .settings-group-body{padding-top:4px;padding-bottom:8px}
+#settings-menu .settings-folder>summary{padding-top:9px;padding-bottom:9px}
+#settings-menu .settings-primary-quick{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:4px 0 8px}
+#settings-menu .settings-primary-quick>button{display:flex;align-items:center;justify-content:center;width:100%;height:44px;border:1px solid var(--holo-dim);border-radius:4px;background:var(--holo-fill);color:var(--holo-strong)}
+#settings-menu .settings-primary-quick svg{width:24px;height:24px}
+#settings-menu .settings-main-volume{padding:0 0 4px}
+#settings-menu .settings-surface-controls{display:grid;gap:8px;padding:8px 0;border-block:1px solid var(--holo-faint)}
+#settings-menu .settings-surface-controls .settings-subgroup{display:grid;gap:4px}
+#settings-menu #settings-general-content>.settings-subgroup{padding:8px 0;gap:4px}
+#settings-menu .movement-field{gap:2px 8px;padding:4px 0}
+#settings-menu .movement-number-controls{display:block;grid-column:1/-1}
+#settings-menu input[type="range"]{width:100%;min-width:0;height:44px;touch-action:pan-y}
+#settings-menu .movement-output,#settings-menu #time-reading,#settings-menu #weather-reading{display:none}
+#settings-menu .movement-field p{margin:0;font-size:10px;line-height:1.35}
+#settings-menu .movement-field input[type="range"]::-webkit-slider-thumb{transition:box-shadow .16s ease,background .16s ease}
+#settings-menu .movement-field input[type="range"]:active::-webkit-slider-thumb{background:var(--holo-strong);box-shadow:0 0 12px var(--holo)}
+#settings-menu .movement-field input[type="range"]::-moz-range-thumb{transition:box-shadow .16s ease,background .16s ease}
+#settings-menu .movement-field input[type="range"]:active::-moz-range-thumb{background:var(--holo-strong);box-shadow:0 0 12px var(--holo)}
+.settings-slider-value{position:fixed;z-index:1000;pointer-events:none;transform:translateX(-50%) translateY(3px);padding:5px 8px;border:1px solid var(--holo-dim);border-radius:4px;background:#082b3a;color:var(--holo-ink);font:500 11px/1.2 var(--holo-mono);white-space:nowrap;opacity:0;transition:opacity .15s ease,transform .15s ease}
+.settings-slider-value.is-visible{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(prefers-reduced-motion:reduce){#settings-menu .settings-slider-value,#settings-menu input[type="range"]{transition:none}}

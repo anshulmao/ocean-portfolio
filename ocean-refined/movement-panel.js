@@ -53,16 +53,14 @@ export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
     let input, range, output;
     if (item.type === 'number') {
       output = document.createElement('output');
-      output.htmlFor = `movement-${item.key} movement-${item.key}-number`;
+      output.htmlFor = `movement-${item.key}`;
       output.className = 'movement-output';
       row.append(output);
       const track = document.createElement('div');
       track.className = 'movement-number-controls';
       range = document.createElement('input');
       range.type = 'range';
-      input = document.createElement('input');
-      input.type = 'number';
-      input.inputMode = 'decimal';
+      input = range;
       for (const field of [range,input]) {
         field.min = item.min;
         field.max = item.max;
@@ -71,7 +69,7 @@ export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
       }
       range.id = `movement-${item.key}`;
       input.id = `movement-${item.key}-number`;
-      track.append(range,input);
+      track.append(range);
       row.append(track);
     } else if (item.type === 'select') {
       input = document.createElement('select');
@@ -117,7 +115,7 @@ export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
       window.dispatchEvent(new CustomEvent('oceanmovementchange',{detail:{key:item.key}}));
     };
     listen(input,item.type === 'number' ? 'input' : 'change',() => update(input));
-    if (range) listen(range,'input',() => update(range));
+
     if (item.type === 'number') listen(input,'blur',() => refresh());
     controls.set(item.key,refresh);
     refresh();
