@@ -207,10 +207,10 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 #landmark-dialog .arc-carousel-arrow{display:grid;place-items:center;width:40px;height:40px;border:1px solid color-mix(in srgb,var(--tint),transparent 60%);border-radius:50%;background:color-mix(in srgb,var(--tint),transparent 86%);color:#fff;cursor:pointer;transition:background-color var(--motion-hover) var(--journey-ease),opacity var(--motion-hover) var(--journey-ease)}
 #landmark-dialog .arc-carousel-arrow:hover{background:color-mix(in srgb,var(--tint),transparent 65%)}
 #landmark-dialog .arc-carousel[data-first="true"] [data-slide-by="-1"],#landmark-dialog .arc-carousel[data-last="true"] [data-slide-by="1"]{opacity:.35;pointer-events:none}
-#landmark-dialog .arc-carousel-dots{display:flex;align-items:center;gap:6px;margin-left:auto}
-#landmark-dialog .arc-carousel-dots button{width:22px;height:22px;padding:0;border:0;background:none;cursor:pointer;display:grid;place-items:center}
+#landmark-dialog .arc-carousel-dots{display:flex;align-items:center;gap:0;margin-left:auto}
+#landmark-dialog .arc-carousel-dots button{width:40px;height:40px;padding:0;border:0;background:none;cursor:pointer;display:grid;place-items:center}
 #landmark-dialog .arc-carousel-dots button::before{content:"";width:7px;height:7px;border-radius:999px;background:color-mix(in srgb,var(--tint),transparent 60%);transition:width var(--motion-settle) var(--journey-ease),background-color var(--motion-hover) var(--journey-ease)}
-#landmark-dialog .arc-carousel-dots button[aria-selected="true"]::before{width:22px;background:var(--tint)}
+#landmark-dialog .arc-carousel-dots button[aria-selected="true"]::before{width:26px;background:var(--tint)}
 #landmark-dialog .arc-carousel-count{margin-right:auto;font:500 13px/1 var(--font);color:var(--tint);font-variant-numeric:tabular-nums}
 #landmark-dialog .arc-strip-lead{margin-top:14px;font:400 15px/1.5 var(--font);color:var(--muted)}
 #landmark-dialog .arc-strip-lead b{font-weight:500;color:var(--text)}
@@ -327,6 +327,8 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
   #landmark-dialog .arc-story{grid-template-columns:1fr;gap:0;margin-top:30px}
   #landmark-dialog .arc-slide .media-full{aspect-ratio:4/3}
   #landmark-dialog .arc-carousel{padding:6px}
+  #landmark-dialog .arc-carousel-bar{gap:2px;padding-inline:0}
+  #landmark-dialog .arc-carousel-count{margin-left:4px}
   #landmark-dialog .arc-diagram ol{grid-template-columns:1fr}
   #landmark-dialog .arc-turner{grid-template-columns:1fr}
   #landmark-dialog .arc-turn--next{grid-column:1}
