@@ -259,7 +259,7 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
     }
     mesh.userData.dm = true; mesh.computeBoundingSphere(); mesh.boundingSphere.radius += .2;
     const top = cy + .62, clowns = [];
-    for (let k = 0; k < residents; k++) clowns.push({ slot: fishNew(1, k ? '#ff8a35' : '#f96f22', '#f6f2e6'), size: .125 - k * .02, ph: random() * TAU, w: rr(.7, 1.1), yaw: random() * TAU, mode: 0, t: 0, timer: rr(.6, 2) + k * 1.5, vx: 0, vy: 0, vz: 0 });
+    for (let k = 0; k < residents; k++) clowns.push({ puppet: puppet('clownfish'), slot: fishNew(1, k ? '#ff8a35' : '#f96f22', '#f6f2e6'), size: .125 - k * .02, ph: random() * TAU, w: rr(.7, 1.1), yaw: random() * TAU, mode: 0, t: 0, timer: rr(.6, 2) + k * 1.5, vx: 0, vy: 0, vz: 0 });
     let tuck = 0;
     group(name, cx, top, cz, 1.6, { interest: 9, draw: 30, far: .28, meshes: [mesh], shared: fish, update(dt) {
       const d = Math.hypot(me.x - cx, me.y - top, me.z - cz), reach = underwater > .5 && d < 4.6 && d > 1.5;
@@ -278,9 +278,11 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
           if (amount > .02) { x += c.vx * amount; y += c.vy * amount; z += c.vz * amount; face = Math.atan2(c.vx, c.vz) + (c.mode === 3 ? Math.PI * (1 - amount) : 0); }
         }
         c.yaw += turnTo(c.yaw, face) * ease(dt, 9);
-        fishPose(c.slot, x, y, z, c.yaw, 0, 0, c.size, 1.15, 1.3, .3 + amount * .7, 0);
+        // Drawn by the creature set once it has loaded (a clownfish model 14 cm long is scale 1).
+        if (c.puppet.adopted) { conceal(fish, c.slot); posePuppet(c.puppet, x, y, z, c.yaw, 0, 0, amount > .3 ? 'fast' : 'swim', { scale: c.size / .14, rate: 1 + amount * .6 }); }
+        else fishPose(c.slot, x, y, z, c.yaw, 0, 0, c.size, 1.15, 1.3, .3 + amount * .7, 0);
       }
-    }, conceal() { for (let k = 0; k < clowns.length; k++) conceal(fish, clowns[k].slot); } });
+    }, conceal() { for (let k = 0; k < clowns.length; k++) { conceal(fish, clowns[k].slot); clowns[k].puppet.on = false; } } });
     site(id, name, cx, cy, cz, 1.5, 'resident', note);
   }
   yield;

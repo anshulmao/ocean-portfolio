@@ -353,6 +353,68 @@
    "bytes": 351740
   },
   {
+   "id": "manta-ray",
+   "name": "Reef manta ray",
+   "scientific": "Mobula alfredi",
+   "group": "ray",
+   "lengthMetres": 7.85,
+   "realLengthMetres": 3,
+   "discWidthMetres": 9.42,
+   "realDiscWidthMetres": 3.6,
+   "boundsMetres": [
+    5.643,
+    0.557,
+    6.504
+   ],
+   "triangles": 872,
+   "bones": 18,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 4.4,
+     "loop": true
+    },
+    {
+     "name": "glide",
+     "seconds": 7,
+     "loop": true
+    },
+    {
+     "name": "rest",
+     "seconds": 6,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 4.4,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 4.4,
+     "loop": true
+    },
+    {
+     "name": "fast",
+     "seconds": 2.42,
+     "loop": true
+    },
+    {
+     "name": "bury",
+     "seconds": 2.6,
+     "loop": false
+    },
+    {
+     "name": "loop",
+     "seconds": 7,
+     "loop": false
+    }
+   ],
+   "note": "Black above with pale chevrons on its shoulders, white below; it flies on wings wider than a car, steering with two rolled horns either side of its mouth.",
+   "file": "manta-ray.glb",
+   "bytes": 356092
+  },
+  {
    "id": "bottlenose-dolphin",
    "name": "Bottlenose dolphin",
    "scientific": "Tursiops aduncus",
@@ -523,6 +585,63 @@
    "bytes": 524540
   },
   {
+   "id": "spotted-eagle-ray",
+   "name": "Spotted eagle ray",
+   "scientific": "Aetobatus narinari",
+   "group": "ray",
+   "lengthMetres": 5.99,
+   "realLengthMetres": 2,
+   "discWidthMetres": 5.69,
+   "realDiscWidthMetres": 1.9,
+   "boundsMetres": [
+    3.183,
+    0.335,
+    5.99
+   ],
+   "triangles": 808,
+   "bones": 17,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 2.6,
+     "loop": true
+    },
+    {
+     "name": "glide",
+     "seconds": 5,
+     "loop": true
+    },
+    {
+     "name": "rest",
+     "seconds": 4,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 2.6,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 2.6,
+     "loop": true
+    },
+    {
+     "name": "fast",
+     "seconds": 1.43,
+     "loop": true
+    },
+    {
+     "name": "bury",
+     "seconds": 2.6,
+     "loop": false
+    }
+   ],
+   "note": "Pointed wings dark as ink and dotted white, a duck-billed head, and a whip of a tail three times its body.",
+   "file": "spotted-eagle-ray.glb",
+   "bytes": 315356
+  },
+  {
    "id": "blacktip-reef-shark",
    "name": "Blacktip reef shark",
    "scientific": "Carcharhinus melanopterus",
@@ -681,6 +800,56 @@
    "note": "A torpedo with a gold flank stripe, yellow sickle fins and finlets, and a hard crescent tail.",
    "file": "yellowfin-tuna.glb",
    "bytes": 383492
+  },
+  {
+   "id": "humphead-wrasse",
+   "name": "Humphead wrasse",
+   "scientific": "Cheilinus undulatus",
+   "group": "fish",
+   "lengthMetres": 4.94,
+   "realLengthMetres": 1.5,
+   "boundsMetres": [
+    1.134,
+    1.63,
+    4.981
+   ],
+   "triangles": 994,
+   "bones": 8,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 1.1,
+     "loop": true
+    },
+    {
+     "name": "fast",
+     "seconds": 0.55,
+     "loop": true
+    },
+    {
+     "name": "idle",
+     "seconds": 2.42,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 1.1,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 1.1,
+     "loop": true
+    },
+    {
+     "name": "dart",
+     "seconds": 0.45,
+     "loop": false
+    }
+   ],
+   "note": "A green-blue giant as long as a diver, with a bulging forehead, thick lips and a face scribbled with lines.",
+   "file": "humphead-wrasse.glb",
+   "bytes": 426332
   },
   {
    "id": "great-barracuda",
@@ -935,7 +1104,7 @@
    ],
    "note": "A domed olive shell of fused plates streaked with amber, a small rounded head, long paddle forelimbs and short rear flippers.",
    "file": "green-turtle.glb",
-   "bytes": 319828
+   "bytes": 319832
   },
   {
    "id": "bluespotted-ray",
@@ -1080,6 +1249,11 @@
      "loop": true
     },
     {
+     "name": "strike",
+     "seconds": 1.1,
+     "loop": false
+    },
+    {
      "name": "flash",
      "seconds": 2.4,
      "loop": false
@@ -1087,7 +1261,7 @@
    ],
    "note": "An oval mantle fringed by a rippling fin, big W-pupilled eyes and a cone of arms; it flickers brown, cream and white as it watches.",
    "file": "broadclub-cuttlefish.glb",
-   "bytes": 567192
+   "bytes": 620144
   },
   {
    "id": "garden-eel",
@@ -1183,6 +1357,66 @@
    "note": "Yellow and royal-blue pinstripes running nose to tail behind a black mask edged in light blue.",
    "file": "emperor-angelfish.glb",
    "bytes": 272684
+  },
+  {
+   "id": "lionfish",
+   "name": "Red lionfish",
+   "scientific": "Pterois volitans",
+   "group": "fish",
+   "lengthMetres": 1.87,
+   "realLengthMetres": 0.35,
+   "boundsMetres": [
+    0.767,
+    1.635,
+    1.87
+   ],
+   "triangles": 1078,
+   "bones": 10,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.8,
+     "loop": true
+    },
+    {
+     "name": "fast",
+     "seconds": 0.4,
+     "loop": true
+    },
+    {
+     "name": "idle",
+     "seconds": 1.76,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.8,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.8,
+     "loop": true
+    },
+    {
+     "name": "dart",
+     "seconds": 0.45,
+     "loop": false
+    },
+    {
+     "name": "hover",
+     "seconds": 2.8,
+     "loop": true
+    },
+    {
+     "name": "threat",
+     "seconds": 1.6,
+     "loop": true
+    }
+   ],
+   "note": "Banded red and white from snout to tail, with fans for pectoral fins and a mane of venomous spines it turns towards a threat.",
+   "file": "lionfish.glb",
+   "bytes": 343540
   },
   {
    "id": "flying-fish",
@@ -1293,6 +1527,56 @@
    "note": "Streamlined blue fish with a yellow back and tail, pouring along the reef edge in ribbons.",
    "file": "fusilier.glb",
    "bytes": 250208
+  },
+  {
+   "id": "picasso-triggerfish",
+   "name": "Picasso triggerfish",
+   "scientific": "Rhinecanthus aculeatus",
+   "group": "fish",
+   "lengthMetres": 1.49,
+   "realLengthMetres": 0.25,
+   "boundsMetres": [
+    0.31,
+    0.892,
+    1.49
+   ],
+   "triangles": 724,
+   "bones": 8,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.5,
+     "loop": true
+    },
+    {
+     "name": "fast",
+     "seconds": 0.25,
+     "loop": true
+    },
+    {
+     "name": "idle",
+     "seconds": 1.1,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.5,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.5,
+     "loop": true
+    },
+    {
+     "name": "dart",
+     "seconds": 0.45,
+     "loop": false
+    }
+   ],
+   "note": "As if painted by hand: blue and black bars across the eye, a yellow line from its lips, black wedges and white streaks behind.",
+   "file": "picasso-triggerfish.glb",
+   "bytes": 254140
   },
   {
    "id": "white-spotted-puffer",
@@ -1488,6 +1772,56 @@
    "note": "Powder-blue flanks, a black mask, a white throat and a yellow dorsal fin.",
    "file": "powder-blue-tang.glb",
    "bytes": 242404
+  },
+  {
+   "id": "yellow-tang",
+   "name": "Yellow tang",
+   "scientific": "Zebrasoma flavescens",
+   "group": "fish",
+   "lengthMetres": 1.2,
+   "realLengthMetres": 0.18,
+   "boundsMetres": [
+    0.224,
+    1.018,
+    1.2
+   ],
+   "triangles": 674,
+   "bones": 8,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.42,
+     "loop": true
+    },
+    {
+     "name": "fast",
+     "seconds": 0.21,
+     "loop": true
+    },
+    {
+     "name": "idle",
+     "seconds": 0.924,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.42,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.42,
+     "loop": true
+    },
+    {
+     "name": "dart",
+     "seconds": 0.45,
+     "loop": false
+    }
+   ],
+   "note": "A disc of lemon yellow with a long snout, and a white scalpel at the base of its tail.",
+   "file": "yellow-tang.glb",
+   "bytes": 220352
   },
   {
    "id": "butterflyfish",
@@ -1903,6 +2237,56 @@
    "note": "A smooth domed shell the colour of cream, set with eleven round red spots, and heavy claws tipped in black.",
    "file": "spotted-reef-crab.glb",
    "bytes": 325024
+  },
+  {
+   "id": "clownfish",
+   "name": "Ocellaris clownfish",
+   "scientific": "Amphiprion ocellaris",
+   "group": "fish",
+   "lengthMetres": 0.14,
+   "realLengthMetres": 0.08,
+   "boundsMetres": [
+    0.031,
+    0.057,
+    0.14
+   ],
+   "triangles": 674,
+   "bones": 8,
+   "clips": [
+    {
+     "name": "swim",
+     "seconds": 0.26,
+     "loop": true
+    },
+    {
+     "name": "fast",
+     "seconds": 0.13,
+     "loop": true
+    },
+    {
+     "name": "idle",
+     "seconds": 0.572,
+     "loop": true
+    },
+    {
+     "name": "turn_left",
+     "seconds": 0.26,
+     "loop": true
+    },
+    {
+     "name": "turn_right",
+     "seconds": 0.26,
+     "loop": true
+    },
+    {
+     "name": "dart",
+     "seconds": 0.45,
+     "loop": false
+    }
+   ],
+   "note": "Bright orange with three white bars, each edged in black, living among the stinging tentacles of its anemone.",
+   "file": "clownfish.glb",
+   "bytes": 223168
   }
  ]
 }

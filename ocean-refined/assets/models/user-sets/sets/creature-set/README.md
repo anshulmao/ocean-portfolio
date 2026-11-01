@@ -2,7 +2,7 @@
 
 Low-poly models made in code for this project. No third-party assets, so there is nothing to credit or license.
 
-- `creature-set/`: 38 models of 37 animals (the orca bull and cow are one species), one GLB each. A skinned mesh, its skeleton, a painted skin texture embedded in the file, and 1 to 9 clips. Swimmers have loops for swimming, sprinting, hovering and turning left or right, and one-off actions such as `burst`, `strike`, `breach`, `spyhop`, `spin`, `fluke_dive`, `feed`, `ram`, `bury`, `launch`. Animals that move by their limbs (octopus, cuttlefish, crabs, sea stars) have their own loops: `rest`, `walk`, `guard`, `hide`, `jet`, `hover`, `back`, `flash`. The manifest marks which clips loop.
+- `creature-set/`: 45 models of 44 animals (the orca bull and cow are one species), one GLB each. A skinned mesh, its skeleton, a painted skin texture embedded in the file, and 1 to 9 clips. Swimmers have loops for swimming, sprinting, hovering and turning left or right, and one-off actions such as `burst`, `strike`, `breach`, `spyhop`, `spin`, `fluke_dive`, `feed`, `ram`, `bury`, `launch`. Animals that move by their limbs (octopus, cuttlefish, crabs, sea stars) have their own loops: `rest`, `walk`, `guard`, `hide`, `jet`, `hover`, `back`; and actions such as `strike`, `flash`, a lionfish's `threat` and a manta's `loop`. The manifest marks which clips loop.
 - `coral-set/`: 13 coral colonies, one GLB each. Still meshes with vertex colours, base at y = 0.
 - `manifest.json` in each folder lists names, sizes on the site and in life, bounds, triangle and bone counts, and clips.
 

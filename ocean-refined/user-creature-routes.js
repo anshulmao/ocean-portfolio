@@ -18,7 +18,10 @@ export const ENCOUNTERS = {
       { id: 'whale-shark', pass: [16, 26], depth: [-13, -7], clearance: 3.5, speed: 1.5, bulge: .2, across: -50, cast: [{ species: 'whale-shark' }], riders: [3, 2] },
       // An orca family keeps together: the bull out in front, a cow behind and her calf tucked at her flank.
       { id: 'orcas', pass: [20, 34], depth: [-15, -9], clearance: 3.5, speed: 3.2, bulge: .25, across: -45, cast: [
-        { species: 'orca', side: 3, back: 0 }, { species: 'orca-cow', side: -5, back: 10 }, { species: 'orca-cow', side: -10, back: 12, scale: .55, name: 'orca calf' }] }
+        { species: 'orca', side: 3, back: 0 }, { species: 'orca-cow', side: -5, back: 10 }, { species: 'orca-cow', side: -10, back: 12, scale: .55, name: 'orca calf' }] },
+      // A pair of mantas, wings beating slow; one passing close sometimes loops over in a somersault (loop: seconds between).
+      { id: 'manta', pass: [12, 22], depth: [-14, -7], clearance: 4, speed: 1.5, bulge: .3, across: -45, loop: [12, 22], cast: [
+        { species: 'manta-ray', side: 0, back: 0 }, { species: 'manta-ray', side: 10, back: 16, scale: .82 }] }
     ]
   },
   pelagic: {
@@ -33,6 +36,9 @@ export const ENCOUNTERS = {
       // Hammerheads come up from the deep shelf in a loose file, sweeping their heads, and go back down the same way.
       { id: 'hammerheads', pass: [15, 26], depth: [-26, -14], clearance: 4, speed: 1.7, bulge: .2, across: -50, cast: [
         { species: 'scalloped-hammerhead', side: 0, back: 0 }, { species: 'scalloped-hammerhead', side: 6, back: 10, scale: .9 }, { species: 'scalloped-hammerhead', side: -5, back: 17, scale: .84 }] },
+      // Eagle rays fly past in a loose formation, wingtip to wingtip.
+      { id: 'eagle-rays', pass: [9, 18], depth: [-16, -6], clearance: 3, speed: 1.9, bulge: .3, across: -32, cast: [
+        { species: 'spotted-eagle-ray', side: 0, back: 0 }, { species: 'spotted-eagle-ray', side: 3.6, back: 4, scale: .92 }, { species: 'spotted-eagle-ray', side: -3.4, back: 5, scale: .95 }, { species: 'spotted-eagle-ray', side: .4, back: 9.5, scale: .86 }] },
       // A tuna school tears past, fast and in a loose wedge.
       { id: 'tuna', pass: [14, 26], depth: [-18, -10], clearance: 3, speed: 5.2, bulge: .15, across: -40, school: { species: 'yellowfin-tuna', count: [8, 5], spread: [14, 5, 2.5] } }
     ]
@@ -65,7 +71,13 @@ export const RESIDENTS = {
   // Whitetip reef sharks: one patrols the deep reef low over the bottom, two lie resting on the sand by day.
   whitetips: { species: 'whitetip-reef-shark', patrol: { loop: [-26, -58, 15, 10], height: 2, speed: 1.1 }, resting: [[30, -56], [-42, -90]], lean: 1 },
   // Cuttlefish hover off the side of tall formations, watching; crowd one and it backs off, then flashes its arms.
-  cuttlefish: { species: 'broadclub-cuttlefish', formations: ['Soft coral spire', 'Brain coral dome', 'Lantern garden'], count: [3, 2], height: 2.4 }
+  cuttlefish: { species: 'broadclub-cuttlefish', formations: ['Soft coral spire', 'Brain coral dome', 'Lantern garden'], count: [3, 2], height: 2.4 },
+  // Lionfish hang by the coral, fans spread; come close and one turns its spines on you.
+  lionfish: { species: 'lionfish', formations: ['Table coral tower', 'Pillar coral cathedral', 'Soft coral spire'], count: [3, 2], height: 1.3 },
+  // A humphead wrasse cruises the middle reef on a wide loop, as big as a diver and as unhurried.
+  humphead: { species: 'humphead-wrasse', loop: [-6, -48, 15, 11], height: 3.2, speed: .8 },
+  // Resting animals that wake when crowded: flee (m) how close is too close, hop (m) how far it swims before settling again.
+  wake: { 'green-turtle': { flee: 4.5, hop: 14, rise: 3, seconds: 9 }, 'whitetip-reef-shark': { flee: 5.5, hop: 18, rise: 2, seconds: 6 } }
 };
 
 // Animals on the bottom, drawn as instances (one draw call a species) and never moving: sea stars and urchins spread
@@ -89,6 +101,8 @@ export const SCHOOLS = {
   idols: { species: 'moorish-idol', kind: 'pairs', near: 'patches', count: 3, groups: [2, 1], loop: 5, height: 1.8 },
   tangs: { species: 'powder-blue-tang', kind: 'pairs', near: 'patches', count: 5, groups: [2, 1], loop: 6, height: 1.5 },
   angels: { species: 'emperor-angelfish', kind: 'pairs', near: 'formations', count: 1, groups: [3, 2], loop: 4, height: 2 },
+  yellowTangs: { species: 'yellow-tang', kind: 'pairs', near: 'patches', count: 4, groups: [3, 2], loop: 5, height: 1.6 },
+  triggers: { species: 'picasso-triggerfish', kind: 'pairs', near: 'patches', count: 1, groups: [3, 2], loop: 3.5, height: .9 },
   // Garden eels stand half out of the sand, swaying, and sink into their burrows as a diver comes over.
   gardenEels: { species: 'garden-eel', lod: 2, kind: 'burrows', near: [-6, -36], count: [14, 8] },
   // Fusiliers pour along the reef edge in a ribbon.

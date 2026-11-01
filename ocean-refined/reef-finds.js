@@ -9,7 +9,7 @@ import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 //   const finds = createReefFinds({ floor });  scene.add(finds.root);
 //   finds.update(dt, player, underwater);       finds.take(id);   (expedition-interactions.js does both)
 //
-// Cost: seven small meshes in all (the compass needle and the sextant arm move, so they are their own), none drawn
+// Cost: eleven small meshes in all (moving parts and the sextant's glass are their own), none drawn
 // beyond REACH or out of view, nothing animated that is not drawn. One gold program; each find has its own copy of the
 // material only so it can catch the light on its own beat. The gold is plainly lit, without the reef's toon look
 // (ocean-look.js), which flattened it to yellow paint: a keepsake should catch the eye a little more than the reef.
@@ -51,17 +51,46 @@ function compass() {
 }
 
 function sextant() {
-  // A sextant stood on its handle: the frame a sixty-degree sector hanging from its pivot, the arc graduated along the
-  // bottom, a telescope on one radius. The index arm is its own part, swinging from the pivot across the arc.
-  const R = .5, half = Math.PI / 6, ends = [-half, half].map(a => [Math.sin(a) * R, -Math.cos(a) * R]);
-  const frame = [at(new THREE.TorusGeometry(R, .03, 5, 14, 2 * half), 0, 0, 0, 0, 0, -Math.PI / 2 - half)];
-  for (const [x, y] of ends) frame.push(at(new THREE.BoxGeometry(.045, R, .03), x / 2, y / 2, 0, 0, 0, Math.atan2(x, -y)));
-  frame.push(at(new THREE.BoxGeometry(.32, .035, .03), 0, -R * .55, 0), new THREE.CylinderGeometry(.05, .05, .04, 10).rotateX(Math.PI / 2));
-  for (let k = 0; k <= 12; k++) { const a = -half + k / 12 * 2 * half; frame.push(at(new THREE.BoxGeometry(.008, k % 3 ? .03 : .05, .024), Math.sin(a) * (R - .03), -Math.cos(a) * (R - .03), 0, 0, 0, a)); }
-  frame.push(at(new THREE.CylinderGeometry(.03, .026, .24, 8), ends[1][0] * .5 + .07, ends[1][1] * .5, .05, 0, 0, Math.atan2(ends[1][0], -ends[1][1])));
-  frame.push(at(new THREE.BoxGeometry(.06, .07, .014), .07, -.08, .03), at(new THREE.CylinderGeometry(.03, .03, .16, 8), -.06, -.2, -.05, Math.PI / 2, 0, .4));
-  const arm = shape([at(new THREE.BoxGeometry(.045, R + .02, .022), 0, -(R + .02) / 2, .02), at(new THREE.BoxGeometry(.09, .03, .02), 0, -R, .02), at(new THREE.BoxGeometry(.07, .05, .012), 0, 0, .03)]);
-  return { body: shape(frame), part: arm, partAt: [0, 0, 0] };
+  // A navigator's sextant, stood upright on its frame: the frame a sixty-degree sector hanging from its pivot, made as a
+  // lattice of two radii, an outer graduated limb and an inner arc, with three round lightening holes; the half-silvered
+  // horizon glass on the left radius with its sun shades, the telescope on the right looking across at it; the handle
+  // and three feet behind. The index arm swings from the pivot, carrying the index mirror and its shades at the top and
+  // the vernier, clamp and micrometer drum at the arc. Moving parts: the arm (and the drum on it) and the horizon shades.
+  const R = .5, H = Math.PI / 6, span = H + .07, P = (a, r = R) => [Math.sin(a) * r, -Math.cos(a) * r];
+  const flat = (g, z = .55) => g.scale(1, 1, z);
+  const frame = [
+    flat(at(new THREE.TorusGeometry(R, .034, 4, 22, 2 * span), 0, 0, 0, 0, 0, -Math.PI / 2 - span)),
+    flat(at(new THREE.TorusGeometry(R * .8, .018, 4, 18, 2 * H), 0, 0, 0, 0, 0, -Math.PI / 2 - H)),
+    at(new THREE.TorusGeometry(R + .026, .007, 3, 22, 2 * span), 0, 0, .008, 0, 0, -Math.PI / 2 - span),
+    at(new THREE.CylinderGeometry(.06, .06, .05, 12), 0, 0, 0, Math.PI / 2)];
+  for (const a of [-H, H]) { const [x, y] = P(a); frame.push(at(new THREE.BoxGeometry(.05, R, .026), x / 2, y / 2, 0, 0, 0, a)); }
+  // The lattice: three round holes braced into the frame.
+  for (const [x, y, r] of [[-.105, -.26, .065], [.105, -.26, .065], [0, -.18, .045]]) frame.push(at(new THREE.TorusGeometry(r, .013, 4, 12), x, y, 0));
+  frame.push(at(new THREE.BoxGeometry(.3, .024, .02), 0, -.345, 0));
+  // The scale: a tick every two degrees, a longer one every ten.
+  for (let k = 0; k <= 35; k++) { const a = -span + .02 + k * (2 * span - .04) / 35, long = k % 5 === 0, [x, y] = P(a, R - .02 - (long ? .012 : 0)); frame.push(at(new THREE.BoxGeometry(.006, long ? .05 : .026, .016), x, y, .014, 0, 0, a)); }
+  // The horizon glass's frame on the left radius, turned to face the index mirror; its three shades swing in front.
+  const [hx, hy] = P(-H, R * .42);
+  frame.push(at(new THREE.BoxGeometry(.012, .09, .075), hx, hy, .06, 0, -.35, 0), at(new THREE.BoxGeometry(.03, .02, .06), hx + .01, hy - .05, .03), at(new THREE.CylinderGeometry(.012, .012, .1, 6), hx - .045, hy - .05, .05));
+  // The telescope on its rising piece on the right radius, looking across at the horizon glass.
+  const [tx, ty] = P(H, R * .42);
+  frame.push(at(new THREE.BoxGeometry(.05, .04, .05), tx, ty, .04), at(new THREE.CylinderGeometry(.022, .022, .17, 10), tx + .02, ty, .085, 0, 0, Math.PI / 2),
+    at(new THREE.CylinderGeometry(.03, .027, .04, 10), tx + .12, ty, .085, 0, 0, Math.PI / 2), at(new THREE.TorusGeometry(.024, .007, 4, 10), tx - .065, ty, .085, 0, Math.PI / 2),
+    at(new THREE.TorusGeometry(.029, .006, 4, 10), tx + .14, ty, .085, 0, Math.PI / 2));
+  // Behind: the handle on two posts, and three feet to stand it on a chart table.
+  frame.push(at(new THREE.CylinderGeometry(.032, .028, .24, 8), .08, -.27, -.11, 0, 0, .45), at(new THREE.SphereGeometry(.034, 6, 4), .135, -.37, -.11), at(new THREE.SphereGeometry(.03, 6, 4), .03, -.17, -.11),
+    at(new THREE.BoxGeometry(.03, .03, .11), .03, -.17, -.055), at(new THREE.BoxGeometry(.03, .03, .11), .13, -.36, -.055));
+  for (const [x, y] of [[-.2, -.38], [.21, -.36], [0, -.03]]) frame.push(at(new THREE.CylinderGeometry(.014, .02, .05, 6), x, y, -.035, Math.PI / 2));
+  const glass = [at(new THREE.BoxGeometry(.004, .075, .06), hx + .007, hy, .06, 0, -.35, 0), at(new THREE.CylinderGeometry(.018, .018, .004, 10), tx - .065, ty, .085, 0, 0, Math.PI / 2)];
+  // The index arm: bar, index mirror and its shades at the pivot; vernier and clamp at the arc; the drum is its own part.
+  const arm = [at(new THREE.BoxGeometry(.045, R + .07, .022), 0, -(R + .07) / 2, .035), at(new THREE.CylinderGeometry(.04, .04, .06, 10), 0, 0, .045, Math.PI / 2),
+    at(new THREE.BoxGeometry(.014, .12, .085), 0, .07, .06), at(new THREE.BoxGeometry(.11, .05, .014), 0, -R + .005, .05), at(new THREE.BoxGeometry(.035, .06, .025), .05, -R - .045, .05),
+    at(new THREE.BoxGeometry(.008, .022, .006), -.03, -R + .03, .06), at(new THREE.BoxGeometry(.008, .022, .006), .03, -R + .03, .06)];
+  for (let k = 0; k < 3; k++) arm.push(at(new THREE.BoxGeometry(.06, .045, .006), -.07, .02 - k * .012, .085 - k * .014, 0, .2, 0));
+  const armGlass = [at(new THREE.BoxGeometry(.004, .1, .07), .009, .07, .06)];
+  const drum = shape([new THREE.CylinderGeometry(.04, .04, .035, 12), at(new THREE.TorusGeometry(.04, .007, 4, 12), 0, .012, 0, Math.PI / 2), at(new THREE.TorusGeometry(.04, .007, 4, 12), 0, -.012, 0, Math.PI / 2), at(new THREE.BoxGeometry(.01, .045, .02), 0, 0, .04)].map(g => g.rotateZ(Math.PI / 2)));
+  const shades = shape([0, 1, 2].map(k => at(new THREE.BoxGeometry(.004, .045, .055), .03 + k * .009, -.025, 0)).concat([new THREE.CylinderGeometry(.008, .008, .07, 6)]));
+  return { body: shape(frame), part: shape(arm), partAt: [0, 0, 0], glass: shape(glass), partGlass: shape(armGlass), drum, drumAt: [.085, -R - .025, .06], shades, shadesAt: [hx - .045, hy - .025, .1] };
 }
 
 function medallion() {
@@ -110,15 +139,21 @@ const BUILD = { compass, sextant, medallion, conch, hat };
 export function createReefFinds({ floor }) {
   const root = new THREE.Group(); root.name = 'Reef finds';
   const gold = new THREE.MeshStandardMaterial({ name: 'Reef find gold', color: '#f2b93a', metalness: .3, roughness: .34, emissive: '#9a6412', emissiveIntensity: .45, flatShading: true });
+  const glass = new THREE.MeshStandardMaterial({ name: 'Reef find glass', color: '#d5ecf2', metalness: .7, roughness: .12, emissive: '#3c6370', emissiveIntensity: .35, flatShading: true });
   const items = FINDS.map((find, id) => {
     const made = BUILD[find.key](), material = gold.clone(), group = new THREE.Group(), spin = new THREE.Group();
     group.name = `Reef find · ${find.name}`; group.add(spin);
     const body = new THREE.Mesh(made.body, material); body.name = `${find.name} body`; spin.add(body);
-    let part = null;
+    let part = null, drum = null, shades = null;
     if (made.part) { part = new THREE.Mesh(made.part, material); part.name = `${find.name} moving part`; part.position.fromArray(made.partAt); spin.add(part); }
+    // Mirrors and lenses in silvered glass; a drum turned by the arm; shades that swing in and out of the sight line.
+    if (made.glass) { const m = new THREE.Mesh(made.glass, glass); m.name = `${find.name} glass`; spin.add(m); }
+    if (made.partGlass) { const m = new THREE.Mesh(made.partGlass, glass); m.name = `${find.name} moving glass`; part.add(m); }
+    if (made.drum) { drum = new THREE.Mesh(made.drum, material); drum.name = `${find.name} drum`; drum.position.fromArray(made.drumAt); part.add(drum); }
+    if (made.shades) { shades = new THREE.Mesh(made.shades, material); shades.name = `${find.name} shades`; shades.position.fromArray(made.shadesAt); spin.add(shades); }
     const y = floor(find.x, find.z) + HOVER;
     group.position.set(find.x, y, find.z); root.add(group);
-    return { id, ...find, y, group, spin, body, part, material, phase: id * 1.37, taken: 0, collected: false, shown: false };
+    return { id, ...find, y, group, spin, body, part, drum, shades, material, phase: id * 1.37, taken: 0, collected: false, shown: false };
   });
   let time = 0;
   const player = new THREE.Vector3();
@@ -135,7 +170,13 @@ export function createReefFinds({ floor }) {
       g.position.y = it.y + Math.sin(t * 1.3) * .05;
       it.material.emissiveIntensity = .45 + 1.3 * Math.max(0, Math.sin(t * .6)) ** 30;
       if (it.key === 'compass') { s.rotation.set(.38, t * .25, 0); it.part.rotation.y = -t * .25 + .55 * Math.sin(t * .9) + .08 * Math.sin(t * 4.1); }
-      else if (it.key === 'sextant') { s.rotation.set(0, t * .3, .06 * Math.sin(t * .7)); it.part.rotation.z = .42 * Math.sin(t * .55); }
+      else if (it.key === 'sextant') {
+        // Taking a sight: the arm sweeps along the arc, the drum winding as it goes, and every few seconds the
+        // shades swing into the sight line and out again.
+        const arm = .42 * Math.sin(t * .55);
+        s.rotation.set(0, t * .3, .06 * Math.sin(t * .7)); it.part.rotation.z = arm; it.drum.rotation.x = arm * 14;
+        it.shades.rotation.y = -1.3 * Math.min(1, Math.max(0, Math.sin(t * .4) * 3 - 1.5));
+      }
       else if (it.key === 'medallion') s.rotation.set(0, t * .9, .08 * Math.sin(t * .8));
       else if (it.key === 'conch') s.rotation.set(.2 * Math.sin(t * .8), t * .2, .1 * Math.sin(t * .6));
       else s.rotation.set(.1 * Math.sin(t * .9), t * .35, .14 * Math.sin(t * .7 + 1));
