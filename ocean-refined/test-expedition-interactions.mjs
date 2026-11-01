@@ -13,7 +13,7 @@ await page.route('http://kit.test/**',async route=> {
   if (pathname === '/') return route.fulfill({contentType:'text/html',body:`<!doctype html><body><canvas id="world" width="80" height="60"></canvas><script>
     window.position={x:0,y:-6,z:0};window.hold=false;window.staged=false;
     window.oceanDiagnostics={ready:true,submerged:true,cameraMode:'first',frames:1};
-    window.oceanControls={getPlayerPosition(){return {...position}},getMode(){return 'diver'},getTransition(){return false},setSafetyStop(v){window.staged=v},setInterfaceOpen(v){window.hold=v},getScene(){return{add(mesh){window.tokenCount=mesh.count}}},reef:{userData:{terrainHeightAt:()=>-20}},render(){const c=document.querySelector('canvas');const g=c.getContext('2d');g.fillStyle='#176e84';g.fillRect(0,0,80,60)},getRenderer(){return {domElement:document.querySelector('canvas')}}};
+    window.oceanControls={getPlayerPosition(){return {...position}},getMode(){return 'diver'},getTransition(){return false},setSafetyStop(v){window.staged=v},setInterfaceOpen(v){window.hold=v},getScene(){return{add(group){window.tokenCount=group.children.length}}},reef:{userData:{terrainHeightAt:()=>-20}},render(){const c=document.querySelector('canvas');const g=c.getContext('2d');g.fillStyle='#176e84';g.fillRect(0,0,80,60)},getRenderer(){return {domElement:document.querySelector('canvas')}}};
     </script><script type="module" src="/expedition-interactions.js"></script></body>`});
   const file = path.resolve(root,`.${pathname}`);
   if (!file.startsWith(root+path.sep)) return route.abort();
@@ -21,7 +21,7 @@ await page.route('http://kit.test/**',async route=> {
 });
 try {
   await page.goto('http://kit.test/');
-  await page.waitForFunction(()=>window.oceanExpedition && window.tokenCount===10 && !document.querySelector('[data-stop]').hidden);
+  await page.waitForFunction(()=>window.oceanExpedition && window.tokenCount===5 && !document.querySelector('[data-stop]').hidden);
   assert.equal(await page.locator('[data-photo]').isVisible(),false);
   assert.equal(await page.locator('[data-inventory]').isVisible(),false);
   await page.keyboard.press('F2');

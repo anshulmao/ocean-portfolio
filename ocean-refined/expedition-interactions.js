@@ -6,6 +6,8 @@ import { createSafetyStopClock, SAFETY_STOP_SECONDS, inSafetyStopRange } from '.
 import {sendFeedback} from './submissions.js';
 import {addPhoto} from './dive-log.js';
 import {track} from './analytics.js';
+import {FINDS, createReefFinds} from './reef-finds.js';
+import {seabedHeightAt} from './reef.js';
 
 // Visitor submissions are explicit; photos stay in memory for the dive summary unless shared from there.
 const stylesheet = document.createElement('link');
@@ -28,14 +30,10 @@ const deckPhoto = document.querySelector('.touch-deck [data-photo]');
 const offerFill = stopButton.querySelector('i'), offerTime = stopButton.querySelector('output');
 let offerLeft=0, offerUsed=false, offerSecond=-1,returnOffer=false;
 function offerAvailable() { return offerLeft>0&&!dialog.open&&!ui.dialog&&!ui.panel&&!window.oceanControls?.nav?.suspended&&(window.oceanControls?.nav.returnPhase==='offer'||(!window.oceanDiagnostics?.nearbyLandmark&&!nearest)); }
-const point = new THREE.Vector3(), matrix = new THREE.Matrix4(), quaternion = new THREE.Quaternion(), scale = new THREE.Vector3(1,1,1);
-const normal = new THREE.Vector3(), artifactPoint = new THREE.Vector3();
-const finds = [
-  ['Compass medallion',-15,-17], ['Pearl fragment',23,-29], ['Old navigation token',-31,-52],
-  ['Ceramic seal',36,-67], ['Glass float',-11,-87], ['Brass tide marker',25,-96],
-  ['Reef survey tag',-43,-25], ['Mariner’s coin',47,-45], ['Moon shell',-29,-94], ['Ship’s tally',7,-51],
-].map(([name,x,z],id)=>({id,name,x,z,y:0,collected:false}));
-let mesh = null, nearest = null, active = '', previousFocus = null, heldDepth = 0, noticeLeft = 0, elapsed = 0, photos = 0;
+const point = new THREE.Vector3(), artifactPoint = new THREE.Vector3();
+// Five gold keepsakes to find (reef-finds.js makes and animates them); y is set once they are placed on the reef.
+const finds = FINDS.map(({name,x,z,line},id)=>({id,name,x,z,line,y:0,collected:false}));
+let reefFinds = null, mesh = null, nearest = null, active = '', previousFocus = null, heldDepth = 0, noticeLeft = 0, elapsed = 0, photos = 0;
 let lastScore = -1, lastPrompt = '', lastSubmerged = null;
 const stopClock = createSafetyStopClock();
 let countdown = null, countdownFill = null, countdownTime = null, completion = null, completionLeft = 0, lastSecond = -1;
@@ -149,13 +147,14 @@ function openStop() {
 }
 function openInventory() {
   const collected = finds.filter(item=>item.collected);
-  begin('Your reef finds', `<p>${collected.length} of ${finds.length} artifacts · ${collected.length*100} discovery points</p><p>These are imaginary finds. Enjoy collecting without disturbing the real reef.</p><ul class="artifact-list">${collected.length?collected.map(item=>`<li><span>◈</span>${item.name}<small>+100</small></li>`).join(''):`<li>No finds yet. Look for small gold tokens near the seabed; ${touchInput()?'tap Collect':'press F'} when in reach.</li>`}</ul><p class="feedback-privacy">Inventory lasts for this page session. It does not change your dive or portfolio access.</p>`, 'inventory');
+  begin('Your reef finds', `<p>${collected.length} of ${finds.length} gold keepsakes · ${collected.length*100} discovery points</p><p>${collected.length === finds.length ? 'Every one of them. The ship’s gold is back together.' : 'These are imaginary finds. Enjoy collecting without disturbing the real reef.'}</p><ul class="artifact-list">${collected.length?collected.map(item=>`<li><span>◈</span>${item.name}<small>+100</small><em>${item.line}</em></li>`).join(''):`<li>No finds yet. Look for small gold things hovering over the sand, a compass, a sextant, a medallion, a conch and a pirate’s hat; ${touchInput()?'tap Collect':'press F'} when in reach.</li>`}</ul><p class="feedback-privacy">Inventory lasts for this page session. It does not change your dive or portfolio access.</p>`, 'inventory');
 }
 function collect() {
   if (!nearest || !mesh || dialog.open || ui.dialog || ui.panel) return false;
-  nearest.collected = true; matrix.makeScale(0,0,0); mesh.setMatrixAt(nearest.id,matrix); mesh.instanceMatrix.needsUpdate = true;
+  nearest.collected = true; reefFinds.take(nearest.id);
   track('artifact_collected',{artifact_id:nearest.id});
-  say(`${nearest.name} collected · +100 discovery points`); nearest = null; prompt.hidden = true; return true;
+  const count = finds.filter(item=>item.collected).length;
+  say(count === finds.length ? `${nearest.name} · all ${finds.length} found · +100 discovery points` : `${nearest.name} collected · ${count} of ${finds.length} · +100 discovery points`); nearest = null; prompt.hidden = true; return true;
 }
 function takePhoto() {
   const controls = window.oceanControls, state = window.oceanDiagnostics;
@@ -176,17 +175,16 @@ function takePhoto() {
 }
 const blobOf = (canvas, quality) => new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(Error('photo')), 'image/jpeg', quality));
 function buildArtifacts(controls) {
-  const floor = controls.reef?.userData.terrainHeightAt;
-  if (mesh || typeof floor !== 'function') return;
-  mesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(.28,.28,.075,12),new THREE.MeshStandardMaterial({color:0xe4bb6f,metalness:.65,roughness:.34,emissive:0x6d4012,emissiveIntensity:.22}),finds.length);
-  mesh.name = 'Optional reef artifacts';
-  // Tokens are static and slightly sunk into the terrain so they never float above the seabed.
-  for (const item of finds) {
-    item.y = floor(item.x,item.z)+.025; point.set(item.x,item.y,item.z);
-    normal.set(floor(item.x-.3,item.z)-floor(item.x+.3,item.z),.6,floor(item.x,item.z-.3)-floor(item.x,item.z+.3)).normalize();
-    quaternion.setFromUnitVectors(THREE.Object3D.DEFAULT_UP,normal); matrix.compose(point,quaternion,scale); mesh.setMatrixAt(item.id,matrix);
-  }
-  mesh.instanceMatrix.needsUpdate = true; controls.getScene().add(mesh);
+  const terrain = controls.reef?.userData.terrainHeightAt;
+  if (mesh || typeof terrain !== 'function') return;
+  // They hover over the sand as it is drawn, which can lie above the terrain on a slope.
+  const floor = (x,z) => Math.max(terrain(x,z), seabedHeightAt(x,z,false), seabedHeightAt(x,z,true));
+  reefFinds = createReefFinds({floor}); mesh = reefFinds.root;
+  for (const item of finds) item.y = reefFinds.items[item.id].y;
+  controls.getScene().add(mesh);
+  // Compiled now, off the dive's first sight of one (all five share the one program).
+  const renderer = controls.getRenderer?.(), camera = controls.getCamera?.();
+  if (renderer?.compileAsync && camera) renderer.compileAsync(mesh, camera, controls.getScene()).catch(()=>{});
 }
 onTick(dt=> {
   updateStopClock(dt);
@@ -222,7 +220,7 @@ onTick(dt=> {
     const second=Math.ceil(offerLeft);if(second!==offerSecond){offerSecond=second;offerTime.textContent=`${second}s`;}
     if(!offerLeft)stopButton.hidden=true;
   }
-  if (mesh) mesh.visible = underwater;
+  if (reefFinds) reefFinds.update(dt, controls.getPlayerPosition(), underwater);
   const count = finds.reduce((total,item)=>total+Number(item.collected),0);
   if (count !== lastScore) { lastScore = count; score.textContent = String(count); }
   elapsed += dt;
