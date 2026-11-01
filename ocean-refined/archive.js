@@ -137,13 +137,22 @@ function diagram(entry) {
 }
 // A section's heading: the one large line, and one quiet line under it.
 const head = (heading, strap, ...extra) => el('header', { class: 'arc-head' }, el('h3', { id: 'archive-entry-title', text: heading }), strap && el('p', { class: 'arc-strap', text: strap }), ...extra);
-const returnLabel = () => window.oceanDiagnostics?.submerged ? 'Back to the reef' : 'Back to the surface';
+const submerged = () => Boolean(window.oceanDiagnostics?.submerged);
+const returnLabel = () => submerged() ? 'Back to the reef' : 'Back to the surface';
+// Read from the surface (the hero links, the surface nav, a deep link), the sheet links its sections together:
+// tabs in the header, and the other sections at the foot of every page. On a dive each site shows only its own.
+const LINKED = ['about', 'experience', 'projects', 'resume'];
+const tabs = el('nav', { class: 'arc-tabs', 'aria-label': 'Sections', 'data-scroll-x': true }, LINKED.map(id =>
+  el('button', { type: 'button', 'data-section': id, text: SECTIONS[id].label })));
+panel.querySelector('.arc-place').after(tabs);
 // The end of every page: the way out, and where the other sections are on the reef.
 function foot(section) {
   const elsewhere = SITES.filter(id => id !== section);
   return el('footer', { class: 'arc-foot' },
     el('button', { type: 'button', class: 'arc-pill arc-pill--primary dialog-return' }, glyph('back'), el('span', { id: 'archive-return-label', text: returnLabel() }), el('kbd', { text: 'Esc' })),
-    elsewhere.length > 0 && SECTIONS[section].where && el('p', { class: 'arc-elsewhere' }, 'Also on this reef: ', elsewhere.flatMap((id, index) => [index ? ', and ' : '', el('b', { text: SECTIONS[id].label }), ` at ${SECTIONS[id].where}`]), '.'));
+    !submerged() && LINKED.includes(section) && el('div', { class: 'arc-next', role: 'group', 'aria-label': 'Other sections' }, LINKED.filter(id => id !== section).map(id =>
+      el('button', { type: 'button', class: 'arc-pill', 'data-section': id }, el('span', { text: SECTIONS[id].label }), glyph('next')))),
+    submerged() && elsewhere.length > 0 && SECTIONS[section].where && el('p', { class: 'arc-elsewhere' }, 'Also on this reef: ', elsewhere.flatMap((id, index) => [index ? ', and ' : '', el('b', { text: SECTIONS[id].label }), ` at ${SECTIONS[id].where}`]), '.'));
 }
 
 // Dates. Time in a role is derived only from the dates stored with each entry.
@@ -261,7 +270,8 @@ function careerTrack(list) {
         'aria-label': `${entry.title}, ${monthLabel(entry.start)} to ${entry.end ? monthLabel(entry.end) : 'present'}` }, el('span', { text: entry.title })))),
     el('div', { class: 'arc-track-axis', 'aria-hidden': 'true' },
       el('span', { 'data-edge': 'start', text: monthLabel(dated[0].start) }),
-      ticks.map(month => el('span', { style: `left:${at(month)}`, text: String(month / 12) })),
+      // A year that sits close to an end label is dropped on a phone, where the two would overlap.
+      ticks.map(month => el('span', { style: `left:${at(month)}`, 'data-tight': (month - first) / span < .16 || (last - month) / span < .16, text: String(month / 12) })),
       el('span', { 'data-edge': 'end', text: ongoing ? 'Present' : monthLabel(dated.at(-1).end) })),
     el('p', { class: 'arc-track-sum', text: `${dated.length} roles${dated.every(entry => entry.org === dated[0].org) && dated[0].org ? ` at ${dated[0].org}` : ''} · ${duration(last - first)}${ongoing ? ' and counting' : ''}` }));
 }
@@ -387,7 +397,8 @@ const viewKey = stop => stop.section === 'projects' ? `projects:${stop.id}` : st
 function paint(stop) {
   const meta = SECTIONS[stop.section];
   title.textContent = meta.label; place.textContent = meta.site;
-  panel.dataset.section = stop.section; panel.dataset.entry = stop.id;
+  panel.dataset.section = stop.section; panel.dataset.entry = stop.id; panel.dataset.mode = submerged() ? 'dive' : 'surface';
+  for (const tab of tabs.children) { if (tab.dataset.section === stop.section) tab.setAttribute('aria-current', 'page'); else tab.removeAttribute('aria-current'); }
   if (!panel.open) return;
   // The address names the page being read, without adding history entries or waking other hash listeners.
   try { history.replaceState(history.state, '', `#${hashFor(stop)}`); } catch {}
@@ -492,9 +503,10 @@ addEventListener('afterprint', clearPrint);
 
 // --- Listeners -------------------------------------------------------------------------------------------------------
 page.addEventListener('click', event => {
-  const control = event.target.closest?.('[data-go],[data-lightbox],[data-print],[data-role]');
+  const control = event.target.closest?.('[data-go],[data-lightbox],[data-print],[data-role],[data-section]');
   if (!control || !page.contains(control)) return;
   if (control.dataset.lightbox) openLightbox(panel, media[control.dataset.lightbox], control);
+  else if (control.dataset.section) show(control.dataset.section, null, { focus: '#archive-entry-title' });
   else if (control.dataset.print !== undefined) print();
   else if (control.dataset.go) go(control.dataset.go, { focus: control.dataset.focus });
   else if (control.matches('.arc-track-seg')) show('experience', control.dataset.role, { focus: `#arc-role-${control.dataset.role} h4` });
@@ -521,3 +533,4 @@ page.addEventListener('touchend', event => {
   if (quick && Math.abs(dx) > 64 && Math.abs(dx) > Math.abs(dy) * 2 && !String(getSelection?.() || '') && !lightboxOpen()) step(dx < 0 ? 1 : -1);
 }, { passive: true });
 page.addEventListener('touchcancel', () => { swipe = null; }, { passive: true });
+tabs.addEventListener('click', event => { const tab = event.target.closest('[data-section]'); if (tab) show(tab.dataset.section, null, { focus: '#archive-entry-title' }); });

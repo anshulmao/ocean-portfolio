@@ -8,15 +8,15 @@
 /* 1. Tokens and the sheet */
 #landmark-dialog{
   --tint:#7ff0cf;
-  --text:#eaf6f3;--text-2:#cfe3e0;--muted:#a3c4c4;--dim:#7ea4a6;
-  --sheet:#0b2f3b;--rule:#ffffff14;--card:#ffffff08;--card-hover:#ffffff0f;--ring:#ffffff12;--ring-hover:#ffffff26;--well:#041a27;
+  --text:#e8f3f7;--text-2:#c6d6e2;--muted:#9fb3c8;--dim:#7d91a8;
+  --sheet:#0b1630;--rule:#c8dcff1f;--card:#ffffff08;--card-hover:#ffffff0f;--ring:#c8dcff1f;--ring-hover:#c8dcff33;--well:#040b16;
   --pill:#e0f1e9;--pill-ink:#17434d;--pill-2:#ffffff0e;--pill-2-line:#ffffff24;
   --font:Outfit,system-ui,sans-serif;--mono:"Martian Mono",ui-monospace,Menlo,Consolas,monospace;
   --pad:48px;--measure:62ch;
   box-sizing:border-box;margin:auto;padding:0;width:min(1120px,calc(100vw - 32px));height:min(800px,calc(100dvh - 32px));max-width:none;max-height:none;overflow:hidden;
   display:none;grid-template-rows:auto minmax(0,1fr);
-  border:1px solid #ffffff1f;border-radius:28px;
-  background:radial-gradient(70% 46% at 0% 0%,color-mix(in srgb,var(--tint),transparent 80%),#0000 70%),radial-gradient(50% 40% at 100% 100%,color-mix(in srgb,var(--tint),transparent 90%),#0000 70%),linear-gradient(170deg,#0f3846f2,#082632f7 60%,#07222df8);
+  border:1px solid #c8dcff26;border-radius:28px;
+  background:radial-gradient(70% 46% at 0% 0%,color-mix(in srgb,var(--tint),transparent 80%),#0000 70%),radial-gradient(50% 40% at 100% 100%,color-mix(in srgb,var(--tint),transparent 90%),#0000 70%),linear-gradient(170deg,#101f40f3,#0b1630f8 60%,#070f22fa);
   box-shadow:0 40px 100px -30px #000d1acc,inset 0 1px 0 #ffffff12;color:var(--text);font:400 16px/1.55 var(--font);letter-spacing:0;
   scrollbar-color:#ffffff33 #0000;scrollbar-width:thin;
 }
@@ -32,7 +32,7 @@
 #landmark-dialog[data-section="projects"][data-entry="sage"]{--tint:var(--o-sage,#aee37f)}
 #landmark-dialog[data-section="projects"][data-entry="openclaw"]{--tint:var(--o-claw,#b4c2ff)}
 #landmark-dialog[data-section="projects"][data-entry="ocean-world"]{--tint:var(--o-world,#78d4ff)}
-#landmark-dialog::backdrop{background:#02141fb3;backdrop-filter:none}
+#landmark-dialog::backdrop{background:#030916b8;backdrop-filter:none}
 #landmark-dialog *{box-sizing:border-box}
 #landmark-dialog :is(h2,h3,h4,p,ul,ol,dl,figure){margin:0}
 #landmark-dialog :is(ul,ol){list-style:none;padding:0}
@@ -44,8 +44,17 @@
 html[data-input="touch"] #landmark-dialog kbd{display:none}
 
 /* 2. Header: which section this is, where it is read, and the way out */
-#landmark-dialog .arc-header{display:flex;align-items:center;justify-content:space-between;gap:16px;height:68px;padding:0 16px 0 28px;border-bottom:1px solid var(--rule)}
-#landmark-dialog .arc-place{display:flex;align-items:center;gap:12px;min-width:0}
+#landmark-dialog .arc-header{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:68px;padding:0 16px 0 28px;border-bottom:1px solid var(--rule)}
+#landmark-dialog .arc-tabs{display:none;gap:4px;margin:0 auto;padding:4px;border-radius:999px;background:#ffffff0a;box-shadow:inset 0 0 0 1px var(--ring)}
+#landmark-dialog[data-mode="surface"] .arc-tabs{display:flex}
+#landmark-dialog[data-mode="surface"] .arc-place{flex:0 1 auto}
+#landmark-dialog[data-mode="surface"] .arc-place-site{display:none}
+#landmark-dialog .arc-tabs button{min-height:36px;padding:0 16px;border:0;border-radius:999px;background:none;font:500 13.5px/1 var(--font);color:var(--muted);cursor:pointer;white-space:nowrap;transition:background-color var(--motion-hover) var(--journey-ease),color var(--motion-hover) var(--journey-ease)}
+#landmark-dialog .arc-tabs button:hover{color:var(--text)}
+#landmark-dialog .arc-tabs button[aria-current]{background:var(--pill);color:var(--pill-ink)}
+#landmark-dialog .arc-next{display:flex;flex-wrap:wrap;gap:10px}
+#landmark-dialog .arc-place{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
+#landmark-dialog .dialog-close{margin-left:auto}
 #landmark-dialog .arc-place-dot{width:11px;height:11px;flex:none;border-radius:50%;background:var(--tint);box-shadow:0 0 0 5px color-mix(in srgb,var(--tint),transparent 78%)}
 #landmark-dialog .arc-header{border-bottom-color:color-mix(in srgb,var(--tint),transparent 80%)}
 #landmark-dialog #landmark-title{font:500 16px/1 var(--font);letter-spacing:0;text-transform:none;color:var(--text);text-shadow:none}
@@ -191,7 +200,7 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 #landmark-dialog .arc-media img{display:block;width:100%;height:auto;transition:scale var(--journey-standard) var(--journey-ease)}
 #landmark-dialog .arc-media--hero img{max-height:460px;object-fit:contain}
 #landmark-dialog .arc-media .media-full:is(:hover,:focus-visible) img{scale:1.015}
-#landmark-dialog .arc-expand{position:absolute;right:12px;bottom:12px;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#06283ad9;color:#fff;opacity:0;transition:opacity var(--motion-hover) var(--journey-ease)}
+#landmark-dialog .arc-expand{position:absolute;right:12px;bottom:12px;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#0b1630d9;color:#fff;opacity:0;transition:opacity var(--motion-hover) var(--journey-ease)}
 #landmark-dialog .arc-expand .hud-icon{width:16px;height:16px}
 #landmark-dialog .arc-media .media-full:is(:hover,:focus-visible) .arc-expand{opacity:1}
 /* The screens: one strip that snaps a screen at a time, swiped on touch, arrows and dots below */
@@ -280,9 +289,9 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 #landmark-dialog .dl-empty{padding:22px 24px;border:1px dashed #ffffff26;border-radius:18px;font:400 16px/1.55 var(--font);color:var(--text-2)}
 
 /* 11. The lightbox: a picture over everything, with its caption */
-#landmark-dialog .arc-lightbox{position:fixed;inset:0;display:none;grid-template-rows:auto minmax(0,1fr);justify-items:center;gap:12px;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:clamp(12px,3vw,36px);border:0;background:#02141ff5;color:var(--text);overflow:auto;font-family:var(--font)}
+#landmark-dialog .arc-lightbox{position:fixed;inset:0;display:none;grid-template-rows:auto minmax(0,1fr);justify-items:center;gap:12px;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:clamp(12px,3vw,36px);border:0;background:#040b16f5;color:var(--text);overflow:auto;font-family:var(--font)}
 #landmark-dialog .arc-lightbox[open]{display:grid}
-#landmark-dialog .arc-lightbox::backdrop{background:#02141f80}
+#landmark-dialog .arc-lightbox::backdrop{background:#040b1680}
 #landmark-dialog .arc-lightbox-close{justify-self:end;display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 18px 0 14px;border:1px solid var(--pill-2-line);border-radius:999px;background:var(--pill-2);color:var(--text);font:500 14px/1 var(--font);cursor:pointer}
 #landmark-dialog .arc-lightbox-close kbd{padding:2px 6px;border:1px solid #ffffff2a;border-radius:6px;font:500 11px/1 var(--font);color:var(--muted)}
 #landmark-dialog .arc-lightbox figure{display:grid;grid-template-rows:minmax(0,1fr) auto;justify-items:center;gap:14px;width:100%;max-width:min(1400px,100%);min-height:0;margin:0}
@@ -303,20 +312,54 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 
 /* 13. Phones (and touch screens in landscape): the sheet fills the screen */
 @media(max-width:760px),(pointer:coarse) and (max-height:499px){
-  #landmark-dialog{--pad:18px;width:100vw;height:100dvh;border:0;border-radius:0;background:linear-gradient(170deg,#0f3846fa,#07222dfd)}
-  #landmark-dialog .arc-header{height:60px;padding:0 10px 0 18px;padding-top:env(safe-area-inset-top,0px);height:calc(60px + env(safe-area-inset-top,0px))}
+  #landmark-dialog{--pad:18px;width:100vw;height:100dvh;border:0;border-radius:0;background:linear-gradient(170deg,#101f40fb,#070f22fe)}
+  #landmark-dialog{font-size:15px}
+  #landmark-dialog .arc-header{flex-wrap:wrap;min-height:0;padding:env(safe-area-inset-top,0px) 10px 0 18px;row-gap:0}
+  #landmark-dialog .arc-place{min-height:56px}
+  #landmark-dialog .dialog-close{width:40px;height:40px}
+  #landmark-dialog[data-mode="surface"] .arc-tabs{order:3;flex:1 0 100%;margin:0 -10px 0 -18px;padding:0 18px 10px;border-radius:0;background:none;box-shadow:none;overflow-x:auto;scrollbar-width:none}
+  #landmark-dialog .arc-tabs button{min-height:34px;padding:0 13px;font-size:13px;background:#ffffff0a}
+  #landmark-dialog .arc-page{padding-top:12px}
+  #landmark-dialog .arc-head{padding-top:12px}
+  #landmark-dialog .arc-strap{margin-top:10px;font-size:17px}
+  #landmark-dialog .arc-count{font-size:13px}
+  #landmark-dialog .arc-prose p{font-size:15px;line-height:1.6}
+  #landmark-dialog .arc-prose--lead p{font-size:16px}
+  #landmark-dialog .arc-prose--lead p:first-child{font-size:18px}
+  #landmark-dialog .arc-rule-no{font-size:24px}
+  #landmark-dialog .arc-rules li{padding:16px 16px 18px}
+  #landmark-dialog .arc-rules strong{margin-top:12px;font-size:15.5px}
+  #landmark-dialog .arc-rules p,#landmark-dialog .arc-examples li p{font-size:14px}
+  #landmark-dialog .arc-how-line{font-size:22px}
+  #landmark-dialog .arc-how-strap{font-size:16px}
+  #landmark-dialog .arc-role-body h4{font-size:20px}
+  #landmark-dialog .arc-role-lead{margin-top:10px;font-size:16px}
+  #landmark-dialog .arc-facts li,#landmark-dialog .arc-stages li{font-size:14px}
+  #landmark-dialog .arc-find-text strong{font-size:18px}
+  #landmark-dialog .arc-find-line{font-size:14px}
+  #landmark-dialog .arc-strap--case{font-size:17px}
+  #landmark-dialog .arc-role-line{font-size:14px;margin-top:16px;padding-top:12px}
+  #landmark-dialog .arc-block{padding:18px 0 20px}
+  #landmark-dialog .arc-block p{font-size:15px;margin-top:10px}
+  #landmark-dialog .arc-block:first-child p{font-size:16.5px}
+  #landmark-dialog .arc-evidence,#landmark-dialog .arc-strip-lead{font-size:13px}
+  #landmark-dialog .arc-slide figcaption,#landmark-dialog .arc-media figcaption{font-size:12.5px}
+  #landmark-dialog .arc-resume-meta{font-size:13px}
+  #landmark-dialog .arc-versions a{min-height:44px;font-size:14px}
+  #landmark-dialog .arc-elsewhere{font-size:13px}
   #landmark-dialog .arc-page{padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))}
-  #landmark-dialog .arc-head h3,#landmark-dialog .arc-hero h3,#landmark-dialog .dl-head h3{font-size:34px}
-  #landmark-dialog .arc-head--case h3{font-size:36px}
+  #landmark-dialog .arc-head h3,#landmark-dialog .arc-hero h3,#landmark-dialog .dl-head h3{font-size:29px}
+  #landmark-dialog .arc-head--case h3{font-size:31px}
   #landmark-dialog .arc-hero{grid-template-columns:104px minmax(0,1fr);gap:18px;align-items:start;padding-top:8px}
   #landmark-dialog .arc-portrait{aspect-ratio:1;border-radius:22px}
-  #landmark-dialog .arc-hero-role{margin-top:8px;font-size:17px}
+  #landmark-dialog .arc-hero-role{margin-top:6px;font-size:15.5px}
   #landmark-dialog .arc-hero .arc-pills,#landmark-dialog .arc-hero .arc-welcome{grid-column:1/-1}
   #landmark-dialog .arc-pill{min-height:42px;padding:0 16px;font-size:13.5px}
   #landmark-dialog .arc-pills{gap:8px;margin-top:18px}
-  #landmark-dialog .arc-where{margin-top:12px;gap:6px 16px;font-size:14px}
-  #landmark-dialog .arc-bio,#landmark-dialog .arc-how{margin-top:40px;padding-top:24px}
+  #landmark-dialog .arc-where{margin-top:10px;gap:6px 14px;font-size:13px}
+  #landmark-dialog .arc-bio,#landmark-dialog .arc-how{margin-top:32px;padding-top:20px}
   #landmark-dialog .arc-rules{gap:10px}
+  #landmark-dialog .arc-track-axis [data-tight]{display:none}
   #landmark-dialog .arc-roles::before{display:none}
   #landmark-dialog .arc-role{grid-template-columns:1fr;gap:12px;padding:24px 0 28px}
   #landmark-dialog .arc-role-dot{position:static;display:inline-block;vertical-align:middle;margin:0 10px 2px 0}
