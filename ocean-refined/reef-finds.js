@@ -136,12 +136,19 @@ function hat() {
 const BUILD = { compass, sextant, medallion, conch, hat };
 
 // --- The finds on the reef -----------------------------------------------------------------------------------------
-export function createReefFinds({ floor }) {
+// The same, built a find at a time with a pause between (await pause()), so no single task carries the lot.
+export async function createReefFindsInSteps({ floor }, pause) {
+  const finds = createReefFinds({ floor, deferred: true });
+  for (let id = 0; id < FINDS.length; id++) { await pause(); finds.build(id); }
+  return finds;
+}
+export function createReefFinds({ floor, deferred = false }) {
   const root = new THREE.Group(); root.name = 'Reef finds';
   const gold = new THREE.MeshStandardMaterial({ name: 'Reef find gold', color: '#f2b93a', metalness: .3, roughness: .34, emissive: '#9a6412', emissiveIntensity: .45, flatShading: true });
   const glass = new THREE.MeshStandardMaterial({ name: 'Reef find glass', color: '#d5ecf2', metalness: .7, roughness: .12, emissive: '#3c6370', emissiveIntensity: .35, flatShading: true });
-  const items = FINDS.map((find, id) => {
-    const made = BUILD[find.key](), material = gold.clone(), group = new THREE.Group(), spin = new THREE.Group();
+  const items = [];
+  function build(id) {
+    const find = FINDS[id], made = BUILD[find.key](), material = gold.clone(), group = new THREE.Group(), spin = new THREE.Group();
     group.name = `Reef find · ${find.name}`; group.add(spin);
     const body = new THREE.Mesh(made.body, material); body.name = `${find.name} body`; spin.add(body);
     let part = null, drum = null, shades = null;
@@ -153,8 +160,9 @@ export function createReefFinds({ floor }) {
     if (made.shades) { shades = new THREE.Mesh(made.shades, material); shades.name = `${find.name} shades`; shades.position.fromArray(made.shadesAt); spin.add(shades); }
     const y = floor(find.x, find.z) + HOVER;
     group.position.set(find.x, y, find.z); root.add(group);
-    return { id, ...find, y, group, spin, body, part, drum, shades, material, phase: id * 1.37, taken: 0, collected: false, shown: false };
-  });
+    items[id] = { id, ...find, y, group, spin, body, part, drum, shades, material, phase: id * 1.37, taken: 0, collected: false, shown: false };
+  }
+  if (!deferred) FINDS.forEach((_, id) => build(id));
   let time = 0;
   const player = new THREE.Vector3();
   /** player: where the diver is (or null for the orbit viewer: everything drawn). */
@@ -162,7 +170,7 @@ export function createReefFinds({ floor }) {
     time += dt; root.visible = underwater; if (!underwater) return;
     if (from) player.copy(from);
     for (const it of items) {
-      if (it.collected && it.taken >= 1) continue;
+      if (!it || (it.collected && it.taken >= 1)) continue;
       const near = !from || Math.hypot(player.x - it.x, player.y - it.y, player.z - it.z) < REACH;
       it.group.visible = near; if (!near) continue;
       const t = time + it.phase, g = it.group, s = it.spin;
@@ -189,5 +197,5 @@ export function createReefFinds({ floor }) {
     }
   }
   function take(id) { const it = items[id]; if (!it || it.collected) return false; it.collected = true; it.taken = 0; return true; }
-  return { root, items, update, take, material: gold };
+  return { root, items, update, take, build, material: gold };
 }

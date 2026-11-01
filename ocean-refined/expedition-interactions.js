@@ -6,7 +6,7 @@ import { createSafetyStopClock, SAFETY_STOP_SECONDS, inSafetyStopRange } from '.
 import {sendFeedback} from './submissions.js';
 import {addPhoto} from './dive-log.js';
 import {track} from './analytics.js';
-import {FINDS, createReefFinds} from './reef-finds.js';
+import {FINDS, createReefFindsInSteps} from './reef-finds.js';
 import {seabedHeightAt} from './reef.js';
 
 // Visitor submissions are explicit; photos stay in memory for the dive summary unless shared from there.
@@ -174,17 +174,27 @@ function takePhoto() {
   } catch { say('This browser could not take a photo. Please try again after the scene finishes loading.'); }
 }
 const blobOf = (canvas, quality) => new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(Error('photo')), 'image/jpeg', quality));
+let building = false;
 function buildArtifacts(controls) {
   const terrain = controls.reef?.userData.terrainHeightAt;
-  if (mesh || typeof terrain !== 'function') return;
+  if (mesh || building || typeof terrain !== 'function') return;
+  building = true;
   // They hover over the sand as it is drawn, which can lie above the terrain on a slope.
   const floor = (x,z) => Math.max(terrain(x,z), seabedHeightAt(x,z,false), seabedHeightAt(x,z,true));
-  reefFinds = createReefFinds({floor}); mesh = reefFinds.root;
-  for (const item of finds) item.y = reefFinds.items[item.id].y;
-  controls.getScene().add(mesh);
-  // Compiled now, off the dive's first sight of one (all five share the one program).
-  const renderer = controls.getRenderer?.(), camera = controls.getCamera?.();
-  if (renderer?.compileAsync && camera) renderer.compileAsync(mesh, camera, controls.getScene()).catch(()=>{});
+  for (const item of finds) item.y = floor(item.x,item.z) + .5;
+  // Built a find per task, away from a tap (whenQuiet), and kept hidden until their one shader has been compiled, so
+  // neither the building nor the first draw holds up a frame the visitor is waiting on.
+  const pause = () => new Promise(resolve => setTimeout(resolve, 30)).then(() => controls.whenQuiet?.());
+  createReefFindsInSteps({floor}, pause).then(async built => {
+    // Compiled before they join the scene (compileAsync takes the scene's lights only), then shown.
+    const renderer = controls.getRenderer?.(), camera = controls.getCamera?.();
+    await pause();
+    if (renderer?.compileAsync && camera) try { await renderer.compileAsync(built.root, camera, controls.getScene()); } catch {}
+    await pause();
+    built.update(0, controls.getPlayerPosition(), Boolean(window.oceanDiagnostics?.submerged)); controls.getScene().add(built.root);
+    reefFinds = built; mesh = built.root;
+    for (const item of finds) item.y = built.items[item.id].y;
+  });
 }
 onTick(dt=> {
   updateStopClock(dt);

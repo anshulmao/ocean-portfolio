@@ -189,6 +189,14 @@ const prepared=new WeakSet();
 // A visitor waiting on the work (a dive asked for before the world is ready) gets most of every interval instead.
 const GPU=Symbol('gpu'),jobs=[],buildName='the world under the water',work=diagnostic.work={pending:0,steps:0,ms:0,longest:0,longestName:'',over8:0,over16:0,gpuSteps:0,turns:0,long:[]};
 let jobDebt=0,jobsStarved=0,jobsAt=-1e9,jobsQuietAt=-1e9,jobFrameAt=0,jobGap=0,jobFrameDrew=false,jobPosted=false,pumpQueued=false,gpuRest=0,gpuRan=false,paceGap=16.7,hurry=0,ticking=false;
+// Input first. For a moment after a tap, a click or a key press, nothing from the queue runs and nothing newly prepared
+// is shown for the first time: the frame that answers the visitor carries only its own drawing, not a shader link or a
+// texture upload that happened to be next (interaction to next paint; a tap on a tablet waited 200-700 ms behind them).
+// A finger held on the stick or a drag does not count, so the world keeps loading while the diver swims.
+const INPUT_QUIET=300;let inputQuietUntil=0;
+for(const type of ['pointerdown','pointerup','click','keydown'])addEventListener(type,()=>{inputQuietUntil=performance.now()+INPUT_QUIET;},{capture:true,passive:true});
+const inputQuiet=()=>!document.hidden&&performance.now()<inputQuietUntil;
+const quietPassed=()=>new Promise(resolve=>{const check=()=>{if(inputQuiet())setTimeout(check,inputQuietUntil-performance.now()+1);else resolve();};check();});
 // urgent: ahead of everything queued (what a held dive waits on, the landmarks, goes before the first draws of the rest).
 function later(name,task,{gpu=false,cost=1,tally=null,urgent=false}={}){
   return new Promise((resolve,reject)=>{const job={name,task,steps:null,resolve,reject,gpu,cost,tally,waiting:false};if(urgent)jobs.unshift(job);else jobs.push(job);work.pending=jobs.length;pump();wake();});
@@ -211,6 +219,7 @@ function stepJob(job){
 // kind: 'gpu' takes one GPU step, 'cpu' the steps of this thread up to the budget, 'all' both (no frame is being drawn). Returns the steps taken.
 // strict: nothing whose expected time exceeds the budget, and no model-pipeline turn (their slices run over in parsing).
 function runJobs(budget,kind,strict=false){
+  if(inputQuiet())return 0;
   const start=performance.now();let ran=0;
   for(let i=0;i<jobs.length;){
     const job=jobs[i];
@@ -408,7 +417,7 @@ const nextTask=()=>new Promise(resolve=>{const channel=new MessageChannel();chan
 async function showWhenReady(nodes){
   if(!nodes.length)return;
   try{await later('prop shaders',function*(){const linking=new Set();for(const node of nodes)yield* compileSteps(node,linking);yield programsLinked(linking);});}catch{}
-  for(const node of nodes)node.userData.waiting=false;
+  await quietPassed();for(const node of nodes)node.userData.waiting=false;
   if(uniforms.uDive.value===0)warmLater(...nodes);wake();
 }
 async function prepare(root,urgent=false){
@@ -417,7 +426,7 @@ async function prepare(root,urgent=false){
   try{await later('model shaders',()=>compileSteps(root),{urgent});}catch{}
   for(const texture of textures)try{await later('texture upload',function*(){if(!hurry)yield caughtUp();renderer.initTexture(texture);},{gpu:true,urgent});}catch{}
   if(uniforms.uDive.value===0)warmLater(root);
-  prepared.add(root);wake();
+  await quietPassed();prepared.add(root);wake();
 }
 // Prewarm after the surface is interactive; the dive button can request it sooner.
 // Visitors who explicitly enable data saving defer these downloads until diving.
@@ -488,7 +497,7 @@ function beginModels(){
 }
 // Set for one frame when the diver is moved at once (start-at-site, tour cuts): the camera cuts with it instead of sweeping.
 let snapCamera=false;
-Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayerPosition,getCamera:()=>camera,getScene:()=>scene,viewer:{get orbit(){return viewerOrbit;},layers:()=>({reef,creatures:[marine?.root,extraLife?.root,userCreatures?.root],corals:userCorals?.root,models:modelScene?.root,diver:diver?.root,water,coast:distantScenery?.root,clouds:clouds?.group,life:livingWorld?.root,formations:heroFormations?.root}),focusPoint(point,distance=30){if(!viewerOrbit)return;viewerOrbit.target.copy(point);camera.position.copy(point).add(new THREE.Vector3(distance*.6,distance*.3,distance));viewerOrbit.update();wake();},focus(preset){const views={surface:[[0,2,0],35],reef:[[0,-18,-35],25],deep:[[0,-40,-82],25],overview:[[0,-15,-45],110]};const [point,distance]=views[preset]||views.reef;this.focusPoint(new THREE.Vector3(...point),distance);}},getMode,getTransition,getRenderer:()=>renderer,
+Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayerPosition,getCamera:()=>camera,getScene:()=>scene,viewer:{get orbit(){return viewerOrbit;},layers:()=>({reef,creatures:[marine?.root,extraLife?.root,userCreatures?.root],corals:userCorals?.root,models:modelScene?.root,diver:diver?.root,water,coast:distantScenery?.root,clouds:clouds?.group,life:livingWorld?.root,formations:heroFormations?.root}),focusPoint(point,distance=30){if(!viewerOrbit)return;viewerOrbit.target.copy(point);camera.position.copy(point).add(new THREE.Vector3(distance*.6,distance*.3,distance));viewerOrbit.update();wake();},focus(preset){const views={surface:[[0,2,0],35],reef:[[0,-18,-35],25],deep:[[0,-40,-82],25],overview:[[0,-15,-45],110]};const [point,distance]=views[preset]||views.reef;this.focusPoint(new THREE.Vector3(...point),distance);}},getMode,getTransition,getRenderer:()=>renderer,whenQuiet:quietPassed,
   // Weather: set('clear'|'rain'|'storm') cross-fades to that state and holds it, set('auto') lets it drift again. Time: lock stops the clock advancing by itself; scrubbing and presets still work.
   weather:{get state(){return weather?.state??'clear';},get target(){return weather?.target??'clear';},get locked(){return weather?.locked??false;},set(name){const result=weather?.set(name);wake();return result;},lock(value=true){const result=weather?.lock(value);wake();return result;},states:['clear','rain','storm']},
   time:{get locked(){return timeLocked;},lock(value=true){timeLocked=Boolean(value);diagnostic.timeLocked=timeLocked;try{localStorage.setItem('ocean-time-lock',timeLocked?'1':'0');}catch{}window.dispatchEvent(new CustomEvent('oceantimelockchange',{detail:{locked:timeLocked}}));wake();return timeLocked;}},

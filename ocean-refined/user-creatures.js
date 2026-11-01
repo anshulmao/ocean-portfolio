@@ -69,7 +69,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   const root = new THREE.Group(); root.name = 'Creature set';
   const pair = value => Array.isArray(value) ? value[economy ? 1 : 0] : value;
   // sentinel: where the wreck's barracuda is, and how often a diver has crowded it into bolting.
-  const diagnostics = { sentinel: { at: null, darts: 0 }, loading: {}, ready: false, loaded: 0, loadedSpecies: 0, failed: 0, species: 0, errors: [], visitors: 0, visitorCount: 0, schoolFish: 0, schoolCount: 0, schoolDrawCalls: 0, encounters: { active: [], history: [] } };
+  const diagnostics = { slowestFrame: 0, frame: 0, sentinel: { at: null, darts: 0 }, loading: {}, ready: false, loaded: 0, loadedSpecies: 0, failed: 0, species: 0, errors: [], visitors: 0, visitorCount: 0, schoolFish: 0, schoolCount: 0, schoolDrawCalls: 0, encounters: { active: [], history: [] } };
   const gltfs = new Map(), facts = new Map(), actors = [], groups = [], kinds = new Map(), herds = [];
   let clock = 0, frame = 0;
 
@@ -750,17 +750,9 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     const ff = SCHOOLS.flyingFish;
     shoal(ff.species, route(...ff.loop, { wobble: .12 }), level(ff.y, .25, 9), ff.speed, pair(ff.count), ff.spread, { pose: ff.pose, drift: .3, bob: .05 });
     // Sea stars and urchins on the bottom: still instances, each its own small group so it is culled on its own.
-    for (const bed of Object.values(SEABED)) {
-      const n = pair(bed.count);
-      for (let i = 0; i < n; i++) {
-        const species = bed.species[i % bed.species.length]; if (!gltfs.has(species)) continue;
-        let [x, z] = seabedSpot(i, n, bed.phase); if (solid(x, z)) [x, z] = sand(x, z, .6);
-        const g = schoolGroup(species, { kind: 'bed', count: 1, lod: 1, clip: 'idle' }); if (!g) continue;
-        const scale = bed.scale[0] + (bed.scale[1] - bed.scale[0]) * ((i * .618) % 1), yaw = i * 1.7, length = L(species) * scale;
-        lie(x, z, yaw, length, bottomOf(species) * scale);
-        g.centre.set(x, LIE.y, z); g.radius = length * .6;
-        g.members.push({ x, y: LIE.y, z, yaw, pitch: LIE.pitch, roll: LIE.roll, scale, beat: 0, hx: x, hz: z, lift: bottomOf(species) * scale, crawl: species.endsWith('sea-star') ? rr(.008, .02) : 0, seed: rr(0, TAU) });
-      }
+    for (const b of seabedPlaces) {
+      const g = schoolGroup(b.species, { kind: 'bed', count: 1, lod: 1, clip: 'idle' }); if (!g) continue;
+      g.centre.set(b.x, b.y, b.z); g.radius = b.length * .6; g.members.push(b);
     }
     // One mesh a species; the groups in sight are packed to its front each frame.
     for (const k of kinds.values()) {
@@ -769,6 +761,23 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); mesh.frustumCulled = false; mesh.count = 0; mesh.visible = false;
       k.beats = new THREE.InstancedBufferAttribute(new Float32Array(k.capacity), 1); k.beats.setUsage(THREE.DynamicDrawUsage); mesh.geometry.setAttribute('aBeat', k.beats);
       k.mesh = mesh; root.add(mesh); diagnostics.schoolDrawCalls++;
+    }
+  }
+  // Where each sea star and urchin lies (open sand near its spot, on the slope there), worked out a dozen at a time
+  // before the schools are built: all at once it was a single task of 30 ms here, several times that on a tablet.
+  const seabedPlaces = [];
+  async function placeSeabed() {
+    let done = 0;
+    for (const bed of Object.values(SEABED)) {
+      const n = pair(bed.count);
+      for (let i = 0; i < n; i++) {
+        const species = bed.species[i % bed.species.length]; if (!gltfs.has(species)) continue;
+        let [x, z] = seabedSpot(i, n, bed.phase); if (solid(x, z)) [x, z] = sand(x, z, .6);
+        const scale = bed.scale[0] + (bed.scale[1] - bed.scale[0]) * ((i * .618) % 1), yaw = i * 1.7, length = (facts.get(species)?.lengthMetres || 1) * scale, lift = bottomOf(species) * scale;
+        lie(x, z, yaw, length, lift);
+        seabedPlaces.push({ species, length, x, y: LIE.y, z, yaw, pitch: LIE.pitch, roll: LIE.roll, scale, beat: 0, hx: x, hz: z, lift, crawl: species.endsWith('sea-star') ? rr(.008, .02) : 0, seed: rr(0, TAU) });
+        if (++done % 12 === 0) await turn();
+      }
     }
   }
   // Where the reef's sea stars and urchins have always been: a staggered zigzag from the shallows to the deep ledge, kept
@@ -890,6 +899,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     timed('residents', buildResidents); await turn();
     timed('puppets', buildPuppets); await turn();
     timed('encounters', buildEncounters); await turn();
+    const placing = performance.now(); await placeSeabed(); diagnostics.loading.seabed = Math.round(performance.now() - placing);
     timed('schools', buildSchools); await turn();
     diagnostics.loading.total = Math.round(performance.now() - started);
     update(0); diagnostics.ready = true;
@@ -898,11 +908,13 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
 
   /** view: { frustum, eye, range } or null (the orbit viewer: everything resident is drawn). */
   function update(dt = 0, player = null, view = null) {
-    const step = Math.min(.1, Math.max(0, dt)); clock += step; frame++; swimTime.value = clock;
+    const started = performance.now(), step = Math.min(.1, Math.max(0, dt)); clock += step; frame++; swimTime.value = clock;
     coverLate();
     if (step > 0) { direct(step, player, view); driveResidents(step, player); }
     for (const a of actors) present(a, step, view);
     paintSchools(step, player, view);
+    // The slowest a frame of this set has been (ms): nothing here should ever hold up a tap.
+    const spent = performance.now() - started; diagnostics.frame = Math.round(spent * 100) / 100; if (spent > diagnostics.slowestFrame) diagnostics.slowestFrame = Math.round(spent * 10) / 10;
   }
 
   Object.defineProperties(diagnostics, {
