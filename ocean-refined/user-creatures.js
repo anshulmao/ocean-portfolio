@@ -117,6 +117,16 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   function coverLate() {
     const boxes = collisions?.boxes; if (!boxes || covered < 0 || boxes.length <= covered) return;
     coverBoxes(covered, true);
+    // Coral colonies can arrive after an animal has settled on the sand (the coral set loads alongside this one): one
+    // now lying in a colony moves to the nearest open sand.
+    for (const s of sleepers) {
+      const a = s.actor; if (s.go > 0) continue;
+      const fx = Math.sin(a.yaw) * a.L * .45, fz = Math.cos(a.yaw) * a.L * .45;
+      if (!solid(a.pos.x, a.pos.z) && !solid(a.pos.x + fx, a.pos.z + fz) && !solid(a.pos.x - fx, a.pos.z - fz)) continue;
+      const place = restingPlace(a.pos.x, a.pos.z, Math.max(2, a.L * .6), a.L); if (!place) continue;
+      const [x, z, yaw] = place; a.yaw = yaw; lie(x, z, a.yaw, a.L, s.lift); a.pos.set(x, LIE.y, z); a.pitch = LIE.pitch; a.roll = LIE.roll;
+      a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(-a.pitch, a.yaw, a.roll, 'YXZ');
+    }
   }
   function cover(x, z) {
     const fx = clamp(x - GX, 0, GW - 1.001), fz = clamp(z - GZ, 0, GH - 1.001), ix = fx | 0, iz = fz | 0, tx = fx - ix, tz = fz - iz, i = iz * GW + ix;
@@ -136,14 +146,36 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     LIE.y = Math.max(floor(x, z), (nose + tail + left + right) / 4) + lift;
     return LIE;
   }
-  /** Open, fairly level sand near a wished-for spot: for the animals that lie on the bottom. */
-  function sand(x, z, radius = 2) {
+  /** Open, fairly level sand near a wished-for spot: for the animals that lie on the bottom. strict: null when there is
+   *  none within 16 m (otherwise the wished-for spot itself, open or not). */
+  function sand(x, z, radius = 2, strict = false) {
     for (let ring = 0; ring <= 16; ring++) for (let k = 0, n = ring ? ring * 6 : 1; k < n; k++) {
       const a = k / n * TAU + ring, px = x + Math.cos(a) * ring, pz = z + Math.sin(a) * ring; let ok = Math.abs(px) < 58 && pz > -100 && pz < 30;
       for (let s = 0; ok && s < 6; s++) { const qx = px + Math.cos(s * TAU / 6) * radius, qz = pz + Math.sin(s * TAU / 6) * radius; ok = !solid(qx, qz) && Math.abs(terrain(qx, qz) - terrain(px, pz)) < radius * .45; }
       if (ok && !solid(px, pz)) return [px, pz];
     }
-    return [x, z];
+    return strict ? null : [x, z];
+  }
+  /** A flat body lying on the sand (a sea star, an urchin): fitted to the slope with lie(), then raised as far as it
+   *  takes for its nose, tail and both sides to clear the sand under them as it is tilted. Written to LIE. */
+  function settleFlat(x, z, yaw, length, lift) {
+    lie(x, z, yaw, length, lift);
+    const r = length * .45, fx = Math.sin(yaw), fz = Math.cos(yaw), up = Math.sin(LIE.pitch) * r, side = Math.sin(LIE.roll) * r * .5;
+    LIE.y = Math.max(LIE.y, floor(x + fx * r, z + fz * r) - up + .015, floor(x - fx * r, z - fz * r) + up + .015,
+      floor(x + fz * r * .5, z - fx * r * .5) - side + .015, floor(x - fz * r * .5, z + fx * r * .5) + side + .015);
+    return LIE;
+  }
+  /** Whether the drawn sand at (x, z) slopes more than about one in three. */
+  const steep = (x, z) => Math.max(Math.abs(floor(x + .5, z) - floor(x - .5, z)), Math.abs(floor(x, z + .5) - floor(x, z - .5))) > .34;
+  /** Whether a body of this length lying at (x, z) along yaw is clear of the reef from nose to tail. */
+  const clearBody = (x, z, yaw, length) => { for (const t of [-.45, -.2, 0, .2, .45]) if (solid(x + Math.sin(yaw) * length * t, z + Math.cos(yaw) * length * t)) return false; return true; };
+  /** A resting place for a long body near a wished-for spot: open sand, clear nose to tail on some heading; or null. */
+  function restingPlace(x, z, clear, length) {
+    for (const r of [clear, clear * .7, 2]) {
+      const spot = sand(x, z, r, true); if (!spot) continue;
+      for (let k = 0; k < 8; k++) { const yaw = k / 8 * TAU + rr(0, .3); if (clearBody(spot[0], spot[1], yaw, length)) return [spot[0], spot[1], yaw]; }
+    }
+    return null;
   }
   // What the reef offers to gather round: the tall formations, the coral gardens, residents' sites and landmarks.
   const formations = () => (sites.formations || []).map(s => ({ name: s.name, x: s.position[0], y: s.position[1], z: s.position[2], radius: s.radius, height: s.height }));
@@ -505,8 +537,10 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   }
   // An animal lying still on open sand near a wished-for spot, nose-up or rolled to the slope.
   function rest(species, near, clear, lift, name, scale = 1) {
+    // Nowhere open and clear enough near the spot: better no animal than one lying in the coral.
+    const place = restingPlace(...near, clear, (facts.get(species)?.lengthMetres || 1) * scale); if (!place) { diagnostics.unplaced = [...(diagnostics.unplaced || []), name]; return null; }
     const a = actor(species, { clip: 'rest', name, scale }); if (!a) return null;
-    const [x, z] = sand(...near, clear); a.yaw = rr(0, TAU); lie(x, z, a.yaw, a.L, lift * scale); a.pos.set(x, LIE.y, z); a.pitch = LIE.pitch; a.roll = LIE.roll; a.started = true;
+    const [x, z, yaw] = place; a.yaw = yaw; lie(x, z, a.yaw, a.L, lift * scale); a.pos.set(x, LIE.y, z); a.pitch = LIE.pitch; a.roll = LIE.roll; a.started = true;
     a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(-a.pitch, a.yaw, a.roll, 'YXZ');
     const wake = RESIDENTS.wake[species];
     if (wake) sleepers.push({ actor: a, wake, go: 0, from: new THREE.Vector3(), to: new THREE.Vector3(), yaw: 0, pitch: [0, 0], roll: [0, 0], lift: lift * scale, calm: 0 });
@@ -531,8 +565,9 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       } else if (player && s.calm <= 0 && a.pos.distanceToSquared(player) < w.flee * w.flee) {
         const base = Math.atan2(a.pos.x - player.x, a.pos.z - player.z);
         for (const t of [0, .5, -.5, 1, -1, 1.6, -1.6]) {
-          const [x, z] = sand(a.pos.x + Math.sin(base + t) * w.hop, a.pos.z + Math.cos(base + t) * w.hop, 2.5);
-          if (Math.abs(x) > 56 || z < -99 || z > 28 || Math.hypot(x - a.pos.x, z - a.pos.z) < w.hop * .5) continue;
+          const spot = sand(a.pos.x + Math.sin(base + t) * w.hop, a.pos.z + Math.cos(base + t) * w.hop, 2.5, true); if (!spot) continue;
+          const [x, z] = spot;
+          if (Math.abs(x) > 56 || z < -99 || z > 28 || Math.hypot(x - a.pos.x, z - a.pos.z) < w.hop * .5 || !clearBody(x, z, base + t, a.L)) continue;
           lie(x, z, base + t, a.L, s.lift); s.from.copy(a.pos); s.to.set(x, LIE.y, z); s.pitch = [a.pitch, LIE.pitch]; s.roll = [a.roll, LIE.roll]; s.go = 1;
           play(a, 'fast', .2); break;
         }
@@ -639,21 +674,24 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       }
     }
     // Cuttlefish drift a slow figure of eight off their formation. Within a few body lengths they turn to watch the
-    // diver; closer, they back away still facing them, and a diver who keeps coming gets a flash of raised arms.
+    // diver; closer, a flash of raised arms, and a diver who keeps coming sees it turn and jet away.
     // Lionfish barely move: a slow turn about their spot, fans out. Come within a few metres and one swings round to
-    // face you, head down and spines forward; any closer and it gives ground, still facing you.
+    // face you, head down and spines forward; any closer and it turns its back and glides off. Like any fish it only
+    // moves the way it faces: it turns on the spot first, then goes.
     for (const h of hovering) {
       if (h.kind !== 'lion') continue;
       const a = h.actor, d = player ? a.pos.distanceTo(player) : Infinity; h.drift += dt * .05;
       C.set(h.home.x + Math.cos(h.drift) * .8, 0, h.home.z + Math.sin(h.drift * 1.3) * .6);
-      let yaw = h.drift * 2.2 + Math.sin(clock * .2 + h.drift) * .6, clip = 'hover';
+      const gap = Math.hypot(C.x - a.pos.x, C.z - a.pos.z);
+      let yaw = gap > .25 ? Math.atan2(C.x - a.pos.x, C.z - a.pos.z) : h.drift * 2.2 + Math.sin(clock * .2 + h.drift) * .6, clip = 'hover';
       if (d < 4.5) {
         const ax = a.pos.x - player.x, az = a.pos.z - player.z, al = Math.hypot(ax, az) || 1;
-        yaw = Math.atan2(-ax, -az); clip = 'threat';
-        if (d < 2.2) C.set(a.pos.x + ax / al * 1.2, 0, a.pos.z + az / al * 1.2); else C.set(a.pos.x, 0, a.pos.z);
+        if (d < 2.2) { yaw = Math.atan2(ax, az); clip = 'swim'; C.set(a.pos.x + ax / al * 1.5, 0, a.pos.z + az / al * 1.5); }
+        else { yaw = Math.atan2(-ax, -az); clip = 'threat'; C.set(a.pos.x, 0, a.pos.z); }
       }
+      if (Math.abs(turnTo(a.yaw, yaw)) > .5) C.set(a.pos.x, 0, a.pos.z);
       C.y = Math.min(-2, cover(C.x, C.z) + h.height + Math.sin(clock * .5 + h.drift * 3) * .1);
-      a.ease = d < 2.2 ? 1.2 : .4; place(a, C, yaw, 0, 0, dt);
+      a.ease = d < 2.2 ? .9 : .4; place(a, C, yaw, 0, 0, dt);
       if (a.clip !== clip) play(a, clip, .8);
     }
     for (const h of hovering) {
@@ -674,13 +712,18 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
         h.stalk = 0;
         const ax = a.pos.x - player.x, az = a.pos.z - player.z, al = Math.hypot(ax, az) || 1;
         yaw = Math.atan2(-ax, -az);
-        if (d < 4.5) { C.set(a.pos.x + ax / al * 2.5, 0, a.pos.z + az / al * 2.5); clip = 'back'; } else C.set(a.pos.x, 0, a.pos.z);
-        if (d < 3.2 && h.flash <= 0) { play(a, 'flash', .3, true, 'hover'); h.flash = 14; }
+        // Watching, it holds its place and faces the diver; too close, after its warning, it turns and jets off.
+        if (d < 2.4 && h.flash < 10) { yaw = Math.atan2(ax, az); C.set(a.pos.x + ax / al * 2.5, 0, a.pos.z + az / al * 2.5); clip = 'fast'; } else C.set(a.pos.x, 0, a.pos.z);
+        if (d < 3.4 && h.flash <= 0) { play(a, 'flash', .3, true, 'hover'); h.flash = 14; }
       }
+      // Like any swimmer it moves only the way it faces: it turns on the spot first, then goes.
+      if (Math.abs(turnTo(a.yaw, yaw)) > .5) C.set(a.pos.x, 0, a.pos.z);
       // Never far from home, and never into the coral.
       const off = Math.hypot(C.x - h.home.x, C.z - h.home.z); if (off > 9) { C.x = h.home.x + (C.x - h.home.x) * 9 / off; C.z = h.home.z + (C.z - h.home.z) * 9 / off; }
       C.y = Math.min(-2, cover(C.x, C.z) + h.height);
-      place(a, C, yaw, 0, Math.sin(clock * .4 + h.drift) * .04, dt);
+      // It banks into the turn it is making (rolled to the inside), by how fast it is turning.
+      const turning = dt > 0 ? turnTo(h.lastYaw ?? a.yaw, a.yaw) / dt : 0; h.lastYaw = a.yaw;
+      place(a, C, yaw, 0, clamp(-turning * .3, -.18, .18), dt);
       if (a.clip !== clip && a.clip !== 'flash' && a.clip !== 'strike') play(a, clip, .7);
     }
     drivePuppets();
@@ -772,9 +815,11 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       const n = pair(bed.count);
       for (let i = 0; i < n; i++) {
         const species = bed.species[i % bed.species.length]; if (!gltfs.has(species)) continue;
-        let [x, z] = seabedSpot(i, n, bed.phase); if (solid(x, z)) [x, z] = sand(x, z, .6);
+        // Open sand that is not too steep: a flat star on a steep bank sank its downhill arms into it.
+        let [x, z] = seabedSpot(i, n, bed.phase);
+        if (solid(x, z) || steep(x, z)) { const spot = sand(x, z, .8, true); if (!spot || steep(...spot)) continue; [x, z] = spot; }
         const scale = bed.scale[0] + (bed.scale[1] - bed.scale[0]) * ((i * .618) % 1), yaw = i * 1.7, length = (facts.get(species)?.lengthMetres || 1) * scale, lift = bottomOf(species) * scale;
-        lie(x, z, yaw, length, lift);
+        settleFlat(x, z, yaw, length, lift);
         seabedPlaces.push({ species, length, x, y: LIE.y, z, yaw, pitch: LIE.pitch, roll: LIE.roll, scale, beat: 0, hx: x, hz: z, lift, crawl: species.endsWith('sea-star') ? rr(.008, .02) : 0, seed: rr(0, TAU) });
         if (++done % 12 === 0) await turn();
       }
@@ -863,7 +908,12 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
           if (m.crawl && dt > 0) {
             const home = Math.atan2(m.hx - m.x, m.hz - m.z), away = Math.hypot(m.hx - m.x, m.hz - m.z);
             m.yaw += (Math.sin(t * .07 + m.seed) * .05 + (away > 1.5 ? turnTo(m.yaw, home) * .2 : 0)) * dt;
-            m.x += Math.sin(m.yaw) * m.crawl * dt; m.z += Math.cos(m.yaw) * m.crawl * dt; m.y = floor(m.x, m.z) + m.lift; g.centre.set(m.x, m.y, m.z);
+            // It will not creep onto steep ground or into the reef: there it turns back.
+            const nx = m.x + Math.sin(m.yaw) * m.crawl * dt, nz = m.z + Math.cos(m.yaw) * m.crawl * dt;
+            if (steep(nx + Math.sin(m.yaw) * .3, nz + Math.cos(m.yaw) * .3) || solid(nx, nz)) { m.yaw += Math.PI * .75; m.fit = 0; } else { m.x = nx; m.z = nz; }
+            // Fitted to the sand under it again every quarter second: its arms follow the slope it has crept onto.
+            if ((m.fit = (m.fit ?? m.seed) - dt) <= 0 || Math.abs(turnTo(m.fitYaw ?? m.yaw, m.yaw)) > .15) { m.fitYaw = m.yaw; m.fit = .25; settleFlat(m.x, m.z, m.yaw, m.length, m.lift); m.y = LIE.y; m.pitch = LIE.pitch; m.roll = LIE.roll; }
+            g.centre.set(m.x, m.y, m.z);
           }
           write(k, m.x, m.y, m.z, m.yaw, m.pitch, m.roll, m.scale, m.beat);
         }
@@ -931,7 +981,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     actors: () => actors.map(a => ({ name: a.name, species: a.species, active: a.active, seen: a.seen, clip: a.clip, x: a.pos.x, y: a.pos.y, z: a.pos.z, yaw: a.yaw, pitch: a.pitch, roll: a.roll, length: a.L, rate: a.mixer.timeScale })),
     /** The instanced groups, in the order they are packed into their species' mesh. */
     groups: () => groups.map(g => ({ name: g.name, kind: g.kind, species: g.k.species, key: g.k.key, active: g.active, shown: g.shown, count: g.members.length, centre: g.centre.toArray(), radius: g.radius, spread: g.spread, size: g.size })),
-    swimmers: () => [...herds, ...groups.filter(g => g.kind === 'shoal')].flatMap((g, group) => g.members.filter(m => m.nav).map(m => ({ group: g.name ? `${g.name} #${groups.indexOf(g)}` : `herd ${group}`, route: [g.route.cx, g.route.cz, g.route.rx, g.route.rz], species: m.actor?.species || g.k.species, x: m.nav.x, y: m.nav.y, z: m.nav.z, yaw: m.nav.yaw, pitch: m.nav.pitch, floor: cover(m.nav.x, m.nav.z), clearance: m.clearance, speed: g.speed, blocked: m.nav.blocked }))),
+    swimmers: () => [...herds, ...groups.filter(g => g.kind === 'shoal')].flatMap((g, group) => g.members.filter(m => m.nav).map(m => ({ group: g.name ? `${g.name} #${groups.indexOf(g)}` : `herd ${group}`, route: [g.route.cx, g.route.cz, g.route.rx, g.route.rz], species: m.actor?.species || g.k.species, name: m.actor?.name || null, x: m.nav.x, y: m.nav.y, z: m.nav.z, yaw: m.nav.yaw, pitch: m.nav.pitch, floor: cover(m.nav.x, m.nav.z), clearance: m.clearance, speed: g.speed, blocked: m.nav.blocked }))),
     /** Bring an encounter in now, wherever the diver is: 'whale', 'whale-shark', 'orcas', 'dolphins', 'blacktips', 'tuna'. */
     spawn(id, player = null, view = null) { const e = casts.get(id); if (!e) return false; const s = slots.find(item => item.slot === e.slot); if (s.active) end(s.active); begin(e, player, view); s.active = e; return true; },
     slots: () => slots.map(s => ({ slot: s.slot, active: s.active?.id || null, wait: Math.round(s.wait), progress: s.active ? +s.active.u.toFixed(3) : null })),

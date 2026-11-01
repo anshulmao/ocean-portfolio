@@ -66,16 +66,19 @@ export const RESIDENTS = {
     { species: 'ribbon-eel', formation: 'Table coral tower', angle: 3.6 }
   ],
   // Green turtles cruise slow loops a few metres over the reef, each its own; one sleeps on the sand.
-  //   loops: [centre x, centre z, x radius, z radius] (where the reef's turtles always swam).
-  turtles: { species: 'green-turtle', loops: [[-24, -6, 8, 6], [34, -39, 9, 7], [-35, -72, 8, 7], [31, 14, 9, 6], [33, -91, 8, 6]], count: [5, 3], height: 3.4, speed: .55, scale: [.8, 1], sleeper: [12, -24] },
-  // Whitetip reef sharks: one patrols the deep reef low over the bottom, two lie resting on the sand by day.
-  whitetips: { species: 'whitetip-reef-shark', patrol: { loop: [-26, -58, 15, 10], height: 2, speed: 1.1 }, resting: [[30, -56], [-42, -90]], lean: 1 },
+  //   loops: [centre x, centre z, x radius, z radius] (where the reef's turtles always swam, except the one that passed
+  //   between the wreck and the pillar cathedral: a turtle that steers round the reef spent that loop detouring).
+  turtles: { species: 'green-turtle', loops: [[-24, -6, 8, 6], [36, -50, 7, 6], [-35, -72, 8, 7], [31, 14, 9, 6], [33, -91, 8, 6]], count: [5, 3], height: 3.4, speed: .55, scale: [.8, 1], sleeper: [12, -24] },
+  // Whitetip reef sharks: one patrols the deep reef low over the bottom, two lie resting on the sand by day (the first on
+  // the open sand off the wreck's bow, one of the few patches on this reef clear and level enough for a 5 m shark).
+  whitetips: { species: 'whitetip-reef-shark', patrol: { loop: [-26, -58, 15, 10], height: 2, speed: 1.1 }, resting: [[18, -29], [-42, -90]], lean: 1 },
   // Cuttlefish hover off the side of tall formations, watching; crowd one and it backs off, then flashes its arms.
   cuttlefish: { species: 'broadclub-cuttlefish', formations: ['Soft coral spire', 'Brain coral dome', 'Lantern garden'], count: [3, 2], height: 2.4 },
   // Lionfish hang by the coral, fans spread; come close and one turns its spines on you.
   lionfish: { species: 'lionfish', formations: ['Table coral tower', 'Pillar coral cathedral', 'Soft coral spire'], count: [3, 2], height: 1.3 },
-  // A humphead wrasse cruises the middle reef on a wide loop, as big as a diver and as unhurried.
-  humphead: { species: 'humphead-wrasse', loop: [-6, -48, 15, 11], height: 3.2, speed: .8 },
+  // A humphead wrasse cruises open water west of the wreck on a wide loop, as big as a diver and as unhurried (its first
+  // loop circled the giant clam, and it spent its time detouring round the formation).
+  humphead: { species: 'humphead-wrasse', loop: [-28, -36, 10, 7], height: 3.2, speed: .8 },
   // Resting animals that wake when crowded: flee (m) how close is too close, hop (m) how far it swims before settling again.
   wake: { 'green-turtle': { flee: 4.5, hop: 14, rise: 3, seconds: 9 }, 'whitetip-reef-shark': { flee: 5.5, hop: 18, rise: 2, seconds: 6 } }
 };
@@ -101,7 +104,7 @@ export const SCHOOLS = {
   idols: { species: 'moorish-idol', kind: 'pairs', near: 'patches', count: 3, groups: [2, 1], loop: 5, height: 1.8 },
   tangs: { species: 'powder-blue-tang', kind: 'pairs', near: 'patches', count: 5, groups: [2, 1], loop: 6, height: 1.5 },
   angels: { species: 'emperor-angelfish', kind: 'pairs', near: 'formations', count: 1, groups: [3, 2], loop: 4, height: 2 },
-  yellowTangs: { species: 'yellow-tang', kind: 'pairs', near: 'patches', count: 4, groups: [3, 2], loop: 5, height: 1.6 },
+  yellowTangs: { species: 'yellow-tang', kind: 'pairs', near: 'patches', count: 3, groups: [3, 2], loop: 6, height: 1.6 },
   triggers: { species: 'picasso-triggerfish', kind: 'pairs', near: 'patches', count: 1, groups: [3, 2], loop: 3.5, height: .9 },
   // Garden eels stand half out of the sand, swaying, and sink into their burrows as a diver comes over.
   gardenEels: { species: 'garden-eel', lod: 2, kind: 'burrows', near: [-6, -36], count: [14, 8] },

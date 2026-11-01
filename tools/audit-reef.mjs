@@ -369,8 +369,9 @@ function auditSchools({seconds, rate}) {
   const meshes = new Map(); U.root.traverse(n => { if (n.isInstancedMesh) meshes.set(n.name.replace(/^Creature set · | \(\d+\)$/g, ''), n); });
   const M = new (U.root.matrix.constructor)(), v = A.V(), seen = new Set(), diver = {};
   for (const [index, g] of groups.entries()) {
-    // Cleaner wrasse come to a diver as they come to a fish waiting at their station: they are left out.
-    const key = `${g.species} ${g.kind}`; if (seen.has(key) || !g.active || g.kind === 'burrows' || g.kind === 'encounter' || g.species === 'cleaner-wrasse') continue; seen.add(key);
+    // Cleaner wrasse come to a diver as they come to a fish waiting at their station: they are left out. So are the
+    // sea stars and urchins lying on the bottom (beds): they are not schools, and a diver can settle beside one.
+    const key = `${g.species} ${g.kind}`; if (seen.has(key) || !g.active || g.kind === 'burrows' || g.kind === 'bed' || g.kind === 'encounter' || g.species === 'cleaner-wrasse') continue; seen.add(key);
     let nearest = Infinity;
     P.set(...D.groups()[index].centre);   // the diver stops where the group was, and stays
     for (let f = 0; f < 6 * rate; f++) {
@@ -391,7 +392,7 @@ function auditSchools({seconds, rate}) {
 async function auditRates({seconds}) {
   const C = window.oceanControls, A = window.reefAudit, {round} = A, L = C.viewer.layers(), out = [];
   const [{createUserCreatures}, {LANDMARKS}] = await Promise.all([import('./user-creatures.js'), import('./reef.js')]);
-  const ends = {};
+  const ends = {}, herdNames = new Set();
   for (const rate of [30, 60, 120]) {
     window.__reseed(20261029);
     const sys = createUserCreatures({terrainHeightAt: L.reef.userData.terrainHeightAt, collisions: L.reef.userData.collisions, economy: window.oceanDiagnostics.quality === 'economy', sites: {formations: C.formations, life: C.life?.sites || [], landmarks: LANDMARKS, patches: () => window.oceanDiagnostics.userCorals?.patches || []}});
@@ -407,6 +408,8 @@ async function auditRates({seconds}) {
         last[name] = [x, z];
       }
     }
+    // The skinned animals that swim a herd's loop by navigation (bumpheads, the whipray, turtles, the whitetip on patrol...).
+    for (const m of sys.debug.swimmers()) if (m.name) herdNames.add(m.name);
     ends[rate] = {swum,actors: sys.debug.actors().filter(a => a.active).map(a => [a.name, a.x, a.y, a.z]), swimmers: sys.debug.swimmers().map(m => [m.group, m.x, m.y, m.z]), groups: sys.debug.groups().filter(g => g.active).map(g => [g.name, ...g.centre]), u: sys.debug.slots().find(s => s.slot === 'pelagic')?.progress};
   }
   const apart = {};
@@ -417,7 +420,7 @@ async function auditRates({seconds}) {
   // What follows the clock alone (clouds, encounters, residents at rest) must end where it ends at any rate. A
   // navigating swimmer's course round an obstacle is a run of choices that two runs can make differently, so for
   // those the test is how far each swims, which a speed or turn scaled by frames would change.
-  const navigated = subject => /shoal|herd|bumphead|whipray/.test(subject);
+  const navigated = subject => /shoal|herd|bumphead|whipray/.test(subject) || herdNames.has(subject);
   for (const [subject, d] of Object.entries(apart)) if (!navigated(subject) && d > .3) out.push({check: 'rate.dependent', subject, where: null, detail: `ends ${d} m apart after ${seconds} s at 30, 60 and 120 Hz`});
   for (const name of Object.keys(ends[60].swum)) {
     const lengths = [30, 60, 120].map(r => ends[r].swum[name] || 0), mean = lengths.reduce((a, b) => a + b) / 3;
