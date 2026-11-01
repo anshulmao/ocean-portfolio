@@ -91,6 +91,41 @@ function figure(id, extraClass = '') {
       picture(visual), el('span', { class: 'arc-expand', 'aria-hidden': 'true' }, glyph('expand'))),
     el('figcaption', {}, el('span', { text: visual.caption }), visual.description && el('small', { text: visual.description })));
 }
+// Several screens of one project: a strip that scrolls sideways and snaps, swiped on touch, with arrows and dots.
+// Each slide is a figure that opens in the lightbox. One screen alone is a plain figure.
+function carousel(ids, label) {
+  const slides = ids.map(id => figure(id, 'arc-slide')).filter(Boolean);
+  if (!slides.length) return null;
+  if (slides.length === 1) return el('div', { class: 'arc-case-visual' }, slides[0]);
+  const track = el('div', { class: 'arc-carousel-track', 'data-scroll-x': true, tabindex: '0', role: 'group', 'aria-roledescription': 'carousel', 'aria-label': label }, slides);
+  const dots = el('div', { class: 'arc-carousel-dots', role: 'tablist', 'aria-label': 'Screens' }, slides.map((slide, index) =>
+    el('button', { type: 'button', role: 'tab', 'data-slide': index, 'aria-label': `Screen ${index + 1} of ${slides.length}: ${media[ids[index]].caption}`, 'aria-selected': String(index === 0) })));
+  const count = el('span', { class: 'arc-carousel-count', text: `1 / ${slides.length}` });
+  const root = el('div', { class: 'arc-carousel' }, track,
+    el('div', { class: 'arc-carousel-bar' },
+      el('button', { type: 'button', class: 'arc-carousel-arrow', 'data-slide-by': '-1', 'aria-label': 'Previous screen' }, glyph('previous')),
+      dots, count,
+      el('button', { type: 'button', class: 'arc-carousel-arrow', 'data-slide-by': '1', 'aria-label': 'Next screen' }, glyph('next'))));
+  let at = 0, frame = 0;
+  const mark = () => {
+    frame = 0;
+    const index = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+    if (index === at) return;
+    at = index; count.textContent = `${at + 1} / ${slides.length}`;
+    dots.querySelectorAll('[role="tab"]').forEach((dot, i) => dot.setAttribute('aria-selected', String(i === at)));
+    root.dataset.first = String(at === 0); root.dataset.last = String(at === slides.length - 1);
+  };
+  root.dataset.first = 'true'; root.dataset.last = 'false';
+  track.addEventListener('scroll', () => { if (!frame) frame = requestAnimationFrame(mark); }, { passive: true });
+  root.addEventListener('click', event => {
+    const control = event.target.closest('[data-slide],[data-slide-by]');
+    if (!control) return;
+    const target = control.dataset.slide !== undefined ? Number(control.dataset.slide) : Math.min(slides.length - 1, Math.max(0, at + Number(control.dataset.slideBy)));
+    track.scrollTo({ left: target * track.clientWidth, behavior: calm.matches ? 'auto' : 'smooth' });
+  });
+  return el('div', { class: 'arc-case-visual arc-case-visual--strip' }, root);
+}
+const calm = matchMedia('(prefers-reduced-motion: reduce)');
 // Original diagrams explain a decision without inventing a product screenshot.
 function diagram(entry) {
   const data = entry.diagram;
@@ -286,7 +321,8 @@ function renderProjects() {
 // One case study: what it is, my part, the screens, then the problem, the decision, what came of it and the takeaway.
 function renderProject(id) {
   const list = projects(), index = Math.max(0, list.findIndex(item => item.entry.id === id)), find = list[index], entry = find.entry, story = entry.caseStudy;
-  const visual = figure(entry.id, 'arc-media--hero'), neighbours = [[list[index - 1], -1, 'Previous'], [list[index + 1], 1, 'Next']].filter(([target]) => target);
+  const screens = [entry.id, ...(entry.gallery || [])].filter(id => media[id]);
+  const visual = carousel(screens, `${entry.title} screens`), neighbours = [[list[index - 1], -1, 'Previous'], [list[index + 1], 1, 'Next']].filter(([target]) => target);
   return [
     el('nav', { class: 'arc-crumb', 'aria-label': 'Projects' },
       el('button', { type: 'button', class: 'arc-pill arc-pill--small', 'data-go': 'finds', 'data-focus': `.arc-find[data-entry="${entry.id}"]` }, glyph('back'), el('span', { text: 'All projects' })),
@@ -296,10 +332,8 @@ function renderProject(id) {
       el('h3', { id: 'archive-entry-title', text: entry.title }),
       el('p', { class: 'arc-strap arc-strap--case', text: entry.summary }),
       story && el('p', { class: 'arc-role-line' }, el('span', { text: 'My role' }), el('b', { text: story.role }))),
-    visual && el('div', { class: 'arc-case-visual' }, visual),
-    entry.gallery?.length > 0 && el('section', { class: 'arc-gallery', 'aria-label': `${entry.title} screens` },
-      el('h4', { text: entry.galleryTitle || 'The experience' }), entry.galleryIntro && el('p', { class: 'arc-gallery-intro', text: entry.galleryIntro }),
-      el('div', { class: `arc-gallery-grid${entry.galleryLayout === 'wide' ? ' arc-gallery-grid--wide' : ''}` }, entry.gallery.map(id => figure(id)))),
+    visual,
+    visual && screens.length > 1 && (entry.galleryTitle || entry.galleryIntro) && el('p', { class: 'arc-strip-lead' }, entry.galleryTitle && el('b', { text: entry.galleryTitle }), entry.galleryIntro && ` ${entry.galleryIntro}`),
     story ? el('div', { class: 'arc-story' }, [['The problem', story.problem], ['The decision', story.decision], ['What came out of it', story.outcome], ['The takeaway', story.learning]].map(([label, text], step) =>
       el('section', { class: 'arc-block', 'aria-label': label }, el('h4', {}, el('span', { 'aria-hidden': 'true', text: pad(step + 1) }), label), el('p', { text }))))
       : el('div', { class: 'arc-prose arc-prose--lead' }, paragraphs(entry.body)),

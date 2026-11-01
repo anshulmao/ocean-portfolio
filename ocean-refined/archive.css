@@ -16,7 +16,7 @@
   box-sizing:border-box;margin:auto;padding:0;width:min(1120px,calc(100vw - 32px));height:min(800px,calc(100dvh - 32px));max-width:none;max-height:none;overflow:hidden;
   display:none;grid-template-rows:auto minmax(0,1fr);
   border:1px solid #ffffff1f;border-radius:28px;
-  background:linear-gradient(170deg,#0f3846f2,#082632f7 60%,#07222df8);
+  background:radial-gradient(70% 46% at 0% 0%,color-mix(in srgb,var(--tint),transparent 80%),#0000 70%),radial-gradient(50% 40% at 100% 100%,color-mix(in srgb,var(--tint),transparent 90%),#0000 70%),linear-gradient(170deg,#0f3846f2,#082632f7 60%,#07222df8);
   box-shadow:0 40px 100px -30px #000d1acc,inset 0 1px 0 #ffffff12;color:var(--text);font:400 16px/1.55 var(--font);letter-spacing:0;
   scrollbar-color:#ffffff33 #0000;scrollbar-width:thin;
 }
@@ -46,7 +46,8 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 /* 2. Header: which section this is, where it is read, and the way out */
 #landmark-dialog .arc-header{display:flex;align-items:center;justify-content:space-between;gap:16px;height:68px;padding:0 16px 0 28px;border-bottom:1px solid var(--rule)}
 #landmark-dialog .arc-place{display:flex;align-items:center;gap:12px;min-width:0}
-#landmark-dialog .arc-place-dot{width:10px;height:10px;flex:none;border-radius:50%;background:var(--tint);box-shadow:0 0 0 4px color-mix(in srgb,var(--tint),transparent 82%)}
+#landmark-dialog .arc-place-dot{width:11px;height:11px;flex:none;border-radius:50%;background:var(--tint);box-shadow:0 0 0 5px color-mix(in srgb,var(--tint),transparent 78%)}
+#landmark-dialog .arc-header{border-bottom-color:color-mix(in srgb,var(--tint),transparent 80%)}
 #landmark-dialog #landmark-title{font:500 16px/1 var(--font);letter-spacing:0;text-transform:none;color:var(--text);text-shadow:none}
 #landmark-dialog .arc-place-site{font:400 14px/1 var(--font);color:var(--muted);white-space:nowrap}
 #landmark-dialog .arc-place-site:not(:empty)::before{content:"·";margin-right:12px;color:var(--dim)}
@@ -67,11 +68,11 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 #landmark-dialog .arc-prose p+p{margin-top:14px}
 #landmark-dialog .arc-prose--lead p{font-size:18px;line-height:1.6;color:var(--text)}
 #landmark-dialog .arc-prose--lead p:first-child{font-size:21px;line-height:1.5;color:#fff}
-#landmark-dialog .arc-chip{display:inline-flex;align-items:center;min-height:26px;padding:0 10px;border-radius:999px;background:#ffffff10;font:500 12px/1 var(--font);color:var(--muted);white-space:nowrap}
+#landmark-dialog .arc-chip{display:inline-flex;align-items:center;min-height:26px;padding:0 10px;border-radius:999px;background:color-mix(in srgb,var(--tint),transparent 84%);font:500 12px/1 var(--font);color:color-mix(in srgb,var(--tint),#fff 35%);white-space:nowrap}
 
 /* 4. Pills: the surface's buttons (Dive in, Guided dive), filled for the action the page is for */
 #landmark-dialog .arc-pill{display:inline-flex;align-items:center;gap:10px;min-height:46px;padding:0 20px;border:1px solid var(--pill-2-line);border-radius:999px;background:var(--pill-2);color:var(--text);font:500 14px/1 var(--font);text-decoration:none;cursor:pointer;transition:background-color var(--motion-hover) var(--journey-ease),border-color var(--motion-hover) var(--journey-ease),translate var(--motion-settle) var(--journey-ease),box-shadow var(--motion-settle) var(--journey-ease)}
-#landmark-dialog .arc-pill:hover{background:#ffffff1a;border-color:var(--ring-hover);translate:0 -2px;box-shadow:0 10px 24px -14px #000c}
+#landmark-dialog .arc-pill:hover{background:color-mix(in srgb,var(--tint),transparent 82%);border-color:color-mix(in srgb,var(--tint),transparent 55%);translate:0 -2px;box-shadow:0 10px 24px -14px #000c}
 #landmark-dialog .arc-pill:active{translate:0 0;scale:.98}
 #landmark-dialog .arc-pill .hud-icon{width:16px;height:16px}
 #landmark-dialog .arc-pill--primary{border-color:#ffffff1a;background:var(--pill);color:var(--pill-ink);box-shadow:0 6px 24px -10px #003c4b66}
@@ -85,7 +86,7 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 
 /* 5. About: who this is, then how to reach them */
 #landmark-dialog .arc-hero{display:grid;grid-template-columns:250px minmax(0,1fr);gap:44px;align-items:center;padding:14px 0 8px}
-#landmark-dialog .arc-portrait{aspect-ratio:3/4;overflow:hidden;border-radius:24px;background:var(--well);box-shadow:0 30px 60px -30px #000c,inset 0 0 0 1px var(--ring)}
+#landmark-dialog .arc-portrait{aspect-ratio:3/4;overflow:hidden;border-radius:24px;background:var(--well);box-shadow:0 30px 60px -30px #000c,0 0 0 1px var(--ring),0 0 0 8px color-mix(in srgb,var(--tint),transparent 88%)}
 #landmark-dialog .arc-portrait img{display:block;width:100%;height:100%;object-fit:cover}
 #landmark-dialog .arc-hero-role{margin-top:14px;max-width:30ch;font:300 clamp(18px,2.1vw,23px)/1.35 var(--font);color:var(--text-2);text-wrap:pretty}
 #landmark-dialog .arc-where{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:18px;font:400 14.5px/1.3 var(--font);color:var(--muted)}
@@ -99,7 +100,7 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 #landmark-dialog .arc-how-line{margin-top:16px;font:400 clamp(24px,2.8vw,30px)/1.15 var(--font);letter-spacing:-.025em;color:#fff;text-wrap:balance}
 #landmark-dialog .arc-how-strap{margin-top:10px;font:300 18px/1.45 var(--font);color:var(--text-2)}
 #landmark-dialog .arc-rules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:28px}
-#landmark-dialog .arc-rules li{padding:22px 22px 24px;border-radius:20px;background:var(--card);box-shadow:inset 0 0 0 1px var(--ring)}
+#landmark-dialog .arc-rules li{padding:22px 22px 24px;border-radius:20px;background:linear-gradient(160deg,color-mix(in srgb,var(--tint),transparent 84%),color-mix(in srgb,var(--tint),transparent 95%) 60%);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tint),transparent 75%)}
 #landmark-dialog .arc-rule-no{display:block;font:300 30px/1 var(--font);letter-spacing:-.03em;color:var(--tint);font-variant-numeric:tabular-nums}
 #landmark-dialog .arc-rules strong{display:block;margin-top:18px;font:500 17px/1.3 var(--font);color:#fff}
 #landmark-dialog .arc-rules p{margin-top:8px;font:400 15px/1.55 var(--font);color:var(--muted)}
@@ -112,10 +113,10 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 
 /* 6. Experience: the career on one track, then each role */
 #landmark-dialog .arc-track{margin-top:30px}
-#landmark-dialog .arc-track-bar{position:relative;height:14px;border-radius:999px;background:#ffffff0e}
-#landmark-dialog .arc-track-seg{position:absolute;inset-block:0;margin:0;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--tint),transparent 55%);box-shadow:0 0 0 2px var(--sheet);cursor:pointer;transition:background-color var(--motion-hover) var(--journey-ease),scale var(--motion-press) var(--journey-ease)}
-#landmark-dialog .arc-track-seg[data-now]{background:var(--tint)}
-#landmark-dialog .arc-track-seg:hover{background:#fff;scale:1 1.25}
+#landmark-dialog .arc-track-bar{position:relative;height:16px;border-radius:999px;background:color-mix(in srgb,var(--tint),transparent 88%)}
+#landmark-dialog .arc-track-seg{position:absolute;inset-block:0;margin:0;padding:0;border:0;border-radius:999px;background:linear-gradient(180deg,color-mix(in srgb,var(--tint),#fff 10%),var(--tint));opacity:.55;box-shadow:0 0 0 2px var(--sheet);cursor:pointer;transition:background-color var(--motion-hover) var(--journey-ease),scale var(--motion-press) var(--journey-ease)}
+#landmark-dialog .arc-track-seg[data-now]{opacity:1;box-shadow:0 0 0 2px var(--sheet),0 6px 16px -6px color-mix(in srgb,var(--tint),transparent 30%)}
+#landmark-dialog .arc-track-seg:hover{opacity:1;scale:1 1.25}
 #landmark-dialog .arc-track-seg span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 #landmark-dialog .arc-track-axis{position:relative;height:20px;margin-top:10px;font:400 12.5px/1 var(--font);color:var(--muted);font-variant-numeric:tabular-nums}
 #landmark-dialog .arc-track-axis span{position:absolute;top:4px;translate:-50% 0;white-space:nowrap}
@@ -148,8 +149,8 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 
 /* 7. Projects: the grid, then one case study at a time */
 #landmark-dialog .arc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:28px}
-#landmark-dialog .arc-find{--accent:var(--tint);display:grid;grid-template-rows:auto 1fr auto;width:100%;height:100%;padding:8px 8px 14px;border:0;border-radius:22px;background:var(--card);box-shadow:inset 0 0 0 1px var(--ring);color:inherit;text-align:left;cursor:pointer;transition:background-color var(--motion-hover) var(--journey-ease),box-shadow var(--motion-settle) var(--journey-ease),translate var(--motion-settle) var(--journey-ease)}
-#landmark-dialog .arc-find:hover{background:var(--card-hover);box-shadow:inset 0 0 0 1px var(--ring-hover),0 26px 44px -26px #000d;translate:0 -3px}
+#landmark-dialog .arc-find{--accent:var(--tint);display:grid;grid-template-rows:auto 1fr auto;width:100%;height:100%;padding:8px 8px 14px;border:0;border-radius:22px;background:linear-gradient(170deg,color-mix(in srgb,var(--accent),transparent 82%),color-mix(in srgb,var(--accent),transparent 94%) 55%,#ffffff06);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent),transparent 72%);color:inherit;text-align:left;cursor:pointer;transition:background-color var(--motion-hover) var(--journey-ease),box-shadow var(--motion-settle) var(--journey-ease),translate var(--motion-settle) var(--journey-ease)}
+#landmark-dialog .arc-find:hover{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent),transparent 45%),0 26px 44px -26px color-mix(in srgb,var(--accent),#000 60%);translate:0 -3px}
 #landmark-dialog .arc-find:active{translate:0 -1px}
 #landmark-dialog .arc-find[data-entry="rae"]{--accent:var(--o-rae,#ff9b73)}
 #landmark-dialog .arc-find[data-entry="reengage"]{--accent:var(--o-engage,#4fe3cd)}
@@ -165,7 +166,8 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 #landmark-dialog .arc-find-text strong{font:500 21px/1.2 var(--font);letter-spacing:-.015em;color:#fff}
 #landmark-dialog .arc-find-line{font:400 14.5px/1.5 var(--font);color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 #landmark-dialog .arc-find-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 10px 0}
-#landmark-dialog .arc-find-open{display:inline-flex;align-items:center;gap:4px;margin-left:auto;font:500 13px/1 var(--font);color:var(--text-2)}
+#landmark-dialog .arc-find .arc-chip{background:color-mix(in srgb,var(--accent),transparent 82%);color:color-mix(in srgb,var(--accent),#fff 40%)}
+#landmark-dialog .arc-find-open{display:inline-flex;align-items:center;gap:4px;margin-left:auto;font:500 13px/1 var(--font);color:var(--accent)}
 #landmark-dialog .arc-find-open .hud-icon{width:15px;height:15px;transition:translate var(--motion-settle) var(--journey-ease)}
 #landmark-dialog .arc-find:hover .arc-find-open .hud-icon{translate:3px 0}
 /* A project with no screenshot shows its steps on a field of its own colour. */
@@ -192,12 +194,26 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 #landmark-dialog .arc-expand{position:absolute;right:12px;bottom:12px;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#06283ad9;color:#fff;opacity:0;transition:opacity var(--motion-hover) var(--journey-ease)}
 #landmark-dialog .arc-expand .hud-icon{width:16px;height:16px}
 #landmark-dialog .arc-media .media-full:is(:hover,:focus-visible) .arc-expand{opacity:1}
-#landmark-dialog .arc-gallery{margin-top:44px}
-#landmark-dialog .arc-gallery h4{font:500 20px/1.25 var(--font);letter-spacing:-.015em;color:#fff}
-#landmark-dialog .arc-gallery-intro{margin-top:6px;font:400 15px/1.5 var(--font);color:var(--muted)}
-#landmark-dialog .arc-gallery-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:18px}
-#landmark-dialog .arc-gallery-grid--wide{grid-template-columns:repeat(2,minmax(0,1fr))}
-#landmark-dialog .arc-gallery-grid .media-full{border-radius:14px}
+/* The screens: one strip that snaps a screen at a time, swiped on touch, arrows and dots below */
+#landmark-dialog .arc-case-visual--strip{margin-top:30px}
+#landmark-dialog .arc-carousel{border-radius:22px;background:color-mix(in srgb,var(--tint),transparent 90%);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tint),transparent 72%);padding:8px}
+#landmark-dialog .arc-carousel-track{display:flex;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;border-radius:15px;outline-offset:4px}
+#landmark-dialog .arc-carousel-track::-webkit-scrollbar{display:none}
+#landmark-dialog .arc-slide{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always}
+#landmark-dialog .arc-slide .media-full{aspect-ratio:16/9;border-radius:15px;box-shadow:none}
+#landmark-dialog .arc-slide img{width:100%;height:100%;object-fit:contain}
+#landmark-dialog .arc-slide figcaption{padding:12px 8px 4px}
+#landmark-dialog .arc-carousel-bar{display:flex;align-items:center;gap:12px;padding:8px 6px 4px}
+#landmark-dialog .arc-carousel-arrow{display:grid;place-items:center;width:40px;height:40px;border:1px solid color-mix(in srgb,var(--tint),transparent 60%);border-radius:50%;background:color-mix(in srgb,var(--tint),transparent 86%);color:#fff;cursor:pointer;transition:background-color var(--motion-hover) var(--journey-ease),opacity var(--motion-hover) var(--journey-ease)}
+#landmark-dialog .arc-carousel-arrow:hover{background:color-mix(in srgb,var(--tint),transparent 65%)}
+#landmark-dialog .arc-carousel[data-first="true"] [data-slide-by="-1"],#landmark-dialog .arc-carousel[data-last="true"] [data-slide-by="1"]{opacity:.35;pointer-events:none}
+#landmark-dialog .arc-carousel-dots{display:flex;align-items:center;gap:6px;margin-left:auto}
+#landmark-dialog .arc-carousel-dots button{width:22px;height:22px;padding:0;border:0;background:none;cursor:pointer;display:grid;place-items:center}
+#landmark-dialog .arc-carousel-dots button::before{content:"";width:7px;height:7px;border-radius:999px;background:color-mix(in srgb,var(--tint),transparent 60%);transition:width var(--motion-settle) var(--journey-ease),background-color var(--motion-hover) var(--journey-ease)}
+#landmark-dialog .arc-carousel-dots button[aria-selected="true"]::before{width:22px;background:var(--tint)}
+#landmark-dialog .arc-carousel-count{margin-right:auto;font:500 13px/1 var(--font);color:var(--tint);font-variant-numeric:tabular-nums}
+#landmark-dialog .arc-strip-lead{margin-top:14px;font:400 15px/1.5 var(--font);color:var(--muted)}
+#landmark-dialog .arc-strip-lead b{font-weight:500;color:var(--text)}
 #landmark-dialog .arc-story{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 36px;margin-top:40px}
 #landmark-dialog .arc-block{padding:24px 0 26px;border-top:1px solid var(--rule)}
 #landmark-dialog .arc-block:first-child{grid-column:1/-1}
@@ -206,7 +222,7 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 #landmark-dialog .arc-block p{margin-top:14px;max-width:var(--measure);font:400 16.5px/1.65 var(--font);color:var(--text-2)}
 #landmark-dialog .arc-block:first-child p{font-size:19px;line-height:1.6;color:var(--text)}
 #landmark-dialog .arc-case-diagram{margin-top:8px}
-#landmark-dialog .arc-diagram{padding:22px 24px;border-radius:20px;background:var(--card);box-shadow:inset 0 0 0 1px var(--ring)}
+#landmark-dialog .arc-diagram{padding:22px 24px;border-radius:20px;background:linear-gradient(160deg,color-mix(in srgb,var(--tint),transparent 86%),color-mix(in srgb,var(--tint),transparent 95%));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tint),transparent 76%)}
 #landmark-dialog .arc-diagram-label{font:500 15px/1.3 var(--font);color:#fff}
 #landmark-dialog .arc-diagram ol{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
 #landmark-dialog .arc-diagram li{display:grid;gap:10px;padding:14px 16px;border-radius:14px;background:#ffffff08}
@@ -223,7 +239,7 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 #landmark-dialog .arc-evidence{margin-top:26px;max-width:70ch;font:400 13.5px/1.55 var(--font);color:var(--muted)}
 #landmark-dialog .arc-evidence b{font-weight:500;color:var(--text-2)}
 #landmark-dialog .arc-turner{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:40px}
-#landmark-dialog .arc-turn{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;padding:10px 14px 10px 10px;border:0;border-radius:18px;background:var(--card);box-shadow:inset 0 0 0 1px var(--ring);color:inherit;text-align:left;cursor:pointer;transition:background-color var(--motion-hover) var(--journey-ease),translate var(--motion-settle) var(--journey-ease)}
+#landmark-dialog .arc-turn{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;padding:10px 14px 10px 10px;border:0;border-radius:18px;background:color-mix(in srgb,var(--tint),transparent 91%);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tint),transparent 78%);color:inherit;text-align:left;cursor:pointer;transition:background-color var(--motion-hover) var(--journey-ease),translate var(--motion-settle) var(--journey-ease)}
 #landmark-dialog .arc-turn:hover{background:var(--card-hover);translate:0 -2px}
 #landmark-dialog .arc-turn--next{grid-column:2;grid-template-columns:auto minmax(0,1fr) auto;text-align:right}
 #landmark-dialog .arc-turn--next .arc-turn-art{order:3}
@@ -283,7 +299,6 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
   #landmark-dialog .arc-rules,#landmark-dialog .arc-examples ul{grid-template-columns:1fr}
   #landmark-dialog .arc-examples li{grid-template-columns:1fr}
   #landmark-dialog .arc-resume{grid-template-columns:260px minmax(0,1fr);gap:32px}
-  #landmark-dialog .arc-gallery-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 
 /* 13. Phones (and touch screens in landscape): the sheet fills the screen */
@@ -310,7 +325,8 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
   #landmark-dialog .arc-facts{grid-template-columns:1fr}
   #landmark-dialog .arc-grid{grid-template-columns:1fr;gap:12px;margin-top:22px}
   #landmark-dialog .arc-story{grid-template-columns:1fr;gap:0;margin-top:30px}
-  #landmark-dialog .arc-gallery-grid,#landmark-dialog .arc-gallery-grid--wide{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  #landmark-dialog .arc-slide .media-full{aspect-ratio:4/3}
+  #landmark-dialog .arc-carousel{padding:6px}
   #landmark-dialog .arc-diagram ol{grid-template-columns:1fr}
   #landmark-dialog .arc-turner{grid-template-columns:1fr}
   #landmark-dialog .arc-turn--next{grid-column:1}
