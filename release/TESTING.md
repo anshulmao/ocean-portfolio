@@ -8,7 +8,7 @@ Rebased onto `main` at `504e2ed26d4b7d8ca92844a28ef5522152dd2828`, preserving me
 
 PR #38 intentionally removes the contact checkbox. The browser test now verifies the approved form contract: fields are hidden until a rating, rating pauses the countdown, omitted contact is null, typing optional contact sends nothing, and explicit submission includes the supplied contact with consent. The backend's separate rejection of unconsented contact remains tested. Unit checks cover pause/resume/cancel without changing the 45-second requirement. This is a documented product requirement change, not an exception to obtain green.
 
-Current main's [CI run](https://github.com/anshulmao/ocean-portfolio/actions/runs/41510767838) fails for a flying-fish/diver clearance finding and a desktop guided-travel label/control overlap. The refreshed branch is checked against those same limits. Earlier local results below belong to the 1 November base and do not prove compatibility with this new base.
+Current main's [CI run](https://github.com/anshulmao/ocean-portfolio/actions/runs/41510767838) fails for a flying-fish/diver clearance finding and a desktop guided-travel label/control overlap. The refreshed branch is checked against those same limits. Earlier local results below belong to the 1 November base and do not prove compatibility with this new base. The first refreshed PR [CI run](https://github.com/anshulmao/ocean-portfolio/actions/runs/41512935801) passed five jobs and reproduced the desktop overlap. Root cause: world-label avoidance estimated a 44 px label height even after the shared UI made its text taller. Production now caches rendered reef-label dimensions using ResizeObserver and uses those dimensions for control/marker exclusion and top-instrument clearance, without per-frame layout reads. Focused rectangle cases cover tall/wide copy and preserve unobstructed labels; the original layout assertions remain unchanged. Restoring the fixed 44 px calculation fails the focused tall-label regression test. The new helper is part of the shipped module graph.
 
 ## Findings and decisions
 
@@ -59,6 +59,7 @@ Paths are relative to the indicated directory. “Historical” means retained f
 | `test-guided-motion.mjs` | Keep in unit: real planner/integrator, obstacle detours, tour input, takeover/rejoin, reduced motion and bounded movement. Large but substantial behavior coverage. |
 | `test-navigation-clock.mjs` | Keep in unit: real navigation/return integrator at 30/60/120 Hz; braking, stop, skip, expiry, ascent acceleration and collision path. |
 | `test-settings-escape.mjs` | Keep: real listener and overlay priority. Source-slicing harness is brittle; replace with a normal import if HUD input is next refactored. No snapshot of exact code is asserted. |
+| `test-label-overlap.mjs` | Refreshed-base regression: tall/wide labels respect control bounds while clear labels remain available. |
 | `test-announcements.mjs` | New unit regression: fade-zone ownership and queue behavior under a controlled clock. |
 | `test-cloud-banking.mjs` | New focused browser regression: real models and motion on a synthetic coral site, no WebGL or real server; fails if the old planned-loop bank returns. |
 | `test-return-route.mjs` | New unit: promote useful return-planning assertions from the standalone return-controls browser script. |
