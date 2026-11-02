@@ -144,14 +144,22 @@ const returnLabel = () => submerged() ? 'Back to the reef' : 'Back to the surfac
 const LINKED = ['about', 'experience', 'projects', 'resume'];
 const tabs = el('nav', { class: 'arc-tabs', 'aria-label': 'Sections', 'data-scroll-x': true }, LINKED.map(id =>
   el('button', { type: 'button', 'data-section': id, text: SECTIONS[id].label })));
+const tabPill = el('i', { class: 'arc-tab-pill', 'aria-hidden': 'true' });
+tabs.prepend(tabPill);
 panel.querySelector('.arc-place').after(tabs);
+// The highlight glides to the section being read: it is placed from the tab's own box, and the first placement is not animated.
+function placeTabPill() {
+  const tab = tabs.querySelector('[aria-current]');
+  if (!tab || !tab.offsetWidth) return;
+  tabPill.style.setProperty('--x', `${tab.offsetLeft}px`); tabPill.style.setProperty('--w', `${tab.offsetWidth}px`);
+  if (!tabPill.dataset.ready) requestAnimationFrame(() => { tabPill.dataset.ready = 'true'; });
+  if (tabs.scrollWidth > tabs.clientWidth + 1) tabs.scrollTo({ left: tab.offsetLeft - (tabs.clientWidth - tab.offsetWidth) / 2, behavior: tabPill.dataset.ready ? 'smooth' : 'auto' });
+}
 // The end of every page: the way out, and where the other sections are on the reef.
 function foot(section) {
   const elsewhere = SITES.filter(id => id !== section);
   return el('footer', { class: 'arc-foot' },
     el('button', { type: 'button', class: 'arc-pill arc-pill--primary dialog-return' }, glyph('back'), el('span', { id: 'archive-return-label', text: returnLabel() }), el('kbd', { text: 'Esc' })),
-    !submerged() && LINKED.includes(section) && el('div', { class: 'arc-next', role: 'group', 'aria-label': 'Other sections' }, LINKED.filter(id => id !== section).map(id =>
-      el('button', { type: 'button', class: 'arc-pill', 'data-section': id }, el('span', { text: SECTIONS[id].label }), glyph('next')))),
     submerged() && elsewhere.length > 0 && SECTIONS[section].where && el('p', { class: 'arc-elsewhere' }, 'Also on this reef: ', elsewhere.flatMap((id, index) => [index ? ', and ' : '', el('b', { text: SECTIONS[id].label }), ` at ${SECTIONS[id].where}`]), '.'));
 }
 
@@ -342,22 +350,38 @@ function careerTrack(list) {
   const ongoing = dated.some(entry => !entry.end);
   const ticks = [];
   for (let month = Math.ceil((first + 1) / 12) * 12; month < last - 2; month += 12) ticks.push(month);
+  const now = list[0];
+  // Sticky: it stays at the top while the roles scroll under it, lights the role being read, and jumps to any role.
   return el('div', { class: 'arc-track', role: 'group', 'aria-label': `Career track, ${monthLabel(dated[0].start)} to ${ongoing ? 'present' : monthLabel(dated.at(-1).end)}` },
-    el('div', { class: 'arc-track-bar' }, dated.map(entry =>
-      el('button', { type: 'button', class: 'arc-track-seg', 'data-role': entry.id, 'data-now': !entry.end, style: `left:${at(monthIndex(entry.start))};width:${((roleEnd(entry) - monthIndex(entry.start)) / span * 100).toFixed(2)}%`,
+    el('div', { class: 'arc-track-bar' }, el('i', { class: 'arc-track-lens', 'aria-hidden': 'true' }), dated.map(entry =>
+      el('button', { type: 'button', class: 'arc-track-seg', 'data-role': entry.id, 'data-now': !entry.end, 'data-active': entry === now, style: `left:${at(monthIndex(entry.start))};width:${((roleEnd(entry) - monthIndex(entry.start)) / span * 100).toFixed(2)}%`,
         'aria-label': `${entry.title}, ${monthLabel(entry.start)} to ${entry.end ? monthLabel(entry.end) : 'present'}` }, el('span', { text: entry.title })))),
     el('div', { class: 'arc-track-axis', 'aria-hidden': 'true' },
       el('span', { 'data-edge': 'start', text: monthLabel(dated[0].start) }),
       // A year that sits close to an end label is dropped on a phone, where the two would overlap.
       ticks.map(month => el('span', { style: `left:${at(month)}`, 'data-tight': (month - first) / span < .16 || (last - month) / span < .16, text: String(month / 12) })),
       el('span', { 'data-edge': 'end', text: ongoing ? 'Present' : monthLabel(dated.at(-1).end) })),
-    el('p', { class: 'arc-track-sum', text: `${dated.length} roles${dated.every(entry => entry.org === dated[0].org) && dated[0].org ? ` at ${dated[0].org}` : ''} · ${duration(last - first)}${ongoing ? ' and counting' : ''}` }));
+    el('p', { class: 'arc-track-now', 'aria-live': 'polite' }, el('b', { text: now.title }), el('span', { text: now.start ? `${monthLabel(now.start)} — ${now.end ? monthLabel(now.end) : 'Present'}` : now.tag })));
+}
+// Time at the organisation, from the first role to the last, said once beside the heading.
+function careerStat(list) {
+  const dated = list.filter(entry => entry.start);
+  if (!dated.length) return null;
+  const first = Math.min(...dated.map(entry => monthIndex(entry.start))), last = Math.max(...dated.map(roleEnd)), ongoing = dated.some(entry => !entry.end);
+  const org = dated.every(entry => entry.org === dated[0].org) && dated[0].org;
+  return el('p', { class: 'arc-stat' }, el('b', { text: duration(last - first) }), el('span', { text: `across ${dated.length} roles${org ? ` at ${org}` : ''}${ongoing ? ', and counting' : ''}` }));
 }
 function roleCard(entry) {
   const months = entry.start ? roleEnd(entry) - monthIndex(entry.start) : null;
-  const stages = (entry.stages || []).filter(stage => stage.start && stage.end);
-  const facts = entry.facts.filter(fact => !stages.some(stage => fact.startsWith(stage.label)) && fact !== entry.site);
-  return el('article', { class: 'arc-role', id: `arc-role-${entry.id}`, 'data-role': entry.id, 'data-now': Boolean(entry.start && !entry.end), 'aria-labelledby': `arc-role-title-${entry.id}` },
+  // Titles held, newest first, like the roles themselves.
+  const stages = (entry.stages || []).filter(stage => stage.start && stage.end).sort((a, b) => monthIndex(b.start) - monthIndex(a.start));
+  const facts = entry.facts.filter(fact => !(entry.stages || []).some(stage => fact.startsWith(stage.label)) && fact !== entry.site);
+  const current = Boolean(entry.start && !entry.end), more = `arc-role-more-${entry.id}`;
+  const detail = [el('div', { class: 'arc-prose' }, paragraphs(entry.body)),
+    stages.length > 0 && el('ul', { class: 'arc-stages', 'aria-label': 'Titles held' }, stages.map(stage => el('li', {}, el('b', { text: stage.label }), el('span', { text: `${monthLabel(stage.start)} — ${monthLabel(stage.end)}` })))),
+    facts.length > 0 && el('ul', { class: 'arc-facts', 'aria-label': 'Covered' }, facts.map(text => el('li', {}, glyph('check'), el('span', { text })))),
+    pills(entry.links, `${entry.title} links`)].filter(Boolean);
+  return el('article', { class: 'arc-role', id: `arc-role-${entry.id}`, 'data-role': entry.id, 'data-now': current, 'aria-labelledby': `arc-role-title-${entry.id}` },
     el('div', { class: 'arc-role-when' },
       el('span', { class: 'arc-role-dot', 'aria-hidden': 'true' }),
       entry.start ? [el('b', { text: `${monthLabel(entry.start)} — ${entry.end ? monthLabel(entry.end) : 'Present'}` }), el('span', { text: `${duration(months)}${entry.end ? '' : ' so far'}` })] : el('b', { text: entry.tag })),
@@ -365,19 +389,71 @@ function roleCard(entry) {
       el('h4', { id: `arc-role-title-${entry.id}`, text: entry.title }),
       el('p', { class: 'arc-role-org', text: [entry.org, entry.site].filter(Boolean).join(' · ') || entry.tag }),
       el('p', { class: 'arc-role-lead', text: entry.summary }),
-      el('div', { class: 'arc-prose' }, paragraphs(entry.body)),
-      stages.length > 0 && el('ul', { class: 'arc-stages', 'aria-label': 'Titles held' }, stages.map(stage => el('li', {}, el('b', { text: stage.label }), el('span', { text: `${monthLabel(stage.start)} — ${monthLabel(stage.end)}` })))),
-      facts.length > 0 && el('ul', { class: 'arc-facts', 'aria-label': 'Covered' }, facts.map(text => el('li', {}, glyph('check'), el('span', { text })))),
-      pills(entry.links, `${entry.title} links`)));
+      // The lead says what the role was; what it covered opens beneath it. The current role starts open.
+      el('button', { type: 'button', class: 'arc-more-toggle', 'data-toggle': entry.id, 'aria-expanded': String(current), 'aria-controls': more }, el('span', { text: current ? 'Hide details' : 'Show details' }), glyph('next')),
+      el('div', { class: 'arc-collapse', id: more, 'data-open': String(current) }, el('div', { class: 'arc-collapse-inner' }, detail))));
 }
 function renderExperience() {
   const section = PORTFOLIO_CONTENT.experience, list = roles();
   return [
-    head(section.title, section.subtitle),
+    Object.assign(head(section.title, section.subtitle, careerStat(list)), { className: 'arc-head arc-head--exp' }),
     careerTrack(list),
-    el('div', { class: 'arc-roles' }, list.map(roleCard)),
+    el('div', { class: 'arc-roles' }, el('i', { class: 'arc-roles-fill', 'aria-hidden': 'true' }), list.map(roleCard)),
     foot('experience'),
   ];
+}
+// The controller for the page: roles rise in as they come into view, the track lights the role being read and the line beside
+// the roles fills as you go. A role opens and closes beneath its lead. Only opacity and transforms change.
+const exp = { el: null, io: null, roles: [], segs: [], track: null, now: null, active: null };
+function armExperience() {
+  exp.io?.disconnect(); exp.io = null; exp.el = page.querySelector('.arc-roles'); exp.active = null;
+  if (!exp.el) return;
+  exp.roles = [...exp.el.querySelectorAll('.arc-role')]; exp.segs = [...page.querySelectorAll('.arc-track-seg')];
+  exp.track = page.querySelector('.arc-track'); exp.fill = exp.el.querySelector('.arc-roles-fill'); exp.lens = exp.track.querySelector('.arc-track-lens');
+  if (!calm.matches && 'IntersectionObserver' in window) {
+    exp.io = new IntersectionObserver(entries => { for (const entry of entries) if (entry.isIntersecting) { entry.target.dataset.rise = 'in'; exp.io.unobserve(entry.target); } }, { root: page, threshold: .12 });
+    const edge = page.getBoundingClientRect().bottom - 80;
+    for (const role of exp.roles) if (role.getBoundingClientRect().top > edge) { role.dataset.rise = 'pending'; exp.io.observe(role); }
+  }
+  page.querySelector('.arc-view').style.setProperty('--sticky', `${Math.round(exp.track.offsetHeight + 24)}px`);
+  paintExperience();
+}
+function paintExperience() {
+  if (!exp.el?.isConnected) return;
+  const line = exp.track.getBoundingClientRect().bottom + 28;
+  let active = exp.roles[0];
+  for (const role of exp.roles) if (role.getBoundingClientRect().top <= line) active = role;
+  const box = exp.el.getBoundingClientRect(), from = 40, to = Math.max(from + 1, box.height - 40);
+  exp.fill.style.transform = `scaleY(${clamp01((line - box.top - from) / (to - from)).toFixed(3)})`;
+  if (active === exp.active) return;
+  exp.active = active;
+  placeLens();
+  for (const role of exp.roles) role.dataset.active = String(role === active);
+  for (const seg of exp.segs) seg.dataset.active = String(seg.dataset.role === active.dataset.role);
+  const now = exp.track.querySelector('.arc-track-now');
+  now.querySelector('b').textContent = active.querySelector('h4').textContent; now.querySelector('span').textContent = active.querySelector('.arc-role-when b').textContent;
+}
+// The lens sits over the segment of the role being read; moving from one role to the next it glides and resizes. The first
+// placement is not animated.
+function placeLens() {
+  const seg = exp.segs.find(item => item.dataset.role === exp.active?.dataset.role);
+  if (!seg || !exp.lens || !seg.offsetWidth) return;
+  exp.lens.style.setProperty('--x', `${seg.offsetLeft}px`); exp.lens.style.setProperty('--w', `${seg.offsetWidth}px`);
+  if (!exp.lens.dataset.ready) requestAnimationFrame(() => { exp.lens.dataset.ready = 'true'; });
+}
+function setRoleOpen(id, open) {
+  const role = page.querySelector(`#arc-role-${id}`), box = role?.querySelector('.arc-collapse'), toggle = role?.querySelector('.arc-more-toggle');
+  if (!box) return;
+  const next = open ?? box.dataset.open !== 'true';
+  box.dataset.open = String(next); toggle.setAttribute('aria-expanded', String(next)); toggle.querySelector('span').textContent = next ? 'Hide details' : 'Show details';
+}
+// Scrolls a role to just under the track, and opens it.
+function gotoRole(id, smooth = true) {
+  const role = page.querySelector(`#arc-role-${id}`);
+  if (!role) return;
+  setRoleOpen(id, true); role.dataset.rise = 'in';
+  const top = role.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop - (exp.track?.offsetHeight || 0) - 24;
+  page.scrollTo({ top: Math.max(0, top), behavior: smooth && !calm.matches ? 'smooth' : 'auto' });
 }
 
 // --- Projects --------------------------------------------------------------------------------------------------------
@@ -476,7 +552,8 @@ function paint(stop) {
   const meta = SECTIONS[stop.section];
   title.textContent = meta.label; place.textContent = meta.site;
   panel.dataset.section = stop.section; panel.dataset.entry = stop.id; panel.dataset.mode = submerged() ? 'dive' : 'surface';
-  for (const tab of tabs.children) { if (tab.dataset.section === stop.section) tab.setAttribute('aria-current', 'page'); else tab.removeAttribute('aria-current'); }
+  for (const tab of tabs.querySelectorAll('button')) { if (tab.dataset.section === stop.section) tab.setAttribute('aria-current', 'page'); else tab.removeAttribute('aria-current'); }
+  placeTabPill();
   if (!panel.open) return;
   // The address names the page being read, without adding history entries or waking other hash listeners.
   try { history.replaceState(history.state, '', `#${hashFor(stop)}`); } catch {}
@@ -501,7 +578,7 @@ export function show(id = sectionId, entry = null, options = {}) {
     // the project on either side.
     page.dataset.enter = !sameSection || options.still ? 'open' : stop.id === 'all' ? 'back' : rendered === 'projects:all' ? 'deeper' : index > renderedIndex ? 'next' : 'previous';
     page.replaceChildren(el('div', { class: 'arc-view' }, ...render(stop).flat().filter(Boolean)));
-    armStory();
+    armStory(); armExperience();
     page.setAttribute('aria-label', `${SECTIONS[stop.section].label}: ${page.querySelector('#archive-entry-title')?.textContent || ''}`);
     rendered = key; renderedIndex = index;
     if (options.scroll !== false) page.scrollTop = 0;
@@ -512,7 +589,8 @@ export function show(id = sectionId, entry = null, options = {}) {
   if (stop.anchor) {
     const target = page.querySelector(stop.anchor), within = target?.closest?.('.arc-chapter');
     if (story.on && within) { page.scrollTop = storyTarget(story.layers.indexOf(within)); paintStory(); }
-    else if (target) { if (stop.section === 'experience') target.dataset.current = 'true'; target.scrollIntoView({ block: 'start', behavior: 'auto' }); }
+    else if (stop.section === 'experience' && exp.el) gotoRole(stop.id, false);
+    else if (target) target.scrollIntoView({ block: 'start', behavior: 'auto' });
   }
   paint(stop);
   if (options.focus) page.querySelector(options.focus)?.focus({ preventScroll: true });
@@ -583,6 +661,10 @@ addEventListener('afterprint', clearPrint);
 
 // --- Listeners -------------------------------------------------------------------------------------------------------
 page.addEventListener('click', event => {
+  const fold = event.target.closest?.('[data-toggle]');
+  if (fold) { setRoleOpen(fold.dataset.toggle); return; }
+  const seg = event.target.closest?.('.arc-track-seg');
+  if (seg) { gotoRole(seg.dataset.role); return; }
   const stop = event.target.closest?.('.arc-rail-stop');
   if (stop && story.on) { page.scrollTo({ top: storyTarget(Number(stop.dataset.stop)), behavior: calm.matches ? 'auto' : 'smooth' }); return; }
   const control = event.target.closest?.('[data-go],[data-lightbox],[data-print],[data-role],[data-section]');
@@ -591,7 +673,6 @@ page.addEventListener('click', event => {
   else if (control.dataset.section) show(control.dataset.section, null, { focus: '#archive-entry-title' });
   else if (control.dataset.print !== undefined) print();
   else if (control.dataset.go) go(control.dataset.go, { focus: control.dataset.focus });
-  else if (control.matches('.arc-track-seg')) show('experience', control.dataset.role, { focus: `#arc-role-${control.dataset.role} h4` });
 });
 // Left and right turn between projects while a case study is open. The dialog owns the arrow keys while it is open
 // either way, so the scene behind never turns.
@@ -618,6 +699,6 @@ page.addEventListener('touchcancel', () => { swipe = null; }, { passive: true })
 tabs.addEventListener('click', event => { const tab = event.target.closest('[data-section]'); if (tab) show(tab.dataset.section, null, { focus: '#archive-entry-title' }); });
 
 // The story follows the scroll, one frame at a time, and is measured again when the sheet changes size.
-page.addEventListener('scroll', () => { if (!story.on || story.raf) return; story.raf = requestAnimationFrame(() => { story.raf = 0; paintStory(); }); }, { passive: true });
-if ('ResizeObserver' in window) new ResizeObserver(() => { if (story.el?.isConnected) { measureStory(); paintStory(); } }).observe(page);
+page.addEventListener('scroll', () => { if ((!story.on && !exp.el) || story.raf) return; story.raf = requestAnimationFrame(() => { story.raf = 0; paintStory(); paintExperience(); }); }, { passive: true });
+if ('ResizeObserver' in window) new ResizeObserver(() => { if (story.el?.isConnected) { measureStory(); paintStory(); } if (exp.el?.isConnected) { placeLens(); placeTabPill(); } }).observe(page);
 calm.addEventListener?.('change', () => { if (story.el?.isConnected) { measureStory(); paintStory(); } });
