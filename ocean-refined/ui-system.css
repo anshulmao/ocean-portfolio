@@ -44,7 +44,6 @@ html body .wordmark span{font-size:13px;letter-spacing:0;opacity:1;font-weight:4
 html body .surface-nav{gap:4px;padding:0;border:0;background:none;box-shadow:none;text-shadow:none}
 html body .surface-nav a{font:400 14px/1.2 var(--o-display);letter-spacing:0;text-transform:none;min-height:44px;display:inline-flex;align-items:center;border-radius:var(--ui-radius)}
 html body .surface-nav a:hover{background:var(--ui-ground);color:var(--ui-ink)}
-html body .settings-toggle{border:0;border-radius:var(--ui-radius);background:var(--ui-ground);color:var(--ui-ink);box-shadow:none;filter:none}
 html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{width:min(780px,65vw)}
 html body .hero .surface-copy h1{font-size:clamp(38px,5.1vw,74px);font-weight:400;line-height:1.04;color:var(--o-ink);text-shadow:none}
 html body .hero .surface-copy h1 span{display:block;font:inherit;color:inherit}
@@ -271,3 +270,6 @@ html body.reading-page{background:var(--surface);--deep:var(--ui-deep-raised);--
   html body :is(button,a,summary,.reading-card-cover img){transition:none}
 }
 @media print{.reading-page .reading-nav{position:static}html body #landmark-dialog{background:white;color:black}}
+
+/* Restore the rounded button treatment while preserving round touch and map markers. */
+html body button:not(.touch-key):not([data-landmark]){border-radius:100px!important}
