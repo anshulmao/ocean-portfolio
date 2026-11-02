@@ -216,6 +216,15 @@ export const stops = () => Object.keys(SECTIONS).flatMap(id => stopsFor(id).map(
 // --- About -----------------------------------------------------------------------------------------------------------
 // Who this is first: the photo, the name, what they do and where, then the ways to reach them and the résumé.
 // Then a short bio, then how they work, with the three places that shows in the projects.
+// The story under the hero is one stage. Scrolling moves through its three chapters in place (who I am in short, how
+// I work, what that looks like in the work): the words of the first light up as you read, the principles of the second
+// and the examples of the third take the light one at a time, and a rail beside them (above them on a phone) fills as
+// you go and jumps to a chapter when pressed. Without script, with reduced motion, or on a screen too short to hold a
+// chapter, the same chapters are simply stacked and fully lit.
+const spoken = text => { const p = el('p'); text.split(' ').forEach((word, index, all) => { p.append(el('span', { class: 'w', text: word })); if (index < all.length - 1) p.append(' '); }); return p; };
+function chapter(id, label, ...children) {
+  return el('article', { class: 'arc-chapter', id, 'aria-labelledby': `${id}-label` }, el('h4', { class: 'arc-chapter-label', id: `${id}-label`, text: label }), ...children);
+}
 function renderAbout() {
   const section = PORTFOLIO_CONTENT.about, card = section.entries[0], approach = section.entries.find(entry => entry.id === 'approach');
   const now = roles().find(entry => entry.start && !entry.end), art = media[card.id];
@@ -223,6 +232,20 @@ function renderAbout() {
   const contacts = safeLinks(card.links);
   const contactMark = link => link.url.startsWith('mailto:') ? glyph('mail') : /github\.com/.test(link.url) ? glyph('code') : icon('overview');
   const rules = (approach?.facts || []).map((fact, index) => ({ title: fact, text: approach.body[index] || null }));
+  const examples = approach?.examples || [];
+  const chapters = [
+    chapter('arc-short', 'In short',
+      el('p', { class: 'arc-lead', text: card.summary }), el('div', { class: 'arc-spoken' }, card.body.map(spoken))),
+    approach && chapter('arc-how', approach.tag || 'How I work',
+      el('p', { class: 'arc-chapter-title', text: approach.title }), el('p', { class: 'arc-chapter-strap', text: approach.summary }),
+      rules.length > 0 && el('ol', { class: 'arc-focus', 'aria-label': 'Working principles' }, rules.map(rule => el('li', {}, el('strong', { text: rule.title }), rule.text && el('p', { text: rule.text }))))),
+    examples.length > 0 && chapter('arc-work', 'In the work',
+      el('p', { class: 'arc-chapter-title', text: 'What that looks like in the work' }),
+      el('ul', { class: 'arc-focus', 'aria-label': 'In the work' }, examples.map(example => {
+        const project = PORTFOLIO_CONTENT.projects.entries.find(entry => entry.id === example.project);
+        return el('li', {}, el('strong', { text: example.title }), el('p', { text: example.text }), project && el('span', { class: 'arc-chip', text: project.title }));
+      }))),
+  ].filter(Boolean);
   return [
     el('section', { class: 'arc-hero' },
       art && el('figure', { class: 'arc-portrait' }, picture(art)),
@@ -231,28 +254,83 @@ function renderAbout() {
         (card.role || card.title) && el('p', { class: 'arc-hero-role', text: card.role || card.title }),
         el('ul', { class: 'arc-where', 'aria-label': 'Where and what' },
           card.base && el('li', {}, glyph('pin'), el('span', { text: card.base })),
-          now && el('li', {}, icon('experience'), el('span', { text: `${now.title}${now.org ? ` at ${now.org}` : ''}` }))),
-        // The guided dive's welcome, only while the tour is on (release/guided-dive/SPEC.md, D6).
-        window.oceanTour?.welcome && el('p', { class: 'arc-welcome', text: window.oceanTour.welcome }),
-        el('div', { class: 'arc-pills', id: 'arc-contact', role: 'group', 'aria-label': 'Contact and résumé' },
-          resume && pill(resume, true),
-          contacts.map(link => anchorFor(link, 'arc-pill', contactMark(link), el('span', { text: link.label })))))),
-    el('section', { class: 'arc-bio', 'aria-labelledby': 'arc-bio-title' },
-      el('h4', { id: 'arc-bio-title', text: 'In short' }),
-      el('div', { class: 'arc-prose arc-prose--lead' }, el('p', { text: card.summary }), paragraphs(card.body))),
-    approach && el('section', { class: 'arc-how', id: 'arc-how', 'aria-labelledby': 'arc-how-title' },
-      el('div', { class: 'arc-how-head' }, el('h4', { id: 'arc-how-title', text: approach.tag || 'How I work' }), el('p', { class: 'arc-how-line', text: approach.title }), el('p', { class: 'arc-how-strap', text: approach.summary })),
-      rules.length > 0 && el('ol', { class: 'arc-rules', 'aria-label': 'Working principles' }, rules.map((rule, index) =>
-        el('li', {}, el('span', { class: 'arc-rule-no', 'aria-hidden': 'true', text: pad(index + 1) }), el('strong', { text: rule.title }), rule.text && el('p', { text: rule.text })))),
-      approach.examples?.length > 0 && el('div', { class: 'arc-examples' },
-        el('p', { class: 'arc-examples-label', text: 'What that looks like in the work' }),
-        el('ul', {}, approach.examples.map(example => {
-          const project = PORTFOLIO_CONTENT.projects.entries.find(entry => entry.id === example.project);
-          return el('li', {}, el('strong', { text: example.title }), el('p', { text: example.text }), project && el('span', { class: 'arc-chip', text: project.title }));
-        })))),
+          now && el('li', {}, icon('experience'), el('span', { text: `${now.title}${now.org ? ` at ${now.org}` : ''}` })))),
+      // The guided dive's welcome, only while the tour is on (release/guided-dive/SPEC.md, D6).
+      window.oceanTour?.welcome && el('p', { class: 'arc-welcome', text: window.oceanTour.welcome }),
+      el('div', { class: 'arc-pills arc-actions', id: 'arc-contact', role: 'group', 'aria-label': 'Résumé and contact' },
+        resume && pill(resume, true),
+        contacts.map(link => anchorFor(link, 'arc-pill arc-pill--contact', contactMark(link), el('span', { text: link.label }))))),
+    el('section', { class: 'arc-tale', 'data-pinned': 'false', 'aria-label': 'About me, in three parts' },
+      el('div', { class: 'arc-stage' },
+        el('nav', { class: 'arc-story-rail', 'aria-label': 'Parts of the story' }, chapters.map((item, index) =>
+          el('button', { type: 'button', class: 'arc-rail-stop', 'data-stop': index }, el('i', { 'aria-hidden': 'true' }), el('span', { text: item.querySelector('.arc-chapter-label').textContent })))),
+        el('div', { class: 'arc-layers' }, chapters))),
     foot('about'),
   ];
 }
+
+// The stage's controller. It pins the stage while the track under it scrolls, and turns how far you are through the
+// track into the state of the chapters. Only opacity, translate and a transform on the rail change.
+const story = { el: null, n: 0, top: 0, range: 0, on: false, layers: [], words: [], lists: [], lit: -1, active: [], raf: 0 };
+const clamp01 = value => Math.min(1, Math.max(0, value));
+const EDGE = .16, PACE = .62;
+function armStory() {
+  story.el = page.querySelector('.arc-tale'); story.on = false; story.lit = -1; story.active = [];
+  if (!story.el) return;
+  story.layers = [...story.el.querySelectorAll('.arc-chapter')]; story.n = story.layers.length;
+  story.words = [...story.el.querySelectorAll('.w')];
+  story.lists = story.layers.map(layer => [...layer.querySelectorAll('.arc-focus li')]);
+  story.stops = [...story.el.querySelectorAll('.arc-rail-stop')];
+  measureStory(); paintStory();
+  document.fonts?.ready.then(() => { measureStory(); paintStory(); });
+}
+function measureStory() {
+  const root = story.el;
+  if (!root?.isConnected) return;
+  const height = page.clientHeight, rail = root.querySelector('.arc-story-rail');
+  // The chapters are measured stacked, with the rail showing, to see whether the tallest fits the screen.
+  root.dataset.pinned = 'measure'; root.style.removeProperty('--stage'); root.style.removeProperty('--track'); root.style.removeProperty('--lift');
+  const need = Math.max(...story.layers.map(layer => layer.offsetHeight)) + (rail.offsetWidth > 400 ? rail.offsetHeight + 24 : 0) + 72;
+  const pin = !calm.matches && height >= 480 && need <= height && story.n > 1;
+  if (pin) {
+    // The stage is as tall as its tallest chapter needs and sits a little above the middle of the screen while pinned, so the
+    // last chapter is followed straight by the end of the page.
+    const stage = Math.round(need + 16);
+    story.range = height * PACE * story.n;
+    root.style.setProperty('--stage', `${stage}px`); root.style.setProperty('--lift', `${Math.max(0, Math.round((height - stage) * .4))}px`);
+    root.style.setProperty('--track', `${stage + story.range}px`);
+  }
+  root.dataset.pinned = String(pin); story.on = pin;
+  story.top = root.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop;
+}
+function paintStory() {
+  if (!story.el?.isConnected || !story.on) return;
+  const n = story.n, c = clamp01((page.scrollTop - story.top) / story.range) * n;
+  story.layers.forEach((layer, index) => {
+    const t = c - index;
+    let a = t < 0 || t > 1 ? 0 : 1;
+    if (index > 0) a = Math.min(a, clamp01(t / EDGE));
+    if (index < n - 1) a = Math.min(a, clamp01((1 - t) / EDGE));
+    layer.style.opacity = a.toFixed(3);
+    layer.style.translate = `0 ${((t < .5 ? 1 : -1) * (1 - a) * 22).toFixed(1)}px`;
+    layer.style.pointerEvents = a > .5 ? '' : 'none';
+  });
+  // The first chapter: its words take the light as you read on (its lead is lit from the start).
+  const lit = Math.round(clamp01((clamp01(c) - .04) / .66) * story.words.length);
+  if (lit !== story.lit) { story.words.forEach((word, index) => word.classList.toggle('on', index < lit)); story.lit = lit; }
+  // The others: one entry of the list at a time.
+  story.lists.forEach((items, index) => {
+    if (!items.length) return;
+    const active = Math.min(items.length - 1, Math.floor(clamp01(c - index) / .86 * items.length));
+    if (story.active[index] === active) return;
+    story.active[index] = active;
+    items.forEach((item, i) => { item.dataset.on = String(i === active); item.dataset.past = String(i < active); });
+  });
+  const current = Math.min(n - 1, Math.floor(c));
+  story.stops.forEach((stop, index) => { stop.style.setProperty('--f', clamp01(c - index).toFixed(3)); if (index === current) stop.setAttribute('aria-current', 'step'); else stop.removeAttribute('aria-current'); });
+}
+// Where in the page's scroll a chapter is read from.
+const storyTarget = index => story.top + (index === 0 ? 0 : (index + .3) / story.n * story.range);
 
 // --- Experience ------------------------------------------------------------------------------------------------------
 // The whole career on one track, then each role, newest first, with its dates, what the work was and what it covered.
@@ -423,6 +501,7 @@ export function show(id = sectionId, entry = null, options = {}) {
     // the project on either side.
     page.dataset.enter = !sameSection || options.still ? 'open' : stop.id === 'all' ? 'back' : rendered === 'projects:all' ? 'deeper' : index > renderedIndex ? 'next' : 'previous';
     page.replaceChildren(el('div', { class: 'arc-view' }, ...render(stop).flat().filter(Boolean)));
+    armStory();
     page.setAttribute('aria-label', `${SECTIONS[stop.section].label}: ${page.querySelector('#archive-entry-title')?.textContent || ''}`);
     rendered = key; renderedIndex = index;
     if (options.scroll !== false) page.scrollTop = 0;
@@ -431,8 +510,9 @@ export function show(id = sectionId, entry = null, options = {}) {
   // A place on the page (a role, how I work, contact) is scrolled to and, for a role, lit.
   for (const node of page.querySelectorAll('[data-current]')) delete node.dataset.current;
   if (stop.anchor) {
-    const target = page.querySelector(stop.anchor);
-    if (target) { if (stop.section === 'experience') target.dataset.current = 'true'; target.scrollIntoView({ block: 'start', behavior: 'auto' }); }
+    const target = page.querySelector(stop.anchor), within = target?.closest?.('.arc-chapter');
+    if (story.on && within) { page.scrollTop = storyTarget(story.layers.indexOf(within)); paintStory(); }
+    else if (target) { if (stop.section === 'experience') target.dataset.current = 'true'; target.scrollIntoView({ block: 'start', behavior: 'auto' }); }
   }
   paint(stop);
   if (options.focus) page.querySelector(options.focus)?.focus({ preventScroll: true });
@@ -503,6 +583,8 @@ addEventListener('afterprint', clearPrint);
 
 // --- Listeners -------------------------------------------------------------------------------------------------------
 page.addEventListener('click', event => {
+  const stop = event.target.closest?.('.arc-rail-stop');
+  if (stop && story.on) { page.scrollTo({ top: storyTarget(Number(stop.dataset.stop)), behavior: calm.matches ? 'auto' : 'smooth' }); return; }
   const control = event.target.closest?.('[data-go],[data-lightbox],[data-print],[data-role],[data-section]');
   if (!control || !page.contains(control)) return;
   if (control.dataset.lightbox) openLightbox(panel, media[control.dataset.lightbox], control);
@@ -534,3 +616,8 @@ page.addEventListener('touchend', event => {
 }, { passive: true });
 page.addEventListener('touchcancel', () => { swipe = null; }, { passive: true });
 tabs.addEventListener('click', event => { const tab = event.target.closest('[data-section]'); if (tab) show(tab.dataset.section, null, { focus: '#archive-entry-title' }); });
+
+// The story follows the scroll, one frame at a time, and is measured again when the sheet changes size.
+page.addEventListener('scroll', () => { if (!story.on || story.raf) return; story.raf = requestAnimationFrame(() => { story.raf = 0; paintStory(); }); }, { passive: true });
+if ('ResizeObserver' in window) new ResizeObserver(() => { if (story.el?.isConnected) { measureStory(); paintStory(); } }).observe(page);
+calm.addEventListener?.('change', () => { if (story.el?.isConnected) { measureStory(); paintStory(); } });
