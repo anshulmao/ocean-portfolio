@@ -23,7 +23,7 @@ authentication; the global caps bound submissions even if a client spoofs header
 
 Feedback is limited to five requests per network hash per hour and 500 requests
 per day globally. Retrying an unchanged note uses the same UUID, avoiding duplicate
-rows after a lost response. Contact fields are discarded without explicit consent.
+rows after a lost response. Contact fields are stored only when the visitor enters a name or email in the feedback form.
 The form preserves the note on failure and acknowledges only a confirmed save.
 
 Taking a reef photo still downloads a PNG locally. Afterward, Settings exposes

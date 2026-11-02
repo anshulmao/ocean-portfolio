@@ -25,7 +25,6 @@
 .tooth-options .rated svg{fill:#d4f3eb;stroke:#f0fff8}
 .tooth-options label:hover>span{transform:translateY(-3px);border-color:#dcfff2}
 .tooth-options input:focus-visible+span{outline:2px solid #e6fff9;outline-offset:3px}
-.rating-caption{display:block;min-height:18px;margin:11px 0 0;font-size:11px;color:#b7dce1}
 .feedback-details{animation:field-details-in .25s ease-out}
 .safety-feedback .feedback-details label{font-size:12px;margin-top:14px}
 .safety-feedback .feedback-contact{gap:12px}

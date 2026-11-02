@@ -6,5 +6,5 @@ export function safetyRatingMarkup() {
     `<label><input type="radio" name="rating" value="${value}" required aria-label="${value} out of 5"><span>${star}<small>${value}</small></span></label>`
   ).join('');
 
-  return `<fieldset class="star-rating"><legend>How was your dive?</legend><p>Leave a little signal from the deep.</p><div class="star-options">${options}</div><span class="rating-caption" aria-live="polite">Choose 1–5 stars</span></fieldset>`;
+  return `<fieldset class="star-rating"><legend>Rate your dive</legend><div class="star-options">${options}</div></fieldset>`;
 }
