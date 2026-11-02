@@ -438,7 +438,8 @@ function paintExperience() {
 function placeLens() {
   const seg = exp.segs.find(item => item.dataset.role === exp.active?.dataset.role);
   if (!seg || !exp.lens || !seg.offsetWidth) return;
-  exp.lens.style.setProperty('--x', `${seg.offsetLeft}px`); exp.lens.style.setProperty('--w', `${seg.offsetWidth}px`);
+  // The lens covers exactly the coloured part of the segment (inside its 1.5px side gaps), so nothing shows around it.
+  exp.lens.style.setProperty('--x', `${seg.offsetLeft + 1.5}px`); exp.lens.style.setProperty('--w', `${Math.max(0, seg.offsetWidth - 3)}px`);
   if (!exp.lens.dataset.ready) requestAnimationFrame(() => { exp.lens.dataset.ready = 'true'; });
 }
 function setRoleOpen(id, open) {
