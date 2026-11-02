@@ -1,10 +1,18 @@
 # Test and CI audit — 1 November 2026
 
-Audited from `main` at `5b32c72271d4ab586a3596eac06749bfc4fd1eb8`.
+Original audit from `main` at `5b32c72271d4ab586a3596eac06749bfc4fd1eb8`.
+
+## Compatibility refresh — 3 November 2026
+
+Rebased onto `main` at `504e2ed26d4b7d8ca92844a28ef5522152dd2828`, preserving merged PR #37 (portfolio sheet/UI system) and #38 (simplified safety-stop feedback). The workflow and npm script conflicts retained the new `test:ui` suite and its screenshot artifacts alongside the audit checks; no newer UI work was reverted.
+
+PR #38 intentionally removes the contact checkbox. The browser test now verifies the approved form contract: fields are hidden until a rating, rating pauses the countdown, omitted contact is null, typing optional contact sends nothing, and explicit submission includes the supplied contact with consent. The backend's separate rejection of unconsented contact remains tested. Unit checks cover pause/resume/cancel without changing the 45-second requirement. This is a documented product requirement change, not an exception to obtain green.
+
+Current main's [CI run](https://github.com/anshulmao/ocean-portfolio/actions/runs/41510767838) fails for a flying-fish/diver clearance finding and a desktop guided-travel label/control overlap. The refreshed branch is checked against those same limits. Earlier local results below belong to the 1 November base and do not prove compatibility with this new base.
 
 ## Findings and decisions
 
-- The latest main [CI run](https://github.com/anshulmao/ocean-portfolio/actions/runs/41304609788) failed layout and reef, while build/unit and smoke passed. Layout took 7m50s inside an 8m49s job; reef took 64s inside a 1m39s job. These were actual failed assertions, not dependency installation failures.
+- The 1 November main [CI run](https://github.com/anshulmao/ocean-portfolio/actions/runs/41304609788) failed layout and reef, while build/unit and smoke passed. Layout took 7m50s inside an 8m49s job; reef took 64s inside a 1m39s job. These were actual failed assertions, not dependency installation failures.
 - Preserve navigation/collision continuity, privacy, asset integrity, touch targets, overflow and geometry checks. These protect visitor behavior. Keep their limits; do not update an expectation merely because a new feature fails it.
 - Remove the extra build before `test:build`: that test deliberately seeds stale output, runs a clean build and verifies cleanup. Building before it did the work twice. Keep independent small builds in browser/layout jobs: transferring the large asset directory would introduce a new artifact dependency and more work.
 - Split layout into phone, landscape and desktop jobs. All profiles and states still run; one failed profile does not cancel the others. Keep the same overlap, 40px target and ocean-visibility limits. Request only Chromium's headless shell in CI.
@@ -26,7 +34,8 @@ Audited from `main` at `5b32c72271d4ab586a3596eac06749bfc4fd1eb8`.
 | `npm run smoke` | Built navigation, deep links, every reading page/project and its images, with/without JS | Browser job |
 | `npm run test:services:browser` | Real frontend/SDK with mocked I/O: feedback error/retry, consent, local capture/download, explicit photo sharing, analytics opt-out | Browser job |
 | `npm run test:banking` | Production cloud-fish motion while a diver enters/leaves; all actual turns bank inward at three frame rates | Browser job |
-| `npm run check` | All five rows above; builds once | Local equivalent of fast jobs |
+| `npm run test:ui` | Merged UI regression suite: reading widths, contrast, keyboard, ocean sheets and reduced motion | Browser job |
+| `npm run check` | All six rows above; builds once | Local equivalent of fast jobs |
 | `npm run test:layout -- --only=phone` | Touch targets, overlap, overflow and remaining ocean view across visitor states | Layout matrix; also landscape and desktop |
 | `npm run audit:reef -- --quick` | Coral placement, body/seabed/reef clearance, swimming/banking, six encounters, school avoidance/cohesion, 30/60/120 Hz | Reef job |
 | `npm run audit:reef -- --quality=both` | Longer durations and three encounter locations in both qualities | Manual release check |
@@ -54,7 +63,8 @@ Paths are relative to the indicated directory. “Historical” means retained f
 | `test-cloud-banking.mjs` | New focused browser regression: real models and motion on a synthetic coral site, no WebGL or real server; fails if the old planned-loop bank returns. |
 | `test-return-route.mjs` | New unit: promote useful return-planning assertions from the standalone return-controls browser script. |
 | `test-mobile-layout.mjs` | Keep full profile matrix: surface, profile, summary, reading, dive, landmark, settings and guided states; desktop crosshair flow must actually run. |
-| `test-services-browser.mjs` | Repair and promote to CI; see privacy contract above. |
+| `test-services-browser.mjs` | Repair and promote to CI; see privacy contract above and the 3 November form update. |
+| `test-ui-system.mjs` | Preserve merged PR #37 coverage and screenshot artifacts; run in CI and local check. |
 | `audit-reef.mjs` | Keep: actual geometry and deterministic production simulation; never turn findings into warnings to obtain green. |
 | `test-portfolio-experience.mjs` | Historical overlap with smoke/build/layout; exact copy, project count and no-script assumptions are stale (reading pages now deliberately include analytics). Do not run as a second broad gate. |
 | `test-settings-menu.mjs`, `test-settings-sidebar.mjs` | Historical rounds of settings UI; duplicate broad state/layout coverage and exact default assertions. Use focused Escape/layout checks for CI; revalidate specific keyboard controls before migrating anything else. |

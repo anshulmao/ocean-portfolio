@@ -45,9 +45,17 @@ try{
   await page.waitForFunction(()=>document.querySelector('[data-analytics-toggle]')?.textContent.startsWith('Analytics on'));
   await page.waitForTimeout(1200);
   await page.evaluate(()=>oceanExpedition.openStop());
+  assert.equal(await page.locator('.feedback-details').isVisible(),false,'Feedback fields stay hidden until a rating is chosen');
+  assert.equal(await page.locator('.expedition-dialog [type=submit]').isVisible(),false);
   await page.getByRole('radio',{name:'5 out of 5',exact:true}).check();
+  const held=await page.evaluate(async()=>{
+    const before=oceanExpedition.safetyStop.remaining;
+    const {tick}=await import('/ui-ticker.js');tick(60);
+    return {before,...oceanExpedition.safetyStop};
+  });
+  assert.equal(held.paused,true,'Choosing a rating pauses the safety stop');
+  assert.equal(held.remaining,held.before,'Time spent writing feedback cannot complete the stop');
   await page.locator('[name=feedback]').fill('Synthetic browser note');
-  await page.locator('[name=name]').fill('Do not send');await page.locator('[name=email]').fill('private@example.com');
   await page.locator('.expedition-dialog [type=submit]').click();await page.locator('.feedback-error:not([hidden])').waitFor();
   assert.equal(await page.locator('[name=feedback]').inputValue(),'Synthetic browser note');
   assert.equal(submissions[0].body.contact,null);
@@ -55,9 +63,13 @@ try{
   failFeedback=false;await page.locator('.expedition-dialog [type=submit]').click();await page.waitForFunction(()=>!document.querySelector('.expedition-dialog').open);
   assert.equal(submissions[0].body.id,submissions[1].body.id,'Retry must reuse the id');
   await page.evaluate(()=>oceanExpedition.openStop());await page.getByRole('radio',{name:'4 out of 5',exact:true}).check();
-  await page.locator('[name=email]').fill('consented@example.com');await page.locator('[name=consent]').check();
+  // PR #38 intentionally removed the checkbox: optional contact fields are
+  // shared only by the visitor's explicit submission of this form.
+  await page.locator('[name=email]').fill('consented@example.com');
+  assert.equal(submissions.length,2,'Typing optional contact information never sends it');
   await page.locator('.expedition-dialog [type=submit]').click();await page.waitForFunction(()=>!document.querySelector('.expedition-dialog').open);
   assert.equal(submissions[2].body.contact.email,'consented@example.com');
+  assert.equal(submissions[2].body.contact.consent,true);
   await page.evaluate(()=>oceanExpedition.takePhoto());
   await page.waitForFunction(()=>oceanDiveLog.photos.length===1);
   assert.equal(submissions.filter(item=>item.kind==='photo').length,0,'Taking a photo must not upload it');
