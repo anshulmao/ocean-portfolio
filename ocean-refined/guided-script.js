@@ -59,7 +59,7 @@ export const STEPS = [
   // barracuda wheel off to the left, over the pink whipray and past the brain coral dome, and round to the anchor from the
   // north, squarely in front of it with the nurse shark lined up behind it. Each subject 15-18 m off, so it reads whole, and
   // far enough apart that the view hands one to the next without hurrying.
-  { key: 'about', kind: 'stop', landmark: 'about', opens: 'glance', place: `About · The Anchor · ${depth(-9)}`, signal: '#7ff0cf',
+  { key: 'about', kind: 'stop', landmark: 'about', opens: 'about', place: `About · The Anchor · ${depth(-9)}`, signal: '#7ff0cf',
     view: { behind: 'sleeper', near: [-19, -12.6, -22], distance: 10, rise: 2 },
     title: 'This anchor is me', line: 'Open it for my portfolio at a glance: who I am and where everything lives.',
     via: [

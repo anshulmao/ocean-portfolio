@@ -49,8 +49,6 @@ function openArchive(id, fromWaypoint=false, entry=null, site=id) {
   return showRecords(id, entry);
 }
 function showRecords(id, entry) {
-  const label = panel.querySelector('#archive-return-label');
-  if (label) label.textContent = window.oceanDiagnostics?.submerged ? 'Return to the reef' : 'Return to the surface';
   prompt.hidden = true;panel.showModal();
   // Rendered after the dialog is laid out so the entry can be scrolled into place.
   archive.show(id, entry, {force:true});
@@ -133,7 +131,8 @@ for (const dialog of [panel, credits]) {
     restoreFocus(returnFocus?.isConnected && returnFocus !== document.querySelector('#world') ? returnFocus : document.querySelector('#capture-hint'));
   });
 }
-panel.querySelector('.dialog-return').addEventListener('click', () => close(panel));
+// The page's own way out (archive.js draws one at the end of every page).
+panel.addEventListener('click', event => { if (event.target.closest?.('.dialog-return')) close(panel); });
 prompt.addEventListener('click', interact);
 addEventListener('keydown', event => {
   if (event.code !== 'KeyF' || event.repeat || event.target.closest?.('input,textarea,select,[contenteditable="true"]')) return;

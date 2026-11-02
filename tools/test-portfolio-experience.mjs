@@ -82,9 +82,9 @@ try {
   assert.equal(await world.evaluate(()=>oceanDiagnostics.tour.stop),stop);
   await world.locator('[data-tour="read"]').click();
   await world.locator('#landmark-dialog[open]').waitFor();
-  // On the tour the anchor opens At a glance, with the tour's welcome on it.
-  assert.equal(await world.evaluate(()=>oceanArchive.current.section),'glance');
-  assert.ok(await world.locator('#landmark-dialog .arc-welcome').isVisible(),'the tour welcome shows on At a glance');
+  // On the tour the anchor opens About, with the tour's welcome on it.
+  assert.equal(await world.evaluate(()=>oceanArchive.current.section),'about');
+  assert.ok(await world.locator('#landmark-dialog .arc-welcome').isVisible(),'the tour welcome shows on About');
   await world.locator('#landmark-dialog .dialog-close').click();
   await world.locator('[data-tour="next"]').click();
   await world.waitForFunction(()=>['travel','dwell'].includes(oceanTour.status));
@@ -93,7 +93,7 @@ try {
   await world.evaluate(()=>oceanTour.stop());
   report.metrics=await world.evaluate(()=>oceanExperienceMetrics.snapshot());
   report.startup=startup;
-  report.checks.push('Immediate work entry; all case studies and mobile archive; essential-first prewarm; guided route opens with a welcome, opens At a glance at the anchor, waits for reading and yields on movement.');
+  report.checks.push('Immediate work entry; all case studies and mobile archive; essential-first prewarm; guided route opens with a welcome, opens About at the anchor, waits for reading and yields on movement.');
   await context.close();
   await browser.close();browser=await chromium.launch({channel:'chrome',headless:true});
   const fallback=await browser.newContext({viewport:{width:390,height:844}});
