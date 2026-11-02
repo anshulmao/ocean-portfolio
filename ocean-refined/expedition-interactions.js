@@ -61,8 +61,7 @@ function updateStopClock(dt) {
   if (completionLeft > 0) { completionLeft -= dt; if (completionLeft <= 0) {completion.hidden = true;if(window.oceanControls?.nav.returnPhase==='stop'){dialog.close();return;}} }
   if (stopClock.advance(dt)) {
     countdown.dataset.complete = 'true'; completion.hidden = false; completionLeft = 2.6;
-    dialog.querySelector('.stop-hold').textContent = window.oceanControls?.nav.returnPhase==='stop'?'Stop complete. Continuing to the surface…':'Stop complete. Finish your note or keep exploring.';
-    dialog.querySelector('[data-skip]').textContent = window.oceanControls?.nav.returnPhase==='stop'?'Continue surfacing':'Keep exploring';
+    dialog.querySelector('.stop-hold').textContent = window.oceanControls?.nav.returnPhase==='stop'?'Stop complete. Continuing to the surface…':'Stop complete.';
     window.dispatchEvent(new CustomEvent('oceansafetystopcomplete'));
   }
   renderStopClock();
@@ -99,35 +98,32 @@ function openStop() {
     <div class="safety-complete" role="status" hidden><span>Safety stop</span><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/><path d="m10 18 6 6 11-12"/></svg><span class="sr-only">complete</span></div>
     <p class="stop-hold"><span aria-hidden="true">⌛</span> 45 seconds to pause at ${heldDepth.toFixed(1)} m</p>
     <form id="reef-feedback">${safetyRatingMarkup()}
-    <section class="feedback-details" hidden aria-label="Optional field note">
-    <label>Anything to share? <small>optional</small><textarea name="feedback" maxlength="2000" rows="3" placeholder="A favourite moment, an idea, or something to improve…"></textarea></label>
+    <section class="feedback-details" hidden aria-label="Feedback details">
     <div class="feedback-contact"><label>Name <small>optional</small><input name="name" autocomplete="name" maxlength="100"></label><label>Email <small>optional</small><input name="email" type="email" autocomplete="email" maxlength="254"></label></div>
-    <label class="feedback-check"><input name="consent" type="checkbox">Include my contact details so I can share them with Anshul.</label>
-    <p class="feedback-privacy">Sending saves your note privately for Anshul. Contact details are included only if you opt in. <a href="./privacy.html" target="_blank" rel="noopener">Privacy</a></p>
-    </section><p class="feedback-error" role="alert" hidden></p><div class="feedback-actions"><button type="button" data-skip>Skip & keep exploring</button><button type="submit" class="expedition-primary" hidden>Send field note</button></div></form>`, 'stop')) return;
+    <label>Feedback <small>optional</small><textarea name="feedback" maxlength="2000" rows="3" placeholder="Share anything about your dive…"></textarea></label>
+    </section><p class="feedback-error" role="alert" hidden></p><div class="feedback-actions"><button type="submit" data-submit class="expedition-primary" hidden>Share feedback</button></div></form>`, 'stop')) return;
   track('feedback_started');
-  if(controls.nav.returnPhase==='stop')dialog.querySelector('[data-skip]').textContent='Skip stop & surface · Esc';
   const form = dialog.querySelector('form');
   offerLeft=0;offerUsed=true;stopButton.hidden=true;
   startStopClock();
   form.addEventListener('change', event => {
     if (event.target.name !== 'rating') return;
     const rating = Number(event.target.value);
+    stopClock.pause();
+    dialog.querySelector('.stop-hold').textContent = 'Safety stop paused while you share feedback.';
     dialog.querySelector('.feedback-details').hidden = false;
     dialog.querySelector('[type=submit]').hidden = false;
-    dialog.querySelector('.rating-caption').textContent = `${rating} of 5 · ${['','Room to improve','Finding its feet','A good dive','Loved exploring','An unforgettable dive'][rating]}`;
     dialog.querySelectorAll('.star-options label').forEach((label,index)=>label.classList.toggle('rated',index < rating));
   });
-  dialog.querySelector('[data-skip]').addEventListener('click',()=>dialog.close());
   let submissionId = crypto.randomUUID(), lastPayload = '';
   dialog.querySelector('form').addEventListener('submit', async event=> {
     event.preventDefault(); const form = event.currentTarget;
     if (form.dataset.sending === 'true' || !form.reportValidity()) return;
-    const data = new FormData(form), consent = data.get('consent') === 'on';
+    const data = new FormData(form);
     const error = dialog.querySelector('.feedback-error');
-    // Optional contact is omitted unless explicitly opted in.
     error.hidden = true;
-    const payload = {rating:Number(data.get('rating')),feedback:String(data.get('feedback')).trim(),depthMeters:Number(heldDepth.toFixed(1)),contact:consent?{name:String(data.get('name')).trim(),email:String(data.get('email')).trim(),consent:true}:null};
+    const name=String(data.get('name')||'').trim(), email=String(data.get('email')||'').trim();
+    const payload = {rating:Number(data.get('rating')),feedback:String(data.get('feedback')||'').trim(),depthMeters:Number(heldDepth.toFixed(1)),contact:name||email?{name,email,consent:true}:null};
     const fingerprint=JSON.stringify(payload);
     if(lastPayload && lastPayload!==fingerprint)submissionId=crypto.randomUUID();
     lastPayload=fingerprint;const record={id:submissionId,...payload};
@@ -141,7 +137,7 @@ function openStop() {
     } catch (failure) {
       if(form.isConnected){error.textContent=failure.message;error.hidden=false;}
     } finally {
-      delete form.dataset.sending;submit.disabled=false;submit.textContent='Send field note';fields.forEach(field=>field.disabled=false);
+      delete form.dataset.sending;submit.disabled=false;submit.textContent='Share feedback';fields.forEach(field=>field.disabled=false);
     }
   });
 }
@@ -265,4 +261,4 @@ addEventListener('keydown',event=> {
   else if (event.code === 'KeyH' && !dialog.open && !ui.dialog) { event.preventDefault(); takePhoto(); }
   else if (event.code === 'KeyF' && nearest && !dialog.open && !ui.dialog && !window.oceanDiagnostics?.nearbyLandmark) { event.preventDefault(); event.stopImmediatePropagation(); collect(); }
 }, {capture:true});
-window.oceanExpedition = {openStop,openInventory,takePhoto,collect,get offerRemaining(){return offerLeft;},get safetyStop(){return {remaining:stopClock.remaining,completed:stopClock.completed,active:stopClock.active};},get inventory(){return finds.filter(item=>item.collected).map(({id,name})=>({id,name}));},get locations(){return finds.map(({id,name,x,y,z})=>({id,name,x,y,z}));},get score(){return finds.filter(item=>item.collected).length*100;},get photos(){return photos;},get holding(){return active === 'stop';}};
+window.oceanExpedition = {openStop,openInventory,takePhoto,collect,get offerRemaining(){return offerLeft;},get safetyStop(){return {remaining:stopClock.remaining,completed:stopClock.completed,active:stopClock.active,paused:stopClock.paused};},get inventory(){return finds.filter(item=>item.collected).map(({id,name})=>({id,name}));},get locations(){return finds.map(({id,name,x,y,z})=>({id,name,x,y,z}));},get score(){return finds.filter(item=>item.collected).length*100;},get photos(){return photos;},get holding(){return active === 'stop';}};

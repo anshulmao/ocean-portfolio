@@ -451,3 +451,17 @@ summary:focus-visible{outline-offset:4px}
  .reading-introduction .reading-portrait strong{font-size:18px}
  .reading-introduction .reading-portrait figcaption>span{font-size:12px}
 }
+
+/* The stepped aurora closes the portfolio in its own space, above footer links.
+   A static SVG is the fallback; supported browsers reveal it with the scroll. */
+.reading-aurora{height:175px;overflow:hidden;pointer-events:none;view-timeline-name:--footer-aurora;view-timeline-axis:block;background:var(--deep-3)}
+.reading-aurora svg{display:block;width:100%;height:100%;transform-origin:center bottom}
+@media(min-width:600px){.reading-aurora{height:300px}}
+@media(min-width:1000px){.reading-aurora{height:65vh;max-height:680px}}
+@supports(animation-timeline:view()){
+  @media(prefers-reduced-motion:no-preference){
+    .reading-aurora svg{animation:reading-aurora-reveal 1s linear both;animation-timeline:--footer-aurora;animation-range:entry 0% entry 100%}
+  }
+}
+@keyframes reading-aurora-reveal{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@media print{.reading-aurora{display:none}}
