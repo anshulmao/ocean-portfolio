@@ -272,12 +272,8 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 #landmark-dialog .arc-diagram li span{font:400 11px/1 var(--mono);color:var(--tint)}
 #landmark-dialog .arc-diagram li strong{font:500 15px/1.35 var(--font);color:var(--text)}
 #landmark-dialog .arc-diagram small{display:block;margin-top:12px;font:400 12.5px/1.4 var(--font);color:var(--dim)}
-#landmark-dialog .arc-more{margin-top:26px;padding:0 0 4px;border-top:1px solid var(--rule)}
-#landmark-dialog .arc-more summary{display:inline-flex;align-items:center;gap:8px;min-height:48px;list-style:none;font:500 15px/1 var(--font);color:var(--text);cursor:pointer}
-#landmark-dialog .arc-more summary::-webkit-details-marker{display:none}
-#landmark-dialog .arc-more summary .hud-icon{width:16px;height:16px;transition:rotate var(--motion-settle) var(--journey-ease)}
-#landmark-dialog .arc-more[open] summary .hud-icon{rotate:90deg}
-#landmark-dialog .arc-more .arc-prose{margin-top:6px}
+#landmark-dialog .arc-more{margin-top:26px;padding:24px 0 4px;border-top:1px solid var(--rule)}
+
 #landmark-dialog .arc-more .arc-facts{margin-top:16px;margin-bottom:12px}
 #landmark-dialog .arc-evidence{margin-top:26px;max-width:70ch;font:400 13.5px/1.55 var(--font);color:var(--muted)}
 #landmark-dialog .arc-evidence b{font-weight:500;color:var(--text-2)}
