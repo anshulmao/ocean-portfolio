@@ -229,11 +229,13 @@ export const stops = () => Object.keys(SECTIONS).flatMap(id => stopsFor(id).map(
 // and the examples of the third take the light one at a time, and a rail beside them (above them on a phone) fills as
 // you go and jumps to a chapter when pressed. Without script, with reduced motion, or on a screen too short to hold a
 // chapter, the same chapters are simply stacked and fully lit.
-const spoken = text => { const p = el('p'); text.split(' ').forEach((word, index, all) => { p.append(el('span', { class: 'w', text: word })); if (index < all.length - 1) p.append(' '); }); return p; };
+let wordNo = 0;
+const spoken = text => { const p = el('p'); text.split(' ').forEach((word, index, all) => { p.append(el('span', { class: 'w', style: `--i:${wordNo++}`, text: word })); if (index < all.length - 1) p.append(' '); }); return p; };
 function chapter(id, label, ...children) {
   return el('article', { class: 'arc-chapter', id, 'aria-labelledby': `${id}-label` }, el('h4', { class: 'arc-chapter-label', id: `${id}-label`, text: label }), ...children);
 }
 function renderAbout() {
+  wordNo = 0;
   const section = PORTFOLIO_CONTENT.about, card = section.entries[0], approach = section.entries.find(entry => entry.id === 'approach');
   const now = roles().find(entry => entry.start && !entry.end), art = media[card.id];
   const resume = safeLinks(PORTFOLIO_CONTENT.resume.entries[0]?.links).find(link => link.download);
@@ -277,20 +279,26 @@ function renderAbout() {
   ];
 }
 
-// The stage's controller. It pins the stage while the track under it scrolls, and turns how far you are through the
-// track into the state of the chapters. Only opacity, translate and a transform on the rail change.
-const story = { el: null, n: 0, top: 0, range: 0, on: false, layers: [], words: [], lists: [], lit: -1, active: [], raf: 0 };
+// The stage's controller. The stage is pinned while the track under it scrolls, and the scroll goes one chapter at a time: a
+// chapter plays through by itself (in time, not with the scroll) and then rests with everything lit; the next scroll in either
+// direction moves to the next chapter and the scroll comes to rest on it. Pressing a stop on the rail goes straight to its
+// chapter. Nothing is shown half-way.
+const story = { el: null, n: 0, top: 0, step: 0, range: 0, on: false, layers: [], stops: [], cur: -1, rest: 0, timer: 0, from: null, last: 0, auto: false, touching: false, raf: 0 };
 const clamp01 = value => Math.min(1, Math.max(0, value));
-const EDGE = .16, PACE = .62;
+const PACE = .7, SETTLE = 130;
 function armStory() {
-  story.el = page.querySelector('.arc-tale'); story.on = false; story.lit = -1; story.active = [];
+  clearTimeout(story.timer); story.timer = 0; story.from = null; story.auto = false;
+  story.el = page.querySelector('.arc-tale'); story.on = false; story.cur = -1; story.rest = 0;
   if (!story.el) return;
   story.layers = [...story.el.querySelectorAll('.arc-chapter')]; story.n = story.layers.length;
-  story.words = [...story.el.querySelectorAll('.w')];
-  story.lists = story.layers.map(layer => [...layer.querySelectorAll('.arc-focus li')]);
   story.stops = [...story.el.querySelectorAll('.arc-rail-stop')];
-  measureStory(); paintStory();
-  document.fonts?.ready.then(() => { measureStory(); paintStory(); });
+  measureStory(); showChapter(0, false);
+  // The first chapter plays when the stage first comes into view.
+  if ('IntersectionObserver' in window) {
+    const watch = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) { watch.disconnect(); if (story.on && story.el?.isConnected) showChapter(Math.max(0, chapterAt()), true); } }, { root: page, threshold: .5 });
+    watch.observe(story.el.querySelector('.arc-stage'));
+  }
+  document.fonts?.ready.then(() => { measureStory(); });
 }
 function measureStory() {
   const root = story.el;
@@ -304,41 +312,66 @@ function measureStory() {
     // The stage is as tall as its tallest chapter needs and sits a little above the middle of the screen while pinned, so the
     // last chapter is followed straight by the end of the page.
     const stage = Math.round(need + 16);
-    story.range = height * PACE * story.n;
+    story.step = Math.round(height * PACE); story.range = story.step * (story.n - 1);
     root.style.setProperty('--stage', `${stage}px`); root.style.setProperty('--lift', `${Math.max(0, Math.round((height - stage) * .4))}px`);
     root.style.setProperty('--track', `${stage + story.range}px`);
   }
   root.dataset.pinned = String(pin); story.on = pin;
-  story.top = root.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop;
+  story.top = offsetWithin(root); story.last = page.scrollTop - story.top;
+}
+// An element's distance from the top of the page's scrolling content, from layout (not affected by the sheet's opening scale).
+function offsetWithin(node) { let y = 0; for (let n = node; n && n !== page; n = n.offsetParent) y += n.offsetTop; return y; }
+// The chapter the scroll is on: the nearest resting place.
+const chapterAt = (y = page.scrollTop - story.top) => Math.min(story.n - 1, Math.max(0, Math.round(y / story.step)));
+function showChapter(index, play) {
+  if (index === story.cur && !play) return;
+  story.cur = index;
+  story.layers.forEach((layer, i) => {
+    layer.dataset.pos = i < index ? 'before' : i > index ? 'after' : 'current';
+    if (i === index) { layer.dataset.live = 'false'; if (play) requestAnimationFrame(() => { layer.dataset.live = 'true'; }); }
+  });
+  story.stops.forEach((stop, i) => { stop.dataset.state = i < index ? 'done' : i === index ? 'now' : 'next'; if (i === index) stop.setAttribute('aria-current', 'step'); else stop.removeAttribute('aria-current'); });
 }
 function paintStory() {
-  if (!story.el?.isConnected || !story.on) return;
-  const n = story.n, c = clamp01((page.scrollTop - story.top) / story.range) * n;
-  story.layers.forEach((layer, index) => {
-    const t = c - index;
-    let a = t < 0 || t > 1 ? 0 : 1;
-    if (index > 0) a = Math.min(a, clamp01(t / EDGE));
-    if (index < n - 1) a = Math.min(a, clamp01((1 - t) / EDGE));
-    layer.style.opacity = a.toFixed(3);
-    layer.style.translate = `0 ${((t < .5 ? 1 : -1) * (1 - a) * 22).toFixed(1)}px`;
-    layer.style.pointerEvents = a > .5 ? '' : 'none';
-  });
-  // The first chapter: its words take the light as you read on (its lead is lit from the start).
-  const lit = Math.round(clamp01((clamp01(c) - .04) / .66) * story.words.length);
-  if (lit !== story.lit) { story.words.forEach((word, index) => word.classList.toggle('on', index < lit)); story.lit = lit; }
-  // The others: one entry of the list at a time.
-  story.lists.forEach((items, index) => {
-    if (!items.length) return;
-    const active = Math.min(items.length - 1, Math.floor(clamp01(c - index) / .86 * items.length));
-    if (story.active[index] === active) return;
-    story.active[index] = active;
-    items.forEach((item, i) => { item.dataset.on = String(i === active); item.dataset.past = String(i < active); });
-  });
-  const current = Math.min(n - 1, Math.floor(c));
-  story.stops.forEach((stop, index) => { stop.style.setProperty('--f', clamp01(c - index).toFixed(3)); if (index === current) stop.setAttribute('aria-current', 'step'); else stop.removeAttribute('aria-current'); });
+  if (!story.el?.isConnected || !story.on || story.cur < 0) return;
+  const index = chapterAt();
+  if (index !== story.cur) showChapter(index, true);
 }
-// Where in the page's scroll a chapter is read from.
-const storyTarget = index => story.top + (index === 0 ? 0 : (index + .3) / story.n * story.range);
+// Where in the page's scroll a chapter rests.
+const storyTarget = index => story.top + index * story.step;
+function goToChapter(index, smooth = true) {
+  story.auto = true; story.rest = index;
+  page.scrollTo({ top: storyTarget(index), behavior: smooth && !calm.matches ? 'smooth' : 'auto' });
+}
+// Called on every scroll event of the page. When the scroll has gone quiet it is brought to a resting place: one chapter on
+// from where the gesture began (or back to where it began, if it did not go far), never two at once.
+function storyScrolled() {
+  if (!story.on) return;
+  const y = page.scrollTop - story.top;
+  if (!story.from) story.from = { y: story.last, index: story.rest };
+  clearTimeout(story.timer); story.timer = setTimeout(settleStory, SETTLE);
+  story.last = y;
+}
+function settleStory() {
+  story.timer = 0;
+  if (!story.on) return;
+  if (story.touching) { story.timer = setTimeout(settleStory, SETTLE); return; }
+  const y = page.scrollTop - story.top, from = story.from; story.from = null; story.last = y;
+  if (story.auto) { story.auto = false; story.rest = chapterAt(y); return; }
+  const last = story.n - 1, moved = y - (from?.y ?? y), far = Math.abs(moved) > story.step * .08;
+  let index = null;
+  if (y >= 0 && y <= story.range) {
+    // Inside the track. A gesture that began inside it moves one chapter in its direction; one that came in from outside
+    // lands on the nearest chapter.
+    const inside = from && from.y >= -2 && from.y <= story.range + 2;
+    index = inside ? Math.min(last, Math.max(0, from.index + (far ? Math.sign(moved) : 0))) : chapterAt(y);
+  } else if (y < 0 && y > -page.clientHeight * .35 && moved > 0) index = 0;   // just above the pin, going down: seat the first chapter
+  else if (y > story.range) story.rest = last;
+  else if (y < 0) story.rest = 0;
+  if (index === null) return;
+  story.rest = index;
+  if (Math.abs(y - index * story.step) > 2) { story.auto = true; page.scrollTo({ top: storyTarget(index), behavior: calm.matches ? 'auto' : 'smooth' }); }
+}
 
 // --- Experience ------------------------------------------------------------------------------------------------------
 // The whole career on one track, then each role, newest first, with its dates, what the work was and what it covered.
@@ -376,7 +409,7 @@ function roleCard(entry) {
   // Titles held, newest first, like the roles themselves.
   const stages = (entry.stages || []).filter(stage => stage.start && stage.end).sort((a, b) => monthIndex(b.start) - monthIndex(a.start));
   const facts = entry.facts.filter(fact => !(entry.stages || []).some(stage => fact.startsWith(stage.label)) && fact !== entry.site);
-  const current = Boolean(entry.start && !entry.end), more = `arc-role-more-${entry.id}`;
+  const current = Boolean(entry.start && !entry.end);
   const detail = [el('div', { class: 'arc-prose' }, paragraphs(entry.body)),
     stages.length > 0 && el('ul', { class: 'arc-stages', 'aria-label': 'Titles held' }, stages.map(stage => el('li', {}, el('b', { text: stage.label }), el('span', { text: `${monthLabel(stage.start)} — ${monthLabel(stage.end)}` })))),
     facts.length > 0 && el('ul', { class: 'arc-facts', 'aria-label': 'Covered' }, facts.map(text => el('li', {}, glyph('check'), el('span', { text })))),
@@ -389,9 +422,7 @@ function roleCard(entry) {
       el('h4', { id: `arc-role-title-${entry.id}`, text: entry.title }),
       el('p', { class: 'arc-role-org', text: [entry.org, entry.site].filter(Boolean).join(' · ') || entry.tag }),
       el('p', { class: 'arc-role-lead', text: entry.summary }),
-      // The lead says what the role was; what it covered opens beneath it. The current role starts open.
-      el('button', { type: 'button', class: 'arc-more-toggle', 'data-toggle': entry.id, 'aria-expanded': String(current), 'aria-controls': more }, el('span', { text: current ? 'Hide details' : 'Show details' }), glyph('next')),
-      el('div', { class: 'arc-collapse', id: more, 'data-open': String(current) }, el('div', { class: 'arc-collapse-inner' }, detail))));
+      detail));
 }
 function renderExperience() {
   const section = PORTFOLIO_CONTENT.experience, list = roles();
@@ -403,7 +434,7 @@ function renderExperience() {
   ];
 }
 // The controller for the page: roles rise in as they come into view, the track lights the role being read and the line beside
-// the roles fills as you go. A role opens and closes beneath its lead. Only opacity and transforms change.
+// the roles fills as you go. Only opacity and transforms change.
 const exp = { el: null, io: null, roles: [], segs: [], track: null, now: null, active: null };
 function armExperience() {
   exp.io?.disconnect(); exp.io = null; exp.el = page.querySelector('.arc-roles'); exp.active = null;
@@ -442,17 +473,11 @@ function placeLens() {
   exp.lens.style.setProperty('--x', `${seg.offsetLeft + 1.5}px`); exp.lens.style.setProperty('--w', `${Math.max(0, seg.offsetWidth - 3)}px`);
   if (!exp.lens.dataset.ready) requestAnimationFrame(() => { exp.lens.dataset.ready = 'true'; });
 }
-function setRoleOpen(id, open) {
-  const role = page.querySelector(`#arc-role-${id}`), box = role?.querySelector('.arc-collapse'), toggle = role?.querySelector('.arc-more-toggle');
-  if (!box) return;
-  const next = open ?? box.dataset.open !== 'true';
-  box.dataset.open = String(next); toggle.setAttribute('aria-expanded', String(next)); toggle.querySelector('span').textContent = next ? 'Hide details' : 'Show details';
-}
-// Scrolls a role to just under the track, and opens it.
+// Scrolls a role to just under the track.
 function gotoRole(id, smooth = true) {
   const role = page.querySelector(`#arc-role-${id}`);
   if (!role) return;
-  setRoleOpen(id, true); role.dataset.rise = 'in';
+  role.dataset.rise = 'in';
   const top = role.getBoundingClientRect().top - page.getBoundingClientRect().top + page.scrollTop - (exp.track?.offsetHeight || 0) - 24;
   page.scrollTo({ top: Math.max(0, top), behavior: smooth && !calm.matches ? 'smooth' : 'auto' });
 }
@@ -589,7 +614,7 @@ export function show(id = sectionId, entry = null, options = {}) {
   for (const node of page.querySelectorAll('[data-current]')) delete node.dataset.current;
   if (stop.anchor) {
     const target = page.querySelector(stop.anchor), within = target?.closest?.('.arc-chapter');
-    if (story.on && within) { page.scrollTop = storyTarget(story.layers.indexOf(within)); paintStory(); }
+    if (story.on && within) { const index = story.layers.indexOf(within); story.rest = index; page.scrollTop = storyTarget(index); showChapter(index, true); story.last = index * story.step; }
     else if (stop.section === 'experience' && exp.el) gotoRole(stop.id, false);
     else if (target) target.scrollIntoView({ block: 'start', behavior: 'auto' });
   }
@@ -662,12 +687,10 @@ addEventListener('afterprint', clearPrint);
 
 // --- Listeners -------------------------------------------------------------------------------------------------------
 page.addEventListener('click', event => {
-  const fold = event.target.closest?.('[data-toggle]');
-  if (fold) { setRoleOpen(fold.dataset.toggle); return; }
   const seg = event.target.closest?.('.arc-track-seg');
   if (seg) { gotoRole(seg.dataset.role); return; }
   const stop = event.target.closest?.('.arc-rail-stop');
-  if (stop && story.on) { page.scrollTo({ top: storyTarget(Number(stop.dataset.stop)), behavior: calm.matches ? 'auto' : 'smooth' }); return; }
+  if (stop && story.on) { goToChapter(Number(stop.dataset.stop)); return; }
   const control = event.target.closest?.('[data-go],[data-lightbox],[data-print],[data-role],[data-section]');
   if (!control || !page.contains(control)) return;
   if (control.dataset.lightbox) openLightbox(panel, media[control.dataset.lightbox], control);
@@ -700,6 +723,8 @@ page.addEventListener('touchcancel', () => { swipe = null; }, { passive: true })
 tabs.addEventListener('click', event => { const tab = event.target.closest('[data-section]'); if (tab) show(tab.dataset.section, null, { focus: '#archive-entry-title' }); });
 
 // The story follows the scroll, one frame at a time, and is measured again when the sheet changes size.
-page.addEventListener('scroll', () => { if ((!story.on && !exp.el) || story.raf) return; story.raf = requestAnimationFrame(() => { story.raf = 0; paintStory(); paintExperience(); }); }, { passive: true });
-if ('ResizeObserver' in window) new ResizeObserver(() => { if (story.el?.isConnected) { measureStory(); paintStory(); } if (exp.el?.isConnected) { placeLens(); placeTabPill(); } }).observe(page);
-calm.addEventListener?.('change', () => { if (story.el?.isConnected) { measureStory(); paintStory(); } });
+page.addEventListener('scroll', () => { storyScrolled(); if ((!story.on && !exp.el) || story.raf) return; story.raf = requestAnimationFrame(() => { story.raf = 0; paintStory(); paintExperience(); }); }, { passive: true });
+page.addEventListener('touchstart', () => { story.touching = true; }, { passive: true });
+for (const type of ['touchend', 'touchcancel']) page.addEventListener(type, () => { story.touching = false; }, { passive: true });
+if ('ResizeObserver' in window) new ResizeObserver(() => { if (story.el?.isConnected) { measureStory(); } if (exp.el?.isConnected) { placeLens(); placeTabPill(); } }).observe(page);
+calm.addEventListener?.('change', () => { if (story.el?.isConnected) measureStory(); });
