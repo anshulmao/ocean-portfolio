@@ -34,6 +34,8 @@
 .safety-feedback .feedback-privacy{font-size:10px;line-height:1.5;margin-bottom:0;color:#a6c8d2}
 .feedback-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:24px}
 .expedition-dialog .feedback-actions button{font-size:11px;padding:10px 12px;min-height:40px}
+.safety-feedback .feedback-actions{flex-direction:column;align-items:stretch;gap:8px}
+.safety-feedback .feedback-actions [type=submit]{width:100%;min-height:48px;padding:13px 16px;text-align:center;font-size:13px}
 .safety-feedback [data-skip]{background:transparent;border-color:transparent;color:#b8dbe2;padding-left:0}
 .safety-feedback [data-close]{background:transparent;border:0;font-size:22px;line-height:1;padding:3px 5px}
 @keyframes field-note-in{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
