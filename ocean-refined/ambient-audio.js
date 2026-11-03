@@ -571,17 +571,18 @@ addEventListener('oceansighting', ({ detail }) => {
 // 5. General settings: ambient sound and its level sit with the sky controls.
 const group = document.createElement('section');
 group.className = 'settings-subgroup'; group.id = 'sound-settings'; group.setAttribute('aria-labelledby', 'settings-sound-title');
-group.innerHTML = '<div class="settings-inline-control"><h3 id="settings-sound-title" class="holo-label">Sound</h3><button id="sound-mute" class="time-cycle sound-mute" type="button" aria-label="Unmute ambient sound" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3l4-3.5v12l-4-3.5H4Z"/><g class="sound-on"><path d="M14.5 9.2a4 4 0 0 1 0 5.6M17 6.8a7.4 7.4 0 0 1 0 10.4"/></g><g class="sound-off"><path d="m15 9.5 5 5m0-5-5 5"/></g></svg></button></div>'
+group.innerHTML = '<div class="settings-inline-control"><h3 id="settings-sound-title" class="holo-label">Volume</h3><button id="sound-mute" class="time-cycle sound-mute" type="button" aria-label="Unmute ambient sound" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3l4-3.5v12l-4-3.5H4Z"/><g class="sound-on"><path d="M14.5 9.2a4 4 0 0 1 0 5.6M17 6.8a7.4 7.4 0 0 1 0 10.4"/></g><g class="sound-off"><path d="m15 9.5 5 5m0-5-5 5"/></g></svg></button><output id="sound-quick-reading" class="settings-change-value" aria-live="polite" aria-hidden="true"></output></div>'
   + '<label class="holo-switch"><input id="sound-switch" type="checkbox" role="switch"><i aria-hidden="true"></i><span>Ambient sound</span><small>Sea, weather, breathing and wildlife</small></label>'
   + '<div class="movement-field sound-volume"><label for="sound-volume">Volume</label><output class="movement-output" for="sound-volume"></output><input id="sound-volume" type="range" min="0" max="100" step="1"></div>'
   + '<div class="movement-field sound-volume"><label for="sound-breathing">Breathing</label><output id="sound-breathing-output" class="movement-output" for="sound-breathing"></output><input id="sound-breathing" type="range" min="0" max="100" step="1"></div>';
-const toggle = group.querySelector('#sound-switch'), slider = group.querySelector('#sound-volume'), reading = group.querySelector('output');
+const toggle = group.querySelector('#sound-switch'), slider = group.querySelector('#sound-volume'), reading = group.querySelector('output[for="sound-volume"]'), quickReading=group.querySelector('#sound-quick-reading');
 const breath = group.querySelector('#sound-breathing'), breathReading = group.querySelector('#sound-breathing-output');
 const mute=group.querySelector('#sound-mute');let lastAudibleVolume=volume||.7;
 function paint() {
   toggle.checked = enabled; slider.value = String(Math.round(volume * 100)); reading.textContent = `${Math.round(volume * 100)}%`;
   breath.value = String(Math.round(breathing * 100)); breathReading.textContent = `${Math.round(breathing * 100)}%`;
   const muted=!enabled||volume===0;
+  quickReading.textContent=muted?'Muted':`${Math.round(volume*100)}%`;
   mute.dataset.muted=String(muted);mute.setAttribute('aria-pressed',String(muted));
   mute.setAttribute('aria-label',muted?'Unmute ambient sound':'Mute ambient sound');mute.title=muted?'Click to unmute':'Click to mute';
 }
