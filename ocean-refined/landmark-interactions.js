@@ -72,7 +72,7 @@ window.oceanLandmarks = { interactNearby() { if (!eligible) return false; intera
   openSite(id, page=id) { const site = LANDMARKS.find(item => item.id === id); if (!site) return false; opened = site; if (openArchive(page, true, null, id)) return true; opened = null; return false; } };
 
 // A quiet way in for visitors who would rather read than dive (index.html: the hero's links).
-document.getElementById('logbook-link')?.addEventListener('click', () => openArchive('projects'));
+document.getElementById('logbook-link')?.addEventListener('click', () => openArchive('about'));
 
 window.oceanArchive = {
   // open('log', 'product-manager'): section ids or their hash names; the entry is optional.
