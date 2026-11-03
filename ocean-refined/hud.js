@@ -364,39 +364,29 @@ brightnessQuick?.addEventListener('input',()=>{
 });
 addEventListener('oceanmovementchange',paintBrightness);paintBrightness();
 
-const settingFeedback=document.createElement('div');
-settingFeedback.className='setting-feedback-indicator';
-settingFeedback.setAttribute('role','status');
-settingFeedback.setAttribute('aria-live','polite');
-settingFeedback.innerHTML='<span></span><strong></strong>';
-document.body.append(settingFeedback);
-const settingFeedbackLabel=settingFeedback.querySelector('span'),settingFeedbackValue=settingFeedback.querySelector('strong');
+const timeQuickReading=$('#time-quick-reading');
 let settingFeedbackTimer;
 const feedbackSettings=[
-  {selector:'#sound-mute, #sound-switch, #sound-volume',label:'Volume',value:()=>window.oceanAudio?.enabled===false?'Muted':`${Math.round((window.oceanAudio?.volume??0)*100)}%`},
-  {selector:'#time-cycle, #time-slider, #time-lock, #dawn, #day, #dusk, #night',label:'Time',value:()=>{const value=currentPreset();return value[0].toUpperCase()+value.slice(1);}},
-  {selector:'#weather-glyph, #weather-slider, #weather-lock, .weather-picker button',label:'Weather',value:()=>weatherReading?.value||'Auto'}
+  {selector:'#sound-mute, #sound-switch, #sound-volume',output:$('#sound-quick-reading'),value:()=>window.oceanAudio?.enabled===false?'Muted':`${Math.round((window.oceanAudio?.volume??0)*100)}%`},
+  {selector:'#time-cycle, #time-slider, #time-lock, #dawn, #day, #dusk, #night',output:timeQuickReading,value:()=>{const value=currentPreset();return value[0].toUpperCase()+value.slice(1);}},
+  {selector:'#weather-glyph, #weather-slider, #weather-lock, .weather-picker button',output:weatherReading,value:()=>weatherReading?.value||'Auto'}
 ];
 function showSettingFeedback(event){
   if(!menu?.contains(event.target))return;
   const match=feedbackSettings.find(item=>event.target.closest(item.selector));
-  if(!match)return;
-  const target=event.target.closest(match.selector);
-  if(!target)return;
-  setTimeout(()=>{
-    const rect=target.getBoundingClientRect();
-    settingFeedbackLabel.textContent=match.label;
-    settingFeedbackValue.textContent=match.value();
-    settingFeedback.style.left=`${Math.max(64,Math.min(innerWidth-64,rect.left+rect.width/2))}px`;
-    settingFeedback.style.top=`${rect.bottom+58<innerHeight?rect.bottom+6:Math.max(8,rect.top-52)}px`;
-    settingFeedback.dataset.visible='true';
-    clearTimeout(settingFeedbackTimer);
-    settingFeedbackTimer=setTimeout(()=>{settingFeedback.dataset.visible='false';},1350);
-  },0);
+  if(!match||!match.output)return;
+  const output=match.output;
+  output.textContent=match.value();
+  output.removeAttribute('aria-hidden');
+  output.dataset.visible='true';
+  clearTimeout(settingFeedbackTimer);
+  settingFeedbackTimer=setTimeout(()=>{
+    output.dataset.visible='false';
+    setTimeout(()=>output.setAttribute('aria-hidden','true'),180);
+  },1350);
 }
 menu?.addEventListener('click',showSettingFeedback);
 menu?.addEventListener('input',showSettingFeedback);
 menu?.addEventListener('change',showSettingFeedback);
-
 // QA hook: paint one frame by hand when the tab is not painting.
 window.oceanHud = {sync, aim, setMenu, setMapView, paintLocks, paintConditions};
