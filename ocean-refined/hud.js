@@ -365,7 +365,7 @@ brightnessQuick?.addEventListener('input',()=>{
 addEventListener('oceanmovementchange',paintBrightness);paintBrightness();
 
 const timeQuickReading=$('#time-quick-reading');
-let settingFeedbackTimer;
+const settingFeedbackTimers=new WeakMap();
 const feedbackSettings=[
   {selector:'#sound-mute, #sound-switch, #sound-volume',output:$('#sound-quick-reading'),value:()=>window.oceanAudio?.enabled===false?'Muted':`${Math.round((window.oceanAudio?.volume??0)*100)}%`},
   {selector:'#time-cycle, #time-slider, #time-lock, #dawn, #day, #dusk, #night',output:timeQuickReading,value:()=>{const value=currentPreset();return value[0].toUpperCase()+value.slice(1);}},
@@ -379,11 +379,12 @@ function showSettingFeedback(event){
   output.textContent=match.value();
   output.removeAttribute('aria-hidden');
   output.dataset.visible='true';
-  clearTimeout(settingFeedbackTimer);
-  settingFeedbackTimer=setTimeout(()=>{
+  clearTimeout(settingFeedbackTimers.get(output));
+  const timer=setTimeout(()=>{
     output.dataset.visible='false';
     setTimeout(()=>output.setAttribute('aria-hidden','true'),180);
   },1350);
+  settingFeedbackTimers.set(output,timer);
 }
 menu?.addEventListener('click',showSettingFeedback);
 menu?.addEventListener('input',showSettingFeedback);
