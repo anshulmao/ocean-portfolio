@@ -29,3 +29,4 @@ html body #settings-menu .settings-body{--settings-gap:4px;--settings-section:8p
 .settings-change-value{display:block;min-height:1.25em;margin:0;color:var(--holo-strong);font:500 12px/1.25 var(--o-display,system-ui,sans-serif);text-align:center;opacity:0;translate:0 -3px;transition:opacity 160ms ease,translate 160ms ease}
 .settings-change-value[data-visible="true"]{opacity:1;translate:0 0}
 @media(prefers-reduced-motion:reduce){.settings-change-value{transition:none}}
+.settings-inline-control.setting-quick-control>.quick-setting-title{display:block!important;visibility:visible!important;opacity:1!important;width:100%;margin:0;color:var(--holo-strong,#eef6f5);font:600 13px/1.25 var(--o-display,system-ui,sans-serif);text-align:center}
