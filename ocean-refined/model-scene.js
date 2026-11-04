@@ -2,8 +2,8 @@ import * as THREE from './vendor/three.module.min.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 import { simplify, breathe, turn as nextTask, floatSkinIndices, modelBytes } from './assets.js';
-import { buildHelmet, buildNursery, buildNautilus, buildDescentLine } from './landmark-builds.js';
-import { RESUME_SITE } from './reef.js';
+import { buildHelmet, buildNursery, buildNautilus, buildDescentLine, buildFishingBoat } from './landmark-builds.js';
+import { RESUME_SITE, NURSERY_SITE } from './reef.js';
 
 const ASSET = new URL('./assets/models/', import.meta.url);
 // The portfolio landmarks are built in code (landmark-builds.js); only the coral habitats are downloaded.
@@ -363,18 +363,19 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
 
   // Builds a landmark in place on the terrain, gives it collision boxes and its reading position, and keeps its
   // reveal. The model status counts it as one of the eight models, as the downloaded landmarks were.
-  async function placeBuilt(id, key, build, counted = true) {
+  // A feature (the nursery) is built the same way at its own spot, with no reading position.
+  async function placeBuilt(id, key, build, counted = true, at = null) {
     await nextTask();
     if (disposed) return;
-    const [x, , z] = positions.get(id);
+    const [x, , z] = at ? [at.x, 0, at.z] : positions.get(id);
     const site = build({ x, z, floorAt, economy });
     root.add(site.root);
     for (const object of site.free || []) root.add(object);
     if (site.surface) surface.add(site.surface);
     landmarkGroups.set(id, site.root);
     site.root.updateWorldMatrix(true, true);
-    for (const [index, box] of site.solids.entries()) addStaticProxy(box, `${id} landmark ${index + 1}`);
-    updateLandmark(id, site.focus, site.approach);
+    for (const [index, solid] of site.solids.entries()) addStaticProxy(solid.isBox3 ? solid : solid.box, solid.name || `${id} landmark ${index + 1}`);
+    if (!at) updateLandmark(id, site.focus, site.approach);
     built.set(id, site);
     if (counted) { loaded++; report(onStatus, key, 'loaded', { loaded, total: 8 }); }
     await nextTask();
@@ -506,7 +507,8 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     const preparedPromise = loadPreparedCorals();
     const jobs = [
       () => placeBuilt('about', 'about-helmet', buildHelmet),
-      () => placeBuilt('projects', 'projects-nursery', buildNursery),
+      () => placeBuilt('projects', 'projects-trawler', buildFishingBoat),
+      () => placeBuilt('nursery', 'coral-nursery', buildNursery, false, NURSERY_SITE),
       () => placeBuilt('experience', 'experience-nautilus', buildNautilus),
       () => placeBuilt('resume', 'resume-line', buildDescentLine, false),
       ...MODEL_FILES.coral.map((file, index) => async () => { if (!await preparedPromise) await loadCoral(file, index); })

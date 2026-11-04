@@ -9,7 +9,7 @@ const panel = document.querySelector('#landmark-dialog');
 const credits = document.querySelector('#credits-dialog');
 const point = new THREE.Vector3(), ray = new THREE.Ray(), direction = new THREE.Vector3(), hit = new THREE.Vector3();
 let eligible = null, opened = null, returnFocus = null, lifting = 0;
-// The most the records wait for a landmark's reveal before they open (s): the helmet's bubbles, the nursery's sway,
+// The most the records wait for a landmark's reveal before they open (s): the helmet's bubbles, the trawler's lights,
 // the nautilus's chambers and the slate's turn all run about a second (landmark-builds.js).
 const REVEAL_WAIT = 1.6;
 // Everything that can be opened where it stands: the three sites, and the résumé slate on the descent line.

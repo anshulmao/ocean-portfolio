@@ -11,7 +11,7 @@ import { announce, clearAnnouncements } from './announce.js';
 export const SITES = {
   about: { name: 'The Helmet', signal: '#7ff0cf' },
   experience: { name: 'The Nautilus', signal: '#ffcf7a' },
-  projects: { name: 'The Nursery', signal: '#c9a2ff' }
+  projects: { name: 'The Wreck', signal: '#c9a2ff' }
 };
 const ZONES = [
   { until: 16, title: 'Sunlit shallows', place: 'Coral gardens', range: '0 – 11 m' },

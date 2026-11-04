@@ -22,7 +22,7 @@ const live = panel.querySelector('#archive-live');
 export const SECTIONS = {
   about: { hash: 'profile', label: 'About', site: 'The helmet', where: 'the diver’s helmet on the shallow reef, 8 m down' },
   experience: { hash: 'log', label: 'Experience', site: 'The nautilus', where: 'the nautilus on the deep ledge, 45 m down' },
-  projects: { hash: 'finds', label: 'Projects', site: 'The nursery', where: 'the coral nursery, 23 m down' },
+  projects: { hash: 'finds', label: 'Projects', site: 'The wreck', where: 'the trawler wreck, 23 m down' },
   resume: { hash: 'resume', label: 'Résumé', site: 'One page', where: 'the slate on the descent line, 5 m down' },
   dives: { hash: 'dives', label: 'Dive log', site: 'This visit', where: null },
 };

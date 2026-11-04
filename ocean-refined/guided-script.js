@@ -108,8 +108,8 @@ export const STEPS = [
     ] },
   // The way up: along the deep ledge to the soft coral spire, where the swim drifts while a whale shark passes out to sea,
   // through the bait ball, and round the west of the wreck (clear of its masts and the barracuda's beat) to see it whole.
-  { key: 'projects', kind: 'stop', landmark: 'projects', view: [2, -19, -36], place: `Projects · The Nursery · ${depth(-21)}`, signal: '#c9a2ff',
-    title: 'The coral nursery', line: 'Fragments grown here, then planted out on the reef. This is where you’ll find my projects.',
+  { key: 'projects', kind: 'stop', landmark: 'projects', view: [2, -19, -36], place: `Projects · The Wreck · ${depth(-21)}`, signal: '#c9a2ff',
+    title: 'Here’s the wreck', line: 'A trawler, and the fish that live in its hold now. This is where you’ll find my projects.',
     via: [
       [-6, -46, -79], [8, -47, -86], [24, -47, -84],
       { at: [36, -45, -79], key: 'whale-shark', title: 'Look out to sea', line: 'A whale shark, passing over the deep water.',
@@ -123,7 +123,7 @@ export const STEPS = [
       [34, -26, -58], [14, -28, -55], [-10, -22, -44],
     ] },
   // Up into open water just seaward of the wreck, with the whole reef rising ahead.
-  { key: 'open-water', kind: 'end', at: [16, -11, -58], teach: 'view', place: `Above the nursery · ${depth(-11)}`, signal: '#ff9d8a',
+  { key: 'open-water', kind: 'end', at: [16, -11, -58], teach: 'view', place: `Above the wreck · ${depth(-11)}`, signal: '#ff9d8a',
     title: 'This is my reef', line: 'My portfolio lives here. Dive around on your own and look at the life, or head up when you’re ready.',
     short: 'My portfolio lives here. Explore on your own, or head up.',
     via: [[-2, -15, -46], [6, -12, -56]],

@@ -5,7 +5,7 @@ import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 const TAU = Math.PI * 2;
 const SITES = {
   about: { x: -12, z: -15, color: '#7ff0cf' },
-  // About is the diver's helmet, Experience the nautilus on the deep ledge, Projects the coral nursery (landmark-builds.js).
+  // About is the diver's helmet, Experience the nautilus on the deep ledge, Projects the sunken trawler (landmark-builds.js).
   experience: { x: -18, z: -82, color: '#ffcf7a' },
   projects: { x: 18, z: -39, color: '#c9a2ff' }
 };
@@ -105,10 +105,14 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
   const lanternHandle = batch('Lantern handle', new THREE.TorusGeometry(.06, .011, 5, 14).translate(0, .42, 0), mat('#6f5424'));
   const strap = batch('Weight belt', new THREE.BoxGeometry(1.1, .014, .07), mat('#3c3a37'));
   const lead = batch('Weight belt lead', new THREE.BoxGeometry(.11, .07, .1), mat('#71767c'));
-  // Projects: a fragment table (where the nursery grows its smallest pieces) and broken branches on the sand.
-  const pipe = batch('Nursery table frame', new THREE.CylinderGeometry(.028, .028, 1, 6), mat('#e6eae0'));
-  const sprig = batch('Coral sprigs', new THREE.ConeGeometry(.035, .22, 5).translate(0, .11, 0), mat('#ffffff'));
-  const rubble = batch('Coral rubble', new THREE.CylinderGeometry(.02, .035, 1, 5), mat('#e8e0cc'));
+  // Projects: what a trawler loses when it goes down. Trawl floats, fish crates, a tyre fender, a coil of rope, a life
+  // ring and the broken half of an outrigger boom.
+  const float = batch('Trawl floats', new THREE.SphereGeometry(.2, 10, 7), mat('#ffffff'));
+  const fishCrate = batch('Fish crates', new THREE.BoxGeometry(.7, .3, .45), mat('#ffffff'));
+  const tyre = batch('Tyre fender', new THREE.TorusGeometry(.34, .13, 6, 14), mat('#26282a'));
+  const coil = batch('Rope coil', new THREE.TorusGeometry(.32, .05, 5, 16), mat('#d9b35a'));
+  const lifeRing = batch('Life ring', new THREE.TorusGeometry(.3, .07, 6, 16), mat('#e2553a'));
+  const boom = batch('Broken outrigger', new THREE.CylinderGeometry(.08, .1, 1, 8), mat('#8a8c86'));
   // Experience: sea whips and fans, the deep reef's slow growers, in the shelter of the stones.
   const whip = batch('Sea whips', new THREE.CylinderGeometry(.012, .035, 1, 5).translate(0, .5, 0), mat('#ffffff'));
   const fan = batch('Sea fans', new THREE.IcosahedronGeometry(1, 1).scale(.85, .7, .05).translate(0, .62, 0), mat('#ffffff'));
@@ -135,21 +139,21 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
         rock(x, floor(x, z) + s * .2, z, [s * 1.2, s * .7, s], [random(), random() * TAU, random()], i % 2 ? '#8496ab' : '#a3b1bf');
       }
     }
-    // Projects (the nursery): a fragment table behind the trees, broken branches on the sand, stones framing the far side.
+    // Projects (the trawler): its losses spilled on the sand on the far (high) side and off bow and stern, clear of the approach.
     placing = 'projects';
-    { const { at, yaw } = frame('projects'), [tx, tz] = at(-5.8, .3), top = floor(tx, tz) + .72;
-      for (const [da, db] of [[-.8, -.45], [.8, -.45], [-.8, .45], [.8, .45]]) { const [x, z] = at(-5.8 + da, .3 + db), y = floor(x, z); pipe(x, (y + top) / 2, z, [1, top - y + .05, 1]); }
-      for (const db of [-.45, -.15, .15, .45]) { const [x, z] = at(-5.8, .3 + db); pipe(x, top, z, [1, 1.7, 1], [0, yaw, Math.PI / 2]); }
-      for (const da of [-.8, .8]) { const [x, z] = at(-5.8 + da, .3); pipe(x, top, z, [1, .95, 1], [Math.PI / 2, yaw, 0]); }
-      solid(tx, top - .3, tz, .9, .4, .55, 'Nursery table');
-      const tips = ['#c58cff', '#ffd36a', '#ff8fb0', '#7fe0b0', '#d8c39a', '#e6c9a0'];
-      for (let i = 0; i < 14; i++) { const [x, z] = at(-5.8 - .65 + (i % 7) * .22, .3 + (i < 7 ? -.15 : .15)); sprig(x, top + .03, z, [1, .8 + random() * .6, 1], [(random() - .5) * .4, random() * TAU, (random() - .5) * .4], tips[i % tips.length]); }
-      for (let i = 0, n = economy ? 22 : 36; i < n; i++) {
-        const angle = random() * TAU, radius = 1.6 + Math.pow(random(), .8) * 6.5, [x, z] = at(Math.cos(angle) * radius, Math.sin(angle) * radius);
-        rubble(x, floor(x, z) + .03, z, [1, .18 + random() * .25, 1], [Math.PI / 2 + (random() - .5) * .3, random() * TAU, 0], random() < .3 ? '#d6c8aa' : '#ede7d6');
+    { const { at, yaw } = frame('projects');
+      for (const [a, b, tone] of [[-6.2, 3.1, '#f08a2c'], [-6.6, 3.6, '#f2c230'], [-5.9, 3.9, '#f08a2c'], [-7.4, -4.2, '#f2c230'], [-2.5, 10.2, '#f08a2c'], [-3.1, -10.6, '#f08a2c'], [-8.8, .6, '#f2c230']]) {
+        const [x, z] = at(a, b); float(x, floor(x, z) + .16, z, [1, 1, 1], [0, 0, 0], tone);
       }
+      for (const [a, b, turn, tone, stacked] of [[-5.4, -2.2, .4, '#2f6fb3', 0], [-5.6, -2.3, .5, '#c0392b', 1], [-7.9, 2.2, 1.3, '#2f6fb3', 0], [-1.8, 11.4, .2, '#2f6fb3', 0]]) {
+        const [x, z] = at(a, b); fishCrate(x, floor(x, z) + .14 + stacked * .3, z, [1, 1, 1], [.04, turn + yaw, .05], tone);
+      }
+      { const [x, z] = at(-4.6, 6.8); tyre(x, floor(x, z) + .1, z, [1, 1, 1], [Math.PI / 2 - .08, 0, .3]); }
+      { const [x, z] = at(-6.8, -1); coil(x, floor(x, z) + .05, z, [1, 1, 1], [Math.PI / 2, 0, 0]); coil(x + .05, floor(x, z) + .12, z + .04, [.8, .8, .8], [Math.PI / 2, 0, 0]); }
+      { const [x, z] = at(-3.4, -9.4); lifeRing(x, floor(x, z) + .07, z, [1, 1, 1], [Math.PI / 2 - .1, 0, .4]); }
+      { const [x, z] = at(-8.5, -7.5); boom(x, floor(x, z) + .1, z, [1, 6.5, 1], [Math.PI / 2 - .04, 0, .7 + yaw]); }
       for (let i = 0; i < 10; i++) {
-        const angle = 1.9 + random() * 2.6, radius = 8 + random() * 4, [x, z] = at(Math.cos(angle) * radius, Math.sin(angle) * radius), s = .4 + random() * .5;
+        const angle = 1.9 + random() * 2.6, radius = 9.5 + random() * 4, [x, z] = at(Math.cos(angle) * radius, Math.sin(angle) * radius), s = .4 + random() * .5;
         rock(x, floor(x, z) + s * .25, z, [s * 1.2, s * .7, s], [random(), random() * TAU, random()], i % 2 ? '#8496ab' : '#a3b1bf');
       }
     }

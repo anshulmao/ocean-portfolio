@@ -562,7 +562,7 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
     return s;
   }
   const morayStates = [
-    moray(0, 'moray-den-wreck', 'Moray den', 34, -25, 31, -31, '#ffffff', 'A moray in a den of leaning stones beside the way down to the coral nursery. Its head follows you; crowd it and it withdraws.'),
+    moray(0, 'moray-den-wreck', 'Moray den', 34, -25, 31, -31, '#ffffff', 'A moray in a den of leaning stones beside the way down to the wreck. Its head follows you; crowd it and it withdraws.'),
     moray(1, 'moray-den-deep', 'Deep moray den', -1, -71, 4, -80, '#e8d2b4', 'A second moray on the deep ledge, facing the way to the nautilus.')
   ];
 
