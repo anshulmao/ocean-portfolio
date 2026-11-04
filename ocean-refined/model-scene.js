@@ -369,6 +369,7 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     const [x, , z] = positions.get(id);
     const site = build({ x, z, floorAt, economy });
     root.add(site.root);
+    for (const object of site.free || []) root.add(object);
     if (site.surface) surface.add(site.surface);
     landmarkGroups.set(id, site.root);
     site.root.updateWorldMatrix(true, true);

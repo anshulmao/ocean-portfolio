@@ -11,6 +11,8 @@ import { PORTFOLIO_CONTENT } from './portfolio-content.js';
 //
 // Every builder takes { x, z, floorAt, economy } and returns:
 //   root     the meshes, in world coordinates (the model scene's root is at the origin)
+//   free     (optional) moving things that are not part of the landmark's shape (the nursery's fish): kept out of root,
+//            so whatever measures a landmark by its meshes (grounding, tools/audit-reef.mjs) does not count them
 //   focus    a box around the landmark itself: its centre is where the diver reads it from
 //   approach where the diver hovers to read it (the open lane on the +x side, as the old landmarks had)
 //   solids   collision boxes, in world space
@@ -204,12 +206,13 @@ export function buildHelmet({ x, z, floorAt, economy = false }) {
   const topPort = helmet.localToWorld(new THREE.Vector3(...at(.11, .58, 0)));
   const inlet = helmet.localToWorld(new THREE.Vector3(...at(-.3, .5, 0)));
 
-  // The air hose: off the back of the helmet, down the rock and away across the sand in a lazy S.
+  // The air hose: off the back of the helmet, down the rock and a few metres across the sand in a lazy S (short of the
+  // coral carpets and sea grass further west).
   const path = [inlet, inlet.clone().add(new THREE.Vector3(-.3, -.12, .05)), new THREE.Vector3(x - 1.25, rockTop - .25, z + .2)];
   { const sx = x - 1.75, sz2 = z + .45; path.push(new THREE.Vector3(sx, floorAt(sx, sz2) + .06, sz2)); }
-  for (let i = 1; i <= 9; i++) { const px = x - 1.75 - i * .78, pz = z + .45 + Math.sin(i * .85) * 1.2; path.push(new THREE.Vector3(px, floorAt(px, pz) + .06, pz)); }
+  for (let i = 1; i <= 5; i++) { const px = x - 1.75 - i * .62, pz = z + .45 + Math.sin(i * .95) * .9; path.push(new THREE.Vector3(px, floorAt(px, pz) + .06, pz)); }
   const hoseKit = new Kit();
-  hoseKit.add(rubber, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path), economy ? 70 : 110, .05, 6, false), { color: '#5b4a3b',
+  hoseKit.add(rubber, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path), economy ? 50 : 80, .05, 6, false), { color: '#5b4a3b',
     paint: (v, c) => c.offsetHSL(0, 0, Math.sin(v.x * 3.1 + v.z * 2.3) * .03) });
   hoseKit.meshes('Air hose', root);
 
@@ -341,7 +344,7 @@ export function buildNursery({ x, z, floorAt, economy = false, projects = 6 }) {
     fishKit.add(fishMaterial, tail, { color: '#3a8fb0' }); }
   const fishCount = economy ? 9 : 14;
   const school = new THREE.InstancedMesh(fishKit.geometry(fishMaterial), fishMaterial, fishCount);
-  school.name = 'Nursery chromis'; school.frustumCulled = false; root.add(school);
+  school.name = 'Nursery chromis'; school.frustumCulled = false;
   const fish = Array.from({ length: fishCount }, (_, i) => ({ radius: 1 + random() * 1.1, height: 1.4 + random() * 2.8, speed: (.22 + random() * .2) * (i % 3 ? 1 : -1), phase: random() * TAU, dart: 2.2 + random() * 1.8,
     position: new THREE.Vector3(), previous: new THREE.Vector3(), yaw: 0 }));
   const dummy = new THREE.Object3D(), outward = new THREE.Vector3();
@@ -355,7 +358,7 @@ export function buildNursery({ x, z, floorAt, economy = false, projects = 6 }) {
   let now = 0, pulseAt = -100, open = false, lit = 0;
   const period = 1.35, decay = 1.05;
   return {
-    root, focus, approach, solids: trees.flatMap(tree => tree.solids),
+    root, free: [school], focus, approach, solids: trees.flatMap(tree => tree.solids),
     reveal(isOpen, motion = true) {
       open = isOpen;
       if (!isOpen) return true;
