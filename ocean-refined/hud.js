@@ -101,6 +101,7 @@ function sync() {
   if (offset !== lastOffset) { lastOffset = offset; tape.style.transform = `translate3d(${-offset.toFixed(2)}px,0,0)`; }
   const degrees = Math.round(bearing) % 360;
   if (bearingMark && phone.matches && degrees !== lastDegrees) { lastDegrees = degrees; bearingMark.textContent = `${POINTS[Math.round(degrees / 45) % 8]} ${String(degrees).padStart(3, '0')}°`; }
+  paintCoords(state?.playerPosition);
   if (mapFull || !chart || map.hidden) return;
   // The chart draws east up, so turning it by (90° - bearing) puts the view direction at the top.
   // With reduced motion the chart still follows the diver but keeps its orientation, and the arrow turns instead.
@@ -137,6 +138,19 @@ function sync() {
   }
 }
 onTick(sync);
+
+// 3a. Your position as numbers under the map, in whole metres from the reef's origin. The chart's own axes say which
+// way is which (N ← · E ↑ on the chart): world -x is north and world -z is east. Written only when a metre changes.
+const coordsNS = $('#map-coords-ns'), coordsEW = $('#map-coords-ew');
+let coordsN = null, coordsE = null;
+function paintCoords(position) {
+  if (!position || !coordsNS) return;
+  const north = Math.round(-position[0]), east = Math.round(-position[2]);
+  if (north === coordsN && east === coordsE) return;
+  coordsN = north; coordsE = east;
+  coordsNS.textContent = `${Math.abs(north)} m ${north < 0 ? 'S' : 'N'}`; coordsEW.textContent = `${Math.abs(east)} m ${east < 0 ? 'W' : 'E'}`;
+  coordsNS.parentElement.setAttribute('aria-label', `Your position: ${coordsNS.textContent}, ${coordsEW.textContent}`);
+}
 
 // 3b. The bezel marker: the bearing from the diver to the nearest site not yet found, four times a second.
 // It reads the scope's markers (placed by the scene; journey.js keeps their found state) and moves the marker
