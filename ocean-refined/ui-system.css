@@ -272,4 +272,5 @@ html body.reading-page{background:var(--surface);--deep:var(--ui-deep-raised);--
 @media print{.reading-page .reading-nav{position:static}html body #landmark-dialog{background:white;color:black}}
 
 /* Restore the rounded button treatment while preserving round touch and map markers. */
-html body button:not(.touch-key):not([data-landmark]){border-radius:100px!important}
+/* The portfolio sheet's cards, document preview and pictures are buttons too; they keep their own corners. Its pills are already round. */
+html body button:not(.touch-key):not([data-landmark]):not(#landmark-dialog .arc-page *){border-radius:100px!important}
