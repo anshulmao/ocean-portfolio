@@ -1,5 +1,6 @@
 import { createExperienceMetrics } from './experience-performance.js';
 import { markerBox } from './look-indicator.js';
+import { labelOverlaps } from './label-overlap.js';
 import { createWaterlineSplash } from './waterline-splash.js';
 import { toDisplayDepth, DISPLAY_MAX_DEPTH } from './depth-metrics.js';
 import {createDiveScooter} from './scooter.js';
@@ -139,6 +140,17 @@ const experienceMetrics=window.oceanExperienceMetrics=createExperienceMetrics();
 const startup=diagnostic.startup={modules:Math.round(performance.now()),under:{}};let markAt=performance.now();
 const mark=name=>{const now=performance.now();startup[name]=+((startup[name]||0)+now-markAt).toFixed(1);markAt=now;};
 const exploration=createExploration(canvas,wake),bubbleData=[],skyLabels=[],reefLabels=[];
+const labelItems=new WeakMap();
+// ResizeObserver runs when copy, fonts or viewport styling changes, not per
+// camera frame. Transform-only placement therefore still avoids layout reads.
+const labelSizes=new ResizeObserver(entries=>{
+  for(const entry of entries){
+    const item=labelItems.get(entry.target);if(!item)continue;
+    const box=entry.borderBoxSize?.[0]||entry.borderBoxSize;
+    item.width=box?.inlineSize??entry.contentRect.width;
+    item.rise=box?.blockSize??entry.contentRect.height;
+  }
+});
 createMovementPanel(()=>{
   if(camera){camera.fov=settings.cameraFov+(mobile?7:0);camera.updateProjectionMatrix();}
   if(!settings.pointerLock&&document.pointerLockElement===canvas)document.exitPointerLock();
@@ -665,7 +677,7 @@ function makeWater(){
 // The landmarks' labels and chart markers need only the list of them: they are on the page from the start.
 function makeLandmarkMarks(){
   for(const [index,landmark] of LANDMARKS.entries()){
-    const label=document.createElement('div');label.className='reef-label';label.innerHTML=`${landmark.title}<span>${landmark.description.replace(/\d+(?:\.\d+)? m/, `${Math.round(toDisplayDepth(-landmark.position[1]))} m`)}</span><i></i>`;$('#reef-labels').append(label);label.style.left=label.style.top='0';reefLabels.push({label,landmark,shift:' translate(-50%,-100%)',rise:44,anchor:new THREE.Vector3(...landmark.position).add(new THREE.Vector3(0,2,0))});
+    const label=document.createElement('div');label.className='reef-label';label.innerHTML=`${landmark.title}<span>${landmark.description.replace(/\d+(?:\.\d+)? m/, `${Math.round(toDisplayDepth(-landmark.position[1]))} m`)}</span><i></i>`;$('#reef-labels').append(label);label.style.left=label.style.top='0';const item={label,landmark,shift:' translate(-50%,-100%)',rise:44,anchor:new THREE.Vector3(...landmark.position).add(new THREE.Vector3(0,2,0))};reefLabels.push(item);labelItems.set(label,item);labelSizes.observe(label);
     const marker=document.createElement('button');marker.type='button';marker.textContent=String(index+1);marker.setAttribute('aria-label',`Map marker ${landmark.title}`);marker.title=landmark.title;marker.dataset.landmark=landmark.id;
     marker.style.left=`${(landmark.position[0]+62)/124*100}%`;marker.style.top=`${(landmark.position[2]+105)/140*100}%`;
     const visit=()=>{if(!diagnostic.submerged)return;mapDestination=landmark;const target=modelScene?.landmarks?.find(item=>item.id===landmark.id);const approach=target?.interactionPosition;exploration.travel(approach||landmark.position,target?.position||landmark.position);setExploring(true);canvas.focus({preventScroll:true});$('#map-caption').textContent=`Swimming toward ${landmark.title}. WASD takes control.`;};
@@ -803,13 +815,16 @@ function updateBubbles(underwater){
 // The look-there marker moves every frame, so its box comes straight from look-indicator.js rather than this cache.
 const KEEP_OUT='#clear-ui-toggle:not([hidden]),section.tour-card[data-show="true"]';
 let keepOut=[],keepOutAt=-1;
-function keptOut(x,y){
+const markerKeepOut={left:0,top:0,right:0,bottom:0};
+function keptOut(x,y,item){
   const now=performance.now();
   if(now-keepOutAt>250){keepOutAt=now;keepOut=[];for(const el of document.querySelectorAll(KEEP_OUT)){const r=el.getBoundingClientRect();if(r.width&&r.height)keepOut.push(r);}}
-  // A label is centred over its point and stands above it: about 150 px wide and 44 px tall at most.
-  for(const r of keepOut)if(x+75>r.left&&x-75<r.right&&y>r.top&&y-44<r.bottom)return true;
+  const width=item.width||150,height=item.rise||44;
+  for(const r of keepOut)if(labelOverlaps(x,y,width,height,r))return true;
   const marker=markerBox();
-  return Boolean(marker)&&x+75>marker[0]&&x-75<marker[2]&&y>marker[1]&&y-44<marker[3];
+  if(!marker)return false;
+  markerKeepOut.left=marker[0];markerKeepOut.top=marker[1];markerKeepOut.right=marker[2];markerKeepOut.bottom=marker[3];
+  return labelOverlaps(x,y,width,height,markerKeepOut);
 }
 function labelVisible(worldPosition,item,alpha,padding=35){
   let shown=alpha>0;
@@ -822,7 +837,7 @@ function labelVisible(worldPosition,item,alpha,padding=35){
     projected.copy(worldPosition).project(camera);
     const x=(projected.x*.5+.5)*viewWidth,y=(-projected.y*.5+.5)*viewHeight;
     // A label hung above its point (rise: its height, px) keeps all of itself below the instruments at the top.
-    shown=projected.z<1&&x>padding&&x<viewWidth-padding&&y>labelTop+(item.rise||0)&&y<viewHeight-labelBottom&&!keptOut(x,y);
+    shown=projected.z<1&&x>padding&&x<viewWidth-padding&&y>labelTop+(item.rise||0)&&y<viewHeight-labelBottom&&!keptOut(x,y,item);
     // Moved by transform alone, so a label that tracks the camera costs the page no layout.
     if(shown)item.label.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px)${item.shift}`;
   }
