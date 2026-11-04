@@ -9,9 +9,9 @@ import { announce, clearAnnouncements } from './announce.js';
 // It only reads the public controls and diagnostics, like the other HUD files.
 // The three lights, by portfolio section (the dive summary names them from here too).
 export const SITES = {
-  about: { name: 'The Anchor', signal: '#7ff0cf' },
-  experience: { name: 'The Treasure', signal: '#ffcf7a' },
-  projects: { name: 'The Wreck', signal: '#c9a2ff' }
+  about: { name: 'The Helmet', signal: '#7ff0cf' },
+  experience: { name: 'The Nautilus', signal: '#ffcf7a' },
+  projects: { name: 'The Nursery', signal: '#c9a2ff' }
 };
 const ZONES = [
   { until: 16, title: 'Sunlit shallows', place: 'Coral gardens', range: '0 – 11 m' },

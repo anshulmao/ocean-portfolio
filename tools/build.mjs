@@ -32,7 +32,8 @@ for(const name of ['ambient-audio.css','expedition-interactions.css','controls.c
 await copy('favicon.svg');await tree('assets/fonts');await tree('assets/portfolio',f=>!f.endsWith('.md'));await tree('assets/prepared/charts',f=>!f.endsWith('.png'));await tree('assets/prepared/portraits');
 // Only the prepared sound clips ship; their sources stay in the repository (tools/prepare-audio.mjs cuts them).
 await tree('assets/audio/clips');
-const active=['anchor.glb','sunken_ship_low_poly.glb','treasure_chest.glb','anchor-economy.glb','sunken_ship_low_poly-economy.glb','treasure_chest-economy.glb','coral_waterverbruik_gezond.glb','coral_landbouw_gezond.glb','coral_anker_kleur.glb','coral_uitstoot_gezond.glb','coral_visnet_gezond_fish.glb','manifest.json','CREDITS.md'];
+// The portfolio landmarks are built in code (landmark-builds.js); the anchor, wreck and chest models no longer ship.
+const active=['coral_waterverbruik_gezond.glb','coral_landbouw_gezond.glb','coral_anker_kleur.glb','coral_uitstoot_gezond.glb','coral_visnet_gezond_fish.glb','manifest.json','CREDITS.md'];
 for(const f of active)await copy('assets/models/'+f);
 await tree('assets/models/user-sets/sets/creature-set',f=>/\.(?:glb|json|md)$/i.test(f));await tree('assets/models/user-sets/sets/coral-set',f=>/\.(?:glb|json|md)$/i.test(f));
 
@@ -52,7 +53,6 @@ for(const f of ['full.json','economy.json','full-webp.glb','economy-webp.glb'])a
 // models are only HEAD-checked unless the cache misses: they stay plain.)
 {const gzip=async file=>fs.writeFile(file+'.gz',gzipSync(await fs.readFile(file),{level:9})),creatures=path.join(packParent,'sets/creature-set');
  for(const name of await fs.readdir(creatures))if(name.endsWith('.glb'))await gzip(path.join(creatures,name));
- for(const name of active.filter(name=>name.endsWith('.glb')&&!name.startsWith('coral_')))await gzip(path.join(out,'assets/models',name));
  for(const name of ['full-webp.glb','economy-webp.glb'])await gzip(path.join(out,'assets/models/prepared-corals',name));
  const target=path.join(out,'assets.js'),code=await fs.readFile(target,'utf8');if(!code.includes('const GZIPPED = false;'))throw Error('assets.js: GZIPPED switch not found');await fs.writeFile(target,code.replace('const GZIPPED = false;','const GZIPPED = true;'));}
 // Public hosts assign their own ETags and dates. Hash headers preserve cheap,

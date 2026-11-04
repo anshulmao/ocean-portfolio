@@ -6,10 +6,14 @@ import { valueTexture } from './shaders.js';
 
 export const LANDMARKS = [
   { id: 'about', title: 'About', description: 'Shallow reef · 8 m', position: [-12, -8, -15] },
-  // Experience lives in the treasure on the deep ledge, Projects in the wreck (swapped 31 Oct 2026).
+  // About is the diver's helmet, Experience the nautilus on the deep ledge, Projects the coral nursery (landmark-builds.js).
   { id: 'experience', title: 'Experience', description: 'Deep ledge · 45 m', position: [-18, -45, -82] },
-  { id: 'projects', title: 'Projects', description: 'Mid-depth wreck · 23 m', position: [18, -23, -39] }
+  { id: 'projects', title: 'Projects', description: 'Coral nursery · 23 m', position: [18, -23, -39] }
 ];
+// The résumé: a slate on the descent line near where the dive starts (exploration.js SURFACE_START), hung at
+// safety-stop depth (world y -7.5 reads 5 m). Not one of the three sites of the journey, the map or the dive summary,
+// so it is kept apart from LANDMARKS; landmark-interactions.js offers it like them.
+export const RESUME_SITE = { id: 'resume', title: 'Résumé', description: 'Descent line · 5 m', position: [-24, -7.5, -88] };
 
 // Horizontal coordinates are world coordinates; vertical limits are camera
 // offsets from the normal swimming depth, shared with the exploration module.

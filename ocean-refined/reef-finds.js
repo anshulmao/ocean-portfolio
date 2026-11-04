@@ -17,10 +17,10 @@ import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 // id, name, where (x, z), a line for the inventory, and how high it hovers over the sand (m).
 export const FINDS = [
   { key: 'compass', name: 'Gold compass', x: -15, z: -17, line: 'Its needle still hunts for a north it has not seen in two hundred years.' },
-  { key: 'hat', name: 'Gold pirate hat', x: 23, z: -29, line: 'A captain’s tricorne, cast in gold, from beside the wreck.' },
+  { key: 'hat', name: 'Gold pirate hat', x: 23, z: -29, line: 'A captain’s tricorne, cast in gold, from beside the coral nursery.' },
   { key: 'sextant', name: 'Gold sextant', x: -31, z: -52, line: 'For reading the height of the sun, and from it where the ship was.' },
   { key: 'medallion', name: 'Gold medallion', x: 36, z: -67, line: 'A star struck on both faces, and a loop for a chain long gone.' },
-  { key: 'conch', name: 'Gold conch', x: -29, z: -94, line: 'A shell cast in gold, found on the deep sand by the treasure.' }
+  { key: 'conch', name: 'Gold conch', x: -29, z: -94, line: 'A shell cast in gold, found on the deep sand by the nautilus.' }
 ];
 const HOVER = .5, REACH = 48, TAU = Math.PI * 2;
 

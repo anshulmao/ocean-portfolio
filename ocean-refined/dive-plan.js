@@ -29,9 +29,9 @@ const ART = {
 const list = entries => entries.map(entry => entry.title).join(', ');
 // Portfolio sites are the reason for the dive; the copy takes its section names from the archive itself.
 const PRIMARY = [
-  { id: 'about', name: 'The Anchor', signal: '#7ff0cf', depth: 9, entry: [5.8, 0], bullets: ['Who I am and how I work', PORTFOLIO_CONTENT.about.subtitle, `${PORTFOLIO_CONTENT.about.entries.length} short reads, in the shallows`] },
-  { id: 'experience', name: 'The Treasure', signal: '#ffcf7a', depth: 47, entry: [0, 4], bullets: ['The roles I’ve held and what each one taught me', PORTFOLIO_CONTENT.experience.subtitle, `${PORTFOLIO_CONTENT.experience.entries.length} chapters in the chests`] },
-  { id: 'projects', name: 'The Wreck', signal: '#c9a2ff', depth: 21, entry: [0, 17.2], bullets: ['The things I’ve built', PORTFOLIO_CONTENT.projects.subtitle, `${PORTFOLIO_CONTENT.projects.entries.length} finds in the hull: ${list(PORTFOLIO_CONTENT.projects.entries)}`] }
+  { id: 'about', name: 'The Helmet', signal: '#7ff0cf', depth: 9, entry: [5.8, 0], bullets: ['Who I am and how I work', PORTFOLIO_CONTENT.about.subtitle, `${PORTFOLIO_CONTENT.about.entries.length} short reads, in the shallows`] },
+  { id: 'experience', name: 'The Nautilus', signal: '#ffcf7a', depth: 47, entry: [0, 4], bullets: ['The roles I’ve held and what each one taught me', PORTFOLIO_CONTENT.experience.subtitle, `${PORTFOLIO_CONTENT.experience.entries.length} chambers in the shell`] },
+  { id: 'projects', name: 'The Nursery', signal: '#c9a2ff', depth: 21, entry: [0, 17.2], bullets: ['The things I’ve built', PORTFOLIO_CONTENT.projects.subtitle, `${PORTFOLIO_CONTENT.projects.entries.length} fragments on the nursery tree: ${list(PORTFOLIO_CONTENT.projects.entries)}`] }
 ].map((site, index) => ({ ...site, kind: 'primary', number: index + 1, section: PORTFOLIO_CONTENT[site.id].title, position: LANDMARKS.find(item => item.id === site.id).position }));
 const SCENERY = {
   'Table coral tower': 'Plates of table coral spiral up a leaning stone trunk.',
@@ -240,8 +240,9 @@ function follow(dt, api, state, diving) {
 }
 onFrame(follow);
 
-// Deep links: #anchor, #wreck, #treasure, #tour and #plan.
-const LINKS = { anchor: 'about', wreck: 'projects', treasure: 'experience' };
+// Deep links: #helmet, #nursery, #nautilus, #tour and #plan (#anchor, #wreck and #treasure, from before the landmarks
+// changed, still lead to the same sites).
+const LINKS = { helmet: 'about', nursery: 'projects', nautilus: 'experience', anchor: 'about', wreck: 'projects', treasure: 'experience' };
 function readLink() {
   const key = location.hash.slice(1).toLowerCase();
   if (!ready() || controls().getMode() !== 'surface' || plan.open || prompt.open) return;

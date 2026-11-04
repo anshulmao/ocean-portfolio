@@ -10,12 +10,13 @@ import { currentZone, touchInput } from './journey.js';
 // decides which set is visible from body[data-computer-open].
 const $ = selector => document.querySelector(selector);
 const SITES = {
-  'The Anchor': 'About · how I approach the work',
-  'The Treasure': 'Experience · three roles, 2023 to now',
-  'The Wreck': 'Work · six projects across the AI product loop'
+  'The Helmet': 'About · how I approach the work',
+  'The Nautilus': 'Experience · three roles, 2023 to now',
+  'The Nursery': 'Work · six projects across the AI product loop',
+  'The Slate': 'Résumé · one page, to read or take with you'
 };
-const NAMES = { about: 'The Anchor', experience: 'The Treasure', projects: 'The Wreck' };
-const SIGNALS = { about: '#7ff0cf', experience: '#ffcf7a', projects: '#c9a2ff' };
+const NAMES = { about: 'The Helmet', experience: 'The Nautilus', projects: 'The Nursery', resume: 'The Slate' };
+const SIGNALS = { about: '#7ff0cf', experience: '#ffcf7a', projects: '#c9a2ff', resume: '#f4e3b5' };
 const card = (className, label, html) => {
   const node = document.createElement('section');
   node.className = `calm-card holo holo-deep ${className}`; node.setAttribute('aria-label', label); node.innerHTML = html;
