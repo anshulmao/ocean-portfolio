@@ -1,4 +1,6 @@
 node_modules/
+.ci-reports/
+/debug.log
 ocean-refined/vendor/posthog.js
 ocean-refined/qa/captures/*
 !ocean-refined/qa/captures/.gitkeep

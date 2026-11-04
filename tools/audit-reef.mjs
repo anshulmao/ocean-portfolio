@@ -174,7 +174,7 @@ function auditCorals() {
 // The procedural reef's corals (reef.js), captured as they were placed (see the hook in main()).
 function auditReefFamilies() {
   const A = window.reefAudit, families = window.__reefFamilies || [], out = [], summary = {}, {floor, at, inBox, round} = A;
-  if (!families.length) return {violations: [], summary: null};
+  if (!families.length) return {violations: [{check: 'audit.empty', subject: 'procedural reef', where: null, detail: 'no reef families were inspected'}], summary: null};
   // Families that stand on the sand themselves; the rest (branches, tips, polyps, tentacles) grow from something else.
   const GROUNDED = /outcrops|carpets|brain coral|tube sponges|barrel sponge|boulder coral|sea fans|sea whips|grass|cushions|meadow/i, BUILT = /staghorn|table corals|coral tips/i;
   const built = [];
@@ -246,14 +246,14 @@ function auditReefFamilies() {
 
 // The creature set, stepped by hand. Returns the samples' verdicts.
 async function auditCreatures({seconds, rate, player, spawn, label, until = 0, castOnly = true}) {
-  const A = window.reefAudit, C = window.oceanControls, U = C.creatures, D = U.debug, {floor, at, inBox, round} = A, out = [];
+  const A = window.reefAudit, C = window.oceanControls, U = A.creatures, D = U.debug, {floor, at, inBox, round} = A, out = [];
   const flag = (check, subject, where, detail) => out.push({check, subject, where, detail, run: label});
   const P = C.getPlayerPosition().clone(); if (player) P.set(...player);
   if (spawn) D.spawn(spawn, P, null);
   const dt = 1 / rate, frames = Math.round(Math.max(seconds, until) * rate);
   // An encounter run follows the visitors only, until its slot is empty again (or `until` seconds).
   const cast = spawn && castOnly ? new Set() : null;
-  const solid = A.boxes.filter(b => b.kind !== 'user-coral' || true);
+  const solid = A.boxes;
   const insideSolid = (x, y, z) => { for (const b of solid) if (inBox(b.box, x, y, z, -.1)) return b.mesh || b.kind; const hit = A.onLandmark(x, y, z); return hit ? `the ${hit} model` : ''; };
   const prev = new Map(), stats = new Map(), encounter = {starts: [], samples: []};
   const BOTTOM = /bluespotted-ray|nurse-shark|garden-eel|giant-moray|ribbon-eel/;
@@ -334,7 +334,7 @@ async function auditCreatures({seconds, rate, player, spawn, label, until = 0, c
 
 // Schools: do they hold together, and do they keep off a diver who swims into them?
 function auditSchools({seconds, rate}) {
-  const A = window.reefAudit, C = window.oceanControls, U = C.creatures, D = U.debug, {at, round} = A, out = [], dt = 1 / rate;
+  const A = window.reefAudit, C = window.oceanControls, U = A.creatures, D = U.debug, {at, round} = A, out = [], dt = 1 / rate;
   const P = C.getPlayerPosition().clone();
   // Cohesion: the shoals and herds, from the navigators themselves.
   const widest = new Map(), last = new Map();
@@ -433,7 +433,7 @@ async function auditRates({seconds}) {
 
 // --- Driving it -------------------------------------------------------------------------------------------------------
 const browser = await launchBrowser();
-const report = {base, runs: {}}, failures = [];
+const report = {base, simulationSeed: 20261029, updateSeed: 4242, runs: {}}, failures = [];
 try {
   for (const quality of qualities) {
     const started = Date.now();
@@ -448,7 +448,7 @@ try {
     // The procedural reef keeps no record of where it put each coral: keep a copy of each family as it is finished.
     await page.route(/\/reef\.js(\?.*)?$/, async route => {
       const response = await route.fetch(), body = await response.text(), hooked = body.replace(/finish\((\w+),\s*(\w+)\)\s*\{/, (m, a) => `${m}(globalThis.__reefFamilies??=[]).push({name:${a},geometry,entries});`);
-      if (hooked === body) console.warn('reef.js: no finish(name, kind) to hook; the procedural reef is not audited');
+      if (hooked === body) errors.push('reef.js: missing procedural reef instrumentation; audit coverage is incomplete');
       await route.fulfill({response, body: hooked});
     });
     await page.goto(base, {waitUntil: 'load', timeout: 120000});
@@ -459,6 +459,21 @@ try {
     // Stop the page's own loop: from here every frame is stepped by hand.
     await page.evaluate(() => { Object.defineProperty(document, 'hidden', {configurable: true, get: () => true}); Object.defineProperty(document, 'visibilityState', {configurable: true, get: () => 'hidden'}); document.dispatchEvent(new Event('visibilitychange')); });
     await page.evaluate(install);
+    // Rendering and async loading consume random numbers at machine-dependent times.
+    // Audit a fresh production creature system after the render loop is stopped, so
+    // residents always begin at t=0 with the same seed, terrain and collision world.
+    await page.evaluate(async () => {
+      const C = oceanControls, layers = C.viewer.layers();
+      const [{createUserCreatures}, {LANDMARKS}] = await Promise.all([import('./user-creatures.js'), import('./reef.js')]);
+      window.__reseed(20261029);
+      reefAudit.creatures = createUserCreatures({terrainHeightAt: layers.reef.userData.terrainHeightAt,
+        collisions: layers.reef.userData.collisions, economy: oceanDiagnostics.quality === 'economy',
+        sites: {formations: C.formations, life: C.life?.sites || [], landmarks: LANDMARKS,
+          patches: () => oceanDiagnostics.userCorals?.patches || []}});
+      await reefAudit.creatures.load();
+      if (!reefAudit.creatures.diagnostics.ready || reefAudit.creatures.diagnostics.failed) throw Error('Audit creature set did not fully load');
+      window.__reseed(4242);
+    });
     const run = report.runs[quality] = {quality: await page.evaluate(() => window.oceanDiagnostics.quality), loadSeconds: Math.round((Date.now() - started) / 1000), world: await page.evaluate(() => window.reefAudit.describe())};
     const timed = async (name, fn, arg) => {
       const t = Date.now();
@@ -483,7 +498,7 @@ try {
     // Verdicts for this quality.
     const all = [...run.corals.violations, ...run.reef.violations, ...run.creatures.resident.violations, ...run.schools.violations];
     for (const [name, e] of Object.entries(run.encounters)) {
-      all.push(...e.violations.filter(v => !/^(fish|actor)/.test(v.subject) || true));
+      all.push(...e.violations);
       // Encounters: in from beyond the haze, out of sight again, and never over the shallows.
       const id = name.split(' ')[0], lead = Object.entries(e.paths).filter(([key]) => key.startsWith('actor:'))
         .filter(([key]) => ({whale: /right-whale/, 'whale-shark': /:whale-shark@/, orcas: /orca/, dolphins: /dolphin/, blacktips: /blacktip/, tuna: /tuna/})[id].test(key));

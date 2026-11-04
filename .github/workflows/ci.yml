@@ -1,4 +1,4 @@
-# Runs on every pull request and on main. Both jobs should be required checks on main
+# Runs on every pull request and on main. Build/unit and browser should be required checks on main
 # (Settings → Branches → branch protection), so a broken build cannot be merged.
 name: CI
 
@@ -6,6 +6,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -26,11 +27,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # The build refuses to ship a script that does not parse.
-      - run: npm run build
-      - run: npm run test:build
       - run: npm run test:services
       - run: npm run test:unit
+      # test:build owns the clean build, including stale-output regression checks.
+      - run: npm run test:build
       # The build regenerates vercel.json; a difference means a build change was not committed.
       - name: Build leaves the repository unchanged
         run: git status --porcelain && test -z "$(git status --porcelain)"
@@ -46,9 +46,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps --only-shell chromium
       - run: npm run build
       - run: npm run smoke
+      - run: npm run test:services:browser
+      - run: npm run test:banking
       - run: npm run test:ui
       - uses: actions/upload-artifact@v4
         if: always()
@@ -60,7 +62,11 @@ jobs:
   # Phone, landscape and desktop layout (tools/test-mobile-layout.mjs). Software WebGL makes it the slowest job; keep it
   # out of the required checks until it has proved steady on GitHub's runners.
   layout:
-    name: Mobile layout
+    name: Mobile layout (${{ matrix.profile }})
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [phone, landscape, desktop]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -70,15 +76,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps --only-shell chromium
       - run: npm run build
-      - run: npm run test:layout
+      - run: npm run test:layout -- --only=${{ matrix.profile }}
         env:
           LAYOUT_OUT: layout-report
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: layout-screenshots
+          name: layout-${{ matrix.profile }}
           path: layout-report
 
   # The reef audit (tools/audit-reef.mjs): every coral placement and the animals' motion in the real world, economy quality.
@@ -94,7 +100,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps --only-shell chromium
       - run: npm run audit:reef -- --quick --json=reef-audit.json
       - uses: actions/upload-artifact@v4
         if: always()

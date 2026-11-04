@@ -36,6 +36,7 @@ const PROFILES = {
   landscape: {viewport: {width: 844, height: 390}, isMobile: true, hasTouch: true, deviceScaleFactor: 2, phone: true},
   desktop: {viewport: {width: 1440, height: 900}, isMobile: false, hasTouch: false, deviceScaleFactor: 1, phone: false},
 };
+if (only && !Object.hasOwn(PROFILES, only)) throw Error(`Unknown layout profile: ${only}`);
 
 // Runs in the page. Everything visible that is text or a control is a "leaf"; leaves belong to the nearest fixed
 // (or sticky) ancestor, their "component"; an absolute element placed against the page itself (no positioned ancestor:
@@ -144,7 +145,7 @@ async function run(profileName) {
   if (!phone) await step('surface-profile-crosshair', async () => {
     const looking = () => page.evaluate(() => document.body.dataset.exploring === 'true');
     await page.mouse.click(200, profile.viewport.height - 140);
-    if (!await page.waitForFunction(() => document.pointerLockElement, null, {timeout: 3000}).then(() => true, () => false)) return;
+    await page.waitForFunction(() => document.pointerLockElement, null, {timeout: 5000});
     await page.evaluate(() => oceanProfile.open());
     await page.waitForTimeout(1200);
     if (!await looking()) throw Error('the hero came back behind the card opened from the crosshair');
