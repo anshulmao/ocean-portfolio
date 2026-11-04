@@ -93,7 +93,12 @@ html body footer.scene-footer.holo-deep{font-size:13px;background:none;border:0;
 html body :is(.scene-footer,.heading-readout) :is(span,strong,p){font-family:var(--o-display);font-size:13px;letter-spacing:0}
 
 /* The portfolio sheet is styled whole in archive.css: the night palette, its own corners and pills. */
-html body dialog.ds{background:var(--ui-deep);border:0;border-radius:var(--ui-sheet);box-shadow:none}
+/* The dive log is read on the same night ground as the portfolio sheet (archive.css). */
+html body dialog.ds{--ui-deep-raised:#16274b;background:radial-gradient(70% 40% at 0% 0%,#7ff0cf1f,#0000 70%),linear-gradient(170deg,#101f40f6,#0b1630fa 60%,#070f22fc);border:1px solid #c8dcff26;border-radius:var(--ui-sheet);box-shadow:0 40px 100px -30px #000d1acc}
+html body dialog.ds::backdrop{background:#030916b8}
+/* The field guide's open card sits on the same raised night tone, with the small shared corner. */
+html body dialog.ds .ds-detail{border:0;border-radius:var(--ui-radius);background:var(--ui-deep-raised)}
+html body dialog.ds .ds-detail>:not(.art){background:none}
 html body dialog.ds :is(.ds-card,.ds-stat,.ds-visit,.ds-metric,.ds-highlight,.ds-rate,.ds-chart-wrap){background:var(--ui-deep-raised);border:0;border-radius:var(--ui-radius);box-shadow:none}
 html body dialog.ds :is(.ds-head,.ds-section,.ds-foot){border-color:transparent}
 html body dialog.ds :is(h2,h3,button,summary){text-transform:none;letter-spacing:0;text-shadow:none}
@@ -236,6 +241,9 @@ html body.reading-page{background:var(--surface);--deep:var(--ui-deep-raised);--
 }
 @media print{.reading-page .reading-nav{position:static}html body #landmark-dialog{background:white;color:black}}
 
-/* Restore the rounded button treatment while preserving round touch and map markers. */
-/* The portfolio sheet's cards, document preview and pictures are buttons too; they keep their own corners. Its pills are already round. */
-html body button:not(.touch-key):not([data-landmark]):not(#landmark-dialog .arc-page *){border-radius:100px!important}
+/* Pills are for actions: the buttons that say what they do. Everything else that happens to be a button (animal portraits,
+   tiles, a card's header row, pickers, map and touch controls) keeps the small shared corner, like the panels it sits in. */
+html body :is(.dive-button,.guided-button,.ds-open,.holo-chip,.ds-close,.ds-share-open,.ds-share-cancel,.ds-download,.expedition-primary,.plan-start,.plan-tour,.diver-profile-resume,.diver-profile-more,.dialog-return,.archive-toggle,.dive-computer-toggle,.interact-prompt,.movement-reset,.movement-export,.explore-back,.settings-quick>button,.tour-card button[data-tour]:not(.tour-head):not(.tour-more)){border-radius:100px!important}
+
+/* The dive log button is light in every theme, so its New tag keeps dark ink (the page's ink turns white at night). */
+html body .portfolio-actions .ds-open small,html body .portfolio-actions .ds-open[data-seen] small{color:var(--ui-ink)}
