@@ -101,6 +101,7 @@ function sync() {
   if (offset !== lastOffset) { lastOffset = offset; tape.style.transform = `translate3d(${-offset.toFixed(2)}px,0,0)`; }
   const degrees = Math.round(bearing) % 360;
   if (bearingMark && phone.matches && degrees !== lastDegrees) { lastDegrees = degrees; bearingMark.textContent = `${POINTS[Math.round(degrees / 45) % 8]} ${String(degrees).padStart(3, '0')}°`; }
+  paintCoords(state?.playerPosition);
   if (mapFull || !chart || map.hidden) return;
   // The chart draws east up, so turning it by (90° - bearing) puts the view direction at the top.
   // With reduced motion the chart still follows the diver but keeps its orientation, and the arrow turns instead.
@@ -137,6 +138,19 @@ function sync() {
   }
 }
 onTick(sync);
+
+// 3a. Your position as numbers under the map, in whole metres from the reef's origin. The chart's own axes say which
+// way is which (N ← · E ↑ on the chart): world -x is north and world -z is east. Written only when a metre changes.
+const coordsNS = $('#map-coords-ns'), coordsEW = $('#map-coords-ew');
+let coordsN = null, coordsE = null;
+function paintCoords(position) {
+  if (!position || !coordsNS) return;
+  const north = Math.round(-position[0]), east = Math.round(-position[2]);
+  if (north === coordsN && east === coordsE) return;
+  coordsN = north; coordsE = east;
+  coordsNS.textContent = `${Math.abs(north)} m ${north < 0 ? 'S' : 'N'}`; coordsEW.textContent = `${Math.abs(east)} m ${east < 0 ? 'W' : 'E'}`;
+  coordsNS.parentElement.setAttribute('aria-label', `Your position: ${coordsNS.textContent}, ${coordsEW.textContent}`);
+}
 
 // 3b. The bezel marker: the bearing from the diver to the nearest site not yet found, four times a second.
 // It reads the scope's markers (placed by the scene; journey.js keeps their found state) and moves the marker
@@ -364,5 +378,30 @@ brightnessQuick?.addEventListener('input',()=>{
 });
 addEventListener('oceanmovementchange',paintBrightness);paintBrightness();
 
+const timeQuickReading=$('#time-quick-reading');
+const settingFeedbackTimers=new WeakMap();
+const feedbackSettings=[
+  {selector:'#sound-mute, #sound-switch, #sound-volume',output:$('#sound-quick-reading'),value:()=>window.oceanAudio?.enabled===false?'Muted':`${Math.round((window.oceanAudio?.volume??0)*100)}%`},
+  {selector:'#time-cycle, #time-slider, #time-lock, #dawn, #day, #dusk, #night',output:timeQuickReading,value:()=>{const value=currentPreset();return value[0].toUpperCase()+value.slice(1);}},
+  {selector:'#weather-glyph, #weather-slider, #weather-lock, .weather-picker button',output:weatherReading,value:()=>weatherReading?.value||'Auto'}
+];
+function showSettingFeedback(event){
+  if(!menu?.contains(event.target))return;
+  const match=feedbackSettings.find(item=>event.target.closest(item.selector));
+  if(!match||!match.output)return;
+  const output=match.output;
+  output.textContent=match.value();
+  output.removeAttribute('aria-hidden');
+  output.dataset.visible='true';
+  clearTimeout(settingFeedbackTimers.get(output));
+  const timer=setTimeout(()=>{
+    output.dataset.visible='false';
+    setTimeout(()=>output.setAttribute('aria-hidden','true'),180);
+  },1350);
+  settingFeedbackTimers.set(output,timer);
+}
+menu?.addEventListener('click',showSettingFeedback);
+menu?.addEventListener('input',showSettingFeedback);
+menu?.addEventListener('change',showSettingFeedback);
 // QA hook: paint one frame by hand when the tab is not painting.
 window.oceanHud = {sync, aim, setMenu, setMapView, paintLocks, paintConditions};

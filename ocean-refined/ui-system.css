@@ -44,7 +44,6 @@ html body .wordmark span{font-size:13px;letter-spacing:0;opacity:1;font-weight:4
 html body .surface-nav{gap:4px;padding:0;border:0;background:none;box-shadow:none;text-shadow:none}
 html body .surface-nav a{font:400 14px/1.2 var(--o-display);letter-spacing:0;text-transform:none;min-height:44px;display:inline-flex;align-items:center;border-radius:var(--ui-radius)}
 html body .surface-nav a:hover{background:var(--ui-ground);color:var(--ui-ink)}
-html body .settings-toggle{border:0;border-radius:var(--ui-radius);background:var(--ui-ground);color:var(--ui-ink);box-shadow:none;filter:none}
 html body:not([data-submerged="true"]):not([data-exploring="true"]) .hero{width:min(780px,65vw)}
 html body .hero .surface-copy h1{font-size:clamp(38px,5.1vw,74px);font-weight:400;line-height:1.04;color:var(--o-ink);text-shadow:none}
 html body .hero .surface-copy h1 span{display:block;font:inherit;color:inherit}
@@ -93,41 +92,13 @@ html body :is(.heading-readout,.scene-footer,.depth-title,.depth-unit,.map-headi
 html body footer.scene-footer.holo-deep{font-size:13px;background:none;border:0;border-radius:0;box-shadow:none}
 html body :is(.scene-footer,.heading-readout) :is(span,strong,p){font-family:var(--o-display);font-size:13px;letter-spacing:0}
 
-/* The archive is a reading sheet, with the same ground as the dive overlays. */
-html body #landmark-dialog{
-  --arc-text:var(--ui-foam);--arc-muted:var(--ui-foam-muted);--arc-shell:var(--ui-deep);--arc-paper:var(--ui-deep);--arc-solid:var(--ui-deep-raised);--arc-field:var(--ui-deep-raised);--arc-rule:transparent;
-  --sig:#9adbd5;--sig-soft:#264d57;--sig-line:transparent;
-  border:0;border-radius:var(--ui-sheet);background:var(--ui-deep);box-shadow:none;
-}
-html body #landmark-dialog .arc-scan{display:none}
-html body #landmark-dialog :is(.arc-header,.arc-footer,.arc-rail){background:var(--ui-deep-raised);border:0}
-html body #landmark-dialog :is(.arc-header,.arc-footer){padding:16px 20px}
-html body #landmark-dialog :is(.arc-emblem,.arc-find,.arc-figure,.arc-link,.arc-btn,.arc-file,.arc-fact,.arc-note,.arc-plate,.arc-callout){border:0;box-shadow:none;background-image:none;border-radius:var(--ui-radius)}
-html body #landmark-dialog :is(button,a){text-shadow:none}
-html body #landmark-dialog :is(.arc-kicker,.arc-folio,.arc-rail-no,.arc-find-no,.arc-grid-no,.arc-section-no){display:none}
-html body #landmark-dialog :is(#landmark-title,.arc-rail-name,.holo-label,#entry-number,.arc-btn,.arc-link,.arc-file){font-family:var(--o-display);letter-spacing:0;text-transform:none}
-html body #landmark-dialog #landmark-title{font-size:16px;line-height:1.3}
-html body #landmark-dialog :is(.arc-btn,.arc-link,.arc-file,.arc-rail-section){min-height:44px;font-size:14px}
-html body #landmark-dialog :is(.arc-title,.arc-case-title){font-weight:400;letter-spacing:-.035em;line-height:1.1}
-html body #landmark-dialog :is(.arc-body,.arc-prose,.arc-case-body){font-size:16px;line-height:1.65}
-html body #landmark-dialog :is(.arc-rail-entries button,.arc-rail-section){border-radius:var(--ui-radius)}
-html body #landmark-dialog :is(.arc-rail-section,.arc-rail-entries button)[aria-current]{background:var(--ui-deep);color:var(--ui-foam)}
-html body #landmark-dialog :is(.arc-case-visual,.arc-media,.arc-story-visual){border-radius:var(--ui-radius);box-shadow:none}
-html body #landmark-dialog[data-section][data-entry]{--sig:#9adbd5;--sig-soft:#264d57;--sig-line:transparent;--tab:#9adbd5;--tab-soft:var(--ui-deep)}
-html body #landmark-dialog :is(.arc-tool,.arc-action,.arc-turn,.arc-grid-link){border:0;border-radius:var(--ui-radius);background:var(--ui-deep-raised);font:400 14px/1.3 var(--o-display);text-transform:none;letter-spacing:0;min-height:44px}
-html body #landmark-dialog .arc-rail-section[aria-current]{border-left-color:transparent}
-html body #landmark-dialog :is(.arc-pagehead>.holo-label,.arc-strap,.arc-step,.arc-rule-no,.arc-rail-entries .holo-label,.arc-find .holo-label){display:none}
-html body #landmark-dialog .arc-pagehead h3{margin-top:0}
-html body #landmark-dialog .arc-grid .arc-find{border:0;background:var(--ui-deep-raised)}
-html body #landmark-dialog .arc-rail-section[aria-current] .hud-icon{color:var(--ui-foam)}
-html body #landmark-dialog .arc-rail :is(li,.arc-rail-section){--tab:#9adbd5;--tab-soft:#264d57}
-html body #landmark-dialog .arc-progress-track i{--tab:#9adbd5}
-html body #landmark-dialog .arc-rail .arc-rail-section[aria-current]{color:var(--ui-foam);border-color:transparent;background:var(--ui-deep)}
-html body #landmark-dialog :is(.arc-pager button,.arc-surface,.arc-expand,.arc-lightbox-close){min-height:44px;border:0;border-radius:var(--ui-radius);font:400 14px/1.3 var(--o-display);text-transform:none;letter-spacing:0;background:var(--ui-deep-raised)}
-html body #landmark-dialog .arc-rail-entries button{grid-template-columns:minmax(0,1fr) 13px}
-html body #landmark-dialog :is(.arc-back,.arc-find-status,.arc-find-kind){font:400 13px/1.4 var(--o-display);letter-spacing:0;text-transform:none}
-html body #landmark-dialog .arc-find-status{border:0;color:var(--ui-foam-muted);padding:0}
-html body dialog.ds{background:var(--ui-deep);border:0;border-radius:var(--ui-sheet);box-shadow:none}
+/* The portfolio sheet is styled whole in archive.css: the night palette, its own corners and pills. */
+/* The dive log is read on the same night ground as the portfolio sheet (archive.css). */
+html body dialog.ds{--ui-deep-raised:#16274b;background:radial-gradient(70% 40% at 0% 0%,#7ff0cf1f,#0000 70%),linear-gradient(170deg,#101f40f6,#0b1630fa 60%,#070f22fc);border:1px solid #c8dcff26;border-radius:var(--ui-sheet);box-shadow:0 40px 100px -30px #000d1acc}
+html body dialog.ds::backdrop{background:#030916b8}
+/* The field guide's open card sits on the same raised night tone, with the small shared corner. */
+html body dialog.ds .ds-detail{border:0;border-radius:var(--ui-radius);background:var(--ui-deep-raised)}
+html body dialog.ds .ds-detail>:not(.art){background:none}
 html body dialog.ds :is(.ds-card,.ds-stat,.ds-visit,.ds-metric,.ds-highlight,.ds-rate,.ds-chart-wrap){background:var(--ui-deep-raised);border:0;border-radius:var(--ui-radius);box-shadow:none}
 html body dialog.ds :is(.ds-head,.ds-section,.ds-foot){border-color:transparent}
 html body dialog.ds :is(h2,h3,button,summary){text-transform:none;letter-spacing:0;text-shadow:none}
@@ -239,8 +210,6 @@ html body.reading-page{background:var(--surface);--deep:var(--ui-deep-raised);--
   html body:not([data-submerged="true"]) .portfolio-links{margin-top:14px;gap:0 8px}
   html body .portfolio-links .hero-link{font-size:13px;padding:0 4px}
   html body .settings-menu{padding:16px}
-  html body #landmark-dialog{border-radius:0}
-  html body #landmark-dialog :is(.arc-header,.arc-footer){padding:10px 12px}
   .reading-page .reading-hero h1{font-size:clamp(29px,7.7vw,44px)}
   .reading-page .reading-section-heading h2{font-size:32px}
   .reading-page .reading-process h3{font-size:24px}
@@ -271,3 +240,10 @@ html body.reading-page{background:var(--surface);--deep:var(--ui-deep-raised);--
   html body :is(button,a,summary,.reading-card-cover img){transition:none}
 }
 @media print{.reading-page .reading-nav{position:static}html body #landmark-dialog{background:white;color:black}}
+
+/* Pills are for actions: the buttons that say what they do. Everything else that happens to be a button (animal portraits,
+   tiles, a card's header row, pickers, map and touch controls) keeps the small shared corner, like the panels it sits in. */
+html body :is(.dive-button,.guided-button,.ds-open,.holo-chip,.ds-close,.ds-share-open,.ds-share-cancel,.ds-download,.expedition-primary,.plan-start,.plan-tour,.diver-profile-resume,.diver-profile-more,.dialog-return,.archive-toggle,.dive-computer-toggle,.interact-prompt,.movement-reset,.movement-export,.explore-back,.settings-quick>button,.tour-card button[data-tour]:not(.tour-head):not(.tour-more)){border-radius:100px!important}
+
+/* The dive log button is light in every theme, so its New tag keeps dark ink (the page's ink turns white at night). */
+html body .portfolio-actions .ds-open small,html body .portfolio-actions .ds-open[data-seen] small{color:var(--ui-ink)}
