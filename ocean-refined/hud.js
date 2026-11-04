@@ -364,5 +364,30 @@ brightnessQuick?.addEventListener('input',()=>{
 });
 addEventListener('oceanmovementchange',paintBrightness);paintBrightness();
 
+const timeQuickReading=$('#time-quick-reading');
+const settingFeedbackTimers=new WeakMap();
+const feedbackSettings=[
+  {selector:'#sound-mute, #sound-switch, #sound-volume',output:$('#sound-quick-reading'),value:()=>window.oceanAudio?.enabled===false?'Muted':`${Math.round((window.oceanAudio?.volume??0)*100)}%`},
+  {selector:'#time-cycle, #time-slider, #time-lock, #dawn, #day, #dusk, #night',output:timeQuickReading,value:()=>{const value=currentPreset();return value[0].toUpperCase()+value.slice(1);}},
+  {selector:'#weather-glyph, #weather-slider, #weather-lock, .weather-picker button',output:weatherReading,value:()=>weatherReading?.value||'Auto'}
+];
+function showSettingFeedback(event){
+  if(!menu?.contains(event.target))return;
+  const match=feedbackSettings.find(item=>event.target.closest(item.selector));
+  if(!match||!match.output)return;
+  const output=match.output;
+  output.textContent=match.value();
+  output.removeAttribute('aria-hidden');
+  output.dataset.visible='true';
+  clearTimeout(settingFeedbackTimers.get(output));
+  const timer=setTimeout(()=>{
+    output.dataset.visible='false';
+    setTimeout(()=>output.setAttribute('aria-hidden','true'),180);
+  },1350);
+  settingFeedbackTimers.set(output,timer);
+}
+menu?.addEventListener('click',showSettingFeedback);
+menu?.addEventListener('input',showSettingFeedback);
+menu?.addEventListener('change',showSettingFeedback);
 // QA hook: paint one frame by hand when the tab is not painting.
 window.oceanHud = {sync, aim, setMenu, setMapView, paintLocks, paintConditions};
