@@ -12,7 +12,7 @@
   --sheet:#0b1630;--rule:#c8dcff1f;--card:#ffffff08;--card-hover:#ffffff0f;--ring:#c8dcff1f;--ring-hover:#c8dcff33;--well:#040b16;
   --pill:#e0f1e9;--pill-ink:#17434d;--pill-2:#ffffff0e;--pill-2-line:#ffffff24;
   --font:Outfit,system-ui,sans-serif;--mono:"Martian Mono",ui-monospace,Menlo,Consolas,monospace;
-  --pad:48px;--measure:62ch;
+  --pad:48px;--measure:62ch;--r-card:22px;--r-turn:18px;--r-media:20px;
   box-sizing:border-box;margin:auto;padding:0;width:min(1120px,calc(100vw - 32px));height:min(800px,calc(100dvh - 32px));max-width:none;max-height:none;overflow:hidden;
   display:none;grid-template-rows:auto minmax(0,1fr);
   border:1px solid #c8dcff26;border-radius:28px;
@@ -192,7 +192,7 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 
 /* 7. Projects: the grid, then one case study at a time */
 #landmark-dialog .arc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:28px}
-#landmark-dialog .arc-find{--accent:var(--tint);display:grid;grid-template-rows:auto 1fr auto;width:100%;height:100%;padding:8px 8px 14px;border:0;border-radius:22px;background:linear-gradient(170deg,color-mix(in srgb,var(--accent),transparent 82%),color-mix(in srgb,var(--accent),transparent 94%) 55%,#ffffff06);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent),transparent 72%);color:inherit;text-align:left;cursor:pointer;transition:background-color var(--motion-hover) var(--journey-ease),box-shadow var(--motion-settle) var(--journey-ease),translate var(--motion-settle) var(--journey-ease)}
+#landmark-dialog .arc-find{--accent:var(--tint);display:grid;grid-template-rows:auto 1fr auto;width:100%;height:100%;padding:8px 8px 14px;border:0;border-radius:var(--r-card);background:linear-gradient(170deg,color-mix(in srgb,var(--accent),transparent 82%),color-mix(in srgb,var(--accent),transparent 94%) 55%,#ffffff06);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent),transparent 72%);color:inherit;text-align:left;cursor:pointer;transition:background-color var(--motion-hover) var(--journey-ease),box-shadow var(--motion-settle) var(--journey-ease),translate var(--motion-settle) var(--journey-ease)}
 #landmark-dialog .arc-find:hover{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent),transparent 45%),0 26px 44px -26px color-mix(in srgb,var(--accent),#000 60%);translate:0 -3px}
 #landmark-dialog .arc-find:active{translate:0 -1px}
 #landmark-dialog .arc-find[data-entry="rae"]{--accent:var(--o-rae,#ff9b73)}
@@ -201,7 +201,7 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 #landmark-dialog .arc-find[data-entry="sage"]{--accent:var(--o-sage,#aee37f)}
 #landmark-dialog .arc-find[data-entry="openclaw"]{--accent:var(--o-claw,#b4c2ff)}
 #landmark-dialog .arc-find[data-entry="ocean-world"]{--accent:var(--o-world,#78d4ff)}
-#landmark-dialog .arc-find-art{display:block;aspect-ratio:16/10;overflow:hidden;border-radius:15px;background:var(--well)}
+#landmark-dialog .arc-find-art{display:block;aspect-ratio:16/10;overflow:hidden;border-radius:calc(var(--r-card) - 8px);background:var(--well)}
 #landmark-dialog .arc-find-art img{display:block;width:100%;height:100%;object-fit:cover;object-position:top;transition:scale var(--journey-standard) var(--journey-ease)}
 #landmark-dialog .arc-find:hover .arc-find-art img{scale:1.03}
 #landmark-dialog .arc-find-text{display:grid;gap:6px;padding:16px 10px 0}
@@ -214,7 +214,7 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 #landmark-dialog .arc-find-open .hud-icon{width:15px;height:15px;transition:translate var(--motion-settle) var(--journey-ease)}
 #landmark-dialog .arc-find:hover .arc-find-open .hud-icon{translate:3px 0}
 /* A project with no screenshot shows its steps on a field of its own colour. */
-#landmark-dialog .arc-plate{position:relative;display:grid;align-content:space-between;width:100%;height:100%;padding:16px;background:linear-gradient(150deg,color-mix(in srgb,var(--accent),transparent 68%),color-mix(in srgb,var(--accent),transparent 90%) 70%,#0000)}
+#landmark-dialog .arc-plate{position:relative;border-radius:inherit;display:grid;align-content:space-between;width:100%;height:100%;padding:16px;background:linear-gradient(150deg,color-mix(in srgb,var(--accent),transparent 68%),color-mix(in srgb,var(--accent),transparent 90%) 70%,#0000)}
 #landmark-dialog .arc-plate-icon{width:40px;height:40px;fill:none;stroke:var(--accent);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 #landmark-dialog .arc-plate-steps{display:grid;gap:5px;font:400 12px/1.3 var(--font);color:var(--text)}
 #landmark-dialog .arc-plate-steps span{display:flex;gap:8px;align-items:baseline}
@@ -230,7 +230,7 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 #landmark-dialog .arc-case-visual{margin-top:30px}
 #landmark-dialog .arc-media figcaption{display:grid;gap:3px;padding:10px 4px 0;font:400 13px/1.45 var(--font);color:var(--muted)}
 #landmark-dialog .arc-media figcaption small{font-size:13px;color:var(--dim)}
-#landmark-dialog .arc-media .media-full{position:relative;display:block;width:100%;padding:0;border:0;border-radius:20px;background:var(--well);overflow:hidden;line-height:0;cursor:zoom-in;box-shadow:inset 0 0 0 1px var(--ring)}
+#landmark-dialog .arc-media .media-full{position:relative;display:block;width:100%;padding:0;border:0;border-radius:var(--r-media);background:var(--well);overflow:hidden;line-height:0;cursor:zoom-in;box-shadow:inset 0 0 0 1px var(--ring)}
 #landmark-dialog .arc-media img{display:block;width:100%;height:auto;transition:scale var(--journey-standard) var(--journey-ease)}
 #landmark-dialog .arc-media--hero img{max-height:460px;object-fit:contain}
 #landmark-dialog .arc-media .media-full:is(:hover,:focus-visible) img{scale:1.015}
@@ -239,11 +239,11 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 #landmark-dialog .arc-media .media-full:is(:hover,:focus-visible) .arc-expand{opacity:1}
 /* The screens: one strip that snaps a screen at a time, swiped on touch, arrows and dots below */
 #landmark-dialog .arc-case-visual--strip{margin-top:30px}
-#landmark-dialog .arc-carousel{border-radius:22px;background:color-mix(in srgb,var(--tint),transparent 90%);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tint),transparent 72%);padding:8px}
-#landmark-dialog .arc-carousel-track{display:flex;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;border-radius:15px;outline-offset:4px}
+#landmark-dialog .arc-carousel{border-radius:var(--r-card);background:color-mix(in srgb,var(--tint),transparent 90%);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tint),transparent 72%);padding:8px}
+#landmark-dialog .arc-carousel-track{display:flex;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;border-radius:calc(var(--r-card) - 8px);outline-offset:4px}
 #landmark-dialog .arc-carousel-track::-webkit-scrollbar{display:none}
 #landmark-dialog .arc-slide{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always}
-#landmark-dialog .arc-slide .media-full{aspect-ratio:16/9;border-radius:15px;box-shadow:none}
+#landmark-dialog .arc-slide .media-full{aspect-ratio:16/9;border-radius:calc(var(--r-card) - 8px);box-shadow:none}
 #landmark-dialog .arc-slide img{width:100%;height:100%;object-fit:contain}
 #landmark-dialog .arc-slide figcaption{padding:12px 8px 4px}
 #landmark-dialog .arc-carousel-bar{display:flex;align-items:center;gap:12px;padding:8px 6px 4px}
@@ -278,13 +278,13 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
 #landmark-dialog .arc-evidence{margin-top:26px;max-width:70ch;font:400 13.5px/1.55 var(--font);color:var(--muted)}
 #landmark-dialog .arc-evidence b{font-weight:500;color:var(--text-2)}
 #landmark-dialog .arc-turner{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:40px}
-#landmark-dialog .arc-turn{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;padding:10px 14px 10px 10px;border:0;border-radius:18px;background:color-mix(in srgb,var(--tint),transparent 91%);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tint),transparent 78%);color:inherit;text-align:left;cursor:pointer;transition:background-color var(--motion-hover) var(--journey-ease),translate var(--motion-settle) var(--journey-ease)}
+#landmark-dialog .arc-turn{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;padding:10px 14px 10px 10px;border:0;border-radius:var(--r-turn);background:color-mix(in srgb,var(--tint),transparent 91%);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tint),transparent 78%);color:inherit;text-align:left;cursor:pointer;transition:background-color var(--motion-hover) var(--journey-ease),translate var(--motion-settle) var(--journey-ease)}
 #landmark-dialog .arc-turn:hover{background:var(--card-hover);translate:0 -2px}
 #landmark-dialog .arc-turn--next{grid-column:2;grid-template-columns:auto minmax(0,1fr) auto;text-align:right}
 #landmark-dialog .arc-turn--next .arc-turn-art{order:3}
 #landmark-dialog .arc-turn--next .hud-icon{order:1}
 #landmark-dialog .arc-turn--prev{grid-column:1}
-#landmark-dialog .arc-turn-art{display:block;width:64px;aspect-ratio:16/11;overflow:hidden;border-radius:10px;background:var(--well)}
+#landmark-dialog .arc-turn-art{display:block;width:64px;aspect-ratio:16/11;overflow:hidden;border-radius:calc(var(--r-turn) - 10px);background:var(--well)}
 #landmark-dialog .arc-turn-art img{display:block;width:100%;height:100%;object-fit:cover;object-position:top}
 #landmark-dialog .arc-turn-art .arc-plate{padding:8px}
 #landmark-dialog .arc-turn-art .arc-plate-icon{width:20px;height:20px}
@@ -432,6 +432,7 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
   #landmark-dialog .arc-story{grid-template-columns:1fr;gap:0;margin-top:30px}
   #landmark-dialog .arc-slide .media-full{aspect-ratio:4/3}
   #landmark-dialog .arc-carousel{padding:6px}
+  #landmark-dialog :is(.arc-carousel-track,.arc-slide .media-full){border-radius:calc(var(--r-card) - 6px)}
   #landmark-dialog .arc-carousel-bar{gap:2px;padding-inline:0}
   #landmark-dialog .arc-carousel-count{margin-left:4px}
   #landmark-dialog .arc-diagram ol{grid-template-columns:1fr}

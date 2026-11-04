@@ -93,40 +93,7 @@ html body :is(.heading-readout,.scene-footer,.depth-title,.depth-unit,.map-headi
 html body footer.scene-footer.holo-deep{font-size:13px;background:none;border:0;border-radius:0;box-shadow:none}
 html body :is(.scene-footer,.heading-readout) :is(span,strong,p){font-family:var(--o-display);font-size:13px;letter-spacing:0}
 
-/* The archive is a reading sheet, with the same ground as the dive overlays. */
-html body #landmark-dialog{
-  --arc-text:var(--ui-foam);--arc-muted:var(--ui-foam-muted);--arc-shell:var(--ui-deep);--arc-paper:var(--ui-deep);--arc-solid:var(--ui-deep-raised);--arc-field:var(--ui-deep-raised);--arc-rule:transparent;
-  --sig:#9adbd5;--sig-soft:#264d57;--sig-line:transparent;
-  border:0;border-radius:var(--ui-sheet);background:var(--ui-deep);box-shadow:none;
-}
-html body #landmark-dialog .arc-scan{display:none}
-html body #landmark-dialog :is(.arc-header,.arc-footer,.arc-rail){background:var(--ui-deep-raised);border:0}
-html body #landmark-dialog :is(.arc-header,.arc-footer){padding:16px 20px}
-html body #landmark-dialog :is(.arc-emblem,.arc-find,.arc-figure,.arc-link,.arc-btn,.arc-file,.arc-fact,.arc-note,.arc-plate,.arc-callout){border:0;box-shadow:none;background-image:none;border-radius:var(--ui-radius)}
-html body #landmark-dialog :is(button,a){text-shadow:none}
-html body #landmark-dialog :is(.arc-kicker,.arc-folio,.arc-rail-no,.arc-find-no,.arc-grid-no,.arc-section-no){display:none}
-html body #landmark-dialog :is(#landmark-title,.arc-rail-name,.holo-label,#entry-number,.arc-btn,.arc-link,.arc-file){font-family:var(--o-display);letter-spacing:0;text-transform:none}
-html body #landmark-dialog #landmark-title{font-size:16px;line-height:1.3}
-html body #landmark-dialog :is(.arc-btn,.arc-link,.arc-file,.arc-rail-section){min-height:44px;font-size:14px}
-html body #landmark-dialog :is(.arc-title,.arc-case-title){font-weight:400;letter-spacing:-.035em;line-height:1.1}
-html body #landmark-dialog :is(.arc-body,.arc-prose,.arc-case-body){font-size:16px;line-height:1.65}
-html body #landmark-dialog :is(.arc-rail-entries button,.arc-rail-section){border-radius:var(--ui-radius)}
-html body #landmark-dialog :is(.arc-rail-section,.arc-rail-entries button)[aria-current]{background:var(--ui-deep);color:var(--ui-foam)}
-html body #landmark-dialog :is(.arc-case-visual,.arc-media,.arc-story-visual){border-radius:var(--ui-radius);box-shadow:none}
-html body #landmark-dialog[data-section][data-entry]{--sig:#9adbd5;--sig-soft:#264d57;--sig-line:transparent;--tab:#9adbd5;--tab-soft:var(--ui-deep)}
-html body #landmark-dialog :is(.arc-tool,.arc-action,.arc-turn,.arc-grid-link){border:0;border-radius:var(--ui-radius);background:var(--ui-deep-raised);font:400 14px/1.3 var(--o-display);text-transform:none;letter-spacing:0;min-height:44px}
-html body #landmark-dialog .arc-rail-section[aria-current]{border-left-color:transparent}
-html body #landmark-dialog :is(.arc-pagehead>.holo-label,.arc-strap,.arc-step,.arc-rule-no,.arc-rail-entries .holo-label,.arc-find .holo-label){display:none}
-html body #landmark-dialog .arc-pagehead h3{margin-top:0}
-html body #landmark-dialog .arc-grid .arc-find{border:0;background:var(--ui-deep-raised)}
-html body #landmark-dialog .arc-rail-section[aria-current] .hud-icon{color:var(--ui-foam)}
-html body #landmark-dialog .arc-rail :is(li,.arc-rail-section){--tab:#9adbd5;--tab-soft:#264d57}
-html body #landmark-dialog .arc-progress-track i{--tab:#9adbd5}
-html body #landmark-dialog .arc-rail .arc-rail-section[aria-current]{color:var(--ui-foam);border-color:transparent;background:var(--ui-deep)}
-html body #landmark-dialog :is(.arc-pager button,.arc-surface,.arc-expand,.arc-lightbox-close){min-height:44px;border:0;border-radius:var(--ui-radius);font:400 14px/1.3 var(--o-display);text-transform:none;letter-spacing:0;background:var(--ui-deep-raised)}
-html body #landmark-dialog .arc-rail-entries button{grid-template-columns:minmax(0,1fr) 13px}
-html body #landmark-dialog :is(.arc-back,.arc-find-status,.arc-find-kind){font:400 13px/1.4 var(--o-display);letter-spacing:0;text-transform:none}
-html body #landmark-dialog .arc-find-status{border:0;color:var(--ui-foam-muted);padding:0}
+/* The portfolio sheet is styled whole in archive.css: the night palette, its own corners and pills. */
 html body dialog.ds{background:var(--ui-deep);border:0;border-radius:var(--ui-sheet);box-shadow:none}
 html body dialog.ds :is(.ds-card,.ds-stat,.ds-visit,.ds-metric,.ds-highlight,.ds-rate,.ds-chart-wrap){background:var(--ui-deep-raised);border:0;border-radius:var(--ui-radius);box-shadow:none}
 html body dialog.ds :is(.ds-head,.ds-section,.ds-foot){border-color:transparent}
@@ -239,8 +206,6 @@ html body.reading-page{background:var(--surface);--deep:var(--ui-deep-raised);--
   html body:not([data-submerged="true"]) .portfolio-links{margin-top:14px;gap:0 8px}
   html body .portfolio-links .hero-link{font-size:13px;padding:0 4px}
   html body .settings-menu{padding:16px}
-  html body #landmark-dialog{border-radius:0}
-  html body #landmark-dialog :is(.arc-header,.arc-footer){padding:10px 12px}
   .reading-page .reading-hero h1{font-size:clamp(29px,7.7vw,44px)}
   .reading-page .reading-section-heading h2{font-size:32px}
   .reading-page .reading-process h3{font-size:24px}
