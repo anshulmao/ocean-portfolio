@@ -609,3 +609,8 @@ html[data-input="touch"] :is(.capture-hint,.look-hint){display:none!important}
   .air-gauge,.dive-computer{top:var(--o-under-bar);left:calc(var(--o-pad) + var(--o-safe-l));right:auto}
   html[data-input="touch"] .interact-prompt{max-width:calc(20vw - var(--o-pad))}
 }
+
+/* Your coordinates under the map: two quiet figures, always the same width so they do not jitter as you swim. */
+.reef-map .map-coords{display:flex;justify-content:center;gap:10px;margin:8px 0 0;font:500 11px/1 var(--o-display,var(--holo-font));font-variant-numeric:tabular-nums;letter-spacing:0;color:var(--holo-ink);text-shadow:0 0 3px #021d2ad9;white-space:nowrap;pointer-events:none}
+.reef-map .map-coords span{min-width:6ch;text-align:center}
+.reef-map[data-view="full"] .map-coords{justify-content:flex-start;margin-top:10px}

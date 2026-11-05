@@ -95,7 +95,9 @@ try {
         await page.locator('#logbook-link').click();
         await page.locator('#landmark-dialog[open]').waitFor();
         await fit(page, '#landmark-dialog');
-        assert.equal(await page.locator('#landmark-dialog').evaluate(el => getComputedStyle(el).backgroundImage),'none');
+        // The portfolio sheet is read on the night palette: a deep blue ground with its section's light at the top.
+        const sheetGround = await page.locator('#landmark-dialog').evaluate(el => getComputedStyle(el).backgroundImage);
+        assert.match(sheetGround, /linear-gradient\(170deg, rgba\(16, 31, 64/, `the portfolio sheet should be on the night ground, got ${sheetGround.slice(0, 80)}`);
         await shot(page, `archive-${viewport.width}`);
         for (const section of ['about','experience','projects','resume']) {
           await page.evaluate(section => window.oceanArchive.open(section), section);
