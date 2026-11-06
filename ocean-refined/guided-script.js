@@ -64,7 +64,8 @@ export const STEPS = [
   { key: 'welcome', kind: 'intro', at: [-52, -13, -12], place: 'Guided dive', title: 'Welcome to my reef',
     line: 'My portfolio lives on this reef: four sites, and a lot of life between them. I’ll lead; you look. Try the controls as we drift in.',
     short: 'My portfolio lives on this reef. I’ll lead; you look.',
-    pan: [LIGHTS.middle, LIGHTS.helmet, LIGHTS.wreck, LIGHTS.treasure, [-30, -14, -10]] },
+    // All three, then the helmet on the left, a long sweep across to the treasure on the right, back to the wreck, then ahead.
+    pan: [LIGHTS.middle, LIGHTS.helmet, LIGHTS.treasure, LIGHTS.wreck, [-30, -14, -10]] },
   // Act 1: the shallows, to the helmet. Every subject passes on the right and the view pans one way: the whipray resting
   // on the sand below as the swim sets off (it lifts off as the guide looks at it), the east face of the brain coral dome
   // where the moray's den opens, the coral nursery and the nurse shark asleep beside it seen together from 20 m off, the

@@ -6,9 +6,9 @@ import { STEPS, SPEED, FLYBY, REACH, SLOW, BRIEF, WELCOME, flyBys, pointOf } fro
 import { track } from './analytics.js';
 
 // The guided dive runs the steps in guided-script.js. Each leg is a scripted route, not a camera path: it hands
-// waypoints to the same autopilot the atlas uses, so the diver still collides and still routes over terrain. The camera
-// is the guide's (round 11: a scripted, locked view, so the mouse, a drag, the arrow keys and a look stick do nothing while
-// it leads), and any input that swims takes the controls straight back.
+// waypoints to the same autopilot the atlas uses, so the diver still collides and still routes over terrain. The
+// visitor keeps the view (free look: the mouse, a drag, the arrow keys and a look stick only look), and any input
+// that swims takes the controls straight back.
 export { STEPS };
 // The portfolio sites among the steps: the tour's three stories.
 export const STOPS = STEPS.filter(step => step.kind === 'stop');
@@ -17,9 +17,9 @@ export const STOPS = STEPS.filter(step => step.kind === 'stop');
 // long way up to the shallows; 5: the same three stops, ending in open water above the wreck; 6: in from open water over
 // the far side of the reef, the treasure before the wreck; 7: from out over the treasure, the cathedral from its front;
 // 8: Experience in the treasure and Projects in the wreck, so the step keys swap places, and a direct leg to the cathedral;
-// 9: the scooter first, out to the right of the anchor past the barracuda, the whipray and the brain coral; 10: the
-// code-built landmarks, a fourth site (the résumé slate on the descent line) and the ending under the buoy; 11: the wreck
-// second and the treasure third, the nautilus a feature on the way, a locked camera and one card for every word).
+// 9: the scooter first, out to the right of the anchor past the barracuda, the whipray and the brain coral).
+// 10 and 11: the code-built landmarks: the helmet, the wreck, the treasure and a fourth site, the résumé slate on the
+// descent line, with the ending under the buoy; round 11 rides on round 9's runner and sheet, with the wreck second.
 const VERSION = 11;
 const note = (event, extra = {}) => track(event, { step: STEPS[index].key, index, tour_version: VERSION, ...extra });
 const ARRIVE_RADIUS = 1.6, PAN_BEAT = 3, INTRO_BEAT = 4.5, HOLD_SIGNAL = '#8ff4ff';
@@ -37,7 +37,7 @@ const PRELUDE_HOLD = .2, PRELUDE_DIVE = 1.6, REVEAL = 3.2;
 const CONTROLS = {
   computer: { key: 'C', name: 'Dive computer', touch: 'Computer', try: ['Press C to open your dive computer.', 'Tap the computer button.'],
     tip: ['Press C to check your depth on your dive computer.', 'Tap Dive computer to check your depth.'] },
-  interact: { key: 'F', name: 'Open a site', touch: 'Read it' },
+  interact: { key: 'F', name: 'Open a site', touch: 'Open' },
   // Swimming and rising or sinking are noticed by the diver moving under the visitor's own control (notice()).
   swim: { key: 'W A S D', name: 'Swim', touch: 'Stick: swim', try: ['Swim with W A S D. The guide picks up again when you let go.', 'Swim with the stick. The guide picks up again when you let go.'] },
   updown: { key: 'Space · Shift', name: 'Up and down', touch: 'Rise and sink', try: ['Space to rise, Shift to sink.', 'Use the rise and sink buttons.'] },
@@ -50,17 +50,15 @@ const CONTROLS = {
   photo: { key: 'H', name: 'Photo', touch: 'Camera',
     tip: ['Press H to take a photo of it.', 'Tap the camera button to take a photo of it.'] },
 };
-// F is not among them: there is nothing to open where the welcome is read; it is taught at the helmet, where there is.
-// The rest are taught by the fly-bys that use them: the guide runs the scooter on the way in, the lamp comes in under the
-// arch and the camera as the whale shark passes; the computer at the nautilus, the deepest stop, and the view at the end.
+// F is not among them: there is nothing to open where the welcome is read; it is taught at the anchor, where there is.
+// The rest are taught by the fly-bys that use them: the guide runs the scooter across the reef shelf, the lamp comes in under
+// the arch and the camera as the whale shark passes; the computer at the treasure, the deepest stop, and the view at the end.
 // On a phone the computer and the view live in the menu, not on the deck, so the welcome asks only for what the deck has and
 // no later beat teaches them there (DESK).
 const PRIMER = { keys: ['swim', 'updown', 'view'], touch: ['swim', 'updown'] }, DESK = new Set(['computer', 'view']);
-// The welcome's shape (s): the words first, then the dive computer opened by the guide for DEMO seconds (the one control
-// shown rather than asked for), then the controls to try.
-const WORDS = 4.5, DEMO = 6.5; let demo = 'off';
-// A caption stands FREE_CARD s once the visitor takes the controls, then the water is theirs.
-const FREE_CARD = 6; let freedAt = -Infinity;
+// The dive computer is shown rather than asked for: WORDS s into the welcome the guide opens it for DEMO s and the sheet says
+// what it is; then the controls are asked for. Opened by the guide, it does not count as tried.
+const WORDS = 4.5, DEMO = 6; let demo = 'off';
 const CHEER = 1.5, MOVED = 1.2;
 // CEILING: in the welcome the visitor may swim anywhere, up and down included, but no higher than this (world y), so rising
 // cannot carry them out of the tour and up to the surface. Only Skip (or Start) leaves the welcome.
@@ -83,8 +81,6 @@ const SPOT = { whale: 100, orcas: 80, 'whale-shark': 60, dolphins: 40 }, SPOT_HO
 const CALM_FADE = 3.5, QUIET = 6, CALM = 12, LOOK_OUT = .6, LOOK_FAR = 32, LOOK_FOR = 5.5, BEHIND = 1.8, ABEAM = 1.65;
 // The tour waits up to ASSETS_WAIT seconds at Start for the creature set (the nurse shark, the whale shark) to be in.
 const ASSETS_WAIT = 20;
-// How long (s) the view takes to come round to a fly-by's subject: a touch slower than a glance, so it reads as a pan.
-const GLANCE = 2.6;
 const motionMedia = matchMedia('(prefers-reduced-motion: reduce)'), coarse = matchMedia('(pointer: coarse)');
 // The phone layout of the layout contract (tokens.css): there the card is a bottom sheet and the copy is the short one.
 const compact = matchMedia('(max-width:599px),(pointer:coarse) and (max-height:499px)');
@@ -94,27 +90,29 @@ const touch = () => document.documentElement.dataset.input === 'touch' || (!docu
 // override on a device whose operating system asks for reduced motion.
 const reduced = () => window.oceanDiagnostics?.reducedMotion ?? motionMedia.matches;
 const card = document.createElement('section'), fade = document.createElement('div');
-// The bar (release/guided-dive/SPEC.md, round 11): one slim row at the foot of the water with the steps as dots and the
-// actions the moment calls for. Every word the guide says is in the card at the top (the caption, below); the bar never
-// carries copy, so the water stays clear at a stop and on a swim alike. The class name stays for the parts that keep out
-// of its way (world.js KEEP_OUT, the layout test).
-card.className = 'tour-card holo holo--reading'; card.setAttribute('aria-label', 'Guided dive'); card.dataset.show = 'false'; card.inert = true;
-card.innerHTML = '<div class="tour-steps" aria-hidden="true"></div><div class="tour-actions">'
-  + '<button type="button" data-tour="read">Open <kbd>F</kbd></button><button type="button" data-tour="next">Continue <kbd>N</kbd></button><button type="button" data-tour="rejoin">Rejoin <kbd>G</kbd></button><button type="button" data-tour="surface">Surface <kbd>N</kbd></button><button type="button" data-tour="explore">Keep exploring</button><button type="button" data-tour="exit">Exit tour</button></div>';
+// The card is a sheet (release/MOBILE_OVERHAUL.md): collapsed it is one row, the stop, the count and one action, so
+// the water stays clear while the tour swims; expanded it carries the stop's headline, its caption and every action.
+// It opens itself at a stop and folds away for the swim; the row toggles it, and that choice holds until the next stop.
+card.className = 'tour-card holo holo--reading'; card.setAttribute('aria-label', 'Guided dive'); card.dataset.show = 'false'; card.dataset.sheet = 'collapsed'; card.inert = true;
+card.innerHTML = '<div class="tour-progress" aria-hidden="true"><i></i></div>'
+  + '<button type="button" class="tour-head" data-tour="toggle" aria-expanded="false"><span class="holo-label tour-kicker"></span><span class="holo-value tour-count"></span><i class="tour-chevron" aria-hidden="true"></i></button>'
+  + '<h2 class="tour-title"></h2><div class="tour-body"><p class="tour-lines" aria-live="polite"></p><button type="button" class="tour-more" data-tour="more" aria-expanded="false"><span>More</span></button><ul class="tour-keys" aria-label="Controls to try" hidden></ul><p class="tour-teach" hidden></p></div><p class="tour-pace"></p>'
+  + '<footer><button type="button" data-tour="pause">Pause <kbd>P</kbd></button><button type="button" data-tour="read">Open <kbd>F</kbd></button><button type="button" data-tour="next">Next <kbd>N</kbd></button><button type="button" data-tour="rejoin">Rejoin <kbd>G</kbd></button><button type="button" data-tour="surface">Surface <kbd>N</kbd></button><button type="button" data-tour="explore">Keep exploring</button><button type="button" data-tour="exit">Exit tour</button></footer>';
 fade.className = 'tour-fade'; fade.setAttribute('aria-hidden', 'true');
-// The guide's voice: one card at the top of the water, in the chapter card's own face (journey.css .tour-caption). It says
-// the welcome, shows the dive computer, asks for the controls one at a time, names a fly-by's subject and the control it
-// teaches, and at a site carries its name, its line and the control it teaches (paintCaption). The bar below holds the actions.
+// A fly-by's caption: a title and a line over the water, no card. On a phone it sits under the depth chip, clear of the
+// subject and the controls; the sheet itself stays folded while the tour swims.
 const caption = document.createElement('div');
 caption.className = 'tour-caption'; caption.dataset.show = 'false'; caption.setAttribute('role', 'status');
-caption.innerHTML = '<small class="tour-caption-kicker"></small><b></b><span></span><div class="tour-caption-keys" hidden></div>';
+caption.innerHTML = '<b></b><span></span><small hidden></small>';
 document.body.append(fade, caption, card);
-const part = name => card.querySelector(name);
+const part = name => card.querySelector(name), bar = part('.tour-progress i');
+// open: the visitor's own choice for this step (null follows the tour); more: the full caption on a phone.
+let open = null, more = false, shownFor = '';
 
 // status: off · starting (waiting for the dive) · intro (the welcome) · travel (a leg, fly-bys and all) · dwell (a portfolio
 // site; waits for Continue) · free (visitor has the controls) · done (the ending)
 let status = 'off', index = 0, arrived = -1, legTime = 0, paused = false, inputs = 0;
-let best = Infinity, stall = 0, settle = 0, waited = 0, cut = null, cutTime = 0;
+let best = Infinity, stall = 0, settle = 0, waited = 0, cut = null, cutTime = 0, barShown = -1;
 let detours = 0, routeIssue = false, panIndex = 0, panTime = 0, prelude = -1, reveal = 0;
 // Seconds since the tour's title card went up, or -1: it goes up as the camera goes under, not once the dive settles.
 let titled = -1;
@@ -138,7 +136,7 @@ let scenicFrom = null;
 // The leg's scenic route as swum: the step's own, with any orbit worked out where things are now, and the approach that
 // brings the swim in on the line from the stop's subject, so the diver arrives facing it rather than swinging round to it.
 let legVia = [];
-const APPROACH = 8, LEAD = 22;
+const APPROACH = 8, LEAD = 16;
 function legOf(step) {
   const items = (step.via ?? []).flatMap((item, i, all) => item.orbit ? orbitOf(item, all[i + 1]) : [item]);
   if (step.kind === 'stop' || step.approach) {
@@ -161,8 +159,9 @@ function orbitOf(item, after) {
   return [{ ...item, at: path[0] }, ...path.slice(1)];
 }
 // cheer: the control just done where the tour was teaching it (a welcome chip, a fly-by's caption, a stop's tip), shown
-// pressed and ticked for CHEER seconds before the next is asked for.
-let cheer = null, cheerFor = 0;
+// pressed and ticked for CHEER seconds before the next is asked for. tipShown: what the tip holds, so a repaint leaves the
+// tick's animation running.
+let cheer = null, cheerFor = 0, keysShown = '', tipShown = '';
 // roaming: the visitor is swimming about in the welcome (the drift waits for them). starting: Start pressed, waiting on the assets.
 let roaming = false, starting = false, introFor = 0; const start = new THREE.Vector3();
 // used: the controls tried on this tour. seen: what they last read, to notice a change.
@@ -195,10 +194,10 @@ function own(step, target, subject) {
   const x = subject[0] + dx / length * view.distance, z = subject[2] + dz / length * view.distance;
   target.splice(0, 3, x, Math.max(subject[1] + view.rise, terrainHeightAt(x, z) + 2.5), z);
 }
-// On a phone the bar and the deck take the foot of the screen at a stop, so the view aims a little below the landmark and
-// the landmark sits above the middle, clear of them: about 6°, a tenth of the distance down.
+// On a phone the sheet covers the lower part of the screen at a stop, so the view aims a little below the landmark and the
+// landmark sits above the middle, clear of it: about 12°, a fifth of the distance down.
 function lift(target, subject) {
-  if (compact.matches) subject[1] -= .1 * Math.hypot(subject[0] - target[0], subject[1] - target[1], subject[2] - target[2]);
+  if (compact.matches) subject[1] -= .2 * Math.hypot(subject[0] - target[0], subject[1] - target[1], subject[2] - target[2]);
 }
 function clear(a, b) {
   if (controls()?.settings?.collisionEnabled === false) return true;
@@ -228,20 +227,49 @@ function onward(step, at) {
   return legVia.slice(next);
 }
 function paint() {
-  const step = STEPS[index], shown = status !== 'off' && status !== 'starting' && reveal <= 0, fingers = touch();
-  document.body.dataset.tour = status; card.dataset.state = status; card.dataset.show = String(shown); card.inert = !shown;
-  card.style.setProperty('--signal', status === 'free' ? HOLD_SIGNAL : step.signal ?? HOLD_SIGNAL);
-  // The steps as a row of dots: those passed, the one here, those to come.
-  part('.tour-steps').innerHTML = STEPS.map((_, i) => `<i data-on="${i === index}" data-done="${i < index}"></i>`).join('');
-  card.setAttribute('aria-label', `Guided dive, step ${index + 1} of ${STEPS.length}: ${status === 'free' ? 'on hold' : step.place}`);
-  // The actions the moment calls for, the one it most calls for lit.
+  const step = STEPS[index], shown = status !== 'off' && status !== 'starting' && reveal <= 0, reading = status === 'intro' || status === 'dwell' || status === 'done';
+  // A new step, or a change of state, starts from the tour's own choice again.
+  if (`${status}:${index}` !== shownFor) { shownFor = `${status}:${index}`; open = null; more = false; }
+  // Open where there is something to read or decide; folded while the tour swims or waits on hold.
+  const wide = open ?? (reading || routeIssue), small = compact.matches, fingers = touch();
+  document.body.dataset.tour = status; card.dataset.state = status; card.dataset.show = String(shown);
+  card.dataset.sheet = wide ? 'expanded' : 'collapsed';
+  // The rest of the interface reads the sheet from the body: world labels and announcements keep out of its way.
+  if (shown) document.body.dataset.sheet = card.dataset.sheet; else delete document.body.dataset.sheet;
+  card.inert = !shown; card.style.setProperty('--signal', status === 'free' ? HOLD_SIGNAL : step.signal ?? HOLD_SIGNAL);
+  part('.tour-count').textContent = `${index + 1}/${STEPS.length}`;
+  part('.tour-kicker').textContent = status === 'free' ? 'Guided dive · on hold' : status === 'travel' ? `Next · ${step.place}` : step.place;
+  const head = part('.tour-head');
+  head.setAttribute('aria-expanded', String(wide));
+  head.setAttribute('aria-label', `${part('.tour-kicker').textContent}. Step ${index + 1} of ${STEPS.length}. ${wide ? 'Fold the guide away' : 'Show the guide'}`);
+  part('.tour-title').textContent = status === 'free' ? 'You have the controls' : step.title;
+  // The caption. On a phone the short one, with More for the full text; the hint follows the input in hand.
+  const full = status === 'free' ? `Swim wherever you like. ${fingers ? 'Tap Rejoin' : 'Press G'} when you want me to lead again.`
+    : status === 'travel' ? (routeIssue ? 'The route is blocked. Resume to try again, skip this swim, or explore freely.' : fingers ? 'On the way there. Drag the water to look around, or touch the pad to take over.' : 'On the way there. Look around freely; any movement key hands the dive to you.')
+    : step.line;
+  const brief = reading ? step.short ?? full : full;
+  part('.tour-lines').textContent = small && !more ? brief : full;
+  const moreButton = part('.tour-more');
+  // On a phone the welcome's controls take the caption's place, so More is how it is read there.
+  moreButton.hidden = !(small && wide && (brief !== full || status === 'intro'));
+  moreButton.setAttribute('aria-expanded', String(more));
+  moreButton.firstChild.textContent = more ? 'Less' : 'More';
+  card.dataset.more = String(small && more);
+  const tip = paintControls(step, fingers);
+  // Folded, the row offers one action: the one the moment calls for.
   const primary = status === 'dwell' ? (step.landmark ? 'read' : 'next') : status === 'free' ? 'rejoin' : status === 'done' ? 'surface' : 'next';
-  const show = { read: status === 'dwell' && Boolean(step.landmark), next: touring(), rejoin: status === 'free', surface: status === 'done', explore: status === 'done', exit: touring() || status === 'free' };
-  for (const button of card.querySelectorAll('[data-tour]')) { const action = button.dataset.tour; button.hidden = !show[action]; button.dataset.primary = String(action === primary); }
-  part('[data-tour="next"]').firstChild.textContent = status === 'travel' ? 'Skip ' : status === 'intro' ? (starting ? 'Getting ready… ' : 'Start ') : 'Continue ';
+  const show = { pause: status === 'travel', read: status === 'dwell' && Boolean(step.landmark), next: touring(), rejoin: status === 'free', surface: status === 'done', explore: status === 'done', exit: touring() || status === 'free' };
+  for (const button of card.querySelectorAll('footer [data-tour]')) { const action = button.dataset.tour; button.hidden = wide ? !show[action] : action !== primary; }
+  part('[data-tour="pause"]').firstChild.textContent = paused ? 'Resume ' : 'Pause ';
+  part('[data-tour="pause"]').setAttribute('aria-pressed', String(paused));
+  part('[data-tour="next"]').firstChild.textContent = status === 'travel' ? (wide ? 'Skip travel ' : 'Skip ') : status === 'intro' ? (primerLeft().length ? 'Skip controls ' : 'Start ') : 'Continue ';
+  part('.tour-pace').textContent = status === 'intro' ? (primerLeft().length ? (fingers ? 'Or skip the controls and start the tour.' : 'Or press N to skip the controls and start the tour.') : '')
+    : status === 'dwell' ? `${step.landmark ? (fingers ? 'Tap Open to look inside. ' : 'Press F to look inside. ') : ''}Take your time. Continue when you’re ready.`
+    : status === 'travel' ? (routeIssue ? '' : paused ? 'Travel paused. Resume when you’re ready.' : 'You can skip this swim or take the controls at any time.') : '';
   setQuiet(touring() || status === 'starting');
-  const said = paintCaption(fingers);
-  if (window.oceanDiagnostics) window.oceanDiagnostics.tour = { status, stop: index, key: step.key, kind: step.kind, arrived, paused, routeIssue, detours, tip: said.tip, sight: sight?.key ?? null, flyTip: said.flyTip, goal: [...goal] };
+  setBar(status === 'done' ? 1 : (index + (arrived === index ? 1 : 0)) / STEPS.length);
+  const flyTip = paintCaption(fingers);
+  if (window.oceanDiagnostics) window.oceanDiagnostics.tour = { status, stop: index, key: step.key, kind: step.kind, arrived, paused, routeIssue, detours, tip, sight: sight?.key ?? null, flyTip, goal: [...goal] };
 }
 // Notices a control in use by what it changed. The first reading of a tour is only a baseline.
 function notice(api) {
@@ -278,70 +306,65 @@ const primer = () => touch() ? PRIMER.touch : PRIMER.keys, primerLeft = () => pr
 // The tick: its key pressed in, then the check drawn on (journey.css tour-press, tour-draw). Built from constants only.
 const TICK = '<svg class="tour-tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.4 6.5 5 9l4.7-5.6" pathLength="1"/></svg>';
 const cheerHTML = (id, fingers) => `<span class="tour-cheer">${fingers ? '' : `<kbd>${CONTROLS[id].key}</kbd>`}${TICK}${fingers ? CONTROLS[id].touch : CONTROLS[id].name}</span>`;
-// The guide's voice (the caption, journey.css .tour-caption): what it says depends on where the tour is. In the welcome,
-// the welcome itself, then the dive computer the guide has opened, then the control to try with its keys as caps and a tick
-// once tried; on a swim, a fly-by's title and line, with the control it teaches as caps; at a site, its name, its line and
-// the control the site teaches, if that has not been tried; on hold, how to rejoin, for a moment. A glimpse (a fly-by with
-// no title: a look out at the water on the way) says nothing. Returns what it asks for: the welcome's prompt (tip) and a
-// fly-by's (flyTip), for the diagnostics.
-let captionShown = '';
-const keyCaps = key => key.split(/\s*·\s*|\s+/).filter(Boolean).map(cap => `<kbd>${cap}</kbd>`).join('');
-function paintCaption(fingers) {
-  const input = fingers ? 1 : 0, step = STEPS[index], name = id => fingers ? CONTROLS[id].touch : CONTROLS[id].name, small = compact.matches;
-  let on = false, kicker = '', title = '', line = '', keys = '', teach = null, cheering = null, tip = '', flyTip = '';
-  const words = step => small && step.short ? step.short : step.line;
-  if (status === 'intro' && !starting) {
+function paintKeys(fingers) {
+  const list = part('.tour-keys'), next = primerLeft()[0];
+  list.hidden = status !== 'intro';
+  const shown = list.hidden ? '' : primer().map(id => `${id}:${used.has(id)}`).join() + next + fingers;
+  if (shown && shown !== keysShown) list.replaceChildren(...primer().map(id => {
+    const control = CONTROLS[id], item = document.createElement('li');
+    item.dataset.done = String(used.has(id)); item.dataset.next = String(id === next); item.dataset.fresh = String(id === cheer);
+    item.innerHTML = (fingers ? control.touch : `<kbd>${control.key}</kbd>${control.name}`) + (used.has(id) ? TICK : '');
+    item.setAttribute('aria-label', `${fingers ? control.touch : `${control.key}: ${control.name}`}${used.has(id) ? ', done' : ''}`);
+    return item;
+  }));
+  keysShown = shown;
+}
+function paintControls(step, fingers) {
+  const tip = part('.tour-teach'), input = fingers ? 1 : 0;
+  let text = '', html = '';
+  paintKeys(fingers);
+  if (status === 'intro' && starting) text = 'Getting the reef ready…';
+  else if (status === 'intro' && demo === 'on') text = fingers ? 'Your dive computer: depth, air and no-stop time. It lives in the menu.' : 'Your dive computer: depth, air and no-stop time. Press C for it any time.';
+  else if (status === 'intro' && demo === 'off') text = '';
+  else if (status === 'intro') {
     const left = primerLeft(), next = left[0];
-    on = true;
-    if (demo === 'off') { kicker = step.place; title = step.title; line = words(step); }
-    else if (demo === 'on') { kicker = 'Your dive computer'; title = 'Depth, air and time'; line = fingers ? 'I’ve opened it for you. It lives in the menu whenever you want it.' : 'I’ve opened it for you. Press C whenever you want it.'; keys = fingers ? '' : keyCaps('C'); }
-    else if (cheer) { cheering = cheer; kicker = 'Done'; title = name(cheer); }
-    else if (next) { teach = next; kicker = `Try it · ${primer().length - left.length + 1} of ${primer().length}`; title = name(next); line = CONTROLS[next].try[input]; keys = fingers ? '' : keyCaps(CONTROLS[next].key); tip = `Try it, ${primer().length - left.length + 1} of ${primer().length}: ${line}`; }
-    else { kicker = 'Ready'; title = 'That’s the controls'; line = fingers ? 'Tap Start for the tour.' : 'Press N to start the tour.'; }
-  } else if (status === 'intro' && starting) { on = true; kicker = step.place; title = tip = 'Getting the reef ready…'; }
-  else if (status === 'travel' && routeIssue) { on = true; kicker = 'Guided dive'; title = 'The way is blocked'; line = fingers ? 'Skip ahead, or take the controls.' : 'Skip ahead with N, or take the controls.'; }
-  else if (status === 'travel' && sight?.title && !paused) {
-    const id = sight.teach, asked = id && !used.has(id) ? CONTROLS[id]?.tip?.[input] ?? '' : '';
-    on = true; cheering = id && cheer === id ? id : null; teach = asked ? id : null; flyTip = asked;
-    kicker = cheering ? 'Done' : asked ? 'Try it' : 'Look'; title = sight.title; line = sight.line;
-    if (asked && !cheering) keys = `${fingers ? '' : keyCaps(CONTROLS[id].key)}<em>${asked}</em>`;
-  } else if ((status === 'dwell' || status === 'done') && step) {
-    const id = step.teach, asked = id && !used.has(id) && !(fingers && DESK.has(id)) ? CONTROLS[id]?.tip?.[input] ?? '' : '';
-    on = true; kicker = step.place; title = step.title; line = words(step); tip = asked;
-    if (id && cheer === id) cheering = id;
-    else if (asked) { teach = id; keys = `${fingers ? '' : keyCaps(CONTROLS[id].key)}<em>${asked}</em>`; }
-  } else if (status === 'free' && tourTime - freedAt < FREE_CARD) {
-    on = true; kicker = 'Guided dive · on hold'; title = 'You have the controls'; line = fingers ? 'Swim wherever you like. Tap Rejoin when you want me to lead again.' : 'Swim wherever you like. Press G when you want me to lead again.'; keys = fingers ? '' : keyCaps('G');
+    if (cheer) html = cheerHTML(cheer, fingers);
+    text = cheer ? `✓ ${CONTROLS[cheer].name}`
+      : next ? `Try it, ${primer().length - left.length + 1} of ${primer().length}: ${CONTROLS[next].try[input]}`
+      : fingers ? 'That’s the controls. Tap Start for the tour.' : 'That’s the controls. Press N to start the tour.';
+  } else {
+    // A stop or the ending teaches once it is reached; a fly-by teaches in its own caption.
+    const id = step.teach, here = status === 'dwell' || status === 'done';
+    if (here && id && cheer === id) { html = cheerHTML(id, fingers); text = `✓ ${CONTROLS[id].name}`; }
+    else if (here && id && !used.has(id) && !(fingers && DESK.has(id))) text = CONTROLS[id]?.tip?.[input] ?? '';
   }
-  // Tried while it was asked for: the card shows it pressed and ticked, and the deck key flashes; asked for, the deck key
-  // calls the thumb to it; and the scooter key reads as held while the guide runs the scooter.
-  if (cheering) document.body.dataset.tourCheer = cheering; else delete document.body.dataset.tourCheer;
-  if (teach) document.body.dataset.tourTeach = teach; else delete document.body.dataset.tourTeach;
-  if (on && status === 'travel' && sight?.scooter) document.body.dataset.guideScooter = 'true'; else delete document.body.dataset.guideScooter;
-  const said = { tip, flyTip }, key = on ? `${status}:${kicker}:${title}:${line}:${keys}:${cheering}` : '';
-  if (key === captionShown) return said;
-  // While the guide's card is up, the floating landmark labels step back (journey.css).
-  captionShown = key; caption.dataset.show = String(on); caption.dataset.kind = status; document.body.dataset.tourFlyby = String(on && status === 'travel');
-  if (on) document.body.dataset.tourCaption = 'on'; else delete document.body.dataset.tourCaption;
-  if (!on) return said;
-  caption.querySelector('.tour-caption-kicker').textContent = kicker; caption.querySelector('b').textContent = title; caption.querySelector('span').textContent = line;
-  const row = caption.querySelector('.tour-caption-keys');
-  row.innerHTML = cheering ? cheerHTML(cheering, fingers) : keys;
-  row.hidden = !cheering && !keys;
-  return said;
+  if ((html || text) !== tipShown) { tipShown = html || text; if (html) tip.innerHTML = html; else tip.textContent = text; }
+  tip.hidden = !text; card.dataset.tip = String(Boolean(text));
+  return text;
 }
-// The dive computer, opened and closed by the guide in the welcome (dive-hud.js: its toggle; a phone keeps it in the menu,
-// where the same toggle still opens the face).
-function setComputer(open) {
-  const toggle = document.querySelector('#dive-computer-toggle'); if (!toggle) return;
-  if ((document.body.dataset.computerOpen === 'true') !== open) toggle.click();
+// The fly-by's caption: its title, its line and the control it teaches, if that has not been tried.
+let captionShown = '';
+function paintCaption(fingers) {
+  // A glimpse (a fly-by with no title: a look out at the water or the reef on the way) has no caption.
+  const id = sight?.teach, on = status === 'travel' && Boolean(sight?.title) && !paused, tip = on && id && !used.has(id) ? CONTROLS[id]?.tip?.[fingers ? 1 : 0] ?? '' : '';
+  // Tried while it was asked for: the caption shows it pressed and ticked, and the deck key flashes.
+  const cheering = on && id && cheer === id;
+  if (cheering) document.body.dataset.tourCheer = id; else delete document.body.dataset.tourCheer;
+  const key = on ? `${sight.key}:${tip}:${cheering}` : '';
+  // The deck key it teaches calls the thumb to it, and the scooter key reads as held while the guide runs the scooter.
+  if (tip) document.body.dataset.tourTeach = id; else delete document.body.dataset.tourTeach;
+  if (on && sight.scooter) document.body.dataset.guideScooter = 'true'; else delete document.body.dataset.guideScooter;
+  if (key === captionShown) return tip;
+  // While a fly-by's caption names its subject, the floating landmark labels step back (journey.css).
+  captionShown = key; caption.dataset.show = String(on); document.body.dataset.tourFlyby = String(on);
+  if (!on) return tip;
+  const small = caption.querySelector('small');
+  caption.querySelector('b').textContent = sight.title; caption.querySelector('span').textContent = sight.line;
+  if (cheering) small.innerHTML = cheerHTML(id, fingers); else small.textContent = tip;
+  small.hidden = !tip && !cheering;
+  return tip;
 }
-function demoStep() {
-  if (status !== 'intro' || starting || roaming) return;
-  if (demo === 'off' && introFor >= WORDS) { demo = 'on'; setComputer(true); paint(); }
-  else if (demo === 'on' && introFor >= WORDS + DEMO) { demo = 'done'; setComputer(false); paint(); }
-}
-function endDemo() { if (demo === 'on') setComputer(false); demo = 'done'; }
+function setBar(value) { const rounded = Math.round(value * 250) / 250; if (rounded !== barShown) { barShown = rounded; bar.style.transform = `scaleX(${rounded})`; } }
 
 // The camera's subjects once a step is reached: the step's own, then a site's landmark. Reduced motion holds the first.
 function startPan() {
@@ -444,7 +467,7 @@ function flyBy(dt, at) {
   // A resident parked for the tour sets off now that the guide is looking at it.
   if (next.wake) controls()?.park?.(next.wake, false);
   waiting = Boolean(next.wait) && !used.has(next.wait);
-  api?.pacing(waiting ? HUSH : next.slow ?? SLOW); if (next.look) api?.glance(subjectOf(next.look), false, GLANCE); api?.guideScooter(Boolean(next.scooter) && !waiting);
+  api?.pacing(waiting ? HUSH : next.slow ?? SLOW); if (next.look) api?.glance(subjectOf(next.look)); api?.guideScooter(Boolean(next.scooter) && !waiting);
   if (next.through) throughBall(at);
   paint();
 }
@@ -532,7 +555,7 @@ function lineUp(at) {
 }
 function launch() {
   const api = controls();
-  api.guide(true, true, false, true);
+  api.guide(true, true, true);
   inputs = api.nav.inputs; best = Infinity; stall = 0; legTime = 0; settle = 2; calmFor = 0; hasLast = false; turnedAt = tourTime;
   if (!api.travelPath(leg, look, STEPS[index].speed ?? SPEED, STEPS[index].lead ?? LEAD)) blockRoute();
   else lineUp(window.oceanDiagnostics.playerPosition);
@@ -563,7 +586,7 @@ function go(next) {
   launch();
 }
 function resolveAt(step) { const point = [0, 0, 0]; resolve(step, point, [0, 0, 0]); return point; }
-function land() { const api = controls(); api.guide(true, true, false, true); api.place(goal, look); arrive(); }
+function land() { const api = controls(); api.guide(true, true, true); api.place(goal, look); arrive(); }
 function advance() { if (index < STEPS.length - 1) go(index + 1); }
 // The welcome is read where the dive levels out: nothing to swim to, only a look around.
 function begin() {
@@ -574,7 +597,7 @@ function begin() {
   // The welcome sheet follows the title card by REVEAL, counted from when the card went up during the descent.
   if (titled < 0) { titled = 0; splash('Guided dive', 'Welcome to the reef'); }
   endPrelude(); reveal = Math.max(.4, REVEAL - titled); titled = -1; note('tour_step');
-  api.guide(true, true, false, true); api.tether?.(CEILING); drift(); startPan(); paint();
+  api.guide(true, true, true); api.tether?.(CEILING); drift(); startPan(); paint();
 }
 // The welcome drifts in toward the reef at an easy pace while the controls are tried. A visitor swimming about takes over,
 // and the drift picks up again once they have let go for RESUME seconds.
@@ -582,10 +605,22 @@ function drift() {
   const api = controls(), step = STEPS[0]; if (!step.at || reduced()) return;
   resolve(step); here.fromArray(window.oceanDiagnostics.playerPosition);
   leg.length = 0; leg.push(...planGuidedRoute(here.toArray(), goal, { floor: terrainHeightAt, clear, clearance: Math.max(1.5, api.settings?.floorClearance ?? 1.5) }));
-  if (leg.length) { api.guide(true, true, false, true); api.travelPath(leg, null, DRIFT); inputs = api.nav.inputs; }
+  if (leg.length) { api.guide(true, true, true); api.travelPath(leg, null, DRIFT); inputs = api.nav.inputs; }
 }
+// The dive computer, opened and closed by the guide in the welcome (dive-hud.js: its toggle; a phone keeps it in the menu,
+// where the same toggle still opens the face).
+function setComputer(open) {
+  const toggle = document.querySelector('#dive-computer-toggle'); if (!toggle) return;
+  if ((document.body.dataset.computerOpen === 'true') !== open) toggle.click();
+}
+function demoStep() {
+  if (status !== 'intro' || starting || roaming || reduced()) { if (demo === 'off' && introFor >= WORDS) demo = 'done'; return; }
+  if (demo === 'off' && introFor >= WORDS) { demo = 'on'; setComputer(true); paint(); }
+  else if (demo === 'on' && introFor >= WORDS + DEMO) { demo = 'done'; setComputer(false); paint(); }
+}
+function endDemo() { if (demo === 'on') setComputer(false); demo = 'done'; }
 function endPrelude() { prelude = -1; delete document.body.dataset.prelude; controls()?.frameDiver?.(false); }
-function handOver() { note('tour_taken_over'); endDemo(); endSight(); controls()?.tether?.(null); status = 'free'; freedAt = tourTime; paused = false; cut = null; fade.dataset.on = 'false'; controls()?.guide(false); paint(); }
+function handOver() { note('tour_taken_over'); endDemo(); endSight(); controls()?.tether?.(null); status = 'free'; paused = false; cut = null; fade.dataset.on = 'false'; controls()?.guide(false); paint(); }
 // Rejoin takes up the step the tour was on, through the scenic waypoints still ahead of wherever the visitor swam to. It used
 // to take the nearest step left, which, with the ending beside the wreck, could skip the treasure altogether.
 function rejoin() {
@@ -597,7 +632,7 @@ function stop(message, how = 'stopped') {
   if (status === 'off') return;
   note('tour_ended', { how });
   endDemo(); endSight(); const api = controls(); status = 'off'; paused = false; cut = null; fade.dataset.on = 'false'; reveal = 0; endPrelude(); roaming = starting = false;
-  // Let go of the view too, so it does not stay on the last subject the tour showed; and of anything parked for it.
+  // Let go of the view too, so it does not stay on the last subject the tour showed.
   if (api) { api.guide(false); api.cancelTravel(); api.lookAt?.(null); api.tether?.(null); api.park?.('whipray', false); }
   paint();
   if (message) say('Guided dive', message, HOLD_SIGNAL, 3200);
@@ -634,8 +669,6 @@ function update(dt, api, state, diving) {
   if (stopOnWay) holdStop(api);
   if (status === 'off') return;
   tourTime += dt;
-  // The on-hold card has had its moment.
-  if (status === 'free' && caption.dataset.show === 'true' && tourTime - freedAt >= FREE_CARD) paint();
   const mode = api.getMode();
   if (status === 'starting') {
     waited += dt;
@@ -704,12 +737,14 @@ card.addEventListener('click', event => {
   else if (action === 'surface') surface();
   else if (action === 'explore') stop('The reef is yours. The lights still mark the three sites.', 'explore');
   else if (action === 'exit') stop('Tour ended. The reef is yours.', 'exit');
-  // The actions hand the focus back to the scene; Open leaves it where the archive puts it.
-  if (action && action !== 'read') document.querySelector('#world')?.focus({ preventScroll: true });
+  else if (action === 'toggle') { open = card.dataset.sheet !== 'expanded'; more = false; paint(); }
+  else if (action === 'more') { more = !more; paint(); }
+  // The sheet's own toggles keep the focus where it is, for a keyboard; the actions hand it back to the scene.
+  if (action && !['read', 'toggle', 'more'].includes(action)) document.querySelector('#world')?.focus({ preventScroll: true });
 });
-// A phone turned on its side, or a window narrowed past the phone width, changes the copy the card carries.
+// A phone turned on its side, or a window narrowed past the phone width, changes the copy the sheet carries.
 compact.addEventListener?.('change', () => { if (status !== 'off') paint(); });
-// The bar's Open stands in for the scene's own prompt, so it offers the same action.
+// On a phone the sheet stands in for the scene's own prompt, so it offers the same action.
 function read() {
   const prompt = document.querySelector('#interact-prompt'), step = STEPS[index];
   if (prompt && !prompt.hidden) prompt.click();
@@ -753,7 +788,7 @@ addEventListener('keydown', event => {
   else if (event.code === 'KeyN' && status === 'done') { event.preventDefault(); surface(); }
   else if (event.code === 'KeyP' && status === 'travel') { event.preventDefault(); togglePause(); }
   // F at a site: its stop viewpoint can stand further off than the landmark's own reach (landmark-interactions.js), so
-  // when that prompt is not up, the tour opens the site itself, as Read it does.
+  // when that prompt is not up, the tour opens the site itself, as Open does.
   else if (event.code === 'KeyF' && status === 'dwell' && STEPS[index].landmark && !document.querySelector('#interact-prompt:not([hidden])')) { event.preventDefault(); read(); }
 });
 window.oceanTour = { start: startTour, stop, rejoin, next, plan: tourPlan, get status() { return status; }, STEPS, STOPS, get tried() { return [...used]; },

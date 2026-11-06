@@ -40,10 +40,11 @@ Everything between them is a **fly-by** (the swim slows, the camera pans across,
 shaped like a real dive: in over the sand, the shallows first, the wreck at 15 m, the deepest site, back up by stages,
 and a safety stop at 5 m on the line before the surface.
 
-**The camera is the guide's.** The view is locked while the tour leads (`setGuided(value, free, looking, locked)`): the
-mouse, a drag, the arrow keys and the look stick do nothing. Any input that swims (W A S D, the thumb-stick, rising and
-sinking) still takes the controls, and the view, straight back. Between subjects the view hands one to the next in one
-pan (a fly-by's pan takes 2.6 s to come round), and the stop's subject is turned to over the last metres of the approach.
+**The runner, the camera and the interface are round 9's** (the owner's choice after round 11). The guide leads with
+free look: the mouse, a drag, the arrow keys and the look stick only look, the guide's view eases back once the visitor
+lets go, and any input that swims takes the controls straight back. Between subjects the view hands one to the next in
+one pan. The sheet sits in the bottom-right corner on a desktop and above the deck on a phone; fly-bys are named by the
+small caption at the top.
 
 **No big animal comes unasked while the tour is on.** The random encounters (`user-creatures.js` director) and the
 one-a-dive guarantee (`big-life.js`) both wait until it ends; the tour calls in its own, each where its route wants it:
@@ -55,10 +56,10 @@ and does not come back once it has been looked at.
 
 **Show me around** eases in on the diver, dives in first person and turns to the middle of the three lights, so the
 helmet, the wreck and the treasure are all in the frame going under (on a desktop lens; a phone's sees them in turn).
-The welcome drifts a little way west along the sand. The guide's card says the welcome (4.5 s), then **opens the dive
-computer** for 6.5 s and says what it is (the one control shown rather than asked for; it does not count as tried), then
-asks for W A S D, rising and sinking, and V, one at a time, and starts on N. The camera visits the three lights in turn,
-then the way ahead.
+The welcome drifts a little way west along the sand while the sheet says the welcome. After 4.5 s the guide **opens the
+dive computer** for 6 s and the sheet says what it is (the one control shown rather than asked for; it does not count as
+tried); then the sheet's chips ask for W A S D, rising and sinking, and V, one at a time, and N starts the tour. The camera
+takes in all three lights, then the helmet, a long sweep across to the treasure, back to the wreck, then the way ahead.
 
 ### Act 1: across the shallows to the helmet
 
@@ -146,17 +147,14 @@ checked for that, and for clearance of the hull, in `tools/test-guided-motion.mj
 - One short line per beat, two at most. Use second person and present tense.
 - Signpost: "This is where you'll find…". Don't summarise the portfolio in the tour.
 - Key hints follow the input in hand (keys on desktop, buttons on touch).
-- **One card for every word (round 11).** The guide's card (`.tour-caption`) is the only place the tour speaks: the
-  welcome, the dive computer, each control to try (its keys as caps, ticked once tried), each fly-by's title and line
-  with the control it teaches, each site's name, line and tip, and the on-hold note after a takeover (6 s). It wears
-  the depth-chapter card's face (mono caps kicker, display-face title, one line, a pool of shade) and stands where
-  those cards stood: top centre on a desktop, under the top bar on a phone. The depth-chapter cards themselves stay
-  quiet while the tour is on, so nothing ever writes over the guide.
-- **The bar** (`.tour-card`) is one slim row at the foot of the water, centred: the steps as dots and the actions the
-  moment calls for (Open F · Continue N · Skip N · Rejoin G · Surface N · Keep exploring · Exit), the one it most calls
-  for lit. It carries no copy. The scene's own "press F" prompt stands down at a stop, since the bar offers Open.
-- **At a stop on a phone**, the camera aims a little below the landmark (about 6°), so the landmark sits above the
-  middle of the screen, clear of the bar and the deck.
+- **Fly-by captions** are a title and one line over a light tint, like the depth gauge. They sit top centre on a desktop, and top
+  left under the depth chip on a phone, clear of the compass. While the tour leads on a phone, Back to the surface
+  makes way for them.
+- **At a stop on a phone**, the camera aims a little below the landmark, so the landmark sits above the middle of the
+  screen, clear of the sheet.
+- **On a desktop the tour card** sits in the bottom-right corner, see-through with a slight tint like the depth gauge. Its
+  action at a site is **Open (F)**.
+- While the tour swims, the scene's own "press F" prompt stays down; the sheet offers Open at each stop.
 - The existing long `lines`/`short` copy on stops is retired from the tour. It stays in the archive.
 
 ## Timing budget
@@ -501,3 +499,10 @@ stops.
     bar of dots and actions (Open, Continue, Skip, Rejoin, Surface, Exit). The depth-chapter cards and the scene's
     press-F prompt stand down while the tour leads. Look-there markers show each animal once.
   - `tour_version` is now 11.
+- **Round 11, rebuilt on round 9** (the owner's notes: "clunky", "doesn't feel cohesive", the new controls and splashes
+  liked less, "the previous one was much better"). The runner, camera and interface are main's round 9 again: free look,
+  the bottom-right sheet with its control chips, the small fly-by caption at the top, Pause, Next and Read it (now
+  **Open**). Kept from round 11, at the owner's choice: the site order (the helmet, the wreck as Experience, the treasure
+  chests as Projects, the slate; the nautilus a feature on the way), the scripted big animals (none random while the tour
+  is on; each look-there marker once) and the dive-computer demonstration in the welcome. Dropped: the locked camera,
+  the centred guide card and the slim bar. The round-11 route stays (one-way pans in Act 1, every fly-by its hold).

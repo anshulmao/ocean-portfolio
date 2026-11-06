@@ -100,7 +100,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   // focusLead: how far out (m) a leg's subject starts drawing the view. The guided dive turns to a stop from well back, so
   // the swim's last curve and the turn to the subject happen together rather than one after the other.
   let focusLead=FOCUS_RANGE;
-  let hasDest=false,hasFocus=false,docking=false,dockTime=0,coursed=false,pace=0,travelSpeed=0,guided=false,freeControl=false,freeLook=false,lockLook=false,settling=false,slack=0,boost=0,spool=0,coast=1,pendingDive=null;
+  let hasDest=false,hasFocus=false,docking=false,dockTime=0,coursed=false,pace=0,travelSpeed=0,guided=false,freeControl=false,freeLook=false,settling=false,slack=0,boost=0,spool=0,coast=1,pendingDive=null;
   const coordinate=value=>Array.isArray(value)?value:[value.x,value.y,value.z];
   let suspended=false,captureRequired=true,touchId=null,skipMove=false,blockedTime=0,ascent=null,lastSubmerged=false,surfaceLocked=true,intentionalUnlock=false,pathCheckAt=0,pathIsClear=true;
   let lookIdle=0,breath=0,sway=0,wander=0,calm=false,engaged=false;const hover={idle:0},hoverRate={idle:0};
@@ -110,7 +110,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   function listen(target,event,handler,options){target.addEventListener(event,handler,options);cleanup.push(()=>target.removeEventListener(event,handler,options));}
   function releasePointer(){if(document.pointerLockElement===canvas){intentionalUnlock=true;document.exitPointerLock();}}
   // The scooter key only modifies a swim, so it leaves the autopilot alone; from the touch pad with nothing else under way it swims, which is deliberate input.
-  function press(code,fromPad=false){if(ascent||(!lastSubmerged&&!surfaceLocked)||(surfaceLocked&&!code.startsWith('Arrow')))return;keys.add(code);if(fromPad)padKeys.add(code);if((code!=='KeyE'||(fromPad&&!hasDest))&&!((freeLook||lockLook)&&code.startsWith('Arrow')))takeControl();if(code.startsWith('Arrow'))lookIdle=0;wake();}
+  function press(code,fromPad=false){if(ascent||(!lastSubmerged&&!surfaceLocked)||(surfaceLocked&&!code.startsWith('Arrow')))return;keys.add(code);if(fromPad)padKeys.add(code);if((code!=='KeyE'||(fromPad&&!hasDest))&&!(freeLook&&code.startsWith('Arrow')))takeControl();if(code.startsWith('Arrow'))lookIdle=0;wake();}
   function release(code){keys.delete(code);padKeys.delete(code);wake();}
   // Any deliberate input hands the dive back to the visitor at once. Nothing is reset: the swim and the turn under way ease into whatever is asked next.
   function takeControl(){hasDest=hasFocus=docking=false;travelRoute=[];endFlyBy();state.inputs++;guided=freeControl=false;state.guided=false;slack=0;endFreeLook();}
@@ -124,9 +124,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     if(!hold){velocity.set(0,0,0);thrust.set(0,0,0);}
     wake();return true;
   }
-  // locked (the guided dive): the view is the guide's alone; aim, the arrow keys and a look stick do nothing, and only
-  // swimming takes the dive over.
-  function setGuided(value,free=false,looking=false,locked=false){guided=Boolean(value);freeControl=guided&&Boolean(free);lockLook=guided&&Boolean(locked);state.guided=guided;state.lockLook=lockLook;slack=0;
+  function setGuided(value,free=false,looking=false){guided=Boolean(value);freeControl=guided&&Boolean(free);state.guided=guided;slack=0;
     if(guided&&looking){if(!freeLook){body.yaw=look.yaw;body.pitch=look.pitch;settling=false;}freeLook=state.freeLook=true;}else endFreeLook();wake();}
   function setLamp(value){const on=Boolean(value);if(on===state.lamp)return on;state.lamp=on;lampButton?.setAttribute('aria-pressed',String(on));window.dispatchEvent(new CustomEvent('oceanlamp',{detail:on}));wake();return on;}
   // Lets go of every held input. The swim itself is left to glide out.
@@ -163,7 +161,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   function skipSafetyStop(){if(ascent?.returnViaReef&&state.returnPhase==='offer')holdSafetyStop(false);}
   listen(document,'visibilitychange',()=>{if(document.hidden)requireRecapture();});
   // Aim input in pixels. It is only summed here; update() turns the sum into a change of view, so nothing depends on how many events a frame delivers.
-  function aim(dx,dy,gain=settings.mouseSensitivity){if(suspended||captureRequired||!state.exploring||ascent)return;if(lockLook)return;if(freeLook){/* look only */}else{if(guided){slack+=Math.abs(dx)+Math.abs(dy);if(slack<90)return;}takeControl();}pend.yaw-=dx*gain;pend.pitch-=dy*gain*(settings.invertMouse?-1:1);lookIdle=0;wake();}
+  function aim(dx,dy,gain=settings.mouseSensitivity){if(suspended||captureRequired||!state.exploring||ascent)return;if(freeLook){/* look only */}else{if(guided){slack+=Math.abs(dx)+Math.abs(dy);if(slack<90)return;}takeControl();}pend.yaw-=dx*gain;pend.pitch-=dy*gain*(settings.invertMouse?-1:1);lookIdle=0;wake();}
   listen(canvas,'pointerdown',e=>{
     if(suspended||ascent)return;
     // One finger on the water looks; the thumb-stick and the buttons keep their own fingers.
@@ -434,8 +432,8 @@ export function createExploration(canvas, wake, settings=savedSettings) {
       const side=clamp(Number(keys.has('KeyD'))-Number(keys.has('KeyA'))+(live&&diving?stick.x+pad.x:0),-1,1);
       let forward=clamp(Number(keys.has('KeyW'))-Number(keys.has('KeyS'))+(live&&diving?stick.y+pad.y:0),-1,1),vertical=clamp(Number(keys.has('Space'))-Number(keys.has('ShiftLeft')||keys.has('ShiftRight'))+(live&&diving?pad.rise-pad.sink:0),-1,1),strafe=turnMode?0:side;
       // A fast swim turns a little wider: the scooter trades a quarter of the turn rate for its speed.
-      const yawAsk=lockLook?0:(Number(keys.has('ArrowLeft'))-Number(keys.has('ArrowRight')))*settings.keyTurnSpeed-(live?pad.lookX:0)*settings.gamepadLookSpeed-(!surfaceLocked&&turnMode?side:0)*settings.turnSpeed*(1-.25*boost);
-      const pitchAsk=lockLook?0:(Number(keys.has('ArrowUp'))-Number(keys.has('ArrowDown')))*settings.keyLookSpeed+(live?pad.lookY:0)*settings.gamepadLookSpeed*.7*(settings.invertMouse?-1:1);
+      const yawAsk=(Number(keys.has('ArrowLeft'))-Number(keys.has('ArrowRight')))*settings.keyTurnSpeed-(live?pad.lookX:0)*settings.gamepadLookSpeed-(!surfaceLocked&&turnMode?side:0)*settings.turnSpeed*(1-.25*boost);
+      const pitchAsk=(Number(keys.has('ArrowUp'))-Number(keys.has('ArrowDown')))*settings.keyLookSpeed+(live?pad.lookY:0)*settings.gamepadLookSpeed*.7*(settings.invertMouse?-1:1);
       if(pitchAsk||(live&&pad.lookX))lookIdle=0;
       const traveling=hasDest&&submerged&&!suspended;
       // The scooter is a boost, not a motor: E multiplies the pace of a swim already under way (W, S or the autopilot).
