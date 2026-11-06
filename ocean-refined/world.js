@@ -483,8 +483,8 @@ function beginModels(){
   const busy=promise=>{modelsBusy++;return promise.finally(()=>{modelsBusy--;scaler.state.settling=1;});};
   const landmarksLoad=busy(import('./model-scene.js').then(({createModelScene})=>{
     if(!reef)return;modelScene=createModelScene({reef,terrainHeightAt:reef.userData.terrainHeightAt,collisions,economy:quality==='economy',onStatus:value=>{if(value.status==='loading')diagnostic.modelLoading=true;diagnostic.modelsLoaded=value.loaded??diagnostic.modelsLoaded??0;diagnostic.modelsFailed=value.failed??diagnostic.modelsFailed??0;if(value.status==='fallback'&&value.message&&!exploration.state.transition)status.textContent='Some optional ocean models could not load.';}});
-    scene.add(modelScene.root);interactionTargets=modelScene.landmarks||[];
-    return modelScene.load().then(async result=>{stylizeImported(modelScene.root,{glow:'near'});const ready=prepare(modelScene.root,true);
+    scene.add(modelScene.root);if(modelScene.surface)scene.add(modelScene.surface);interactionTargets=modelScene.landmarks||[];
+    return modelScene.load().then(async result=>{stylizeImported(modelScene.root,{glow:'near'});if(modelScene.surface)stylizeImported(modelScene.surface);const ready=prepare(modelScene.root,true);
       await worldBuilt;for(const box of deferred)reef.userData.collisions.addBox(...box);deferred.length=0;
       if(setPieces)await later('landmark props',()=>{const props=setPieces.place(modelScene.landmarks)||[];stylizeTree(setPieces.root);diagnostic.setPieces=setPieces.counts;for(const mesh of props){mesh.userData.waiting=true;mesh.visible=false;}showWhenReady(props);},{cost:20});modelScene.update(0,elapsed,playerPosition,night);diagnostic.modelLoading=false;diagnostic.modelsLoaded=result.loaded;diagnostic.modelsFailed=result.failed;for(const item of reefLabels){const placed=modelScene.landmarks.find(p=>p.id===item.landmark.id);if(placed){item.anchor.fromArray(placed.position).add(new THREE.Vector3(0,1.2,0));const marker=document.querySelector(`[data-landmark="${placed.id}"]`);if(marker){marker.style.left=`${(placed.position[0]+62)/124*100}%`;marker.style.top=`${(placed.position[2]+105)/140*100}%`;}item.label.querySelector("span").textContent=`Seafloor landmark · ${Math.round(toDisplayDepth(-placed.position[1]))} m`;}}diagnostic.reefFishCount=result.reefFishCount;diagnostic.reefFishGroups=result.reefFishGroups;return ready.then(()=>{diagnostic.landmarksReady=true;startup.landmarksReadyAt=Math.round(performance.now());experienceMetrics.mark('landmarksReady');});});
   }).catch(error=>{console.warn('Optional landmark models could not load:',error);diagnostic.modelLoading=false;}).finally(()=>{modelsLoading=false;diagnostic.landmarksSettled=true;wake();}));
@@ -1085,7 +1085,7 @@ function updateWorld(dt,clockDt=dt){
   diagnostic.surfaceLight=surfaceLight;diagnostic.brightnessBoost=settings.brightnessBoost;diagnostic.exposure=renderer.toneMappingExposure;diagnostic.ambientIntensity=ambient.intensity;
   const golden=(1-THREE.MathUtils.smoothstep(Math.abs(uniforms.uSun.value.y),.025,.24))*(1-night*.65);
   clouds?.update(camera.position,underwater);birds?.update(elapsed,camera.position,night,underwater);
-  sunlight.color.lerp(goldenSun,golden*.7);distantScenery?.update(elapsed,night,underwater);
+  sunlight.color.lerp(goldenSun,golden*.7);distantScenery?.update(elapsed,night,underwater);modelScene?.updateSurface?.(elapsed);
   // The scooter widens the lens a little. Its boost is already eased, so the field of view follows it directly.
   const fovGoal=settings.cameraFov+(mobile?7:0)+(reducedMotion?0:nav.scooter*5);if(Math.abs(camera.fov-fovGoal)>.01){camera.fov=fovGoal;camera.updateProjectionMatrix();}
   const scale=settings.diverScale*(mobile?1.03/1.35:camera.aspect<1?1.17/1.35:1);

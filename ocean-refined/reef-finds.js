@@ -20,7 +20,7 @@ export const FINDS = [
   { key: 'hat', name: 'Gold pirate hat', x: 23, z: -29, line: 'A captain’s tricorne, cast in gold, from beside the wreck.' },
   { key: 'sextant', name: 'Gold sextant', x: -31, z: -52, line: 'For reading the height of the sun, and from it where the ship was.' },
   { key: 'medallion', name: 'Gold medallion', x: 36, z: -67, line: 'A star struck on both faces, and a loop for a chain long gone.' },
-  { key: 'conch', name: 'Gold conch', x: -29, z: -94, line: 'A shell cast in gold, found on the deep sand by the treasure.' }
+  { key: 'conch', name: 'Gold conch', x: -29, z: -94, line: 'A shell cast in gold, found on the deep sand by the nautilus.' }
 ];
 const HOVER = .5, REACH = 48, TAU = Math.PI * 2;
 

@@ -6,9 +6,9 @@ import { planSurfaceReturn } from './return-route.js';
 import { toDisplayDepth } from './depth-metrics.js';
 import {routeTarget,smoothRoute,distance as routeDistance} from './cinematic-route.js';
 
-// Where the site starts, at the surface: well out over the deep end, near above the treasure, the reef ahead (x, z).
+// Where the site starts, at the surface: well out over the deep end, near above the nautilus, the reef ahead (x, z).
 export const SURFACE_START = [-18, -90];
-// The heart of the reef (the anchor). Going under, the view turns to it whatever the surface view faced.
+// The heart of the reef (the helmet). Going under, the view turns to it whatever the surface view faced.
 export const REEF_HEART = [-12, -15];
 
 // The swimming model. Everything that moves is eased by a critically damped follower that is exact over a step of
