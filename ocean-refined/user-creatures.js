@@ -430,7 +430,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
 
   // --- Residents ------------------------------------------------------------------------------------------------
   const spotted = [], dens = [], hovering = [], sleepers = [], cruisers = [];
-  let sentinel = null, grazers = null, whipray = null;
+  let sentinel = null, grazers = null, whipray = null, humphead = null;
   // Dens: out from the formation's middle, through its rock, to the first open ground beyond it: the den mouth, with
   // the body back in the rock. A heading that never crosses rock, or only reaches open ground far out (a gap in a ring
   // of columns, say), would leave the eel lying on bare sand, so headings nearest the authored one are tried first.
@@ -520,7 +520,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       hovering.push({ kind: 'lion', actor: a, home: new THREE.Vector3(x, 0, z), height: li.height, drift: rr(0, TAU), flash: 0 });
     }
     const hw = RESIDENTS.humphead;
-    if (gltfs.has(hw.species)) { const a = actor(hw.species, { name: 'humphead wrasse' }); if (a) herds.push({ route: route(...hw.loop, { wobble: .14 }), height: over(hw.height, -4), speed: hw.speed, pace: 1, members: [{ actor: a, ...member(0, 0, 0, { drift: .6, bob: .3 }) }], look: 6, bank: .1 }); }
+    if (gltfs.has(hw.species)) { const a = actor(hw.species, { name: 'humphead wrasse' }); if (a) humphead = a; if (a) herds.push({ route: route(...hw.loop, { wobble: .14 }), height: over(hw.height, -4), speed: hw.speed, pace: 1, members: [{ actor: a, ...member(0, 0, 0, { drift: .6, bob: .3 }) }], look: 6, bank: .1 }); }
   }
   // A material of its own with a band of shade that can roll along the body (object z, so it rides the skinning).
   function clouds(mesh) {
@@ -993,7 +993,8 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   };
   // Where a resident that stays put actually settled (sand() can move it well away from its wished-for spot): the guided dive frames it from here.
   // Where a resident is: one lying still where it settled, or the whipray where it glides now (the guided dive follows it).
-  const residentAt = id => resting[id] ?? (id === 'whipray' && whipray ? [whipray.pos.x, whipray.pos.y, whipray.pos.z] : null);
+  const swimming = { whipray: () => whipray, humphead: () => humphead };
+  const residentAt = id => resting[id] ?? (swimming[id]?.() ? [swimming[id]().pos.x, swimming[id]().pos.y, swimming[id]().pos.z] : null);
   // The guided dive brings one encounter in on a course of its own, and points out the visitors passing: where each lead animal is now.
   function encounter(id, player, view, course) { const e = casts.get(id); if (!e?.cast.length) return false; const s = slots.find(item => item.slot === e.slot); if (s.active) end(s.active); begin(e, player, view, course); s.active = e; return true; }
   const visitors = () => slots.filter(s => s.active?.path && s.active.cast[0]?.actor.started).map(s => { const p = s.active.cast[0].actor.pos; return { id: s.active.id, x: p.x, y: p.y, z: p.z }; });

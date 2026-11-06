@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
-import { LANDMARKS, terrainHeightAt } from './reef.js';
+import { LANDMARKS, RESUME_SITE, terrainHeightAt } from './reef.js';
 import { onFrame, setQuiet, discover, say, splash } from './journey.js';
 import { planGuidedRoute } from './guided-route.js';
 import { STEPS, SPEED, FLYBY, REACH, SLOW, BRIEF, WELCOME, flyBys, pointOf } from './guided-script.js';
@@ -17,8 +17,9 @@ export const STOPS = STEPS.filter(step => step.kind === 'stop');
 // long way up to the shallows; 5: the same three stops, ending in open water above the wreck; 6: in from open water over
 // the far side of the reef, the treasure before the wreck; 7: from out over the treasure, the cathedral from its front;
 // 8: Experience in the treasure and Projects in the wreck, so the step keys swap places, and a direct leg to the cathedral;
-// 9: the scooter first, out to the right of the anchor past the barracuda, the whipray and the brain coral).
-const VERSION = 9;
+// 9: the scooter first, out to the right of the anchor past the barracuda, the whipray and the brain coral; 10: the
+// code-built landmarks, a fourth site (the résumé slate on the descent line) and the ending under the buoy).
+const VERSION = 10;
 const note = (event, extra = {}) => track(event, { step: STEPS[index].key, index, tour_version: VERSION, ...extra });
 const ARRIVE_RADIUS = 1.6, PAN_BEAT = 3, INTRO_BEAT = 4.5, HOLD_SIGNAL = '#8ff4ff';
 // The opening from the surface (SPEC step 0): a held beat while the surface copy fades, the camera eases in on the diver
@@ -48,9 +49,9 @@ const CONTROLS = {
   photo: { key: 'H', name: 'Photo', touch: 'Camera',
     tip: ['Press H to take a photo of it.', 'Tap the camera button to take a photo of it.'] },
 };
-// F is not among them: there is nothing to open where the welcome is read; it is taught at the anchor, where there is.
-// The rest are taught by the fly-bys that use them: the guide runs the scooter across the reef shelf, the lamp comes in under
-// the arch and the camera as the whale shark passes; the computer at the treasure, the deepest stop, and the view at the end.
+// F is not among them: there is nothing to open where the welcome is read; it is taught at the helmet, where there is.
+// The rest are taught by the fly-bys that use them: the guide runs the scooter on the way in, the lamp comes in under the
+// arch and the camera as the whale shark passes; the computer at the nautilus, the deepest stop, and the view at the end.
 // On a phone the computer and the view live in the menu, not on the deck, so the welcome asks only for what the deck has and
 // no later beat teaches them there (DESK).
 const PRIMER = { keys: ['swim', 'updown', 'computer', 'view'], touch: ['swim', 'updown'] }, DESK = new Set(['computer', 'view']);
@@ -174,9 +175,11 @@ function resolve(step, target = goal, subject = look) {
   if (!step.landmark) { target.splice(0, 3, ...step.at); subject.splice(0, 3, ...(Array.isArray(step.pan?.[0]) ? step.pan[0] : step.at)); return true; }
   const placed = landmarkOf(step);
   if (placed) { target.splice(0, 3, ...placed.interactionPosition); subject.splice(0, 3, ...placed.position); own(step, target, subject); lift(target, subject); return true; }
-  // Before the models settle, a viewpoint beside the charted position stands in.
-  const [x, , z] = LANDMARKS.find(item => item.id === step.landmark).position, floor = terrainHeightAt(x, z);
-  target.splice(0, 3, x + 6, floor + 5, z); subject.splice(0, 3, x, floor + 1.5, z); own(step, target, subject); lift(target, subject); return false;
+  // Before the models settle, a viewpoint beside the charted position stands in (the slate hangs mid-water, at its own height).
+  const charted = [...LANDMARKS, RESUME_SITE].find(item => item.id === step.landmark), [x, y, z] = charted.position, floor = terrainHeightAt(x, z);
+  if (charted === RESUME_SITE) { target.splice(0, 3, x + 3, y, z); subject.splice(0, 3, x, y, z); }
+  else { target.splice(0, 3, x + 6, floor + 5, z); subject.splice(0, 3, x, floor + 1.5, z); }
+  own(step, target, subject); lift(target, subject); return false;
 }
 // A stop's own viewpoint (step.view) where the model's is not the one to see it from: a point, or { behind, near, distance,
 // rise } to stand squarely in front of the landmark with that resident (where it settled; near until it has) lined up behind.

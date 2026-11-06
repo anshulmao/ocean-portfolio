@@ -544,8 +544,8 @@ export function buildNursery({ x, z, floorAt, economy = false, projects = 6 }) {
       now = elapsed;
       const near_ = eye ? eye.distanceTo(center) : 0;
       if (eye && near_ > 55) return;
-      // A diver swimming up brings a pulse of current with them (not more often than every 14 s).
-      if (eye && near_ < 8 && now - pulseAt > 14) pulseAt = now;
+      // A diver swimming up (the guided dive passes 12 m off) brings a pulse of current with them (not more often than every 14 s).
+      if (eye && near_ < 15 && now - pulseAt > 14) pulseAt = now;
       lit += ((open ? .35 : near(eye, center, 4, 10) * .08) - lit) * (step > 0 ? 1 - Math.exp(-step * 3) : 1);
       for (const tree of trees) {
         const t = now - pulseAt - tree.delay, w = TAU / period;

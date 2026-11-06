@@ -58,8 +58,9 @@ export const RESIDENTS = {
   // The nurse shark sleeps on the open sand beside the coral nursery (reef.js NURSERY_SITE, at -5, 4).
   sleeper: { species: 'nurse-shark', near: [-6, 9.5] },
   // The barracuda that patrols a slow oval off the wreck (patrol: x and z radii, m; speed m/s), pauses to hang
-  // and watch a diver, and bolts if crowded.
-  sentinel: { species: 'great-barracuda', landmark: 'projects', offset: [9, 7, 4], patrol: [7, 4.5], speed: .8 },
+  // and watch a diver, and bolts if crowded. Its beat is off the hull's west (high, breached) side, over the open sand:
+  // the guided dive comes down the reef's east side and in to the wreck from the south-east, and never crowds it.
+  sentinel: { species: 'great-barracuda', landmark: 'projects', offset: [-15, 7, -2], patrol: [7, 4.5], speed: .8 },
   // Morays and a ribbon eel look out from the foot of the tall formations, mouths working; too close and they strike.
   dens: [
     // The cathedral's columns are too thin to hold a den: a moray there ended up on open sand by the reef's edge.
