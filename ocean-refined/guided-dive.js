@@ -231,7 +231,8 @@ function paint() {
   // A new step, or a change of state, starts from the tour's own choice again.
   if (`${status}:${index}` !== shownFor) { shownFor = `${status}:${index}`; open = null; more = false; }
   // Open where there is something to read or decide; folded while the tour swims or waits on hold.
-  const wide = open ?? (reading || routeIssue), small = compact.matches, fingers = touch();
+  // While the guide shows the dive computer the sheet folds away, so the computer's face is in view; the caption says what it is.
+  const wide = open ?? (status === 'intro' && demo === 'on' ? false : reading || routeIssue), small = compact.matches, fingers = touch();
   document.body.dataset.tour = status; card.dataset.state = status; card.dataset.show = String(shown);
   card.dataset.sheet = wide ? 'expanded' : 'collapsed';
   // The rest of the interface reads the sheet from the body: world labels and announcements keep out of its way.
@@ -324,8 +325,7 @@ function paintControls(step, fingers) {
   let text = '', html = '';
   paintKeys(fingers);
   if (status === 'intro' && starting) text = 'Getting the reef ready…';
-  else if (status === 'intro' && demo === 'on') text = fingers ? 'Your dive computer: depth, air and no-stop time. It lives in the menu.' : 'Your dive computer: depth, air and no-stop time. Press C for it any time.';
-  else if (status === 'intro' && demo === 'off') text = '';
+  else if (status === 'intro' && demo !== 'done') text = '';
   else if (status === 'intro') {
     const left = primerLeft(), next = left[0];
     if (cheer) html = cheerHTML(cheer, fingers);
@@ -344,7 +344,18 @@ function paintControls(step, fingers) {
 }
 // The fly-by's caption: its title, its line and the control it teaches, if that has not been tried.
 let captionShown = '';
+// The dive computer, while the guide shows it in the welcome, is named the same way as a fly-by.
+const DEMO_CAPTION = { key: 'dive-computer', title: 'Your dive computer', line: ['Depth, air and no-stop time, always on your wrist. Press C for it any time.', 'Depth, air and no-stop time. It lives in the menu.'] };
 function paintCaption(fingers) {
+  if (status === 'intro' && demo === 'on') {
+    const key = `${DEMO_CAPTION.key}:${fingers}`;
+    if (key !== captionShown) {
+      captionShown = key; caption.dataset.show = 'true'; document.body.dataset.tourFlyby = 'true';
+      caption.querySelector('b').textContent = DEMO_CAPTION.title; caption.querySelector('span').textContent = DEMO_CAPTION.line[fingers ? 1 : 0];
+      caption.querySelector('small').hidden = true;
+    }
+    return '';
+  }
   // A glimpse (a fly-by with no title: a look out at the water or the reef on the way) has no caption.
   const id = sight?.teach, on = status === 'travel' && Boolean(sight?.title) && !paused, tip = on && id && !used.has(id) ? CONTROLS[id]?.tip?.[fingers ? 1 : 0] ?? '' : '';
   // Tried while it was asked for: the caption shows it pressed and ticked, and the deck key flashes.

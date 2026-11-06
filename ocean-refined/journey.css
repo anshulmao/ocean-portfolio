@@ -173,8 +173,9 @@ body:is([data-tour="intro"],[data-tour="travel"],[data-tour="dwell"],[data-tour=
 .tour-fade[data-on="true"]{opacity:1;transition:opacity 200ms var(--journey-out)}
 /* The tour narrates each landmark itself, so the generic prompt to click in stays out of its way. */
 body:is([data-tour="intro"],[data-tour="travel"],[data-tour="dwell"]) .waypoint{opacity:0}
-/* While the tour swims, the scene's prompt to open a site stays down: the sheet offers Open at each stop. */
-body:is([data-tour="intro"],[data-tour="travel"]) #interact-prompt{visibility:hidden}
+/* While the tour leads, the scene's own prompt to open a site stays down: the sheet offers Open at each stop (and F still
+   opens it, guided-dive.js). */
+body:is([data-tour="intro"],[data-tour="travel"],[data-tour="dwell"]) #interact-prompt{visibility:hidden}
 /* The settings menu stands over the scene on every screen: the Ahead chip waits behind it. */
 body[data-menu="open"] .waypoint{visibility:hidden}
 /* The guided dive's opening (guided-dive.js): the surface copy steps aside while the camera moves in on the diver. */
