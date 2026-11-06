@@ -33,7 +33,7 @@ The reading pages (`/profile.html` and `/projects/<id>/`) now use the portfolio 
 
 ## Decisions
 
-- **The footer aurora keeps its day colours** (deep teal through sky blue and mint to a pale crest), scoped on the aurora itself.
+- **The aurora ends the home page.** There is no footer bar. The aurora runs from dark teal at the bottom to lighter teal at its crest, with no white. A single Privacy link stays beside "Back to the surface" because analytics is on by default; the privacy page has the analytics switch. Project pages keep their footer.
 - **Night only.** The pages match the sheet and no longer follow the system light/dark setting.
 - **Tenure is set at build time.** "3 yrs 2 mo" is computed when the site is built, so it is only as current as the
   last deploy.
