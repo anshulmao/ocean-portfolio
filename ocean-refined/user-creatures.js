@@ -1002,7 +1002,9 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   // Where a resident is: one lying still where it settled, or the whipray where it glides now (the guided dive follows it).
   const swimming = { whipray: () => whipray, humphead: () => humphead };
   // park('whipray', true): the ray rests at the start of its loop with its animation stopped until park(id, false).
-  function park(id, on = true) { const herd = { whipray: whiprayHerd }[id]; if (!herd) return false; herd.parked = Boolean(on); if (on) herd.parkTheta = Math.PI / 2; return true; }
+    // Parked at the south point of its loop (theta -π/2: open sand, 19 m from the brain coral dome's rock, which hides the
+  // north point from the swim coming in).
+  function park(id, on = true) { const herd = { whipray: whiprayHerd }[id]; if (!herd) return false; herd.parked = Boolean(on); if (on) herd.parkTheta = -Math.PI / 2; return true; }
   const residentAt = id => resting[id] ?? (swimming[id]?.() ? [swimming[id]().pos.x, swimming[id]().pos.y, swimming[id]().pos.z] : null);
   // The guided dive brings one encounter in on a course of its own, and points out the visitors passing: where each lead animal is now.
   function encounter(id, player, view, course) { const e = casts.get(id); if (!e?.cast.length) return false; const s = slots.find(item => item.slot === e.slot); if (s.active) end(s.active); begin(e, player, view, course); s.active = e; return true; }

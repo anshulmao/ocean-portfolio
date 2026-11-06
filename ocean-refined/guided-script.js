@@ -74,8 +74,9 @@ export const STEPS = [
     title: 'This helmet is me', line: 'I’ve dived since I was ten. Open it for who I am, how I work, and where everything on this reef lives.',
     short: 'Open it for who I am and where everything lives.',
     via: [
+      // The ray rests at the south point of its loop (user-creatures.js park), on open sand dead ahead of the swim in.
       { at: [-47, -15.5, -16], key: 'whipray', wake: 'whipray', title: 'A pink whipray', line: 'Resting on the sand below us. Watch: it lifts off and glides as it sees us.',
-        look: { resident: 'whipray', near: [-41, -23.2, -11] }, hold: 8, slow: .3, reach: 9 },
+        look: { resident: 'whipray', near: [-41, -23.2, -21] }, hold: 8, slow: .3, reach: 9 },
       // The dome is 16 m across: seen from 18 m off its centre, 14 m from the den, so the whole of it is in the frame.
       { at: [-30, -12, -15], key: 'brain-coral', title: 'The brain coral dome', line: 'Centuries old. A giant moray keeps a den at its foot; look for the head in the dark.',
         look: [-35, -17, -1.5], hold: 7, slow: .4 },
@@ -146,8 +147,9 @@ export const STEPS = [
     title: 'The safety stop', line: 'On a real dive you’d hang here three minutes before surfacing. My résumé is on the slate, to read while you wait or take with you.',
     short: 'Safety-stop depth. My résumé is on the slate.',
     via: [
-      { at: [-18, -44, -73], key: 'nautilus', title: 'A nautilus', line: 'A living fossil: a shell that grows one chamber at a time, and keeps every one.',
-        look: [-34, -47, -72], hold: 7, slow: .45 },
+      // 12 m off the shell (it is 3.3 m across), so it reads as more than a point.
+      { at: [-22, -45, -70], key: 'nautilus', title: 'A nautilus', line: 'A living fossil: a shell that grows one chamber at a time, and keeps every one.',
+        look: [-34, -47.5, -72], hold: 7, slow: .45 },
       [-24, -43, -66],
       // The hammerheads' line runs east along the foot of the cliff, 11 m ahead of the swim and above it: they cross right to
       // left against the blue, clear of the kelp grove (its edge is 9 m further west).

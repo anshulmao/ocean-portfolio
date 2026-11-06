@@ -107,7 +107,7 @@ body:is([data-clear-ui="true"],[data-safety-stop="true"]) section.tour-card{visi
 @media (prefers-reduced-motion:reduce){.tour-cheer :is(kbd,.tour-tick,.tour-tick path){animation:none!important;stroke-dashoffset:0!important}}
 /* The tour narrates each site itself and its bar offers Open, so the scene's own prompt to click in stands down; and the
    footer's control hints (click to aim, among them) stand down too, since the bar has their place and the view is the guide's. */
-body[data-tour="dwell"] #interact-prompt{visibility:hidden}
+body:is([data-tour="intro"],[data-tour="travel"],[data-tour="dwell"]) #interact-prompt{visibility:hidden}
 body:is([data-tour="intro"],[data-tour="travel"],[data-tour="dwell"],[data-tour="done"]) .scene-footer{visibility:hidden}
 /* Look there (look-indicator.js): a ring on an animal worth turning for, or an arrow at the screen's edge pointing the
    way to turn. Moved with a transform each frame; never takes a pointer. */
