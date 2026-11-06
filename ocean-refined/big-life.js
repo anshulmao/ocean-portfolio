@@ -12,6 +12,8 @@ const pointed = new Set();
 let marked = null, markedFor = 0, diveFor = 0, metBig = false, calling = null;
 
 function guarantee(dt, api, live) {
+  // The guided dive calls its own animals in, where its route wants them; the guarantee waits until it is over.
+  if (window.oceanTour && window.oceanTour.status !== 'off') { diveFor = 0; return; }
   diveFor += dt;
   if (!metBig && live.some(item => BIG.includes(item.id))) metBig = true;
   if (metBig || diveFor < GUARANTEE) return;

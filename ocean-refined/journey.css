@@ -85,18 +85,23 @@ body:is([data-clear-ui="true"],[data-safety-stop="true"]) section.tour-card{visi
 .tour-head{grid-area:head;display:flex;align-items:center;gap:10px;min-width:0;min-height:40px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .tour-head:focus-visible{outline:2px solid var(--holo-focus);outline-offset:2px}
 .tour-card .tour-kicker{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;color:var(--signal,var(--holo-strong))}
-.tour-card .tour-count{flex:none;font-size:12px}
+/* The steps as dots: passed, here (lit in the step's colour), to come. */
+.tour-card .tour-count{flex:none;display:flex;align-items:center;gap:5px}
+.tour-count i{width:6px;height:6px;border-radius:50%;background:var(--holo-faint);transition:background var(--journey-quick) var(--journey-ease)}
+.tour-count i[data-done="true"]{background:var(--holo-dim)}
+.tour-count i[data-on="true"]{background:var(--signal,var(--holo));box-shadow:0 0 6px var(--signal,var(--holo))}
 .tour-chevron{flex:none;width:7px;height:7px;margin:0 4px 3px 2px;border:solid var(--holo-strong);border-width:1.5px 0 0 1.5px;rotate:45deg;transition:rotate var(--journey-quick) var(--journey-ease),margin var(--journey-quick) var(--journey-ease)}
 .tour-card[data-sheet="expanded"] .tour-chevron{rotate:225deg;margin-top:-3px;margin-bottom:0}
 .tour-card[data-sheet="collapsed"] :is(.tour-title,.tour-body,.tour-pace){display:none}
-.tour-title{grid-area:title;width:fit-content;margin:4px 0 9px;font-size:22px;line-height:1.15;text-wrap:balance}
+.tour-title{grid-area:title;width:fit-content;margin:4px 0 9px;font:var(--o-weight-display) 24px/1.15 var(--o-display);letter-spacing:.005em;text-wrap:balance}
 .tour-body{grid-area:body;position:relative}
 .tour-lines{margin:0;font-size:14.5px;line-height:22px}
 .tour-card[data-state="travel"] .tour-lines{opacity:.72}
 .tour-more{display:none}
 .tour-pace{grid-area:pace;margin:10px 0 0;font-size:11px;line-height:1.5;opacity:.72}
-/* The welcome's control to try, one at a time, and a beat's one tip (guided-dive.js CONTROLS). */
-.tour-teach{margin:10px 0 0;font-size:13px;line-height:1.45;color:var(--signal,var(--holo-strong))}
+/* The welcome's control to try and a site's one tip are the guide's card's now (.tour-caption); the sheet keeps the row of
+   controls ticked off below. */
+.tour-teach{display:none}
 /* The welcome's controls, one chip each: the next to try lit, each ticked once tried (guided-dive.js PRIMER). */
 .tour-keys{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0;padding:0;list-style:none}
 .tour-keys li{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 5px;border:1px solid var(--holo-faint);border-radius:999px;font-size:11.5px;line-height:1.2;opacity:.72;transition:border-color var(--journey-quick) var(--journey-ease),opacity var(--journey-quick) var(--journey-ease)}
@@ -146,20 +151,37 @@ body[data-clear-ui="true"] .look-there{visibility:hidden}
 .tour-card footer kbd{padding:2px 5px;border:1px solid var(--holo-dim);border-radius:2px;font:500 9px/1 var(--holo-mono);letter-spacing:0}
 .tour-card footer button[hidden]{display:none}
 .tour-card footer [data-tour="exit"]{margin-left:auto;border-color:#0000;background:none}
-.tour-card footer :is([data-tour="rejoin"],[data-tour="surface"],[data-tour="read"]){border-color:var(--signal,var(--holo))}
+/* The one action the moment calls for is lit in the step's colour: Read it at a site, Start at the welcome, Rejoin, Surface. */
+.tour-card footer :is([data-tour="rejoin"],[data-tour="surface"],[data-tour="read"]),.tour-card[data-state="intro"] footer [data-tour="next"]{border-color:var(--signal,var(--holo));background:color-mix(in srgb,var(--signal,#7ff0cf) 16%,var(--holo-fill))}
 .tour-card[data-sheet="collapsed"] footer button{border-color:var(--signal,var(--holo))}
-/* A fly-by's caption (guided-dive.js): a title and a line over the water, with no card, only a scrim that fades out to the
-   right. Top centre under the top bar; on a phone, top left under the depth chip, clear of the compass. */
-.tour-caption{position:fixed;top:calc(var(--o-under-bar) + 8px);left:50%;z-index:var(--o-z-announce);display:grid;gap:3px;box-sizing:border-box;width:max-content;max-width:min(520px,calc(100vw - 2*var(--o-pad)));padding:10px 40px 11px 16px;border-left:2px solid var(--signal,var(--holo));background:linear-gradient(90deg,color-mix(in srgb,var(--holo-tint-solid) 45%,#0000) 55%,#0000);color:var(--holo-ink);font-family:var(--holo-font);text-shadow:var(--holo-text-glow);pointer-events:none;opacity:0;translate:-50% -6px;transition:opacity 400ms var(--journey-out),translate 400ms var(--journey-out)}
-.tour-caption[data-show="true"]{opacity:1;translate:-50% 0;transition:opacity 500ms var(--journey-in),translate 500ms var(--journey-in)}
-.tour-caption b{font-size:19px;font-weight:500;line-height:1.2}
-.tour-caption span{font-size:14px;line-height:1.4;opacity:.86}
-.tour-caption small{margin-top:3px;font-size:12.5px;line-height:1.4;color:var(--signal,var(--holo-strong))}
-.tour-caption small[hidden]{display:none}
+/* The guide's voice (guided-dive.js paintCaption): one card at the top of the water, in the chapter card's own face (the
+   zone card above): a kicker in the instruments' caps, the name in the display face, one line, and the control it asks
+   for as key caps. It names a fly-by's subject, asks for the welcome's controls one at a time, announces a site on arrival
+   and teaches that site's control. Centred where the chapter cards go: under the heading tape on a desktop, under the top
+   bar and the map on a phone. Never a target. */
+.tour-caption{position:fixed;top:var(--announce-top);left:50%;z-index:var(--o-z-announce);display:grid;justify-items:center;gap:6px;box-sizing:border-box;width:max-content;max-width:min(560px,calc(100vw - 2*var(--o-pad)));padding:16px 44px 18px;text-align:center;color:#f2fbff;text-shadow:0 0 2px #021d2ad9,0 1px 14px #062c3acc;background:radial-gradient(closest-side,#03202c8c,#03202c47 62%,#03202c00);pointer-events:none;opacity:0;translate:-50% 10px}
+.tour-caption[data-show="true"]{opacity:1;translate:-50% 0;transition:opacity var(--journey-slow) var(--journey-in),translate var(--journey-slow) var(--journey-in)}
+.tour-caption[data-show="false"]{translate:-50% -6px;transition:opacity 300ms var(--journey-out),translate 300ms var(--journey-out)}
+.tour-caption-kicker{font:500 10px/1.3 var(--holo-mono);letter-spacing:.2em;text-transform:uppercase;color:var(--signal,var(--holo-strong))}
+.tour-caption b{font:var(--o-weight-display) clamp(24px,2.4vw,30px)/1.1 var(--o-display);letter-spacing:.01em;text-wrap:balance}
+.tour-caption span{max-width:46ch;font:400 14.5px/1.45 var(--holo-font);opacity:.92}
+.tour-caption span:empty{display:none}
+/* The keys to press, as caps the size of a fingertip, lit in the step's colour; on a touch screen the deck key rings instead. */
+.tour-caption-keys{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px 8px;margin-top:4px;font:500 13px/1.3 var(--holo-font);color:var(--signal,var(--holo-strong))}
+.tour-caption-keys[hidden]{display:none}
+.tour-caption-keys kbd,.tour-caption-keys .tour-cheer kbd{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 9px;box-sizing:border-box;border:1.5px solid var(--signal,var(--holo-strong));border-radius:7px;background:color-mix(in srgb,var(--signal,#7ff0cf) 14%,transparent);font:500 12px/1 var(--holo-mono);letter-spacing:.04em;color:#f2fbff;box-shadow:0 2px 0 color-mix(in srgb,var(--signal,#7ff0cf) 45%,transparent)}
+.tour-caption-keys em{font-style:normal}
+.tour-caption-keys .tour-cheer{gap:9px}
+.tour-caption-keys .tour-cheer .tour-tick{width:16px;height:16px}
+.tour-caption[data-kind="intro"] b{font-size:clamp(26px,2.6vw,32px)}
+/* A chapter card or a note is the louder voice: the guide's card steps back while one is up. */
+body[data-announce="on"] .tour-caption{opacity:0;transition:opacity 200ms var(--journey-out)}
 body:is([data-clear-ui="true"],[data-safety-stop="true"]) .tour-caption{visibility:hidden}
-/* A fly-by's caption names what is in view: the landmark labels stand back meanwhile, off the shot and the deck. */
+/* A fly-by's caption names what is in view: the landmark labels stand back meanwhile, off the shot and the deck, and the
+   look-there marker keeps its ring but not its name (the caption has it). */
 body[data-tour-flyby="true"] #reef-labels{visibility:hidden}
-@media (prefers-reduced-motion:reduce){.tour-caption,.tour-caption[data-show="true"]{translate:-50% 0}}
+body[data-tour-flyby="true"] .look-there span{display:none}
+@media (prefers-reduced-motion:reduce){.tour-caption,.tour-caption[data-show]{translate:-50% 0;transition:opacity var(--journey-quick) linear}}
 /* A fly-by teaching a control rings its key on the touch deck; the scooter key reads as held while the guide runs it. */
 body[data-tour-teach="scooter"] .touch-actions [data-swim="KeyE"],body[data-tour-teach="photo"] .touch-actions [data-photo],body[data-tour-teach="lamp"] .touch-actions [data-lamp]{border-color:var(--holo-strong);animation:journey-ping 1.4s var(--journey-out) infinite}
 body[data-guide-scooter="true"] .touch-actions [data-swim="KeyE"]{background:var(--holo-fill-on)}
@@ -190,13 +212,13 @@ html[data-input="touch"] .tour-card footer kbd{display:none}
   .zone-card small{font-size:9px;letter-spacing:.16em}
   .zone-card strong{font-size:24px}
   .zone-card b{width:104px}
-  /* The fly-by caption under the depth chip, left, short of the compass; and while the tour leads or its ending is up,
-     Back to the surface gives its place up (the tour's own Exit and Surface stay), so the top of the water is the caption's. */
-  .tour-caption{left:var(--o-pad);max-width:calc(100vw - 2*var(--o-pad) - 112px);padding:8px 28px 9px 12px;translate:0 -6px}
-  .tour-caption[data-show="true"]{translate:0 0}
-  .tour-caption b{font-size:16px}
+  /* The guide's card where the chapter cards go, under the top bar and the map; and while the tour leads or its ending is
+     up, Back to the surface gives its place up (the tour's own Exit and Surface stay), so the top of the water is the card's. */
+  .tour-caption{gap:4px;max-width:calc(100vw - 2*var(--o-pad));padding:11px 22px 13px}
+  .tour-caption b,.tour-caption[data-kind="intro"] b{font-size:21px}
   .tour-caption span{font-size:13px;line-height:1.35}
-  .tour-caption small{font-size:12px}
+  .tour-caption-keys{font-size:12px}
+  .tour-caption-keys kbd,.tour-caption-keys .tour-cheer kbd{min-width:28px;height:28px;font-size:11px}
   body:is([data-tour="intro"],[data-tour="travel"],[data-tour="dwell"],[data-tour="done"])[data-submerged="true"] .dive-button{visibility:hidden}
   section.tour-card,body[data-computer-open="true"][data-camera="third"] section.tour-card{left:var(--o-pad);right:var(--o-pad);bottom:var(--o-sheet-bottom);width:auto;max-height:var(--o-sheet-max);padding:0 8px 0 18px;column-gap:8px}
   section.tour-card[data-sheet="expanded"]{padding:0 14px 10px 18px}
@@ -217,12 +239,6 @@ html[data-input="touch"] .tour-card footer kbd{display:none}
   .tour-card[data-more="true"] .tour-lines{display:block}
   .tour-card[data-more="true"] .tour-more:not([hidden]){position:static;margin-left:auto}
   .tour-card[data-more="true"] .tour-more span{padding:0;background:none}
-  /* A beat's tip takes the caption's third line, so a sheet with one is no taller than one without. */
-  .tour-card[data-tip="true"]:not([data-more="true"]) .tour-lines{-webkit-line-clamp:2;line-clamp:2}
-  /* The welcome's controls are the point of it here: the chips and the one to try take the caption's place, and More
-     brings the title and caption back (the title card and the sheet's own head have just said welcome). */
-  .tour-card[data-state="intro"][data-tip="true"]:not([data-more="true"]) :is(.tour-title,.tour-lines){display:none}
-  .tour-teach{margin-top:6px;font-size:12.5px;line-height:17px}
   .tour-keys{flex-wrap:nowrap;gap:4px;margin-top:6px;overflow-x:auto;scrollbar-width:none}
   .tour-keys li{flex:none;padding:2px 8px 2px 4px;font-size:11px}
   .tour-keys li:not(:has(kbd)){padding-left:8px}

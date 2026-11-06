@@ -298,6 +298,17 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     return spot;
   }
   function driveHerd(g, dt, t, player) {
+    // Parked (the guided dive's whipray, until the guide looks at it): resting on the sand at a fixed point of its loop,
+    // its animation stopped. Let go, it lifts off from there and swims on round the loop.
+    if (g.parked) {
+      const r = g.route; r.theta = g.parkTheta ?? 0;
+      for (const m of g.members) {
+        const a = m.actor; along(r, r.theta, A); along(r, r.theta + .03 * r.dir, B);
+        a.pos.set(A.x, cover(A.x, A.z) + .35, A.z); a.yaw = Math.atan2(B.x - A.x, B.z - A.z); a.pitch = 0; a.roll = 0; a.started = true;
+        a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(0, a.yaw, 0, 'YXZ'); a.mixer.timeScale = 0; m.nav = null;
+      }
+      return;
+    }
     g.route.theta += g.route.dir * g.speed * g.pace * dt / g.route.radius;
     for (const m of g.members) {
       const a = m.actor, p = station(g, m, t, dt, player);
@@ -310,6 +321,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
 
   // --- The director: big animals come, pass, and go ------------------------------------------------------------
   const casts = new Map(), slots = [];
+  const touring = () => { const tour = globalThis.window?.oceanTour; return Boolean(tour) && tour.status !== 'off'; };
   function buildEncounters() {
     for (const [slot, config] of Object.entries(ENCOUNTERS)) {
       const kinds = [];
@@ -421,6 +433,9 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       if (s.active) {
         if (driveEncounter(s.active, dt, player, view ? view.range : 110)) { diagnostics.encounters.active.push(s.active.id); continue; }
         end(s.active); s.last = s.active.id; s.active = null; s.wait = rr(...s.config.cooldown) * (economy ? 1.3 : 1);
+      } else if (touring()) {
+        // The guided dive calls its own animals in (encounter below), each where its route wants it; the random ones
+        // wait until it ends, and come as they would have from there.
       } else if ((s.wait -= dt) <= 0) {
         const choices = s.kinds.filter(k => k.id !== s.last), e = choices[Math.floor(Math.random() * choices.length)] || s.kinds[0];
         begin(e, player, view); s.active = e;
@@ -430,7 +445,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
 
   // --- Residents ------------------------------------------------------------------------------------------------
   const spotted = [], dens = [], hovering = [], sleepers = [], cruisers = [];
-  let sentinel = null, grazers = null, whipray = null, humphead = null;
+  let sentinel = null, grazers = null, whipray = null, whiprayHerd = null, humphead = null;
   // Dens: out from the formation's middle, through its rock, to the first open ground beyond it: the den mouth, with
   // the body back in the rock. A heading that never crosses rock, or only reaches open ground far out (a gap in a ring
   // of columns, say), would leave the eel lying on bare sand, so headings nearest the authored one are tried first.
@@ -453,7 +468,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       herds.push(grazers);
     }
     const w = RESIDENTS.whipray;
-    if (gltfs.has(w.species)) { const a = actor(w.species); if (a) whipray = a; if (a) herds.push({ route: route(...w.loop), height: over(w.height, -4), speed: w.speed, pace: 1, members: [{ actor: a, ...member(0, 0, 0, { drift: .6, bob: .12 }) }], look: 6, bank: .12 }); }
+    if (gltfs.has(w.species)) { const a = actor(w.species); if (a) { whipray = a; whiprayHerd = { route: route(...w.loop), height: over(w.height, -4), speed: w.speed, pace: 1, members: [{ actor: a, ...member(0, 0, 0, { drift: .6, bob: .12 }) }], look: 6, bank: .12 }; herds.push(whiprayHerd); } }
     const s = RESIDENTS.bluespots;
     if (gltfs.has(s.species)) for (const [x, z] of s.spots.slice(0, economy ? s.lean : s.spots.length)) {
       const a = actor(s.species, { clip: 'rest' }); if (!a) continue;
@@ -510,14 +525,6 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       // Dark bands roll down its back like passing clouds, faint at rest and strong as it stalks (the skin's own copy).
       a.clouds = clouds(a.mesh);
       hovering.push({ kind: 'cuttle', actor: a, home: new THREE.Vector3(x, 0, z), height: cu.height, drift: rr(0, TAU), flash: 0, hunt: rr(8, 18), stalk: 0 });
-    }
-    const li = RESIDENTS.lionfish;
-    if (gltfs.has(li.species)) for (const name of li.formations.slice(0, pair(li.count))) {
-      const f = all.find(item => item.name === name); if (!f) continue;
-      const angle = Math.atan2(-f.x, -40 - f.z) + 1.1, x = f.x + Math.sin(angle) * (f.radius + 1.2), z = f.z + Math.cos(angle) * (f.radius + 1.2);
-      const a = actor(li.species, { clip: 'hover', name: `lionfish ${hovering.length + 1}`, reach: 45, scale: rr(.85, 1.05) }); if (!a) continue;
-      a.pos.set(x, cover(x, z) + li.height, z); a.yaw = angle + Math.PI; a.started = true; a.ease = .5;
-      hovering.push({ kind: 'lion', actor: a, home: new THREE.Vector3(x, 0, z), height: li.height, drift: rr(0, TAU), flash: 0 });
     }
     const hw = RESIDENTS.humphead;
     if (gltfs.has(hw.species)) { const a = actor(hw.species, { name: 'humphead wrasse' }); if (a) humphead = a; if (a) herds.push({ route: route(...hw.loop, { wobble: .14 }), height: over(hw.height, -4), speed: hw.speed, pace: 1, members: [{ actor: a, ...member(0, 0, 0, { drift: .6, bob: .3 }) }], look: 6, bank: .1 }); }
@@ -994,9 +1001,11 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   // Where a resident that stays put actually settled (sand() can move it well away from its wished-for spot): the guided dive frames it from here.
   // Where a resident is: one lying still where it settled, or the whipray where it glides now (the guided dive follows it).
   const swimming = { whipray: () => whipray, humphead: () => humphead };
+  // park('whipray', true): the ray rests at the start of its loop with its animation stopped until park(id, false).
+  function park(id, on = true) { const herd = { whipray: whiprayHerd }[id]; if (!herd) return false; herd.parked = Boolean(on); if (on) herd.parkTheta = Math.PI / 2; return true; }
   const residentAt = id => resting[id] ?? (swimming[id]?.() ? [swimming[id]().pos.x, swimming[id]().pos.y, swimming[id]().pos.z] : null);
   // The guided dive brings one encounter in on a course of its own, and points out the visitors passing: where each lead animal is now.
   function encounter(id, player, view, course) { const e = casts.get(id); if (!e?.cast.length) return false; const s = slots.find(item => item.slot === e.slot); if (s.active) end(s.active); begin(e, player, view, course); s.active = e; return true; }
   const visitors = () => slots.filter(s => s.active?.path && s.active.cast[0]?.actor.started).map(s => { const p = s.active.cast[0].actor.pos; return { id: s.active.id, x: p.x, y: p.y, z: p.z }; });
-  return { root, load, update, diagnostics, sites: sitesNow, debug, residentAt, encounter, visitors };
+  return { root, load, update, diagnostics, sites: sitesNow, debug, residentAt, park, encounter, visitors };
 }

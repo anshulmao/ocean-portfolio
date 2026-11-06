@@ -531,7 +531,7 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   recull(){camera.updateMatrixWorld(true);refreshView();userCreatures?.update(0,playerPosition,viewerOrbit?null:view);if(built)cullWorld(0);},
   // Dive planner and guided tour hooks: autopilot, instant placement, dive start / surfacing, and the flashlight and scooter state.
   travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free,looking){exploration.setGuided(value,free,looking);},frameDiver(value){preludeOn=Boolean(value);if(reducedMotion)prelude=Number(preludeOn);wake();},lookAt(point,follow){exploration.lookAt(point,follow);wake();},glance(point,follow,fade){exploration.glance(point,follow,fade);},pacing(scale){exploration.pacing(scale);},guideScooter(on){exploration.guideScooter(on);},tether(top){exploration.tether(top);},baitBall(){return livingWorld?.baitBall?.()??null;},residentAt(id){return userCreatures?.residentAt?.(id)??null;},
-  encounter(id,course){return userCreatures?.encounter?.(id,playerPosition,viewerOrbit?null:view,course)??false;},visitors(){return userCreatures?.visitors?.()??[];},
+  encounter(id,course){return userCreatures?.encounter?.(id,playerPosition,viewerOrbit?null:view,course)??false;},park(id,on){return userCreatures?.park?.(id,on)??false;},visitors(){return userCreatures?.visitors?.()??[];},
   travelPath(points,focus,speed,lead){return exploration.travelPath(points,focus,speed,lead);},
   cancelTravel(options){return exploration.cancelTravel(options);},
   // The guided dive's surface prelude: a dive is asked for, and goes under a couple of seconds from now. What it will wait

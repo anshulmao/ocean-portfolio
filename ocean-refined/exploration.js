@@ -7,7 +7,9 @@ import { toDisplayDepth } from './depth-metrics.js';
 import {routeTarget,smoothRoute,distance as routeDistance} from './cinematic-route.js';
 
 // Where the site starts, at the surface: well out over the deep end, near above the nautilus, the reef ahead (x, z).
-export const SURFACE_START = [-18, -90];
+// 53 m N, 18 m E on the map (world -x is north, -z east): over the sand west of the whipray's loop, where every one of
+// the three lights is in view going under.
+export const SURFACE_START = [-53, -18];
 // The heart of the reef (the helmet). Going under, the view turns to it whatever the surface view faced.
 export const REEF_HEART = [-12, -15];
 

@@ -526,45 +526,9 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
     site('octopus', 'Octopus territory', perches[0].x, perches[0].y, perches[0].z, 9, 'behaviour', 'An octopus on one of four rocks beyond the giant clam, the colour of the stone until it notices you. Approach slowly and it will let you watch; rush it and it jets to another perch behind a puff of ink.');
   }
 
-  // --- Morays: each in a den of leaning stones, watching whoever passes --------------------------------
-  yield;
-  const morays = cast(geo.moray, 2, 'Living world · moray eels');
-  function den(x, z, yaw, k) {
-    const m = propZones[zoneOf(z)], y = floor(x, z), fx = Math.sin(yaw), fz = Math.cos(yaw), sx = fz, sz = -fx;
-    m.rock(x - sx * .46 - fx * .28, y + .3, z - sz * .46 - fz * .28, .5, .64, .62, 50 + k, stonePaint(k));
-    m.rock(x + sx * .48 - fx * .32, y + .26, z + sz * .48 - fz * .32, .48, .54, .64, 60 + k, stonePaint(k + 2));
-    m.rock(x - fx * .42, y + .66, z - fz * .42, .78, .34, .58, 70 + k, stonePaint(k + 1));
-    m.rock(x - fx * .85, y + .25, z - fz * .85, .72, .58, .62, 80 + k, stonePaint(k + 3));
-    m.blob(x - fx * .34, y + .3, z - fz * .34, .2, .2, .2, 6, 4, [.012, .014, .018]);
-    nook(x + sx * .34 + fx * .1, y + .12, z + sz * .34 + fz * .1); nook(x - sx * .2 - fx * .2, y + .52, z - sz * .2 - fz * .2);
-    nudibranch(x - fx * .3 + sx * .2, y + 1.0, z - fz * .3 + sz * .2, yaw + 1);
-    return [x + fx * .02, y + .3, z + fz * .02];
-  }
-  function moray(i, id, name, tx, tz, faceX, faceZ, hue, note) {
-    const [x, z] = settle(tx, tz, 1.6, 12, 3.5), yaw = Math.atan2(faceX - x, faceZ - z), [mx, my, mz] = den(x, z, yaw, i);
-    pose(morays, i, mx, my, mz, yaw, 0, 0, 1.55, 1.55, 1.55);
-    life(morays, i, .1, .14, 0, 50); dress(morays, i, hue, '#d9c45c');
-    const s = { yaw: 0, pitch: .1, st: .14, sentYaw: 9, sentPitch: 9, sentSt: 9, crowded: false, hold: 0 };
-    group(name, mx, my, mz, 1.6, { interest: 13, draw: 40, far: .34, shared: morays, update(dt) {
-      const dx = me.x - mx, dy = me.y - my, dz = me.z - mz, d = Math.hypot(dx, dy, dz);
-      let wantYaw = Math.sin(time * .4 + i * 2) * .35, wantPitch = .1 + Math.sin(time * .3 + i) * .08;
-      // The head follows the diver as far as the neck will bend.
-      if (d < 10 && underwater > .5) { wantYaw = clamp(turnTo(yaw, Math.atan2(dx, dz)), -1.05, 1.05); wantPitch = clamp(Math.atan2(dy, Math.hypot(dx, dz)), -.15, .8); }
-      const k = ease(dt, 2.6);
-      s.yaw += (wantYaw - s.yaw) * k; s.pitch += (wantPitch - s.pitch) * k;
-      if (d < 2.3 && underwater > .5) { if (!s.crowded) emit('moray-withdraw', mx, my, mz, .6); s.crowded = true; s.hold = 3; }
-      else if (d > 4.2 && s.crowded) { s.hold -= dt; if (s.hold <= 0) s.crowded = false; }
-      // Further out at night, when it hunts; back in the den when crowded or when a storm stirs the shallows.
-      s.st += clamp(Math.max(s.crowded ? 1 : night > .5 ? 0 : .14, hunker * .7) - s.st, -dt * .45, dt * 3.2);
-      if (Math.abs(s.yaw - s.sentYaw) + Math.abs(s.pitch - s.sentPitch) + Math.abs(s.st - s.sentSt) > .004) { s.sentYaw = s.yaw; s.sentPitch = s.pitch; s.sentSt = s.st; life(morays, i, s.pitch, s.st, s.yaw, 50); }
-    } });
-    site(id, name, mx, my, mz, 3, 'resident', note);
-    return s;
-  }
-  const morayStates = [
-    moray(0, 'moray-den-wreck', 'Moray den', 34, -25, 31, -31, '#ffffff', 'A moray in a den of leaning stones beside the way down to the wreck. Its head follows you; crowd it and it withdraws.'),
-    moray(1, 'moray-den-deep', 'Deep moray den', -1, -71, 4, -80, '#e8d2b4', 'A second moray on the deep ledge, facing the way to the nautilus.')
-  ];
+  // The morays of leaning stones that stood here (an older, procedural eel) are gone; the giant moray and the ribbon eel of
+  // the creature set keep their dens at the brain coral dome and the table coral tower (user-creature-routes.js).
+  const morayStates = [];
 
   // --- A blue-spotted ray under the sand ----------------------------------------------------------
   yield;
@@ -867,7 +831,7 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
       trailAt = time; U.uTrail.value[trailCursor++ % 8].set(me.x, me.y, me.z, time);
       if (speed > 2.2 && night > .5 && time - burstAt > 9) { burstAt = time; emit('biolume-burst', me.x, me.y, me.z, Math.min(1, speed / 4)); }
     }
-    fish.userData.on = crabs.userData.on = morays.userData.on = false;
+    fish.userData.on = crabs.userData.on = false;
     for (let i = 0; i < groups.length; i++) {
       const g = groups[i], c = g.sphere.center;
       g.toPlayer = Math.hypot(me.x - c.x, me.y - c.y, me.z - c.z); g.toEye = Math.hypot(eye.x - c.x, eye.y - c.y, eye.z - c.z);
@@ -878,7 +842,7 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
       if (g.shown !== g.drawn) { g.drawn = g.shown; if (g.meshes) for (let k = 0; k < g.meshes.length; k++) g.meshes[k].visible = g.shown; }
       if (g.shown && g.shared) g.shared.userData.on = true;
     }
-    fish.visible = fish.userData.on; crabs.visible = crabs.userData.on; morays.visible = morays.userData.on;
+    fish.visible = fish.userData.on; crabs.visible = crabs.userData.on;
     for (let i = 0; i < props.length; i++) { const s = props[i].boundingSphere; props[i].visible = !view || Math.hypot(eye.x - s.center.x, eye.y - s.center.y, eye.z - s.center.z) - s.radius < Math.min(60, range * .5); }
     for (let i = 0; i < lifeMeshes.length; i++) {
       const mesh = lifeMeshes[i], d = mesh.userData;
@@ -931,7 +895,7 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
   // --- Reporting and test hooks -------------------------------------------------------------------
   const triangles = mesh => (mesh.userData.triangles || 0) * (mesh.isInstancedMesh ? mesh.count : 1);
   const counts = {
-    gardenEels: eelGardens.reduce((sum, s) => sum + s.count, 0), morays: 2, octopus: 1, baitFish: bait.count, jacks: 3, clownfish: 8, cleanerWrasse: 4, pufferfish: 2, batfish: 2, goatfish: 2, flounder: 2,
+    gardenEels: eelGardens.reduce((sum, s) => sum + s.count, 0), morays: 0, octopus: 1, baitFish: bait.count, jacks: 3, clownfish: 8, cleanerWrasse: 4, pufferfish: 2, batfish: 2, goatfish: 2, flounder: 2,
     rays: 1, crabs: crabList.length, seahorses: economy ? 3 : 5, nudibranchs, shrimpEyes: shrimps, vents: vents.length, plankton: PLANKTON, driftingWeed: LEAVES, ...surface.counts,
     groups: groups.length, sites: sites.length,
     drawCalls: { underwaterMeshes: under.children.length, surfaceMeshes: surface.root.children.length },

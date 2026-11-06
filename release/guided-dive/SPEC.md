@@ -29,57 +29,66 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
 ## The sequence (round 10)
 
 World coordinates are metres (x, y, z), with y negative below the surface. "Right" is +x, facing −z. The site starts at
-the surface out over the deep end, above the nautilus, at (−18, −90), facing the reef (`exploration.js` SURFACE_START).
-The route itself lives in `ocean-refined/guided-script.js`. The landmarks are built in code (`landmark-builds.js`):
-the diver's helmet (About), the trawler wreck (Projects), the nautilus (Experience) and the slate on the descent line
-(Résumé), with the coral nursery as a feature of the reef beside the nurse shark.
+the surface at 53 m N, 18 m E on the map (world −53, −18): over the sand west of the whipray's loop, where all three
+lights are in view going under (`exploration.js` SURFACE_START). The route itself lives in
+`ocean-refined/guided-script.js`. The landmarks are built in code (`landmark-builds.js`): the diver's helmet (About), the
+trawler wreck (Projects), the nautilus (Experience) and the slate on the descent line (Résumé), with the coral nursery as
+a feature of the reef beside the nurse shark.
 
 Only six moments wait for the visitor: the welcome, **About**, **Experience**, **Projects**, **Résumé** and the ending.
 Everything between them is a **fly-by**, as in round 9 (the swim slows, the camera eases across, a caption names it, the
-view turns one way at a time). The tour is shaped like a real dive: in over the deep end, the shallows first, down to the
+view turns one way at a time). The tour is shaped like a real dive: in over the shelf, the shallows first, down to the
 deepest site, back up by stages, and a safety stop at 5 m on the line before the surface.
+
+**No big animal comes unasked while the tour is on.** The random encounters (`user-creatures.js` director) and the
+one-a-dive guarantee (`big-life.js`) both wait until it ends; the tour calls in its own, each where its route wants it:
+hammerheads, the whale shark, blacktips and dolphins. The whipray rests on the sand at the north of its loop (`park`)
+and sets off only as the guide looks at it.
 
 ### 0. Entry and 1. Welcome
 
 As before: **Show me around** eases in on the diver, dives in first person and turns to the heart of the reef; the
-welcome drifts in toward the reef (the kelp grove to the right, the wreck down to the left), asks for the controls one at
-a time and starts on N.
+welcome drifts a little way in, the camera visiting the three lights in turn (the helmet ahead, the wreck to the right,
+the nautilus far down to the right), asks for the controls one at a time and starts on N.
 
 ### Act 1: across the shallows to the helmet
 
-2. **The scooter**, first, on the open-water approach (waits up to 7 s for E).
-3. Out to the right, over the far (west) side of the reef: **a barracuda wheel**, **a pink whipray**, **the brain coral
-   dome**, each 15-18 m off. Then one right-hand arc onto the helmet's own line.
-4. **About: the Helmet** (stop), seen from 10 m to its west, its air hose running from the diver's feet up onto the rock.
-   F is taught here.
+2. **A pink whipray**, resting on the sand right ahead; it lifts off and glides as the guide looks at it.
+3. **The brain coral dome**, named as it passes nine metres off the right shoulder (no turn), then **the scooter** on the
+   long run east along the north of the shelf (waits up to 7 s for E).
+4. **The coral nursery**, nine metres off, close enough to set its trees swaying, the nurse shark asleep beside it in
+   the same view.
+5. One right-hand sweep round to the east of the helmet and in to it from in front: **About: the Helmet** (stop), seen
+   from its faceplate side, 5 m off. F is taught here.
 
 ### Act 2: down to the nautilus (deepest first, as on a real dive)
 
-5. Fly-bys: **the coral nursery** (12 m off, close enough to set its trees swaying) and **the nurse shark asleep**
-   beside it, 8 m off and left alone; **the table coral tower**; straight down the reef's east side over the coral heads
-   to **the pillar coral cathedral**, seen from its open front; a glimpse out to the deep blue; **through the arch**
-   (waits up to 7 s for Q); **the lantern garden**, the deepest point.
-6. **Experience: the Nautilus** (stop), seen from the north-east inside the open side of the stones that cradle it. The
+6. Fly-bys: round the helmet's rock and east along the middle of the shelf to **the table coral tower**; straight down
+   the reef's east side over the coral heads to **the pillar coral cathedral**, seen from its open front; a glimpse out
+   to the deep blue; **through the arch** (waits up to 7 s for Q); **the lantern garden**, the deepest point.
+7. **Experience: the Nautilus** (stop), seen from the north-east inside the open side of the stones that cradle it. The
    camera starts turning to it 30 m out. The dive computer is taught here.
 
 ### Act 3: the way up to the wreck
 
-7. Out over the deep sand and east along the ledge's seaward edge: **look out to sea** (the whale shark, called in; the
-   camera is taught), **a bait ball, ahead**, **through the bait ball**.
-8. **Projects: the Wreck** (stop), the trawler seen whole from 15 m to its south-east, its deck and open hold facing the
+8. Out over the deep sand, where **hammerheads** come up from the shelf in a file over the ledge; east along the ledge's
+   seaward edge: **look out to sea** (the whale shark, called in; the camera is taught), **a bait ball, ahead**,
+   **through the bait ball**.
+9. **Projects: the Wreck** (stop), the trawler seen whole from 15 m to its south-east, its deck and open hold facing the
    diver. The camera starts turning to it 24 m out.
 
 ### Act 4: up to the line
 
-9. West under the wreck's bow: **the giant clam** (an octopus keeps the rocks beyond it), **a humphead wrasse** on its
-   rounds, **the kelp grove** (seahorses inside), rising by stages, and **the descent line** itself. Dolphins are called
-   in to pass over the buoy as the swim reaches the line.
-10. **Résumé: the Slate** (stop), at safety-stop depth on the line, 2.8 m off. The copy says what a safety stop is.
-11. **The ending**, under the buoy at about 5 m (shown depth), the line running down into the kelp and the reef off to
+10. West under the wreck's bow: **the giant clam** (an octopus keeps the rocks beyond it), **blacktip reef sharks** low
+    over the sand, **a humphead wrasse** on its rounds, **the kelp grove** (seahorses inside, the barracuda wheel off its
+    edge), rising by stages, and **the descent line** itself. Dolphins are called in to pass over the buoy as the swim
+    reaches the line.
+11. **Résumé: the Slate** (stop), at safety-stop depth on the line, 2.8 m off. The copy says what a safety stop is.
+12. **The ending**, under the buoy at about 5 m (shown depth), the line running down into the kelp and the reef off to
     the east. The choice is **Keep exploring** or **Surface (N)**. Surfacing from here is the safety stop itself: the
     ascent offers it at once.
 
-### 12. Surface (if chosen)
+### 13. Surface (if chosen)
 
 As before: the ascent, the safety stop offered (hold, or skip with Esc), the surface; the tour is complete.
 

@@ -52,6 +52,7 @@ export const RESIDENTS = {
   // The whipray glides low over the open sand west of the cleaning reef (22-28 m, nowhere steeper than 1 in 3). Its first
   // loop crossed the 15 m drop off the About pad's rim, which a ray 1.4 m off the bottom cannot climb: it slid down
   // the slope and ended stuck at the foot of the deep ledge.
+  // On the guided dive it rests on the sand at the north of its loop (-41, -11) until the guide looks at it (park).
   whipray: { species: 'pink-whipray', loop: [-41, -16, 8, 5], height: 1.4, speed: 1.1 },
   // Bluespotted rays lie on open sand and scoot away when crowded.
   bluespots: { species: 'bluespotted-ray', spots: [[8, 6], [-16, 2], [26, -14]], lean: 2 },
@@ -76,8 +77,6 @@ export const RESIDENTS = {
   whitetips: { species: 'whitetip-reef-shark', patrol: { loop: [-26, -58, 15, 10], height: 2, speed: 1.1 }, resting: [[18, -29], [-42, -90]], lean: 1 },
   // Cuttlefish hover off the side of tall formations, watching; crowd one and it backs off, then flashes its arms.
   cuttlefish: { species: 'broadclub-cuttlefish', formations: ['Soft coral spire', 'Brain coral dome', 'Lantern garden'], count: [3, 2], height: 2.4 },
-  // Lionfish hang by the coral, fans spread; come close and one turns its spines on you.
-  lionfish: { species: 'lionfish', formations: ['Table coral tower', 'Pillar coral cathedral', 'Soft coral spire'], count: [3, 2], height: 1.3 },
   // A humphead wrasse cruises open water west of the wreck on a wide loop, as big as a diver and as unhurried (its first
   // loop circled the giant clam, and it spent its time detouring round the formation).
   humphead: { species: 'humphead-wrasse', loop: [-28, -36, 10, 7], height: 3.2, speed: .8 },

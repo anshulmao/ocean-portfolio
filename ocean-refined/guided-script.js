@@ -35,7 +35,9 @@ import { toDisplayDepth } from './depth-metrics.js';
 //              teach    the control it introduces (skipped if tried); wait: the same control, waited for (up to 7 s, the
 //                       swim all but still) before the fly-by goes on.
 //              encounter  an animal called in on its own course: `course` is the line of its pass, measured from this
-//                       fly-by's point, and `cue` how far ahead (m) it is called so it arrives during the fly-by.
+//                       fly-by's point, and `cue` how far ahead (m) it is called so it arrives during the fly-by. While
+//                       the tour is on no big animal comes unasked (user-creatures.js): these are the only ones.
+//              wake     a resident parked for the tour (the whipray, resting on the sand) that sets off as this fly-by begins.
 //   pan      what the camera looks at, in turn, once there (the welcome and the ending).
 //   teach    the control this step introduces; speed: the swim's pace for the leg into it (m/s); lead: how far out (m)
 //            the camera starts turning to a stop's subject (guided-dive.js LEAD otherwise); approach: how far out (m) the
@@ -52,58 +54,55 @@ export const SPEED = 3.6, FLYBY = 5, REACH = 9, SLOW = .5, BRIEF = 2.5;
 const depth = y => `${Math.round(toDisplayDepth(-y))} m`;
 
 export const STEPS = [
-  // The site starts at the surface out over the deep end, above the nautilus (exploration.js SURFACE_START). The welcome is
-  // read as the guide drifts in toward the reef, and the controls are tried on the way.
-  { key: 'welcome', kind: 'intro', at: [-22, -12, -66], place: 'Guided dive', title: 'Welcome to my reef',
+  // The site starts at the surface over the sand west of the whipray's loop (exploration.js SURFACE_START: 53 m N, 18 m E
+  // on the map), where all three lights are in view going under. The welcome is read as the guide drifts in toward the
+  // reef, and the controls are tried on the way.
+  { key: 'welcome', kind: 'intro', at: [-50, -13, -26], place: 'Guided dive', title: 'Welcome to my reef',
     line: 'My portfolio lives on this reef: four sites, and a lot of life in between. I’ll lead; you look. Try the controls as we swim in.',
     short: 'My portfolio lives on this reef. I’ll lead; you look. Try the controls as we swim in.',
-    // The reef rising ahead, the kelp grove off to the right, the wreck down to the left, then ahead again.
-    pan: [[-22, -18, -30], [-50, -30, -52], [20, -23, -40], [-22, -16, -36]] },
-  // Act 1: across the shallows. The reef is still a way off, so the scooter comes first. Then out to the right, over the far
-  // (west) side of the reef: the barracuda wheel off to the left, the pink whipray, the brain coral dome; then round in one
-  // right-hand arc onto the helmet's own line and in to it from the west, its air hose running from the diver's feet up
-  // onto the rock. Each subject 14-18 m off, so it reads whole, and far enough apart that the view hands one to the next
-  // without hurrying.
+    // The three lights in turn: the helmet ahead, the wreck off to the right, the nautilus far down to the right; then ahead.
+    pan: [[-12, -10, -15], [20, -23, -40], [-18, -46, -82], [-34, -15, -20]] },
+  // Act 1: across the shallows. The whipray first, resting on the sand at the north of its loop, passed low and close on the
+  // way north: it lifts off as the guide looks at it. Round to the north of the brain coral dome, then the long run east along the north of the shelf (the scooter), over
+  // the coral nursery and the nurse shark asleep beside it, and one right-hand sweep round to the east of the helmet, to
+  // come in to it from in front, facing its faceplate. Each subject 9-18 m off, so it reads whole, and far enough apart
+  // that the view hands one to the next without hurrying.
   { key: 'about', kind: 'stop', landmark: 'about', opens: 'about', place: `About · The Helmet · ${depth(-8.5)}`, signal: '#7ff0cf',
-    view: [-22, -8.2, -15.1],
     title: 'This helmet is me', line: 'I’ve dived since I was ten. Open it for who I am, how I work, and where everything on this reef lives.',
     short: 'Open it for who I am and where everything lives.',
     via: [
-      { at: [-28, -12, -56], key: 'scooter', title: 'The scooter', line: 'The reef is a way off yet. Let’s take the scooter.',
+      // The shelf rises to the north and its coral heads here reach up to -18: the swim keeps 2 m over them. The fly-bys
+      // are chained: each comes into reach as the one before ends, so the view hands straight from one subject to the next.
+      { at: [-44, -15, -21], key: 'whipray', wake: 'whipray', title: 'A pink whipray', line: 'Resting on the sand. Watch: it lifts off and glides when it sees us.',
+        look: { resident: 'whipray', near: [-41, -23.2, -11] }, hold: 8, slow: .3, reach: 9 },
+      // The dome stands off the right shoulder, at eye level and nine metres away: named, not turned to (the view keeps
+      // to the way ahead, and the turns on the way in stay few).
+      { at: [-51, -12, -8], key: 'brain-coral', title: 'The brain coral dome', line: 'Centuries old, off to the right. A giant moray keeps a den at its foot.',
+        hold: 6 },
+      // Straight on past the dome's shoulder to the scooter: no bend between, so the view turns one way.
+      { at: [-42, -9, 12], key: 'scooter', title: 'The scooter', line: 'It’s a long way along the shelf. Let’s take the scooter.',
         scooter: true, teach: 'scooter', wait: 'scooter', hold: 5, slow: .7 },
-      [-40, -13, -52],
-      { at: [-52, -14, -44], key: 'barracuda', title: 'A barracuda wheel', line: 'Young barracuda, turning slowly in mid-water. They part for a diver.',
-        look: [-36, -20, -44], hold: 6 },
-      [-54, -14, -34],
-      { at: [-56, -13, -22], key: 'whipray', title: 'A pink whipray', line: 'It glides low over the sand by the cleaning reef, looking for crabs.',
-        look: { resident: 'whipray', near: [-41, -23, -16] }, hold: 6 },
-      { at: [-58, -10, -4], key: 'brain-coral', title: 'The brain coral dome', line: 'Centuries old. A giant moray keeps a den at its foot.',
-        look: [-42, -16, -2], hold: 6 },
-      // One right-hand arc from heading north to heading east, ending tangent to the helmet's line (z -15.1), so the view
-      // turns one way: no bend back at the end.
-      [-56, -8, -7], [-50, -8, -12], [-44, -8, -14.5],
+      [-16, -8, 14],
+      { at: [-4, -7.5, 14], key: 'nursery', title: 'The coral nursery', line: 'Fragments grow on the trees until they’re strong enough to plant out. A nurse shark sleeps beside them by day.',
+        look: [-3, -10.5, 5], hold: 7, slow: .4 },
+      [8, -8, 10], [12, -8, -2], [8, -8, -12],
     ] },
-  // Act 2: down to the nautilus, the deepest site first, as on a real dive. The coral nursery and the nurse shark beside it,
-  // then east across the reef shelf by the table coral tower, down the east side (clear of the barracuda's beat off the
-  // wreck) to the pillar coral cathedral's open front, on down to the gully, through the limestone arch (reef.js: the arch
-  // at 20, -72) and over the lantern garden to the ledge.
+  // Act 2: down to the nautilus, the deepest site first, as on a real dive. Round the helmet's rock and east along the
+  // middle of the shelf to the table coral tower, down the reef's east side to the pillar coral cathedral's open front, on
+  // down to the gully, through the limestone arch (reef.js: the arch at 20, -72) and over the lantern garden to the ledge.
   // Seen from the north-east, inside the open side of the stones that cradle it, so the swim on leaves the way the diver
   // faces (south-east, out over the deep sand) rather than turning right round.
   { key: 'experience', kind: 'stop', landmark: 'experience', view: [-13.5, -43.2, -74.2], teach: 'computer', lead: 30, place: `Experience · The Nautilus · ${depth(-45)}`, signal: '#ffcf7a',
     title: 'The nautilus', line: 'A shell that grows one chamber at a time, and keeps every one. My experience is in here, chamber by chamber.',
     short: 'It grows one chamber at a time. My experience is in here.',
     via: [
-      { at: [-16, -8, -2], key: 'nursery', title: 'The coral nursery', line: 'Fragments grow on the trees until they’re strong enough to plant out on the reef.',
-        look: [-1.5, -10, 4], hold: 6, slow: .45 },
-      { at: [-14, -8, 12], key: 'nurse', title: 'A nurse shark, asleep', line: 'They rest on the sand by day. We’ll pass quietly and let it be.',
-        look: { resident: 'sleeper', near: [-6, -12.6, 9.5] }, hold: 7, slow: .4, reach: 7 },
-      [2, -8, 18], [14, -9, 8],
-      { at: [22, -12, -14], key: 'tower', title: 'The table coral tower', line: 'Plates of coral stacked up a leaning stone trunk. A ribbon eel lives at the bottom.',
+      [-16, -8, -21], [-8, -10, -30], [8, -11, -30],
+      { at: [24, -13, -22], key: 'tower', title: 'The table coral tower', line: 'Plates of coral stacked up a leaning stone trunk. A ribbon eel lives at the bottom.',
         look: [38, -15.5, -8], hold: 6 },
       // Straight down from the tower to look in at the cathedral's open side, which faces the wreck (hero-formations.js
       // `open`): a gentle descent over the coral heads in front of the cathedral (their collision volumes reach up to
       // -25.6) and clear of its west column. The fly-by stays within about 15° of the open side, 16 m out.
-      [28, -17.5, -19], [32, -21, -24], [34.5, -22.5, -29],
+      [30, -17, -22], [33, -20.5, -26], [34.5, -22.5, -29],
       { at: [35, -23, -35], key: 'cathedral', title: 'The pillar coral cathedral', line: 'Organ-pipe columns in a horseshoe. Batfish live between them.',
         look: [48, -23.5, -28], hold: 6, reach: 9 },
       // Down to the arch: a glimpse, with no caption and no slowing, out past the gully's edge into the deep blue to the
@@ -119,16 +118,19 @@ export const STEPS = [
         look: [8, -55, -86], reach: 6 },
       [4, -47, -74],
     ] },
-  // Act 3: the way up. Out over the deep sand and along the ledge to the soft coral spire, where the swim drifts while a
-  // whale shark passes out to sea, up through the bait ball, and in to the wreck from the south-east, where its deck and
-  // open hold face the diver.
+  // Act 3: the way up. Out through the open side of the stones and over the deep sand, where hammerheads come up from the
+  // shelf; along the ledge to the soft coral spire, where the swim drifts while a whale shark passes out to sea; up through
+  // the bait ball, and in to the wreck from the south-east, where its deck and open hold face the diver.
   { key: 'projects', kind: 'stop', landmark: 'projects', view: [30, -20, -52], lead: 24, place: `Projects · The Wreck · ${depth(-22)}`, signal: '#c9a2ff',
     title: 'The wreck', line: 'A trawler, down a long while now, and the fish that have made it theirs. The things I’ve built are in the hold.',
     short: 'A trawler, and the fish that live in it now. My projects are in the hold.',
     via: [
-      // Out through the open side of the stones and over the deep sand (a long calm stretch the look tests use), then east
-      // along the seaward edge of the ledge to the spire.
-      [2, -47, -96], [16, -47, -92], [27, -47, -85],
+      // A long calm stretch first (the look tests use it), then the hammerheads' line runs over the ledge north of the swim.
+      [2, -47, -96], [14, -47, -94],
+      { at: [22, -47, -90], key: 'hammerheads', title: 'Hammerheads', line: 'Up from the deep shelf in a loose file, heads sweeping. They keep their distance.',
+        look: { visitor: 'hammerheads' }, hold: 8, slow: .2, reach: 8,
+        encounter: { id: 'hammerheads', cue: 24, course: { angle: -Math.PI / 2, side: 1, pass: 16, y: -36, ahead: 14 } } },
+      [27, -47, -85],
       { at: [36, -45, -79], key: 'whale-shark', title: 'Look out to sea', line: 'A whale shark, passing over the deep water. The biggest fish there is.',
         look: { visitor: 'whale-shark' }, teach: 'photo', hold: 9, slow: .12, reach: 7,
         encounter: { id: 'whale-shark', cue: 26, course: { angle: Math.PI / 2, side: 1, pass: 22, y: -38, ahead: 14 } } },
@@ -139,19 +141,22 @@ export const STEPS = [
         slow: .6, hold: 4, reach: 6 },
       [40, -24, -62],
     ] },
-  // Act 4: back up across the reef to the line. West under the wreck's bow to the giant clam, the humphead wrasse on its
-  // rounds, the kelp grove, and up the descent line to the slate at safety-stop depth. Dolphins are called in over the buoy
-  // as the swim reaches the line.
+  // Act 4: back up across the reef to the line. West under the wreck's bow to the giant clam, blacktips low over the sand,
+  // the humphead wrasse on its rounds, the kelp grove (the barracuda wheel off its edge), and up the descent line to the
+  // slate at safety-stop depth. Dolphins are called in over the buoy as the swim reaches the line.
   { key: 'resume', kind: 'stop', landmark: 'resume', opens: 'resume', lead: 20, place: `Résumé · The Slate · ${depth(-7.4)}`, signal: '#f4e3b5',
     title: 'The safety stop', line: 'On a real dive you’d hang here three minutes before surfacing. My résumé is on the slate, to read while you wait or take with you.',
     short: 'Safety-stop depth. My résumé is on the slate.',
     via: [
       [16, -25, -58],
-      { at: [0, -33, -58], key: 'clam', title: 'The giant clam', line: 'Its mantle is a fingerprint: no two clams wear the same pattern. An octopus keeps the rocks beyond it.',
+      { at: [2, -34, -60], key: 'clam', title: 'The giant clam', line: 'Its mantle is a fingerprint: no two clams wear the same pattern. An octopus keeps the rocks beyond it.',
         look: [-9, -42.5, -54], hold: 6 },
-      { at: [-14, -30, -44], key: 'humphead', title: 'A humphead wrasse', line: 'As big as a diver and in no hurry. It cruises the same loop every day.',
+      { at: [-10, -32, -52], key: 'blacktips', title: 'Blacktip reef sharks', line: 'Three of them, low over the sand. They want nothing from a diver.',
+        look: { visitor: 'blacktips' }, hold: 8, slow: .25, reach: 8,
+        encounter: { id: 'blacktips', cue: 22, course: { angle: Math.PI, side: 1, pass: 14, y: -33, ahead: 16 } } },
+      { at: [-20, -29, -44], key: 'humphead', title: 'A humphead wrasse', line: 'As big as a diver and in no hurry. It cruises the same loop every day.',
         look: { resident: 'humphead', near: [-28, -30, -36] }, hold: 6 },
-      { at: [-34, -20, -40], key: 'kelp', title: 'The kelp grove', line: 'Seahorses hold on to the whips inside, backs turned to anyone who comes close.',
+      { at: [-36, -20, -40], key: 'kelp', title: 'The kelp grove', line: 'Seahorses hold on to the whips inside; young barracuda wheel off its edge.',
         look: [-50, -33, -52], hold: 6,
         encounter: { id: 'dolphins', cue: 12, course: { angle: 0, side: -1, pass: 22, y: -4, ahead: 40 } } },
       { at: [-42, -10, -44], key: 'line', title: 'The descent line', line: 'Algae near the light, sponges lower down, and a school of fusiliers that has made it home.',

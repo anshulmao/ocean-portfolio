@@ -48,8 +48,10 @@ function step() {
   const time = now();
   // A sheet opened for reading takes the message down at once rather than letting it sit over the words.
   if (current) { if (time >= until || blocked()) hide(); return; }
+  // The zone is free again once the last message's fade and the gap after it are done, whether or not the next may show
+  // yet (a sheet open for reading used to leave the flag on, and whatever stands aside for a message stood aside for good).
+  if (time >= resume && document.body.dataset.announce) delete document.body.dataset.announce;
   if (time < resume || blocked()) return;
-  delete document.body.dataset.announce;
   while (queue.length && time - queue[0].at > queue[0].stale) queue.shift();
   if (queue.length) show(queue.shift());
 }
