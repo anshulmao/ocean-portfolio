@@ -5,9 +5,9 @@ import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 const TAU = Math.PI * 2;
 const SITES = {
   about: { x: -12, z: -15, color: '#7ff0cf' },
-  // About is the diver's helmet, Experience the nautilus on the deep ledge, Projects the sunken trawler (landmark-builds.js).
-  experience: { x: -18, z: -82, color: '#ffcf7a' },
-  projects: { x: 18, z: -39, color: '#c9a2ff' }
+  // About is the diver's helmet, Experience the sunken trawler (landmark-builds.js), Projects the treasure chests on the deep ledge.
+  experience: { x: 18, z: -39, color: '#ffcf7a' },
+  projects: { x: -18, z: -82, color: '#c9a2ff' }
 };
 
 const beaconVertex = /* glsl */ `
@@ -59,8 +59,8 @@ uniform vec3 uColor; uniform float uStrength; varying float vAlpha;
 void main(){ float d = length(gl_PointCoord - .5); gl_FragColor = vec4(uColor, smoothstep(.5, .05, d) * vAlpha * uStrength); }`;
 
 // Composed props and light markers around the three portfolio landmarks. The
-// props of a site are baked into one vertex-coloured mesh, so a site costs a
-// draw call while it is near and none beyond
+// props of a site are baked into one mesh per kind of surface (matte, gold,
+// gem), so a site costs a draw call or three while it is near and none beyond
 // the haze; the beacons stay separate, since they are meant to show through it.
 export function createSetPieces({ terrainHeightAt = () => -20, collisions = null, economy = false } = {}) {
   const root = new THREE.Group(); root.name = 'Landmark set pieces';
@@ -81,7 +81,9 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
     new THREE.Vector3(x - hx, y - hy, z - hz), new THREE.Vector3(x + hx, y + hy, z + hz)), { mesh: name, kind: 'prop' });
 
   const stone = mat('#6d7f93', { roughness: .95, flatShading: true });
-  // Everything shades alike under the shared look; the colours are baked into vertices.
+  const gold = mat('#f3c552', { roughness: .42, emissive: '#b8791a', emissiveIntensity: .55 });
+  const gem = mat('#ffffff', { roughness: .2, flatShading: true, vertexColors: true });
+  // Iron, wood, clay and stone shade alike under the shared look; their colours are baked into vertices.
   const matte = mat('#ffffff', { vertexColors: true }), culled = [];
   const plain = geometry => { const g = geometry.index ? geometry.toNonIndexed() : geometry; for (const name of Object.keys(g.attributes)) if (name !== 'position' && name !== 'normal') g.deleteAttribute(name); return g; };
 
@@ -113,7 +115,13 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
   const coil = batch('Rope coil', new THREE.TorusGeometry(.32, .05, 5, 16), mat('#d9b35a'));
   const lifeRing = batch('Life ring', new THREE.TorusGeometry(.3, .07, 6, 16), mat('#e2553a'));
   const boom = batch('Broken outrigger', new THREE.CylinderGeometry(.08, .1, 1, 8), mat('#8a8c86'));
-  // Experience: sea whips and fans, the deep reef's slow growers, in the shelter of the stones.
+  // Projects (the treasure): what spilled from the chests, and sea whips and fans, the deep reef's slow growers, in the
+  // shelter of the stones.
+  const coin = batch('Spilled coins', new THREE.CylinderGeometry(.06, .06, .014, 8), gold);
+  const goblet = batch('Gold goblets', new THREE.LatheGeometry([
+    [.1, 0], [.03, .04], [.025, .2], [.11, .3], [.13, .42]
+  ].map(([r, y]) => new THREE.Vector2(r, y)), 8), gold);
+  const jewel = batch('Scattered gems', new THREE.OctahedronGeometry(.09, 0), gem);
   const whip = batch('Sea whips', new THREE.CylinderGeometry(.012, .035, 1, 5).translate(0, .5, 0), mat('#ffffff'));
   const fan = batch('Sea fans', new THREE.IcosahedronGeometry(1, 1).scale(.85, .7, .05).translate(0, .62, 0), mat('#ffffff'));
 
@@ -139,9 +147,9 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
         rock(x, floor(x, z) + s * .2, z, [s * 1.2, s * .7, s], [random(), random() * TAU, random()], i % 2 ? '#8496ab' : '#a3b1bf');
       }
     }
-    // Projects (the trawler): its losses spilled on the sand on the far (high) side and off bow and stern, clear of the approach.
-    placing = 'projects';
-    { const { at, yaw } = frame('projects');
+    // Experience (the trawler): its losses spilled on the sand on the far (high) side and off bow and stern, clear of the approach.
+    placing = 'experience';
+    { const { at, yaw } = frame('experience');
       for (const [a, b, tone] of [[-6.2, 3.1, '#f08a2c'], [-6.6, 3.6, '#f2c230'], [-5.9, 3.9, '#f08a2c'], [-7.4, -4.2, '#f2c230'], [-2.5, 10.2, '#f08a2c'], [-3.1, -10.6, '#f08a2c'], [-8.8, .6, '#f2c230']]) {
         const [x, z] = at(a, b); float(x, floor(x, z) + .16, z, [1, 1, 1], [0, 0, 0], tone);
       }
@@ -157,15 +165,28 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
         rock(x, floor(x, z) + s * .25, z, [s * 1.2, s * .7, s], [random(), random() * TAU, random()], i % 2 ? '#8496ab' : '#a3b1bf');
       }
     }
-    // Experience (the nautilus): a horseshoe of stone cradles it, sea whips and fans growing in its shelter.
-    placing = 'experience';
-    { const { at } = frame('experience');
+    // Projects (the treasure): the chests have spilled, a horseshoe of stone cradles them, sea whips and fans growing in
+    // its shelter.
+    placing = 'projects';
+    { const { at } = frame('projects'), origin = frames.projects, centers = [[origin.x, origin.z], origin.second || [origin.x + 2.9, origin.z - 1.35]];
+      const middle = [(centers[0][0] + centers[1][0]) / 2 - origin.x, (centers[0][1] + centers[1][1]) / 2 - origin.z];
+      for (let i = 0, coins = economy ? 90 : 170; i < coins; i++) {
+        const [ox, oz] = centers[i % 2], angle = random() * TAU, radius = .7 + Math.pow(random(), 1.6) * 2.6;
+        const x = ox + Math.cos(angle) * radius, z = oz + Math.sin(angle) * radius;
+        coin(x, floor(x, z) + .03 + random() * .03, z, [1, 1, 1], [(random() - .5) * .9, random() * TAU, (random() - .5) * .9]);
+      }
+      const gems = ['#ff6f8f', '#62e6c5', '#7fa8ff', '#ffd76a', '#c58cff'];
+      for (let i = 0; i < 16; i++) {
+        const [ox, oz] = centers[i % 2], angle = random() * TAU, radius = .9 + random() * 2.2, x = ox + Math.cos(angle) * radius, z = oz + Math.sin(angle) * radius;
+        jewel(x, floor(x, z) + .08, z, [1, 1.3, 1], [random(), random() * TAU, random()], gems[i % gems.length]);
+      }
+      for (const [a, b, tilt] of [[1.4, 1.5, 0], [-1.3, -1.2, 1.4], [2.2, -2.4, -1.2]]) { const [x, z] = at(a, b); goblet(x, floor(x, z) + (tilt ? .1 : 0), z, [1.2, 1.2, 1.2], [tilt, a, 0]); }
       for (let i = 0; i < 8; i++) {
         // An arc of roughly 200 degrees, open toward the approach lane.
-        const angle = Math.PI - 1.75 + i / 7 * 3.5, radius = 5.6 + (i % 2) * .7, s = 1 + random() * .75;
-        const [x, z] = at(Math.cos(angle) * radius, Math.sin(angle) * radius), y = floor(x, z) + s * .35;
-        rock(x, y, z, [s * 1.15, s * (.8 + random() * .5), s], [random() * .4, random() * TAU, random() * .4], i % 3 ? '#7385a0' : '#93a3b6');
-        solid(x, y, z, s * .8, s * .75, s * .75, 'Nautilus alcove stone');
+        const angle = Math.PI - 1.75 + i / 7 * 3.5, radius = 6.3 + (i % 2) * .7, s = 1 + random() * .75;
+        const [x, z] = at(Math.cos(angle) * radius, Math.sin(angle) * radius), wx = x + middle[0], wz = z + middle[1], y = floor(wx, wz) + s * .35;
+        rock(wx, y, wz, [s * 1.15, s * (.8 + random() * .5), s], [random() * .4, random() * TAU, random() * .4], i % 3 ? '#7385a0' : '#93a3b6');
+        solid(wx, y, wz, s * .8, s * .75, s * .75, 'Treasure alcove stone');
       }
       const whips = ['#d9643a', '#e8a33a', '#c94a5a', '#e07a4a'];
       for (let i = 0, n = economy ? 9 : 14; i < n; i++) {
@@ -181,10 +202,10 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
     const groups = new Map(), base = new THREE.Color(), normalMatrix = new THREE.Matrix3(), point = new THREE.Vector3(), normal = new THREE.Vector3();
     for (const { name, geometry, material, entries } of batches) {
       counts[name] = entries.length;
-      const surface = matte, flat = material.flatShading && geometry.index ? geometry.toNonIndexed() : null;
+      const surface = material === gold ? gold : material === gem ? gem : matte, flat = material.flatShading && geometry.index ? geometry.toNonIndexed() : null;
       flat?.computeVertexNormals();
       const source = flat || geometry, p = source.getAttribute('position'), n = source.getAttribute('normal'), order = source.index;
-      base.copy(material.color);
+      base.copy(surface === gold ? color.set('#ffffff') : material.color);
       for (const entry of entries) {
         const key = `${entry.site}|${surface.uuid}`;
         if (!groups.has(key)) groups.set(key, { site: entry.site, surface, position: [], normal: [], color: [], index: [] });
@@ -205,7 +226,7 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
       geometry.setAttribute('normal', new THREE.Float32BufferAttribute(group.normal, 3));
       geometry.setAttribute('color', new THREE.Float32BufferAttribute(group.color, 3));
       geometry.setIndex(group.index); geometry.computeBoundingSphere();
-      const mesh = new THREE.Mesh(geometry, group.surface); mesh.name = `${group.site} set pieces · props`;
+      const mesh = new THREE.Mesh(geometry, group.surface); mesh.name = `${group.site} set pieces · ${group.surface === gold ? 'gold' : group.surface === gem ? 'gems' : 'props'}`;
       root.add(mesh); culled.push(mesh); fresh.push(mesh);
     }
   }
@@ -252,6 +273,7 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
   function setFound(id, found = true) { const beacon = beacons.find(item => item.id === id); if (beacon) beacon.found = found; }
   function update(elapsed, cameraPosition, night = 0, depth = 0, pixelRatio = 1) {
     time.value = elapsed; ratio.value = pixelRatio;
+    gold.emissiveIntensity = .45 + depth * .5 + night * .35 + Math.sin(elapsed * .8) * .06;
     for (const beacon of beacons) {
       // A visited landmark settles to a quieter glow; the next one stays bright.
       const target = (beacon.found ? .2 : .52) + depth * .22 + night * .18;

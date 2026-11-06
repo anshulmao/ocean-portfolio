@@ -26,63 +26,73 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
 | R7 | Touch, phone and keyboard all get equal treatment, and every key hint has a tap equivalent. |
 | R8 | The visitor can always exit, surface or keep exploring. The safety stop is offered, never forced. |
 
-## The sequence (round 10)
+## The sequence (round 11)
 
-World coordinates are metres (x, y, z), with y negative below the surface. "Right" is +x, facing −z. The site starts at
-the surface at 53 m N, 18 m E on the map (world −53, −18): over the sand west of the whipray's loop, where all three
-lights are in view going under (`exploration.js` SURFACE_START). The route itself lives in
-`ocean-refined/guided-script.js`. The landmarks are built in code (`landmark-builds.js`): the diver's helmet (About), the
-trawler wreck (Projects), the nautilus (Experience) and the slate on the descent line (Résumé), with the coral nursery as
-a feature of the reef beside the nurse shark.
+World coordinates are metres (x, y, z), with y negative below the surface; on the map "north" is −x and "east" is −z.
+The site starts at the surface at 53 m N, 18 m E on the map (world −53, −18), over the sand at the north-east corner
+(`exploration.js` SURFACE_START). The route itself lives in `ocean-refined/guided-script.js`. The landmarks are built in
+code (`landmark-builds.js`): the diver's helmet (About), the trawler wreck (Experience) and the slate on the descent line
+(Résumé); the treasure chests (Projects) are the modelled chests again, on the deep ledge. The coral nursery and the
+nautilus are features of the reef on the way, not sites.
 
 Only six moments wait for the visitor: the welcome, **About**, **Experience**, **Projects**, **Résumé** and the ending.
-Everything between them is a **fly-by**, as in round 9 (the swim slows, the camera eases across, a caption names it, the
-view turns one way at a time). The tour is shaped like a real dive: in over the shelf, the shallows first, down to the
-deepest site, back up by stages, and a safety stop at 5 m on the line before the surface.
+Everything between them is a **fly-by** (the swim slows, the camera pans across, the guide's card names it). The tour is
+shaped like a real dive: in over the sand, the shallows first, the wreck at 15 m, the deepest site, back up by stages,
+and a safety stop at 5 m on the line before the surface.
+
+**The camera is the guide's.** The view is locked while the tour leads (`setGuided(value, free, looking, locked)`): the
+mouse, a drag, the arrow keys and the look stick do nothing. Any input that swims (W A S D, the thumb-stick, rising and
+sinking) still takes the controls, and the view, straight back. Between subjects the view hands one to the next in one
+pan (a fly-by's pan takes 2.6 s to come round), and the stop's subject is turned to over the last metres of the approach.
 
 **No big animal comes unasked while the tour is on.** The random encounters (`user-creatures.js` director) and the
 one-a-dive guarantee (`big-life.js`) both wait until it ends; the tour calls in its own, each where its route wants it:
-hammerheads, the whale shark, blacktips and dolphins. The whipray rests on the sand at the north of its loop (`park`)
-and sets off only as the guide looks at it.
+the whale shark, hammerheads, blacktips and dolphins. The whipray rests on the sand at the north of its loop (`park`,
+on the seabed as drawn) and sets off only as the guide looks at it. The look-there marker rings each animal once a dive
+and does not come back once it has been looked at.
 
 ### 0. Entry and 1. Welcome
 
-As before: **Show me around** eases in on the diver, dives in first person and turns to the heart of the reef; the
-welcome drifts a little way in, the camera visiting the three lights in turn (the helmet ahead, the wreck to the right,
-the nautilus far down to the right), asks for the controls one at a time and starts on N.
+**Show me around** eases in on the diver, dives in first person and turns to the middle of the three lights, so the
+helmet, the wreck and the treasure are all in the frame going under (on a desktop lens; a phone's sees them in turn).
+The welcome drifts a little way west along the sand. The guide's card says the welcome (4.5 s), then **opens the dive
+computer** for 6.5 s and says what it is (the one control shown rather than asked for; it does not count as tried), then
+asks for W A S D, rising and sinking, and V, one at a time, and starts on N. The camera visits the three lights in turn,
+then the way ahead.
 
 ### Act 1: across the shallows to the helmet
 
-2. **A pink whipray**, resting on the sand right ahead; it lifts off and glides as the guide looks at it.
-3. **The brain coral dome**, named as it passes nine metres off the right shoulder (no turn), then **the scooter** on the
-   long run east along the north of the shelf (waits up to 7 s for E).
-4. **The coral nursery**, nine metres off, close enough to set its trees swaying, the nurse shark asleep beside it in
-   the same view.
-5. One right-hand sweep round to the east of the helmet and in to it from in front: **About: the Helmet** (stop), seen
-   from its faceplate side, 5 m off. F is taught here.
+Every subject passes on the right and the view pans one way (a test counts the reversals: 2).
 
-### Act 2: down to the nautilus (deepest first, as on a real dive)
+2. **A pink whipray**, resting on the sand below as the swim sets off; it lifts off and glides as the guide looks at it.
+3. **The brain coral dome**, its east face, where the moray's den opens (the look is at the den's mouth).
+4. **The coral nursery** and the nurse shark asleep beside it, seen together from 20 m off (the look is at the midpoint
+   of the trees and wherever the shark settled, so both are in the shot whatever the spawn).
+5. **The scooter** (waits up to 7 s for E) east past the helmet's rock, out over the sand beyond it, and one right-hand
+   loop that ends on the approach: **About: the Helmet** (stop), seen from its faceplate side, 5 m off. F is taught here.
 
-6. Fly-bys: round the helmet's rock and east along the middle of the shelf to **the table coral tower**; straight down
-   the reef's east side over the coral heads to **the pillar coral cathedral**, seen from its open front; a glimpse out
-   to the deep blue; **through the arch** (waits up to 7 s for Q); **the lantern garden**, the deepest point.
-7. **Experience: the Nautilus** (stop), seen from the north-east inside the open side of the stones that cradle it. The
-   camera starts turning to it 30 m out. The dive computer is taught here.
+### Act 2: along the top of the reef and down to the wreck
 
-### Act 3: the way up to the wreck
+6. Fly-bys: round the helmet's rock and east along the middle of the shelf to **the table coral tower**; down the reef's
+   east side over the coral heads to **the pillar coral cathedral**, seen from its open front; a wide turn south round
+   **the soft coral spire**, to come at **a bait ball, ahead** from the sea side and swim **through the bait ball**.
+7. **Experience: the Wreck** (stop), the trawler seen whole from 15 m to its south-east, its deck and open hold facing
+   the diver. The turn to it starts only 10 m out: the swim round the spire passes 12 m from the viewpoint on its way.
 
-8. Out over the deep sand, where **hammerheads** come up from the shelf in a file over the ledge; east along the ledge's
-   seaward edge: **look out to sea** (the whale shark, called in; the camera is taught), **a bait ball, ahead**,
-   **through the bait ball**.
-9. **Projects: the Wreck** (stop), the trawler seen whole from 15 m to its south-east, its deck and open hold facing the
-   diver. The camera starts turning to it 24 m out.
+### Act 3: down to the treasure (deepest, as on a real dive)
+
+8. South-west from the wreck and down the slope in one line to **the arch** (waits up to 7 s for Q), **the lantern
+   garden**, the deepest point, and out onto the deep sand: **look out to sea** (the whale shark, called in 20 m out and
+   10 m up; the camera is taught).
+9. **Projects: the Treasure** (stop), the two chests on the ledge, 6.5 m off from the east. The dive computer is taught
+   here. The turn to the chests starts 14 m out, so the view stays on the whale shark.
 
 ### Act 4: up to the line
 
-10. West under the wreck's bow: **the giant clam** (an octopus keeps the rocks beyond it), **blacktip reef sharks** low
-    over the sand, **a humphead wrasse** on its rounds, **the kelp grove** (seahorses inside, the barracuda wheel off its
-    edge), rising by stages, and **the descent line** itself. Dolphins are called in to pass over the buoy as the swim
-    reaches the line.
+10. North-west across the deep reef: **a nautilus** on its own ledge, **hammerheads** crossing ahead along the foot of the
+    cliff (called in), up the slope past **the kelp grove**, **blacktip reef sharks** low over the sand (called in), **a
+    humphead wrasse** on its rounds (dolphins are called in over the buoy here) and **the descent line** itself: one
+    slow left-hand curve that ends on the line's approach.
 11. **Résumé: the Slate** (stop), at safety-stop depth on the line, 2.8 m off. The copy says what a safety stop is.
 12. **The ending**, under the buoy at about 5 m (shown depth), the line running down into the kelp and the reef off to
     the east. The choice is **Keep exploring** or **Surface (N)**. Surfacing from here is the safety stop itself: the
@@ -115,12 +125,13 @@ checked for that, and for clearance of the hull, in `tools/test-guided-motion.mj
 
 | Control | Where | How |
 |---------|-------|-----|
-| C, W A S D, Space/Shift, V | Welcome | Key chips, one prompt at a time, each ticked once it's tried |
+| C (shown) | Welcome | The guide opens the dive computer for 6.5 s and says what it is; not counted as tried |
+| W A S D, Space/Shift, V | Welcome | One prompt at a time in the guide's card, with its keys as caps, each ticked once it's tried |
 | F | About, Experience, Projects | "Press F to open it" |
 | E (scooter) | The first fly-by, on the open-water approach | The guide runs it: the scooter shows in first person, the pace lifts and ⚡ reads as held and rings. "That's the scooter. Hold E to use it yourself, any time." |
 | Q (lamp) | Fly-by through the arch | "It's dark under the arch. Press Q for your lamp." |
 | H (photo) | Whale shark drift | "Press H to take a photo of it." On touch, the deck has a camera key. |
-| C (computer) | Projects (desktop) | "Press C to check your depth on your dive computer." |
+| C (computer) | Projects, the treasure (desktop) | "Press C to check your depth on your dive computer." |
 | V (view) | The ending (desktop) | "Press V to see yourself against the reef." |
 | G (rejoin) | First takeover | "You have the controls. G to rejoin." |
 
@@ -135,12 +146,17 @@ checked for that, and for clearance of the hull, in `tools/test-guided-motion.mj
 - One short line per beat, two at most. Use second person and present tense.
 - Signpost: "This is where you'll find…". Don't summarise the portfolio in the tour.
 - Key hints follow the input in hand (keys on desktop, buttons on touch).
-- **Fly-by captions** are a title and one line over a light tint, like the depth gauge. They sit top centre on a desktop, and top
-  left under the depth chip on a phone, clear of the compass. While the tour leads on a phone, Back to the surface
-  makes way for them.
-- **At a stop on a phone**, the camera aims a little below the landmark, so the landmark sits above the middle of the
-  screen, clear of the sheet.
-- **On a desktop the tour card** sits in the bottom-right corner, see-through with a slight tint like the depth gauge.
+- **One card for every word (round 11).** The guide's card (`.tour-caption`) is the only place the tour speaks: the
+  welcome, the dive computer, each control to try (its keys as caps, ticked once tried), each fly-by's title and line
+  with the control it teaches, each site's name, line and tip, and the on-hold note after a takeover (6 s). It wears
+  the depth-chapter card's face (mono caps kicker, display-face title, one line, a pool of shade) and stands where
+  those cards stood: top centre on a desktop, under the top bar on a phone. The depth-chapter cards themselves stay
+  quiet while the tour is on, so nothing ever writes over the guide.
+- **The bar** (`.tour-card`) is one slim row at the foot of the water, centred: the steps as dots and the actions the
+  moment calls for (Open F · Continue N · Skip N · Rejoin G · Surface N · Keep exploring · Exit), the one it most calls
+  for lit. It carries no copy. The scene's own "press F" prompt stands down at a stop, since the bar offers Open.
+- **At a stop on a phone**, the camera aims a little below the landmark (about 6°), so the landmark sits above the
+  middle of the screen, clear of the bar and the deck.
 - The existing long `lines`/`short` copy on stops is retired from the tour. It stays in the archive.
 
 ## Timing budget
@@ -462,3 +478,26 @@ stops.
   - **Down to the arch:** one glimpse out into the deep blue instead of the gully floor all the way.
   - `glance()` takes an optional fade (`exploration.js`), so the guide's own looks are slower than a fly-by's.
   - `tour_version` is now 9.
+- **Round 10: the code-built landmarks** (the owner's notes): the helmet, the nautilus, the trawler and the slate on
+  the descent line replace the GLB landmarks; a fourth site (Résumé) and an ending under the buoy; the start at 53 N
+  18 E; scripted animals only while the tour is on; one guide voice in the chapter card's face. `tour_version` 10.
+- **Round 11 (the owner's notes on round 10: "make it 10x better"):**
+  - **The camera is scripted and locked** (`exploration.js` lockLook: aim, arrows and the look stick do nothing; swimming
+    still takes over). Fly-by pans come round in 2.6 s rather than 2; the turn to a stop's subject starts 22 m out by
+    default, and later where a fly-by sits near the stop (the treasure 14 m, the wreck 10 m).
+  - **Going under faces all three lights**: the welcome's first look is at their middle; the welcome drifts west along
+    the sand rather than at the ray.
+  - **The sites are the helmet, the wreck (Experience, second), the treasure chests (Projects, on the deep ledge, the
+    modelled chests back with their lid animation and dressing) and the slate.** The nautilus is a feature of the reef
+    on its own ledge at (−34, −72), passed on the way up; the coral nursery stays a feature beside the nurse shark.
+  - **Act 1 turns one way**: the ray, the dome's east face (the den side, so the moray shows), the nursery and the shark
+    together (a `midpoint` look, so the framing holds wherever the shark spawned), the scooter, and one right-hand loop
+    into the helmet from the front. The whipray is parked on the seabed as drawn, not above it.
+  - **Act 2 goes round the spire** to take the bait ball from the sea side and come in to the wreck facing it; Act 3 is
+    one line down to the arch, the lanterns and the whale shark, then the chests; Act 4 is one slow curve up past the
+    nautilus, hammerheads crossing ahead, the kelp, blacktips, the wrasse and the line.
+  - **One card for every word**: the welcome, a dive-computer demonstration (opened by the guide), the controls, the
+    fly-bys, the sites and the on-hold note all in the guide's card at the top; the sheet is gone, replaced by a slim
+    bar of dots and actions (Open, Continue, Skip, Rejoin, Surface, Exit). The depth-chapter cards and the scene's
+    press-F prompt stand down while the tour leads. Look-there markers show each animal once.
+  - `tour_version` is now 11.

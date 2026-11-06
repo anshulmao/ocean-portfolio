@@ -21,12 +21,11 @@ function guarantee(dt, api, live) {
   calling ??= BIG[Math.floor(Math.random() * BIG.length)];
   if (api.encounter?.(calling)) metBig = true;
 }
-// Points out the nearest notable visitor not yet seen on this pass; once it has been in view for SEEN_AFTER seconds the
-// marker lets it go. A visitor that leaves can be pointed out again on a later pass.
+// Points out the nearest notable visitor not yet seen this dive; once it has been in view for SEEN_AFTER seconds the
+// marker lets it go, and that kind is not pointed out again until the next dive.
 function lookThere(dt, api, state, live) {
   const camera = api.getCamera?.(); if (!camera) return;
   const [px, py, pz] = state.playerPosition;
-  for (const id of pointed) if (!live.some(item => item.id === id)) pointed.delete(id);
   let subject = null, nearest = Infinity;
   for (const item of live) {
     const noted = NOTED[item.id]; if (!noted || pointed.has(item.id)) continue;

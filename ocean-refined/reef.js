@@ -6,9 +6,10 @@ import { valueTexture } from './shaders.js';
 
 export const LANDMARKS = [
   { id: 'about', title: 'About', description: 'Shallow reef · 8 m', position: [-12, -8, -15] },
-  // About is the diver's helmet, Experience the nautilus on the deep ledge, Projects the sunken trawler (landmark-builds.js).
-  { id: 'experience', title: 'Experience', description: 'Deep ledge · 45 m', position: [-18, -45, -82] },
-  { id: 'projects', title: 'Projects', description: 'Mid-depth wreck · 23 m', position: [18, -23, -39] }
+  // About is the diver's helmet, Experience the sunken trawler (landmark-builds.js), Projects the treasure chests on the
+  // deep ledge (model-scene.js, the one downloaded landmark).
+  { id: 'experience', title: 'Experience', description: 'Mid-depth wreck · 23 m', position: [18, -23, -39] },
+  { id: 'projects', title: 'Projects', description: 'Deep ledge · 45 m', position: [-18, -45, -82] }
 ];
 // The résumé: a slate on the descent line on the far (west) side of the kelp grove (hero-formations.js), out of the
 // passing visitors' lanes across the reef, hung at safety-stop depth (world y -7.5 reads 5 m). Not one of the three sites of the journey, the map or the dive summary, so it is kept
@@ -17,6 +18,8 @@ export const RESUME_SITE = { id: 'resume', title: 'Résumé', description: 'Desc
 // The coral nursery: a feature of the reef, not a portfolio site, on the level sand flat north of the About pad (the
 // widest clear sand at nursery depth on this reef). The nurse shark sleeps beside it (user-creature-routes.js).
 export const NURSERY_SITE = { x: -5, z: 4 };
+// The nautilus: a feature of the deep sand west of the ledge, on the guided dive's way up from the treasure.
+export const NAUTILUS_SITE = { x: -34, z: -72 };
 
 // Horizontal coordinates are world coordinates; vertical limits are camera
 // offsets from the normal swimming depth, shared with the exploration module.

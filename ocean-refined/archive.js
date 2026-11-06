@@ -21,8 +21,8 @@ const live = panel.querySelector('#archive-live');
 // depths restate reef.js LANDMARKS (descriptions), kept here so reading never loads the world's modules.
 export const SECTIONS = {
   about: { hash: 'profile', label: 'About', site: 'The helmet', where: 'the diver’s helmet on the shallow reef, 8 m down' },
-  experience: { hash: 'log', label: 'Experience', site: 'The nautilus', where: 'the nautilus on the deep ledge, 45 m down' },
-  projects: { hash: 'finds', label: 'Projects', site: 'The wreck', where: 'the trawler wreck, 23 m down' },
+  experience: { hash: 'log', label: 'Experience', site: 'The wreck', where: 'the trawler wreck, 23 m down' },
+  projects: { hash: 'finds', label: 'Projects', site: 'The treasure', where: 'the treasure chests on the deep ledge, 45 m down' },
   resume: { hash: 'resume', label: 'Résumé', site: 'One page', where: 'the slate on the descent line, 5 m down' },
   dives: { hash: 'dives', label: 'Dive log', site: 'This visit', where: null },
 };

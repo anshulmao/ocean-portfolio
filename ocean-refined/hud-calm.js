@@ -11,11 +11,11 @@ import { currentZone, touchInput } from './journey.js';
 const $ = selector => document.querySelector(selector);
 const SITES = {
   'The Helmet': 'About · how I approach the work',
-  'The Nautilus': 'Experience · three roles, 2023 to now',
-  'The Wreck': 'Work · six projects across the AI product loop',
+  'The Wreck': 'Experience · three roles, 2023 to now',
+  'The Treasure': 'Work · six projects across the AI product loop',
   'The Slate': 'Résumé · one page, to read or take with you'
 };
-const NAMES = { about: 'The Helmet', experience: 'The Nautilus', projects: 'The Wreck', resume: 'The Slate' };
+const NAMES = { about: 'The Helmet', experience: 'The Wreck', projects: 'The Treasure', resume: 'The Slate' };
 const SIGNALS = { about: '#7ff0cf', experience: '#ffcf7a', projects: '#c9a2ff', resume: '#f4e3b5' };
 const card = (className, label, html) => {
   const node = document.createElement('section');

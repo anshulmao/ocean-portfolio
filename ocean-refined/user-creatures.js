@@ -304,7 +304,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       const r = g.route; r.theta = g.parkTheta ?? 0;
       for (const m of g.members) {
         const a = m.actor; along(r, r.theta, A); along(r, r.theta + .03 * r.dir, B);
-        a.pos.set(A.x, cover(A.x, A.z) + .35, A.z); a.yaw = Math.atan2(B.x - A.x, B.z - A.z); a.pitch = 0; a.roll = 0; a.started = true;
+        a.pos.set(A.x, drawn(A.x, A.z) + .25, A.z); a.yaw = Math.atan2(B.x - A.x, B.z - A.z); a.pitch = 0; a.roll = 0; a.started = true;
         a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(0, a.yaw, 0, 'YXZ'); a.mixer.timeScale = 0; m.nav = null;
       }
       return;

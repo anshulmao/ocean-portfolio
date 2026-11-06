@@ -5,6 +5,14 @@ Prepared copies resize textures and deduplicate embedded buffers. Geometry, rigs
 
 All supplied assets declare [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
+## Treasure Chest
+
+- Creator: Multipainkiller Studio (https://sketchfab.com/Multipainkiller_Studio)
+- Source: https://sketchfab.com/3d-models/treasure-chest-b124919b7bc3470c82daeef72823f941
+- Licence: CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+- Prepared size: 3.98 MB; 4,588 triangles.
+
+
 ## Coral Waterverbruik Gezond
 
 - Creator: carolienvanbedaf (https://sketchfab.com/carolienvanbedaf)

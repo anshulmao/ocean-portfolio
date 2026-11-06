@@ -32,6 +32,9 @@ export function createUserCorals({terrainHeightAt,collisions,economy=false}={}){
 
   // Slope at x,z across r either side (a colony's is taken across its footprint, not only under its middle).
   function gradient(x,z,r=.35){const dx=(floor(x+r,z)-floor(x-r,z))/(2*r),dz=(floor(x,z+r)-floor(x,z-r))/(2*r);normal.set(-dx,1,-dz).normalize();return Math.hypot(dx,dz);}
+  // The rise across a colony's whole footprint (its highest sample over its lowest, per metre of width), as the reef audit
+  // measures it: a centre gradient can read level on a step or a ridge that the footprint still straddles.
+  function rise(x,z,r){let lo=Infinity,hi=-Infinity;for(let k=0;k<8;k++){const a=k*Math.PI/4,y=floor(x+Math.cos(a)*r,z+Math.sin(a)*r);lo=Math.min(lo,y);hi=Math.max(hi,y);}const c=floor(x,z);return(Math.max(hi,c)-Math.min(lo,c))/(2*r);}
   function centers(){
     const candidates={shallow:[],mid:[],deep:[]};
     for(let z=-96;z<=22;z+=5)for(let x=-51;x<=51;x+=5){const depth=-floor(x,z);if(isLane(x,z,3)||onFormation(x,z,4)||gradient(x,z)>.35)continue;for(const [zone,[min,max]]of Object.entries(ZONES))if(depth>=min&&depth<max)candidates[zone].push({x,z,depth});}
@@ -100,7 +103,7 @@ export function createUserCorals({terrainHeightAt,collisions,economy=false}={}){
             // The files are already at the site's scale (widthMetres): colonies vary around it rather than growing past it.
             const scale=.7+rng()*.45;
             const slope=Math.max(gradient(x,z,Math.max(.35,species.widthMetres*scale*.25)),gradient(x,z));
-            if(depth<minDepth||depth>=maxDepth||isLane(x,z,species.widthMetres*scale*.35)||onFormation(x,z,species.widthMetres*scale*.35)||onLife(x,z,species.widthMetres*scale*.4)||slope>.35){diagnostics.rejected++;continue;}
+            if(depth<minDepth||depth>=maxDepth||isLane(x,z,species.widthMetres*scale*.35)||onFormation(x,z,species.widthMetres*scale*.35)||onLife(x,z,species.widthMetres*scale*.4)||slope>.35||rise(x,z,species.widthMetres*scale*.5)>.4){diagnostics.rejected++;continue;}
             probe.set(x,height+.3,z);if(occupied(probe)){diagnostics.rejected++;continue;}
             let overlaps=false;for(let p=0;p<placements.length;p++){const placed=placements[p],dx=placed.x-x,dz=placed.z-z,reach=(placed.width+species.widthMetres*scale)*.33;if(dx*dx+dz*dz<reach*reach){overlaps=true;break;}}
             if(overlaps){diagnostics.rejected++;continue;}

@@ -10,8 +10,8 @@ import { announce, clearAnnouncements } from './announce.js';
 // The three lights, by portfolio section (the dive summary names them from here too).
 export const SITES = {
   about: { name: 'The Helmet', signal: '#7ff0cf' },
-  experience: { name: 'The Nautilus', signal: '#ffcf7a' },
-  projects: { name: 'The Wreck', signal: '#c9a2ff' }
+  experience: { name: 'The Wreck', signal: '#ffcf7a' },
+  projects: { name: 'The Treasure', signal: '#c9a2ff' }
 };
 const ZONES = [
   { until: 16, title: 'Sunlit shallows', place: 'Coral gardens', range: '0 – 11 m' },
@@ -58,6 +58,8 @@ export function say(kicker, text, signal = '#7ff0cf') { announce({ kicker, text,
 // A chapter title card, as the depth zones use: the guided dive opens with one. It takes the zone's place in the queue.
 export function splash(kicker, title, signal = '#c9fbff') { announce({ kind: 'zone', key: 'zone', kicker, title, signal, stale: 4 }); }
 function showZone(index) {
+  // On the guided dive the guide's own card has the top of the water; the chapter is on the depth card meanwhile.
+  if (window.oceanTour && window.oceanTour.status !== 'off') return;
   const { title, place, range } = ZONES[index];
   announce({ kind: 'zone', key: 'zone', kicker: `${range} · ${place}`, title, signal: '#c9fbff', stale: 3 });
 }

@@ -646,7 +646,7 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
   const perPatch = Math.ceil(CRABS / 6);
   crabPatch('crabs-shallows', 'Crab flat', 9, -9, perPatch, 'Crabs and a hermit crab working the sand beside the first leg of the tour. They freeze in the lamp and their eyes shine back.');
   crabPatch('crabs-brain-dome', 'Brain dome crabs', -45, 6, perPatch, 'More come out at dusk.');
-  crabPatch('crabs-deep', 'Deep ledge crabs', -30, -93, perPatch, 'On the deep sand west of the nautilus.');
+  crabPatch('crabs-deep', 'Deep ledge crabs', -30, -93, perPatch, 'On the deep sand west of the treasure.');
   crabPatch('crabs-east', 'East slope crabs', 26, -97, perPatch, 'Below the arch on the eastern side.');
   crabPatch('crabs-west', 'West coral crabs', -49, -47, perPatch, 'Larger crabs crawling across the western coral shelf.');
   crabPatch('crabs-outer', 'Outer shelf crabs', 50, 13, perPatch, 'Crabs on the bright sand near the edge of the reef.');

@@ -30,8 +30,8 @@ const list = entries => entries.map(entry => entry.title).join(', ');
 // Portfolio sites are the reason for the dive; the copy takes its section names from the archive itself.
 const PRIMARY = [
   { id: 'about', name: 'The Helmet', signal: '#7ff0cf', depth: 9, entry: [5.8, 0], bullets: ['Who I am and how I work', PORTFOLIO_CONTENT.about.subtitle, `${PORTFOLIO_CONTENT.about.entries.length} short reads, in the shallows`] },
-  { id: 'experience', name: 'The Nautilus', signal: '#ffcf7a', depth: 47, entry: [0, 4], bullets: ['The roles I’ve held and what each one taught me', PORTFOLIO_CONTENT.experience.subtitle, `${PORTFOLIO_CONTENT.experience.entries.length} chambers in the shell`] },
-  { id: 'projects', name: 'The Wreck', signal: '#c9a2ff', depth: 21, entry: [0, 17.2], bullets: ['The things I’ve built', PORTFOLIO_CONTENT.projects.subtitle, `${PORTFOLIO_CONTENT.projects.entries.length} finds in the hull: ${list(PORTFOLIO_CONTENT.projects.entries)}`] }
+  { id: 'experience', name: 'The Wreck', signal: '#ffcf7a', depth: 21, entry: [8.5, 0], bullets: ['The roles I’ve held and what each one taught me', PORTFOLIO_CONTENT.experience.subtitle, `${PORTFOLIO_CONTENT.experience.entries.length} chapters in the hold`] },
+  { id: 'projects', name: 'The Treasure', signal: '#c9a2ff', depth: 47, entry: [6.5, 0], bullets: ['The things I’ve built', PORTFOLIO_CONTENT.projects.subtitle, `${PORTFOLIO_CONTENT.projects.entries.length} finds in the chests: ${list(PORTFOLIO_CONTENT.projects.entries)}`] }
 ].map((site, index) => ({ ...site, kind: 'primary', number: index + 1, section: PORTFOLIO_CONTENT[site.id].title, position: LANDMARKS.find(item => item.id === site.id).position }));
 const SCENERY = {
   'Table coral tower': 'Plates of table coral spiral up a leaning stone trunk.',
@@ -240,9 +240,8 @@ function follow(dt, api, state, diving) {
 }
 onFrame(follow);
 
-// Deep links: #helmet, #wreck, #nautilus, #tour and #plan (#anchor and #treasure, from before those landmarks changed,
-// still lead to the same sites).
-const LINKS = { helmet: 'about', wreck: 'projects', nautilus: 'experience', anchor: 'about', treasure: 'experience' };
+// Deep links: #helmet, #wreck, #treasure, #tour and #plan (#anchor, from before the helmet, still leads to About).
+const LINKS = { helmet: 'about', wreck: 'experience', treasure: 'projects', anchor: 'about' };
 function readLink() {
   const key = location.hash.slice(1).toLowerCase();
   if (!ready() || controls().getMode() !== 'surface' || plan.open || prompt.open) return;
