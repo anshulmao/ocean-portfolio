@@ -248,10 +248,12 @@ a.dv-chip:hover .reading-icon{translate:3px 0}
 .dv-contact{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:40px 72px;align-items:end;margin-top:28px}
 .dv-contact h2{font-size:clamp(46px,7vw,96px);background:linear-gradient(100deg,#fff 20%,color-mix(in srgb,var(--tint),#fff 30%) 70%,var(--tint));-webkit-background-clip:text;background-clip:text;color:transparent}
 .dv-contact p{max-width:38ch;font:400 18px/1.55 var(--font);color:var(--text-2)}
-.reading-aurora{height:175px;overflow:hidden;pointer-events:none;view-timeline-name:--footer-aurora;view-timeline-axis:block}
+/* The aurora keeps the day palette it was drawn in (tokens.css, day ramp): a deep teal base through sky blue and mint to a
+   pale crest. The page's night tokens would turn it navy, so its own stops are set here. */
+.reading-aurora{--o-abyss:#072a36;--o-twilight:#0f6e80;--o-sunlit:#1d9aa2;--o-sunlit-2:#35c4c4;--o-world:#78d4ff;--o-engage:#4fe3cd;--o-surface-2:#c9ece6;--o-surface-0:#f3fbfa;height:175px;overflow:hidden;pointer-events:none;view-timeline-name:--footer-aurora;view-timeline-axis:block}
 .reading-aurora svg{display:block;width:100%;height:100%;transform-origin:center bottom}
 @media(min-width:600px){.reading-aurora{height:300px}}
-@media(min-width:1000px){.reading-aurora{height:56vh;max-height:600px}}
+@media(min-width:1000px){.reading-aurora{height:65vh;max-height:680px}}
 .reading-footer{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 24px;padding:24px var(--band) 32px;background:var(--well);border-top:1px solid var(--rule);font:400 13px/1.4 var(--font);color:var(--muted)}
 .reading-footer p>span{margin:0 8px}
 .reading-footer ul{display:flex;flex-wrap:wrap;align-items:center;gap:0 22px}

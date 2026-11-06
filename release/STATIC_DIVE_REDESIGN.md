@@ -33,6 +33,7 @@ The reading pages (`/profile.html` and `/projects/<id>/`) now use the portfolio 
 
 ## Decisions
 
+- **The footer aurora keeps its day colours** (deep teal through sky blue and mint to a pale crest), scoped on the aurora itself.
 - **Night only.** The pages match the sheet and no longer follow the system light/dark setting.
 - **Tenure is set at build time.** "3 yrs 2 mo" is computed when the site is built, so it is only as current as the
   last deploy.
