@@ -811,9 +811,10 @@ function updateBubbles(underwater){
   bubbleMesh.count=alive;bubbleMesh.instanceMatrix.needsUpdate=true;bubblesAlive=alive>0;
 }
 // A reef label stands aside for the guided dive's own interface: the clear-screen button, the tour sheet and the
-// look-there marker. Their boxes are read a few times a second, not every frame.
+// look-there marker, and the Ahead chip (journey.js), which names the site it points at, so that site's own label yields
+// to it rather than standing on it. Their boxes are read a few times a second, not every frame.
 // The look-there marker moves every frame, so its box comes straight from look-indicator.js rather than this cache.
-const KEEP_OUT='#clear-ui-toggle:not([hidden]),section.tour-card[data-show="true"]';
+const KEEP_OUT='#clear-ui-toggle:not([hidden]),section.tour-card[data-show="true"],.waypoint[data-show="true"]';
 let keepOut=[],keepOutAt=-1;
 const markerKeepOut={left:0,top:0,right:0,bottom:0};
 function keptOut(x,y,item){

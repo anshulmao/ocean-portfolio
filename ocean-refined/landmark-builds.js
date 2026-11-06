@@ -623,7 +623,7 @@ const smallShellPaint = surface => (theta, phi, c) => {
 };
 
 export function buildNautilus({ x, z, floorAt, economy = false, diameter = 3.3 }) {
-  const root = new THREE.Group(); root.name = 'experience placement wrapper';
+  const root = new THREE.Group(); root.name = 'nautilus placement wrapper';
   const surface = nautilusSurface(diameter), { thetaMax, thetaMin, b, R, K, W } = surface;
   const chambers = 10, visibleFrom = thetaMax - 2.2 * Math.PI;
   const steps = economy ? 120 : 200, around = economy ? 20 : 32;
@@ -968,7 +968,7 @@ function fishGeometry(kit, material, { length = .07, depth = .045, width = .018,
 }
 
 export function buildFishingBoat({ x, z, floorAt, economy = false }) {
-  const root = new THREE.Group(); root.name = 'projects placement wrapper';
+  const root = new THREE.Group(); root.name = 'experience placement wrapper';
   const boat = new THREE.Group(); boat.name = 'Sunken trawler'; root.add(boat);
   const random = seededRandom(9127);
   const L = 16, B = 5.4, BULWARK = .9, stations = economy ? 26 : 44;

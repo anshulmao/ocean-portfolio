@@ -235,39 +235,6 @@
       }
     },
     {
-      "name": "Coral habitat 4.1",
-      "position": [
-        31,
-        -42.090838247301186,
-        -57
-      ],
-      "groundedRoots": 6,
-      "grounding": {
-        "samples": 328,
-        "clearance": -0.06,
-        "contact": [
-          31.763011668322754,
-          -42.57373208930102,
-          -57.536773576055936
-        ],
-        "min": [
-          29.282448439540506,
-          -42.86708760653283,
-          -58.849999999999994
-        ],
-        "max": [
-          32.717551560459505,
-          -38.99206831148962,
-          -55.150000000000006
-        ],
-        "center": [
-          31.000000000000007,
-          -40.929577959011226,
-          -57
-        ]
-      }
-    },
-    {
       "name": "Coral habitat 3.2",
       "position": [
         -41.519633431361626,
@@ -296,6 +263,72 @@
         "center": [
           -42,
           -40.492150167676016,
+          -57
+        ]
+      }
+    },
+    {
+      "name": "Coral habitat 3.3",
+      "position": [
+        -19.578691536691565,
+        -47.677513213149645,
+        -65.83092265010066
+      ],
+      "groundedRoots": 3,
+      "grounding": {
+        "samples": 173,
+        "clearance": -0.06,
+        "contact": [
+          -19.410220454090034,
+          -47.93971079842185,
+          -64.90377833690167
+        ],
+        "min": [
+          -21.395242714664725,
+          -49.11138294262327,
+          -67.47421278115726
+        ],
+        "max": [
+          -18.604757285335282,
+          -46.169357539728104,
+          -64.52578721884274
+        ],
+        "center": [
+          -20.000000000000004,
+          -47.64037024117569,
+          -66
+        ]
+      }
+    },
+    {
+      "name": "Coral habitat 4.1",
+      "position": [
+        31,
+        -42.090838247301186,
+        -57
+      ],
+      "groundedRoots": 6,
+      "grounding": {
+        "samples": 328,
+        "clearance": -0.06,
+        "contact": [
+          31.763011668322754,
+          -42.57373208930102,
+          -57.536773576055936
+        ],
+        "min": [
+          29.282448439540506,
+          -42.86708760653283,
+          -58.849999999999994
+        ],
+        "max": [
+          32.717551560459505,
+          -38.99206831148962,
+          -55.150000000000006
+        ],
+        "center": [
+          31.000000000000007,
+          -40.929577959011226,
           -57
         ]
       }
@@ -330,39 +363,6 @@
           43,
           -48.212379323785335,
           -70.00000000000003
-        ]
-      }
-    },
-    {
-      "name": "Coral habitat 3.3",
-      "position": [
-        -19.578691536691565,
-        -47.677513213149645,
-        -65.83092265010066
-      ],
-      "groundedRoots": 3,
-      "grounding": {
-        "samples": 173,
-        "clearance": -0.06,
-        "contact": [
-          -19.410220454090034,
-          -47.93971079842185,
-          -64.90377833690167
-        ],
-        "min": [
-          -21.395242714664725,
-          -49.11138294262327,
-          -67.47421278115726
-        ],
-        "max": [
-          -18.604757285335282,
-          -46.169357539728104,
-          -64.52578721884274
-        ],
-        "center": [
-          -20.000000000000004,
-          -47.64037024117569,
-          -66
         ]
       }
     },
@@ -922,6 +922,90 @@
     },
     {
       "min": [
+        -41.76367683036279,
+        -41.56352865274356,
+        -58.35556347646853
+      ],
+      "max": [
+        -40.452661645693276,
+        -40.04806039558291,
+        -57.05086283432574
+      ],
+      "mesh": "Coral habitat 3.2 coral",
+      "imported": true
+    },
+    {
+      "min": [
+        -43.48541921402862,
+        -41.41591541547061,
+        -58.20700052311929
+      ],
+      "max": [
+        -41.735341034659776,
+        -40.64909941655063,
+        -56.441039989497895
+      ],
+      "mesh": "Coral habitat 3.2 coral",
+      "imported": true
+    },
+    {
+      "min": [
+        -42.37113645170541,
+        -41.00230038207656,
+        -57.047964498381
+      ],
+      "max": [
+        -40.93469233150452,
+        -39.42893645637681,
+        -55.65665113768622
+      ],
+      "mesh": "Coral habitat 3.2 coral",
+      "imported": true
+    },
+    {
+      "min": [
+        -19.919054796299694,
+        -47.88396839447863,
+        -65.83753772238767
+      ],
+      "max": [
+        -18.767198550735376,
+        -46.56196417014699,
+        -64.68791368557301
+      ],
+      "mesh": "Coral habitat 3.3 coral",
+      "imported": true
+    },
+    {
+      "min": [
+        -20.700640004616385,
+        -49.017047422843426,
+        -67.25567532052388
+      ],
+      "max": [
+        -19.156625195724533,
+        -48.34812282804089,
+        -65.70604605421444
+      ],
+      "mesh": "Coral habitat 3.3 coral",
+      "imported": true
+    },
+    {
+      "min": [
+        -21.21867843962224,
+        -47.73542545158801,
+        -66.11136346328024
+      ],
+      "max": [
+        -19.96667721659369,
+        -46.36291649512652,
+        -64.87531609214554
+      ],
+      "mesh": "Coral habitat 3.3 coral",
+      "imported": true
+    },
+    {
+      "min": [
         30.86207125241475,
         -42.418203102054854,
         -58.67483580526559
@@ -1006,48 +1090,6 @@
     },
     {
       "min": [
-        -41.76367683036279,
-        -41.56352865274356,
-        -58.35556347646853
-      ],
-      "max": [
-        -40.452661645693276,
-        -40.04806039558291,
-        -57.05086283432574
-      ],
-      "mesh": "Coral habitat 3.2 coral",
-      "imported": true
-    },
-    {
-      "min": [
-        -43.48541921402862,
-        -41.41591541547061,
-        -58.20700052311929
-      ],
-      "max": [
-        -41.735341034659776,
-        -40.64909941655063,
-        -56.441039989497895
-      ],
-      "mesh": "Coral habitat 3.2 coral",
-      "imported": true
-    },
-    {
-      "min": [
-        -42.37113645170541,
-        -41.00230038207656,
-        -57.047964498381
-      ],
-      "max": [
-        -40.93469233150452,
-        -39.42893645637681,
-        -55.65665113768622
-      ],
-      "mesh": "Coral habitat 3.2 coral",
-      "imported": true
-    },
-    {
-      "min": [
         42.92132327615048,
         -49.77502319446987,
         -71.54551914987083
@@ -1128,48 +1170,6 @@
         -70.86098530883079
       ],
       "mesh": "Coral habitat 4.2 coral",
-      "imported": true
-    },
-    {
-      "min": [
-        -19.919054796299694,
-        -47.88396839447863,
-        -65.83753772238767
-      ],
-      "max": [
-        -18.767198550735376,
-        -46.56196417014699,
-        -64.68791368557301
-      ],
-      "mesh": "Coral habitat 3.3 coral",
-      "imported": true
-    },
-    {
-      "min": [
-        -20.700640004616385,
-        -49.017047422843426,
-        -67.25567532052388
-      ],
-      "max": [
-        -19.156625195724533,
-        -48.34812282804089,
-        -65.70604605421444
-      ],
-      "mesh": "Coral habitat 3.3 coral",
-      "imported": true
-    },
-    {
-      "min": [
-        -21.21867843962224,
-        -47.73542545158801,
-        -66.11136346328024
-      ],
-      "max": [
-        -19.96667721659369,
-        -46.36291649512652,
-        -64.87531609214554
-      ],
-      "mesh": "Coral habitat 3.3 coral",
       "imported": true
     },
     {
@@ -1387,7 +1387,7 @@
     {
       "full": "coral_full_0",
       "light": "coral_light_0",
-      "name": "Coral habitat batch \u00b7 Corals_1_5_8_9",
+      "name": "Coral habitat batch · Corals_1_5_8_9",
       "renderOrder": 0,
       "layers": 1,
       "sphere": {
@@ -1411,7 +1411,7 @@
     {
       "full": "coral_full_1",
       "light": "coral_light_1",
-      "name": "Coral habitat batch \u00b7 Corals_2_7_10_12",
+      "name": "Coral habitat batch · Corals_2_7_10_12",
       "renderOrder": 0,
       "layers": 1,
       "sphere": {
@@ -1435,7 +1435,7 @@
     {
       "full": "coral_full_2",
       "light": "coral_light_2",
-      "name": "Coral habitat batch \u00b7 Corals_1_5_8_9",
+      "name": "Coral habitat batch · Corals_1_5_8_9",
       "renderOrder": 0,
       "layers": 1,
       "sphere": {
@@ -1459,7 +1459,7 @@
     {
       "full": "coral_full_3",
       "light": "coral_light_3",
-      "name": "Coral habitat batch \u00b7 Coral_13_15_16",
+      "name": "Coral habitat batch · Coral_13_15_16",
       "renderOrder": 0,
       "layers": 1,
       "sphere": {
@@ -1483,7 +1483,7 @@
     {
       "full": "coral_full_4",
       "light": "coral_light_4",
-      "name": "Coral habitat batch \u00b7 Coral_13_15_16",
+      "name": "Coral habitat batch · Coral_13_15_16",
       "renderOrder": 0,
       "layers": 1,
       "sphere": {
@@ -1507,7 +1507,7 @@
     {
       "full": "coral_full_5",
       "light": "coral_light_5",
-      "name": "Coral habitat batch \u00b7 Corals_1_5_8_9",
+      "name": "Coral habitat batch · Corals_1_5_8_9",
       "renderOrder": 0,
       "layers": 1,
       "sphere": {
@@ -1531,7 +1531,7 @@
     {
       "full": "coral_full_6",
       "light": "coral_light_6",
-      "name": "Coral habitat batch \u00b7 Corals_2_7_10_12",
+      "name": "Coral habitat batch · Corals_2_7_10_12",
       "renderOrder": 0,
       "layers": 1,
       "sphere": {
@@ -1555,7 +1555,7 @@
     {
       "full": "coral_full_7",
       "light": "coral_light_7",
-      "name": "Coral habitat batch \u00b7 Coral_13_15_16",
+      "name": "Coral habitat batch · Coral_13_15_16",
       "renderOrder": 0,
       "layers": 1,
       "sphere": {
@@ -1579,7 +1579,7 @@
     {
       "full": "coral_full_8",
       "light": "coral_light_8",
-      "name": "Coral habitat batch \u00b7 Corals_2_7_10_12",
+      "name": "Coral habitat batch · Corals_2_7_10_12",
       "renderOrder": 0,
       "layers": 1,
       "sphere": {
@@ -1603,7 +1603,7 @@
     {
       "full": "coral_full_9",
       "light": "coral_light_9",
-      "name": "Coral habitat batch \u00b7 Corals_1_5_8_9",
+      "name": "Coral habitat batch · Corals_1_5_8_9",
       "renderOrder": 0,
       "layers": 1,
       "sphere": {
@@ -1627,7 +1627,7 @@
     {
       "full": "coral_full_10",
       "light": "coral_light_10",
-      "name": "Coral habitat batch \u00b7 Coral_13_15_16",
+      "name": "Coral habitat batch · Coral_13_15_16",
       "renderOrder": 0,
       "layers": 1,
       "sphere": {
@@ -1652,11 +1652,11 @@
   "sources": [
     {
       "file": "reef.js",
-      "sha256": "dd6d388832f8ff7556aa6592ee782d3f8e1ced6154bdc09f2508bb7c9d14adf1"
+      "sha256": "75c83d1a97585aedcb93dd7226587247b9a3076a300532735d9db7aeec102327"
     },
     {
       "file": "model-scene.js",
-      "sha256": "851e756e3e0b08519ad35f58fafc611e92297f305ae770d5f44db732b0c8427b"
+      "sha256": "2f7f3c51788391a5e980fdf05af8969d7372995d719b67b64609ece76cc6b2fd"
     }
   ],
   "assets": [
@@ -1664,41 +1664,41 @@
       "file": "coral_waterverbruik_gezond.glb",
       "bytes": 4599908,
       "sha256": "25ac773bfe5d8a1228af881863360326c5d03ce6e9c70aeadedd4bf37e44915e",
-      "lastModified": "Sat, 10 Oct 2026 16:15:57 GMT",
-      "etag": "\"18dd373bdfad44d4-463064-gzip\""
+      "lastModified": "Sun, 01 Nov 2026 06:46:01 GMT",
+      "etag": "\"18e3d8e69bd85cff-463064-gzip\""
     },
     {
       "file": "coral_landbouw_gezond.glb",
       "bytes": 5668008,
       "sha256": "c12281635de5baaa50979f6d17ac6461e58b04e046387a73f2c33e273c25588e",
-      "lastModified": "Sat, 10 Oct 2026 16:15:58 GMT",
-      "etag": "\"18dd373c4e35e0dc-567ca8-gzip\""
+      "lastModified": "Sun, 01 Nov 2026 06:46:01 GMT",
+      "etag": "\"18e3d8e691d4e2f5-567ca8-gzip\""
     },
     {
       "file": "coral_anker_kleur.glb",
       "bytes": 2061940,
       "sha256": "010936e0a8c493dd26640adc8701d1e279be020039fc13fe77127d6434f3291f",
-      "lastModified": "Sat, 10 Oct 2026 16:16:00 GMT",
-      "etag": "\"18dd373ca41c11ec-1f7674-gzip\""
+      "lastModified": "Sun, 01 Nov 2026 06:46:01 GMT",
+      "etag": "\"18e3d8e68f7288f3-1f7674-gzip\""
     },
     {
       "file": "coral_uitstoot_gezond.glb",
       "bytes": 6850448,
       "sha256": "a907e052c746d93747ab91ac3f443776bd49b535cc24c1044ff310a362664f76",
-      "lastModified": "Sat, 10 Oct 2026 16:16:02 GMT",
-      "etag": "\"18dd373d1d5bae28-688790-gzip\""
+      "lastModified": "Sun, 01 Nov 2026 06:46:01 GMT",
+      "etag": "\"18e3d8e698bee7fc-688790-gzip\""
     },
     {
       "file": "coral_visnet_gezond_fish.glb",
       "bytes": 4970724,
       "sha256": "cd189ff088c757908f344076a12257bfff9c9c7a30d669b38912b5b077762032",
-      "lastModified": "Sat, 10 Oct 2026 16:16:03 GMT",
-      "etag": "\"18dd373d7c66f5f8-4bd8e4-gzip\""
+      "lastModified": "Sun, 01 Nov 2026 06:46:01 GMT",
+      "etag": "\"18e3d8e69a2d1dfe-4bd8e4-gzip\""
     }
   ],
   "glb": {
-    "file": "economy-webp.glb",
-    "bytes": 5677176,
-    "sha256": "d5c715782b41b3f775c984ee73274015e7d9976414b858e044c0bcb3217e0130"
+    "file": "economy.glb",
+    "bytes": 7092468,
+    "sha256": "cc4c394ec46fcc6f9570eb9cf9e2e574ab95cb975efb8aab576e8f4ce0c3281d"
   }
 }

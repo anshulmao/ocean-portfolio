@@ -76,8 +76,9 @@ export const STEPS = [
     via: [
       { at: [-47, -15.5, -16], key: 'whipray', wake: 'whipray', title: 'A pink whipray', line: 'Resting on the sand below us. Watch: it lifts off and glides as it sees us.',
         look: { resident: 'whipray', near: [-41, -23.2, -11] }, hold: 8, slow: .3, reach: 9 },
-      { at: [-39, -13, -13], key: 'brain-coral', title: 'The brain coral dome', line: 'Centuries old. A giant moray keeps a den at its foot; look for the head in the dark.',
-        look: [-35, -16, -1.5], hold: 7, slow: .4 },
+      // The dome is 16 m across: seen from 18 m off its centre, 14 m from the den, so the whole of it is in the frame.
+      { at: [-30, -12, -15], key: 'brain-coral', title: 'The brain coral dome', line: 'Centuries old. A giant moray keeps a den at its foot; look for the head in the dark.',
+        look: [-35, -17, -1.5], hold: 7, slow: .4 },
       { at: [-19, -9, -8], key: 'nursery', title: 'The coral nursery', line: 'Fragments grow on the trees until they’re strong enough to plant out. The nurse shark sleeps beside them by day.',
         look: { midpoint: [[-3.5, -10, 2], { resident: 'sleeper', near: [-6, -12.6, 9.5] }] }, hold: 8, slow: .35 },
       { at: [-6, -8.5, -6], key: 'scooter', title: 'The scooter', line: 'Hold E: we’ll take the scooter along the shelf and round to the helmet.',
@@ -99,9 +100,12 @@ export const STEPS = [
       // Down from the tower to look in at the cathedral's open side, which faces the wreck (hero-formations.js `open`): a
       // gentle descent over the coral heads in front of it (their collision volumes reach up to -25.6) and clear of its west
       // column. The fly-by stays within about 15° of the open side, 16 m out.
-      [30, -17, -22], [33, -20.5, -26], [34.5, -22.5, -29],
-      { at: [35, -23, -35], key: 'cathedral', title: 'The pillar coral cathedral', line: 'Organ-pipe columns in a horseshoe. Batfish live between them.',
-        look: [48, -23.5, -28], hold: 6, reach: 9 },
+      [30, -17, -22], [33, -20.5, -26],
+      // The fly-by begins north of the open side and drifts past it slowly, so the columns stay ahead of the shoulder for
+      // its whole hold rather than falling behind after three seconds.
+      { at: [34.5, -22.5, -30], key: 'cathedral', title: 'The pillar coral cathedral', line: 'Organ-pipe columns in a horseshoe. Batfish live between them.',
+        look: [48, -23.5, -28], hold: 6, slow: .3, reach: 9 },
+      [35, -23, -35],
       // Round the spire: a half-circle 14 m out from the bait ball's home, south about, with the spire on the inside.
       // The turn to the wreck itself starts late (lead 10): the swim round the spire passes 12 m from the viewpoint on its way out.
       [40, -26, -58], [39, -29, -66],
@@ -136,33 +140,35 @@ export const STEPS = [
     ] },
   // Act 4: the way up, north-west across the deep reef to the line. Past the nautilus on its own ledge, hammerheads crossing
   // ahead off the cliff, up the slope past the kelp grove (the barracuda wheel off its edge), blacktips low over the sand,
-  // the humphead wrasse on its rounds, and up the descent line to the slate at safety-stop depth. Dolphins are called in
-  // over the buoy as the swim reaches the line.
-  { key: 'resume', kind: 'stop', landmark: 'resume', opens: 'resume', lead: 20, place: `Résumé · The Slate · ${depth(-7.4)}`, signal: '#f4e3b5',
+  // and up the descent line to the slate at safety-stop depth. Dolphins are called in over the buoy as the swim reaches
+  // the line. (The humphead wrasse cruises its own loop over the slope here and is met as it comes.)
+  { key: 'resume', kind: 'stop', landmark: 'resume', opens: 'resume', lead: 12, place: `Résumé · The Slate · ${depth(-7.4)}`, signal: '#f4e3b5',
     title: 'The safety stop', line: 'On a real dive you’d hang here three minutes before surfacing. My résumé is on the slate, to read while you wait or take with you.',
     short: 'Safety-stop depth. My résumé is on the slate.',
     via: [
-      [-16, -43.5, -76],
-      { at: [-24, -43, -66], key: 'nautilus', title: 'A nautilus', line: 'A living fossil: a shell that grows one chamber at a time, and keeps every one.',
+      { at: [-18, -44, -73], key: 'nautilus', title: 'A nautilus', line: 'A living fossil: a shell that grows one chamber at a time, and keeps every one.',
         look: [-34, -47, -72], hold: 7, slow: .45 },
+      [-24, -43, -66],
       // The hammerheads' line runs east along the foot of the cliff, 11 m ahead of the swim and above it: they cross right to
       // left against the blue, clear of the kelp grove (its edge is 9 m further west).
       { at: [-30, -38, -60], key: 'hammerheads', title: 'Hammerheads', line: 'Crossing ahead in a loose file, heads sweeping. They keep their distance.',
         look: { visitor: 'hammerheads' }, hold: 8, slow: .2, reach: 8,
-        encounter: { id: 'hammerheads', cue: 24, course: { angle: Math.PI, side: 1, pass: 11, y: -34, ahead: 16 } } },
+        encounter: { id: 'hammerheads', cue: 24, course: { angle: Math.PI, side: 1, pass: 11, y: -34, ahead: 16 } }, reach: 7 },
       [-36, -33, -58],
       { at: [-40, -29, -56], key: 'kelp', title: 'The kelp grove', line: 'Seahorses hold on to the whips inside; young barracuda wheel off its edge.',
         look: [-50, -33, -52], hold: 6 },
-      // Up the slope in one slow left-hand curve that ends on the line's approach, heading north along it.
-      [-40, -24, -50],
-      { at: [-39, -21, -46], key: 'blacktips', title: 'Blacktip reef sharks', line: 'Three of them, low over the sand. They want nothing from a diver.',
+      // Up the slope in one slow left-hand curve that ends on the line's approach, heading north along it. The fly-bys
+      // stand 14 m apart, so each has its hold before the next comes into reach.
+      [-37, -25, -50],
+      { at: [-36, -21, -45], key: 'blacktips', title: 'Blacktip reef sharks', line: 'Three of them, low over the sand. They want nothing from a diver.',
         look: { visitor: 'blacktips' }, hold: 8, slow: .25, reach: 8,
-        encounter: { id: 'blacktips', cue: 22, course: { angle: 0, side: 1, pass: 14, y: -30, ahead: 16 } } },
-      { at: [-40, -17, -44.5], key: 'humphead', title: 'A humphead wrasse', line: 'As big as a diver and in no hurry. It cruises the same loop every day.',
-        look: { resident: 'humphead', near: [-28, -30, -36] }, hold: 6,
-        encounter: { id: 'dolphins', cue: 12, course: { angle: 0, side: -1, pass: 22, y: -4, ahead: 40 } } },
+        // Their line crosses 16 m ahead of the fly-by, square to the swim (angle .61 is the swim's own bearing here plus
+        // 90°), from the kelp's edge on the left to the open sand on the right, 4 m over the slope.
+        encounter: { id: 'blacktips', cue: 18, course: { angle: .61, side: -1, pass: 16, y: -26, ahead: 12 } } },
+      [-39.5, -16, -44.5],
       { at: [-42.5, -11, -44], key: 'line', title: 'The descent line', line: 'Algae near the light, sponges lower down, and a school of fusiliers that has made it home.',
-        look: [-56.1, -7.5, -44], hold: 6, reach: 8 },
+        look: [-56.1, -7.5, -44], hold: 6, reach: 8,
+        encounter: { id: 'dolphins', cue: 14, course: { angle: 0, side: -1, pass: 20, y: -4, ahead: 36 } } },
     ] },
   // The ending, under the buoy, with the line running down into the kelp and the whole reef off to the east.
   { key: 'buoy', kind: 'end', at: [-52.5, -6.8, -40.5], teach: 'view', place: `Under the buoy · ${depth(-6.8)}`, signal: '#ff9d8a',

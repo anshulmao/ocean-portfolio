@@ -325,6 +325,7 @@ for (const hz of [30, 60, 120]) {
     assert.ok(leg.length > hz, 'the swim lasts across many frames');
     // Every fly-by on the leg shows once, for its hold, and turns the view to its subject while the swim carries on.
     assert.deepEqual([...shown.keys()], flyBys(step).map(item => item.key), `${step.key}: every fly-by, in order`);
+    if (hz === 60) console.log(`  ${step.key}: ${[...shown].map(([key, record]) => `${key} ${(record.frames / hz).toFixed(1)}s`).join(', ')}`);
     for (const sight of flyBys(step)) {
       const record = shown.get(sight.key), hold = (sight.hold ?? 5) + (sight.wait ? 7 : 0);
       // Its hold, or cut short once the next is in reach: never under BRIEF (2.5 s).

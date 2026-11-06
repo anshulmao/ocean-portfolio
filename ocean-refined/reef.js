@@ -745,9 +745,10 @@ export function* reefSteps({ economy = false } = {}) {
       if (Math.hypot(gx - archX, gz - archRouteZ) < 7.8) continue;
       if (Math.hypot(gx, gz) < 5 || routeDistance(gx, gz) < 2.8) continue;
       if (LANDMARKS.some(({ position: [lx, , lz] }) => Math.hypot(gx - lx, gz - lz) < 6)) continue;
-      // The coral nursery's sand (its trees and table stand from 1 m west to 7 m east of NURSERY_SITE) is left bare. The
-      // random draws still run, so the meadow everywhere else stays exactly where it was.
-      const bare = Math.hypot(gx - NURSERY_SITE.x - 3, gz - NURSERY_SITE.z) < 6.2;
+      // The coral nursery's sand (its trees and table stand from 1 m west to 7 m east of NURSERY_SITE) is left bare, and
+      // so is the nautilus's ledge (NAUTILUS_SITE keeps its own dressing, set-pieces.js). The random draws still run, so
+      // the meadow everywhere else stays exactly where it was.
+      const bare = Math.hypot(gx - NURSERY_SITE.x - 3, gz - NURSERY_SITE.z) < 6.2 || Math.hypot(gx - NAUTILUS_SITE.x, gz - NAUTILUS_SITE.z) < 5;
       const lay = bare ? () => {} : (layer, ...args) => layer.add(...args);
       // Long, organic meadow bands connect shallow shelves and outer ledges.
       const meadow = Math.sin(gx * .10 + gz * .065) + Math.cos(gz * .11 - gx * .045);
