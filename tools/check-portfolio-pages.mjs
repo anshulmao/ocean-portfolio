@@ -15,7 +15,7 @@ export async function checkPortfolioPages({out,content,siteURL}){
     assert.ok(html.includes(`<link rel="canonical" href="${siteURL}${route}">`),'Missing or wrong canonical: '+file);
     assert.ok(sitemap.includes(`<loc>${siteURL}${route}</loc>`),'Page missing from sitemap: '+file);
     assert.equal([...html.matchAll(/<h1(?:\s|>)/g)].length,1,'Expected one page heading: '+file);
-    assert.ok(/<html lang="en">/.test(html)&&/<main id="main">/.test(html),'Missing document landmarks: '+file);
+    assert.ok(/<html lang="en"[\s>]/.test(html)&&/<main id="main">/.test(html),'Missing document landmarks: '+file);
     for(const script of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)){
       if (script[1].includes('type="module"') && /src="(?:\.\/|\.\.\/\.\.\/)analytics\.js"/.test(script[1])) continue;
       assert.ok(script[1].includes('type="application/ld+json"'),'Unexpected reading-page script: '+file);
