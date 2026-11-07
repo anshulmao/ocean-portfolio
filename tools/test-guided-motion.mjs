@@ -276,6 +276,8 @@ for (const hz of [30, 60, 120]) {
   assert.ok(swing > .8, `the welcome looks around the reef (${swing.toFixed(2)} rad)`);
   window.oceanTour.next();
   let totalDistance = 0, maxStep = 0, moving = 0, worstBack = 0; const heldBack = { captioned: false, leaked: false, during: false };
+  // Round the wreck, with no caption up, her card and the sheet offer Read it on the way in (guided-dive.js nearing).
+  const nearRead = new Set();
   const aimAt = point => { const at = env.state.playerPosition, s = env.nav.state, aim = [-Math.sin(s.yaw) * Math.cos(s.pitch), Math.sin(s.pitch), -Math.cos(s.yaw) * Math.cos(s.pitch)];
     const to = point.map((v, k) => v - at[k]); return Math.acos(Math.max(-1, Math.min(1, aim.reduce((sum, v, k) => sum + v * to[k], 0) / Math.hypot(...to)))); };
   for (let i = 1; i < STEPS.length; i++) {
@@ -284,6 +286,7 @@ for (const hz of [30, 60, 120]) {
     let calm = 0;
     for (let frame = 0; frame < hz * 160 && tourStatus() === 'travel'; frame++) {
       env.tick();
+      if (window.oceanTour.nearSite) nearRead.add(`${window.oceanTour.nearSite}:${env.state.tour.sight ?? ''}`);
       // Between fly-bys, once the view has had time to come round (a calm turn's 3.5 s, and a little), it never looks back
       // over the diver's shoulder: no further round than abeam of the way the swim is going (a subject still close by is
       // held until the swim leaves it abeam, guided-dive.js NEAR_HOLD, and let go before a turn away from it).
@@ -368,6 +371,7 @@ for (const hz of [30, 60, 120]) {
   // line across the reef the seabed is deep, and it swims clear of it (user-creature-routes.js: 3.5 m, its clearance).
   const called = env.calls.filter(call => call[0] === 'encounter');
   assert.deepEqual(called.map(call => call[1]), ['whale-shark'], 'one guaranteed whale shark, even when it was not ready at first');
+  assert.ok(nearRead.has('projects:wreck-circle'), `the wreck may be read while the swim goes round her (${[...nearRead].join(' ')})`);
   assert.ok(heldBack.captioned && !heldBack.leaked && !heldBack.during, `the marker leaves the whale shark to the caption (${JSON.stringify(heldBack)})`);
   // A little above, not overhead: from the drift at the lip of the nautilus's ledge its line rises no steeper than 35°, and
   // it lies out to sea (lower z), over the deep water beyond the drop-off, not in against the slope.

@@ -267,7 +267,8 @@ function paint() {
   // Folded, the row offers one action: the one the moment calls for.
   const primary = status === 'dwell' ? (step.landmark ? 'read' : 'next') : status === 'free' ? 'rejoin' : status === 'done' ? 'surface' : 'next';
   const show = { pause: status === 'travel', read: readable(), next: touring(), rejoin: status === 'free', surface: status === 'done', explore: status === 'done', exit: touring() || status === 'free' };
-  for (const button of card.querySelectorAll('footer [data-tour]')) { const action = button.dataset.tour; button.hidden = wide ? !show[action] : action !== primary; }
+  const near = status === 'travel' && show.read;
+  for (const button of card.querySelectorAll('footer [data-tour]')) { const action = button.dataset.tour; button.hidden = wide ? !show[action] : !(action === primary || near && action === 'read'); }
   part('[data-tour="pause"]').firstChild.textContent = paused ? 'Resume ' : 'Pause ';
   part('[data-tour="pause"]').setAttribute('aria-pressed', String(paused));
   part('[data-tour="next"]').firstChild.textContent = status === 'travel' ? (wide ? 'Skip travel ' : 'Skip ') : status === 'intro' ? (primerLeft().length ? 'Skip controls ' : 'Start ') : 'Continue ';
@@ -729,6 +730,7 @@ function update(dt, api, state, diving) {
   if (status === 'dwell') { const onSite = window.oceanSiteCard?.shown === STEPS[index].landmark; if (onSite !== cardUp) { cardUp = onSite; paint(); } }
   if (reveal > 0) { reveal -= dt; if (reveal <= 0) paint(); }
   if (cheerFor > 0) { cheerFor -= dt; if (cheerFor <= 0) { cheer = null; paint(); } }
+  if (status === 'travel') { const near = nearing(); if (near !== nearShown) { nearShown = near; paint(); } }
   if (status !== 'travel') { pan(dt); return; }
   // Pause the route itself, rather than only its caption.
   if (paused) return;
@@ -765,12 +767,22 @@ card.addEventListener('click', event => {
   if (action && !['read', 'toggle', 'more'].includes(action)) document.querySelector('#world')?.focus({ preventScroll: true });
 });
 // The card on a site coming up or going changes what the sheet needs to carry at a stop (cardUp: as last painted).
-let cardUp = false;
+let cardUp = false, nearShown = null;
 addEventListener('oceansitecard', () => { if (status === 'dwell') paint(); });
 // A phone turned on its side, or a window narrowed past the phone width, changes the copy the sheet carries.
 compact.addEventListener?.('change', () => { if (status !== 'off') paint(); });
 // Something to read here: a site's landmark at its stop, or the ending's own (the résumé on the descent line).
-function readable() { const step = STEPS[index]; return (status === 'dwell' && Boolean(step.landmark)) || (status === 'done' && Boolean(step.site)); }
+function readable() { const step = STEPS[index]; return (status === 'dwell' && Boolean(step.landmark)) || (status === 'done' && Boolean(step.site)) || Boolean(nearing()); }
+// On the way in to a site, once within NEAR_READ m of it and with no caption up, it may be read already (the owner's notes,
+// round 14: round the wreck, Read it at any time): the site's card comes up and the sheet offers Read it. Reading holds the
+// swim where it is; closing the page lets it go on.
+const NEAR_READ = 24;
+function nearing() {
+  const step = STEPS[index];
+  if (status !== 'travel' || !step.landmark || paused || routeIssue || sight?.title) return null;
+  const at = window.oceanDiagnostics?.playerPosition; if (!at) return null;
+  return Math.hypot(at[0] - look[0], at[1] - look[1], at[2] - look[2]) < NEAR_READ ? step.landmark : null;
+}
 // On a phone the sheet stands in for the scene's own prompt, so it offers the same action.
 function read() {
   const prompt = document.querySelector('#interact-prompt'), step = STEPS[index], site = step.landmark ?? step.site;
@@ -821,7 +833,9 @@ addEventListener('keydown', event => {
 // An animal a fly-by ahead is about to show (the whale shark, called in early so it is there): big-life.js leaves it to the
 // tour, so the look-there marker does not point it out before the caption says to look.
 const reserved = id => status === 'travel' && sights.some(item => item.look?.visitor === id) && sight?.look?.visitor !== id;
-window.oceanTour = { start: startTour, stop, rejoin, next, plan: tourPlan, reserved, get status() { return status; }, STEPS, STOPS, get tried() { return [...used]; },
+window.oceanTour = { start: startTour, stop, rejoin, next, surface: () => { if (status === 'done') surface(); }, plan: tourPlan, reserved, get status() { return status; }, STEPS, STOPS, get tried() { return [...used]; },
   // The archive asks: At a glance carries the welcome only on the tour (SPEC D6), and a site opens the page its step names.
   get welcome() { return status === 'off' ? null : WELCOME; },
-  opens(id) { const step = STEPS[index]; return status !== 'off' && step.landmark === id ? step.opens ?? null : null; } };
+  opens(id) { const step = STEPS[index]; return status !== 'off' && step.landmark === id ? step.opens ?? null : null; },
+  // The site that may be read on the way in to it (nearing), for its card (site-cards.js).
+  get nearSite() { return nearing(); } };

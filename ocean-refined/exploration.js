@@ -252,7 +252,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     }else{glanceFrom.set(at[0],at[1],at[2]);glanceTo.copy(glanceFrom);glancePoint.copy(glanceFrom);glanceT=1;}
     glanceOn=true;wake();
   }
-  function pacing(scale=1){paceGoal=clamp(Number(scale)||1,.05,1);wake();}
+  function pacing(scale=1){paceGoal=clamp(Number(scale)||1,.05,1.4);wake();}
   function guideScooter(on){guideScoot=state.guideScooter=Boolean(on);wake();}
   function endFlyBy(){glanceOn=guideScoot=state.guideScooter=false;paceGoal=1;}
   function tether(top){tetherTop=Number.isFinite(top)?top:Infinity;wake();}

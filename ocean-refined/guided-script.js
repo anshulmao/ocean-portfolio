@@ -26,7 +26,7 @@ import { toDisplayDepth } from './depth-metrics.js';
 //                       then on: the next fly-by is the swim through it.
 //                       Without one the view stays on the course.
 //              hold     seconds the fly-by lasts (default FLYBY), cut short (after BRIEF at least) by the next one
-//                       coming into reach; slow: the pace through it, a fraction of the cruise.
+//                       coming into reach; slow: the pace through it, a fraction of the cruise (up to 1.4).
 //              reach    how near (m) the diver comes before it begins (default REACH).
 //              scooter  the guide runs the scooter through it, for the visitor to see. The boost (2.2×) is on top of
 //                       slow, so .7 makes about 5.5 m/s.
@@ -124,7 +124,7 @@ export const STEPS = [
   // crosses up and to the right, out over the deep water beyond the drop-off, from the west. Then up the slope to the
   // wreck and once round it before the stop: past its bow, along its deck side (out beyond the descent line) and round its
   // stern, and in to its west side, 10 m off, to see it whole. The barracuda patrols off the bow, well clear of the swim.
-  { key: 'projects', kind: 'stop', landmark: 'projects', view: [8, -20, -37.5], approach: 4.5, place: `Projects · The Wreck · ${depth(-21)}`, signal: '#c9a2ff',
+  { key: 'projects', kind: 'stop', landmark: 'projects', view: [8, -20, -37.5], approach: 9, place: `Projects · The Wreck · ${depth(-21)}`, signal: '#c9a2ff',
     title: 'Here’s the wreck', line: 'A trawler, and the fish that live in it now. This is where you’ll find my projects.',
     via: [
       { at: [-9, -43, -86.5], key: 'whale-shark', title: 'Look out to sea', line: 'A whale shark, crossing the deep water above the drop-off.',
@@ -133,8 +133,10 @@ export const STEPS = [
       [-6, -42.5, -91], [4, -41, -89], [10, -39, -78], [14, -31, -66],
       // Once round her, without a word: in at the bow, down the starboard side, round the stern and up the port side to
       // the stop, the view held on her all the way (stay) while the swim goes round.
-      { at: [20, -22, -60], key: 'wreck-circle', look: [19, -22.5, -39.5], stay: true, hold: 80, slow: .75, reach: 8 },
-      [29, -20, -56], [35, -18.5, -47], [36.5, -17.5, -36], [33.5, -17.5, -25], [24, -18, -18.5], [12, -19, -22], [5.5, -19.5, -28],
+      // A quarter faster than the cruise (slow over 1), a little closer in than it was: about 17 s round, and her card is up all the way
+      // round (guided-dive.js nearing), so she may be read at any point of it.
+      { at: [20, -22, -60], key: 'wreck-circle', look: [19, -22.5, -39.5], stay: true, hold: 80, slow: 1.25, reach: 8 },
+      [28, -20.5, -56.5], [34.5, -19, -48], [35.5, -18.5, -37], [32.5, -18.5, -26], [23, -19, -21], [12, -19.5, -24], [3, -19.5, -31],
     ] },
   // From the wreck's west side across the top of it, over its rigging, to the descent line just beyond it (return-route.js
   // DESCENT_LINE), and up the line to the résumé's slate at the safety stop. Surface from here: the ascent holds the safety

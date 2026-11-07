@@ -119,14 +119,12 @@ export const SCHOOLS = {
     { species: 'chromis', at: [-3.4, .8, -10.2], count: [8, 5], size: [1.2, .5, 1.2] },
     { species: 'yellow-tang', at: [4, 1.6, 10.8], count: [4, 3], size: [1.2, .6, .9] }
   ] },
-  // By the nautilus on its ledge, the reef's anthias (they used to be fish made for it) and a few chromis, on the open
-  // sand off the shell's east face, the side the diver comes in on. Not over the shell: a cloud that took in the shell
-  // (its keep-out reaches 2.5 m over the ledge) had fish lifting over it and sinking off it as they went round, and the
-  // stones of its alcove ring the other three sides. The shell's keep-out ends 1.7 m east of the spot; the clouds start
-  // past that, and each fish's 0.8 m loop with them.
+  // Near the nautilus but off its stage: the reef's anthias (they used to be fish made for it) and a few chromis, at the
+  // north and south ends of its ledge, about 10 m from the shell, outside the ring of its alcove stones (7.7 m at most)
+  // and the shark's beat. Over the shell, or among its stones, they rose over each solid and sank off it as they went.
   nautilus: { landmark: 'experience', clouds: [
-    { species: 'anthias', at: [3.6, 1.7, .4], count: [14, 8], size: [.7, .6, 2.2] },
-    { species: 'chromis', at: [4.4, .8, -2.6], count: [6, 4], size: [.6, .4, .8] }
+    { species: 'anthias', at: [1.5, 1.8, 10.5], count: [14, 8], size: [2.2, .7, 1] },
+    { species: 'chromis', at: [2.5, 1.1, -9.8], count: [6, 4], size: [1.4, .5, 1] }
   ] },
   // The descent line's own: fusiliers wheeling round it at the safety stop (return-route.js DESCENT_LINE).
   line: { species: 'fusilier', radius: 3, y: -7, speed: .9, count: [14, 8], stack: 2.5 },

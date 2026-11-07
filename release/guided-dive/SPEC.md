@@ -540,3 +540,11 @@ stops.
   - **The nautilus's fish** keep to the open sand off the shell's east face, clear of the shell and of the stones of its
     alcove, which they used to rise over and sink off as they went round; the whitetip circles the ledge at one depth
     above the stones instead of a set height over the bottom.
+- **Round 14 (the owner's notes on round 13):**
+  - **Surface at the ending:** the résumé's card carries Surface beside Read it. On a phone the docked card hides the
+    tour's sheet, so once the résumé was closed there was no way up from the card.
+  - **The wreck** is circled a quarter faster than the cruise and a little closer in (about 17 s round), and her card is
+    up all the way round: on the way in to any site, within 24 m of it and with no caption up, the site may be read
+    (`nearing`); reading holds the swim, and closing the page lets it go on. A fly-by's `slow` may now be up to 1.4.
+  - **The nautilus's fish** are off its stage: anthias at the north end of its ledge and chromis at the south, about
+    10 m from the shell, outside its alcove and the shark's beat.

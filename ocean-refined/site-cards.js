@@ -58,6 +58,7 @@ const positionOf = (controls, id) => {
 // The site the guided dive is waiting at (a stop, or the ending's slate), if any.
 function tourSite() {
   const tour = window.oceanTour, status = tour?.status;
+  if (status === 'travel') return tour.nearSite ?? null;
   if (status !== 'dwell' && status !== 'done') return null;
   const step = tour.STEPS?.[window.oceanDiagnostics?.tour?.stop ?? -1];
   return step?.landmark ?? step?.site ?? null;
@@ -108,7 +109,8 @@ onFrame((dt, controls, state, diving) => {
     if (off < spot.radius && spot.distance < pointedAt) { pointed = id; pointedAt = spot.distance; }
   }
   // While the tour leads (its welcome, and the swims between sites) its own captions speak: no cards then.
-  const leading = ['starting', 'intro', 'travel'].includes(window.oceanTour?.status);
+  // On the way in to a site, near it with no caption up, its card comes up for it (guided-dive.js nearing).
+  const leading = ['starting', 'intro', 'travel'].includes(window.oceanTour?.status) && !(waiting && window.oceanTour?.status === 'travel');
   const hot = leading ? null : waiting && placed[waiting] ? waiting : near && placed[near] ? near : pointed;
   if (closed && closed !== hot) closed = null;
   if (hot && hot !== closed) { if (hot !== shown) { shown = hot; fill(hot, controls); } hotAt = clock; why = hot === waiting ? 'tour' : hot === near ? 'near' : 'hover'; }
@@ -150,8 +152,11 @@ onFrame((dt, controls, state, diving) => {
   const key = `${shown}|${why}|${live}|${waiting === shown}|${window.oceanTour?.status}|${touch()}`;
   if (key !== drawn) {
     drawn = key; card.dataset.hot = String(live); card.dataset.why = why;
-    // Continue only at a stop the tour waits at; at its ending the tour's sheet offers Surface and Keep exploring.
-    part('[data-site="next"]').hidden = waiting !== shown || window.oceanTour?.status !== 'dwell';
+    // Continue at a stop the tour waits at; at its ending, Surface (the owner's notes, round 14: on a phone the docked card
+    // stands in for the tour's sheet, so with only Read it on it there was no way up once the résumé was closed).
+    const status = window.oceanTour?.status, next = part('[data-site="next"]');
+    next.hidden = waiting !== shown || (status !== 'dwell' && status !== 'done');
+    next.dataset.act = status === 'done' ? 'surface' : 'next'; next.firstChild.textContent = status === 'done' ? 'Surface ' : 'Continue ';
     for (const kbd of card.querySelectorAll('kbd')) kbd.hidden = touch();
   }
   if (card.dataset.show !== 'true') { card.dataset.show = 'true'; card.inert = false; }
@@ -175,7 +180,7 @@ card.addEventListener('click', event => {
   if (!action) return;
   if (action.classList.contains('site-card-close')) { closed = shown; hide(); }
   else if (action.dataset.site === 'read') read();
-  else if (action.dataset.site === 'next') window.oceanTour?.next?.();
+  else if (action.dataset.site === 'next') { if (action.dataset.act === 'surface') window.oceanTour?.surface?.(); else window.oceanTour?.next?.(); }
   document.querySelector('#world')?.focus({ preventScroll: true });
 });
 // F reads the site the card is on when it is up only because it is pointed at: in reach the site's own prompt
