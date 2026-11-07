@@ -10,7 +10,7 @@ import { SPECIES_OF_MODEL } from './field-guide.js';
 export { SITES };
 // Reef features as the site map charts them, until the scene's own list is available; the arch is not a formation.
 const CHARTED = [['Table coral tower', 38, -8, 6], ['Brain coral dome', -42, -2, 8], ['Pillar coral cathedral', 48, -28, 8], ['Kelp grove', -50, -52, 8.5], ['Giant clam', -9, -54, 3.5], ['Soft coral spire', 50, -72, 6], ['Lantern garden', 8, -86, 6.5]];
-const ARCH = ['The arch', 20, -72, 6];
+const ARCH = ['The arch', 20, -83, 6];
 // SAMPLE: seconds between points of the profile and the track. LOOK: seconds between looks for animals. SEEN_AFTER:
 // seconds an animal must be in view, and near enough to make out (REACH), before it counts as seen.
 const SAMPLE = 2, LOOK = .5, SEEN_AFTER = 1.5;

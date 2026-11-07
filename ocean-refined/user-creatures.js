@@ -343,8 +343,10 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     let pass = course?.pass ?? rr(...e.pass), y0 = course?.y ?? rr(...e.depth);
     if (!course && player && y0 - player.y > pass * RISE) { y0 = Math.max(player.y + pass * RISE, y0 - DEEPEN); pass = Math.max(pass, (y0 - player.y) / RISE); }
     const cx = across ? px : px + nx * pass, cz = across ? Math.min(pz - pass, e.across) : pz + nz * pass;
-    // The gentle bow in the line; one swimming across the reef bows out to sea, never in over the shallows.
-    const bow = rr(-1, 1) * e.bulge * R;
+    // The gentle bow in the line; one swimming across the reef bows out to sea, never in over the shallows. The guided dive's
+    // own course is straight (or bows as it says): up to a fifth of the pass out either way at random, and the whale shark it
+    // frames could come by 26 m nearer or further than planned.
+    const bow = course ? course.bow ?? 0 : rr(-1, 1) * e.bulge * R;
     e.path = { sx: cx - dx * R, sz: cz - dz * R, ex: cx + dx * R, ez: cz + dz * R, nx, nz, len: 2 * R, bulge: across ? -Math.sign(nz) * Math.abs(bow) : bow };
     e.u = course?.ahead === undefined ? 0 : clamp(.5 - course.ahead / e.path.len, 0, .5); e.y0 = y0; e.next = clock + rr(4, 8);
     for (const c of e.cast) { c.actor.active = true; c.actor.started = false; play(c.actor, 'swim', 0); }
@@ -481,6 +483,8 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
         a.pos.set(pose.x, pose.y, pose.z); a.pitch = 0;
         a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(0, a.yaw, 0, 'YXZ');
       }
+      // The guided dive frames the giant moray where its den mouth actually is (denMouth may turn from the authored heading).
+      if (d.species === 'giant-moray') resting.moray = [f.x + dx * edge, a.pos.y, f.z + dz * edge];
       dens.push({ actor: a, rest: 0, motion, pose });
     }
     // Turtles, each cruising its own loop; one asleep on the sand.
@@ -769,6 +773,12 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     for (const [x, z] of sg.at.slice(0, economy ? 2 : sg.at.length)) cloud(sg.species, x, Math.max(sg.y, cover(x, z) + 4), z, pair(sg.count), sg.size);
     const wr = SCHOOLS.wrasse, station = lifeSite(wr.site);
     if (station) cloud(wr.species, station.x, cover(station.x, station.z) + wr.lift, station.z, pair(wr.count), wr.size);
+    // The wreck's fish, placed from its charted spot (the wreck itself may still be loading).
+    const wk = SCHOOLS.wreck, hull = landmark(wk.landmark) || { x: 18, z: -39 };
+    if (hull) {
+      const base = bed(hull.x, hull.z);
+      for (const c of wk.clouds) cloud(c.species, hull.x + c.at[0], base + c.at[1], hull.z + c.at[2], pair(c.count), c.size);
+    }
     // Pairs and small parties working the reef close to the bottom.
     // At a formation, on its reef side (toward the middle of the site): on the +x side, the loops round the eastern
     // formations ran out to the edge of the world and round the back of them.

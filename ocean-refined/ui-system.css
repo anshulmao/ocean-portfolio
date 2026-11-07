@@ -243,7 +243,52 @@ html body.reading-page{background:var(--surface);--deep:var(--ui-deep-raised);--
 
 /* Pills are for actions: the buttons that say what they do. Everything else that happens to be a button (animal portraits,
    tiles, a card's header row, pickers, map and touch controls) keeps the small shared corner, like the panels it sits in. */
-html body :is(.dive-button,.guided-button,.ds-open,.holo-chip,.ds-close,.ds-share-open,.ds-share-cancel,.ds-download,.expedition-primary,.plan-start,.plan-tour,.diver-profile-resume,.diver-profile-more,.dialog-return,.archive-toggle,.dive-computer-toggle,.interact-prompt,.movement-reset,.movement-export,.explore-back,.settings-quick>button,.tour-card button[data-tour]:not(.tour-head):not(.tour-more)){border-radius:100px!important}
+html body :is(.dive-button,.guided-button,.ds-open,.holo-chip,.ds-close,.ds-share-open,.ds-share-cancel,.ds-download,.expedition-primary,.plan-start,.plan-tour,.diver-profile-resume,.diver-profile-more,.dialog-return,.archive-toggle,.dive-computer-toggle,.interact-prompt,.movement-reset,.movement-export,.explore-back,.settings-quick>button){border-radius:100px!important}
 
 /* The dive log button is light in every theme, so its New tag keeps dark ink (the page's ink turns white at night). */
 html body .portfolio-actions .ds-open small,html body .portfolio-actions .ds-open[data-seen] small{color:var(--ui-ink)}
+
+/* The guided dive's card (the owner's notes, Nov 2026): glass over the water rather than a solid slab, so the reef shows
+   through it, with square-cornered keys rather than pills. A dark tint under a blur keeps the words legible over the
+   bright shallows. On a phone it is lower and tighter, so it covers less of the view above the touch deck. */
+html body section.tour-card{
+  --tour-glass:#061c25;--tour-line:#d6f2f02b;--tour-key:#ffffff12;--tour-key-hover:#ffffff24;
+  background:color-mix(in srgb,var(--tour-glass) 50%,transparent);
+  -webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3); /* taste-skill-ignore: the card is glass over the moving water */
+  border:1px solid var(--tour-line);border-radius:12px;box-shadow:0 12px 32px -12px #00121a66;
+}
+html body section.tour-card[data-sheet="expanded"]{background:color-mix(in srgb,var(--tour-glass) 58%,transparent)}
+html body .tour-card .tour-head{min-height:40px;border:0;border-radius:0;background:none;font-size:13px}
+html body .tour-card .tour-head:hover{background:none}
+html body .tour-card .tour-title{margin:2px 0 6px;font-size:19px;font-weight:500;line-height:1.2}
+html body .tour-card .tour-lines{color:#e9f5f4}
+html body .tour-card .tour-progress{left:14px;right:14px;background:var(--tour-line)}
+html body .tour-card footer{gap:6px}
+html body .tour-card footer button{min-height:36px;padding:0 12px;border:1px solid var(--tour-line);border-radius:5px;background:var(--tour-key);font-size:13.5px;font-weight:500}
+html body .tour-card footer button:hover{border-color:#d6f2f066;background:var(--tour-key-hover)}
+/* The action the moment calls for carries the stop's colour; Exit is only a word. */
+html body .tour-card footer :is([data-tour="read"],[data-tour="next"],[data-tour="rejoin"],[data-tour="surface"]){border-color:color-mix(in srgb,var(--signal,#9adbd5) 65%,transparent);background:color-mix(in srgb,var(--signal,#9adbd5) 15%,transparent)}
+html body .tour-card footer [data-tour="exit"]{border-color:transparent;background:none;opacity:.78}
+html body .tour-card footer [data-tour="exit"]:hover{opacity:1;background:var(--tour-key)}
+html body .tour-card footer kbd{border-color:var(--tour-line);border-radius:3px;font-size:10px}
+html body .tour-card .tour-keys li{border-radius:5px}
+html body .tour-card .tour-more{min-height:0;border:0;border-radius:0;background:none}
+@media (max-width:599px),(pointer:coarse) and (max-height:499px){
+  html body section.tour-card{border-radius:10px;background:color-mix(in srgb,var(--tour-glass) 44%,transparent)}
+  html body section.tour-card[data-sheet="collapsed"]{padding:0 4px 0 14px}
+  html body section.tour-card[data-sheet="expanded"]{padding:0 10px 8px 14px;background:color-mix(in srgb,var(--tour-glass) 54%,transparent)}
+  html body .tour-card .tour-title{margin:0 0 4px;font-size:15.5px;line-height:19px}
+  html body .tour-card .tour-lines{font-size:13px;line-height:18px;-webkit-line-clamp:2;line-clamp:2}
+  html body .tour-card footer button,html body .tour-card[data-sheet="collapsed"] footer button{min-height:40px;padding:0 12px;font-size:13.5px}
+  html body .tour-card[data-sheet="expanded"] footer{margin-top:8px}
+  /* More sits under the words rather than over the end of the last line: on glass a fade cannot hide what is behind it. */
+  html body .tour-card .tour-more:not([hidden]){position:static;align-items:center;justify-content:flex-end;width:100%;min-height:40px;margin:-8px 0 -8px;padding:0}
+  html body .tour-card .tour-more span{padding:0;background:none}
+  /* In the welcome the caption is folded away for the controls: More sits at the end of the chips' row, costing no height. */
+  html body .tour-card[data-state="intro"]:not([data-more="true"]) .tour-more:not([hidden]){position:absolute;top:-2px;right:0;width:auto;margin:0}
+}
+@media (max-width:599px){
+  /* Folded, the row is one finger tall and its one action fits inside it. */
+  html body .tour-card[data-sheet="collapsed"] .tour-head{min-height:44px}
+  html body .tour-card[data-sheet="collapsed"] footer button{min-height:40px}
+}

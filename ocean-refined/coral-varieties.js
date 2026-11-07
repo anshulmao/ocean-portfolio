@@ -562,8 +562,8 @@ export function buildCoralSpecimen(id, { seed = 1, economy = false } = {}) {
 
 // --- Placement ------------------------------------------------------------------------------------------
 // Ground the scene has already spoken for (the same list living-world.js keeps): the start, the three
-// landmarks and the arch (11 to 12 m each), the grottos (10 m); the lanes between the landmarks and along the guided tour; the gully
-// under the arch; the flat of each landmark pad; and the seven hero formations with their outliers.
+// landmarks and the gully above the arch (11 to 12 m each), the grottos (10 m); the lanes between the landmarks and along the guided
+// tour; the gully; the flat of each landmark pad; and the seven hero formations with their outliers.
 const KEEP = [[0, 0, 12], [-12, -15, 11], [18, -39, 11], [-18, -82, 11], [20, -72, 12], [-35, -30, 10], [36, -48, 10], [-33, -73, 10], [39, -91, 10], [7, 18, 10]];
 const ROUTE = [[0, 0], [-12, -15], [18, -39], [-18, -82]];
 const TOUR = [[0, -5], [-12, -15], [28.5, -11], [18, -21.8], [31, -30], [31, -48], [25, -58], [20, -62.6], [20, -87.5], [4, -80], [-18, -82]];
@@ -662,6 +662,9 @@ export function* coralVarietySteps({ terrainHeightAt = () => -20, collisions = n
 
   for (const planned of plan) {
     if (economy && planned.ordinal % 3 === 2) continue;
+    // The arch's passage and the sight line through it, west to the foot of the nautilus's ledge, stay clear (reef.js ARCH).
+    // Left out here, after the plan is made, so every other site keeps its place, its family and its seed.
+    if (planned.x > -6 - SITE_REACH && planned.x < 34 + SITE_REACH && planned.z > -88 - SITE_REACH && planned.z < -78 + SITE_REACH) continue;
     const local = mulberry(planned.seed), rr = (a, b) => a + local() * (b - a), b = band(planned.z);
     k.R = local; k.rr = rr; k.pick = list => list[Math.floor(local() * list.length)];
     k.still = cell(`still ${b} ${planned.x < 0 ? 0 : 1}`, `Coral varieties · ${BANDS[b]} ${planned.x < 0 ? 'west' : 'east'}`, false).buffer;

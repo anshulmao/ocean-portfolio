@@ -26,7 +26,7 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
 | R7 | Touch, phone and keyboard all get equal treatment, and every key hint has a tap equivalent. |
 | R8 | The visitor can always exit, surface or keep exploring. The safety stop is offered, never forced. |
 
-## The sequence (round 9)
+## The sequence (round 10)
 
 World coordinates are metres (x, y, z), with y negative below the surface. "Right" is +x, facing −z. The site starts at
 the surface out over the deep end, beyond the treasure, at (−18, −90), facing the reef (`exploration.js` SURFACE_START). The route itself
@@ -45,13 +45,13 @@ between them is a **fly-by**:
 - The swim carries on. A subject the swim has left well behind (BEHIND, about 103°) ends its fly-by early, after 2.5 s;
   one beside the diver never does. The guide never looks back over the diver's shoulder.
 - **The view turns one way at a time:** never out to a subject, back to the way ahead and out again. A test counts the
-  reversals on the swim to the anchor (round 8 had 8; now 3, all the course's own bends).
+  reversals on the swim to the helmet (round 8 had 8; now 3, all the course's own bends).
 - **The guide's own looks are calm ones:** a turn to a passing animal, or a look round, eases in and out over 3.5 s (a
   fly-by's takes 2), and none starts within 6 s of the view last turning (QUIET). A look round needs 12 calm seconds, so
   on this route it is rare: the scripted fly-bys and glimpses decide where the view goes.
 
 Every stop is approached on the line from its subject, so the diver arrives facing it. The camera starts turning to it
-16 m out. The visitor's own look always wins (R1, D5).
+16 m out (9 m at the helmet, so it stays on the nursery until the run in). The visitor's own look always wins (R1, D5).
 
 ### 0. Entry: "Show me around" (surface → underwater)
 
@@ -70,38 +70,39 @@ Every stop is approached on the line from its subject, so the diver arrives faci
 - Rising stops 3.5 m below the surface.
 - N starts the tour.
 
-### Act 1: across the reef to the anchor
+### Act 1: across the reef to the helmet
 
 2. **The scooter**, first, on the open-water approach while the reef is still a way off. The fly-by waits up to 7 s for
    the visitor to try E, then the guide runs it.
-3. Out to the right of the anchor, over the far (west) side of the reef: **a barracuda wheel** off to the left,
-   **a pink whipray**, and **the brain coral dome**, with a moray at its foot, each 15-18 m off. Then round the north of
-   the anchor to come in to it from in front.
-4. **About: the Anchor** (stop). The diver stands squarely in front of it, with the nurse shark (where it settled) lined
-   up behind.
+3. Out west, over the far side of the reef: **a barracuda wheel**, **a pink whipray**, and **the brain coral dome**,
+   passed on its east side, where its giant moray looks out of its den (the den faces east). The whipray and the moray
+   are under 30 m apart, so the view hands straight across from one to the other.
+4. **The coral nursery**, a short pause: the swim all but stops (8% of the cruise) for 7 s while the view rests on the
+   trees, the nurse shark asleep beside them.
+5. **About: the Helmet** (stop), seen face on: its faceplate looks east, so the stop stands 7 m east of it, and the swim
+   comes in on that line with nothing else turning the view.
 
-### Act 2: down to the treasure (deepest first, as on a real dive)
-
-4. Fly-bys:
-   - **The nurse shark**, an orbit: the diver strafes round the anchor while the camera stays on the shark.
-   - **The table coral tower.**
-   - Straight down from the tower, under the barracuda's beat.
-   - **The pillar coral cathedral**, seen from its open (west-south-west) front.
-   - Down the east side to the gully, clear of the barracuda's beat, with a glimpse out into the deep blue to the south.
-   - **Through the arch.** The fly-by waits up to 7 s for the visitor to try Q.
-   - **The lantern garden.**
-5. **Experience: the Treasure** (stop), seen from 9 m, the way the anchor is. The camera starts turning to it 30 m out.
-
-### Act 3: the way up
+### Act 2: down to the nautilus (deepest first, as on a real dive)
 
 6. Fly-bys:
-   - **Look out to sea:** the whale shark drift.
-   - **A bait ball, ahead.**
-   - **Through the bait ball.**
-   - Then round the west of the wreck.
-7. **Projects: the Wreck** (stop), seen whole from 16 m to its west.
-8. **The ending**, in open water just seaward of the wreck at about 8 m (shown depth), with the reef rising ahead. The
-   choice is **Keep exploring** or **Surface (N)**.
+   - **The table coral tower**, off to the right across the reef shelf.
+   - **The pillar coral cathedral**, seen from its open (west-south-west) front.
+   - **A bait ball, ahead**, over the soft coral spire, and **through the bait ball**.
+   - Down the deep slope to **the arch**, which now stands on the deep sand east of the lantern garden (`reef.js` ARCH,
+     at 20, −83) with its passage running east to west: from its east mouth the garden and the nautilus on its ledge are
+     framed in it. The fly-by looks through it at the nautilus and waits up to 7 s for the visitor to try Q.
+   - **The lantern garden**, just out of the arch's west mouth.
+7. **Experience: the Nautilus** (stop), up on its ledge, seen from 9.5 m to its east, the side its spiral and its
+   horseshoe of stone open to.
+
+### Act 3: the way up and back to the line
+
+8. Off the ledge and up the slope: **Look out ahead**, a whale shark crossing in front over the deep water, 13 m up the
+   slope and 4 m above. The swim all but stops for it (12% of the cruise, 11 s), and waits up to 8 s if it is late. The
+   look-there marker leaves it to the caption: it does not point it out before the caption says to look.
+9. **Projects: the Wreck** (stop), seen whole from 16 m to its west.
+10. **The ending**, back at the descent line (`reef.js` RESUME_SITE) beside the résumé's slate, below the safety stop.
+    The choice is **Read it (F)** for the résumé, **Keep exploring** or **Surface (N)**, straight up the line.
 
 ### 9. Surface (if chosen)
 
@@ -169,6 +170,8 @@ Every stop is approached on the line from its subject, so the diver arrives faci
   doesn't try them.
 - **Round 5:** about 410 m and roughly **145 s**. The way up ends above the wreck rather than in the shallows, and the
   way down is a little longer round the west of the wreck.
+- **Round 10:** about 445 m and roughly **180 s**, plus up to 7 s at each of the scooter and the arch, and up to 8 s
+  waiting for the whale shark.
 - Reading time is unbounded. The welcome, the three sites and the ending wait for the visitor.
 
 ## Acceptance checks
@@ -477,3 +480,17 @@ stops.
   - **Down to the arch:** one glimpse out into the deep blue instead of the gully floor all the way.
   - `glance()` takes an optional fade (`exploration.js`), so the guide's own looks are slower than a fly-by's.
   - `tour_version` is now 9.
+- **Round 10 (the owner's notes on the naturalist landmarks, Nov 2026):**
+  - **The new landmarks in the tour.** The brain coral is passed on the moray's side; the coral nursery is a short pause;
+    the helmet is seen face on (its stop used to line the nurse shark up behind it, which put the diver at its back once
+    the shark moved to the nursery).
+  - **The arch moved and turned.** It stands on the deep sand below the old gully, its passage east to west, so the
+    nautilus is framed in it. The gully stays, kept clear of reef as before.
+  - **The whale shark on the way up.** It crosses ahead, on a straight course (a guided course no longer takes the random
+    bow that could bring it 26 m nearer or further than planned), and the fly-by waits for it rather than being skipped
+    when it is late. The look-there arrow no longer shows before the caption.
+  - **The bait ball** is now on the way down, between the cathedral and the arch; the open-water glimpse is gone.
+  - **The ending** is at the descent line, where the résumé hangs; F reads it.
+  - **The card** is glass over the water with square-cornered keys, and lower on a phone.
+  - `tour_version` is now 10, and the ending's key is `descent-line`.
+

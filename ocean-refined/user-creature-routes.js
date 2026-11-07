@@ -101,6 +101,13 @@ export const SCHOOLS = {
   chromis: { species: 'chromis', lod: 2, kind: 'cloud', over: 'patches', zone: 'mid', count: [16, 9], max: 4 },
   sergeants: { species: 'sergeant-major', kind: 'cloud', at: [[2, -6], [-22, -8], [24, -14]], y: -6, count: [8, 5], size: [3, 1, 3] },
   wrasse: { species: 'cleaner-wrasse', kind: 'cloud', site: 'cleaning-station', count: [3, 3], size: [1.2, .7, 1.2], lift: 1.6 },
+  // The wreck's own: the reef's fish, not fish made for it. Clouds over its deck, by its wheelhouse and off its bow.
+  // at: [x, height over the seabed at the wreck's charted spot, z] from that spot (reef.js LANDMARKS projects); size as a cloud's.
+  wreck: { landmark: 'projects', clouds: [
+    { species: 'anthias', at: [0, 5.5, 0], count: [18, 10], size: [2.6, 1.3, 4.5] },
+    { species: 'sergeant-major', at: [2, 4, 4.5], count: [9, 6], size: [2.2, 1, 2.2] },
+    { species: 'chromis', at: [-1, 3.2, -5], count: [10, 6], size: [1.8, .9, 2.4] }
+  ] },
   butterflies: { species: 'butterflyfish', kind: 'pairs', near: 'patches', count: 2, groups: [5, 3], loop: 4.5, height: 1.4 },
   idols: { species: 'moorish-idol', kind: 'pairs', near: 'patches', count: 3, groups: [2, 1], loop: 5, height: 1.8 },
   tangs: { species: 'powder-blue-tang', kind: 'pairs', near: 'patches', count: 5, groups: [2, 1], loop: 6, height: 1.5 },

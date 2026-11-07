@@ -47,7 +47,7 @@ const SCENERY = {
 const CHARTED = [['Table coral tower', 38, -8, 6, 10.5], ['Brain coral dome', -42, -2, 8, 9.2], ['Pillar coral cathedral', 48, -28, 8, 10.5], ['Kelp grove', -50, -52, 8.5, 15], ['Giant clam', -9, -54, 3.5, 2.6], ['Soft coral spire', 50, -72, 6, 15], ['Lantern garden', 8, -86, 6.5, 5.5]];
 function scenery() {
   const live = controls()?.formations, sites = live?.length ? live.map(item => [item.name, item.position[0], item.position[2], item.radius, item.height]) : CHARTED;
-  return [...sites, ['The arch', 20, -72, 6, 8]].filter(([name]) => SCENERY[name]).map(([name, x, z, radius, height]) => ({ id: name, name, kind: 'scenic', signal: '#8ff4ff', section: 'Reef feature', position: [x, terrainHeightAt(x, z), z], radius, height, bullets: [SCENERY[name], 'Nothing to read here, just somewhere good to be'] }));
+  return [...sites, ['The arch', 20, -83, 6, 8]].filter(([name]) => SCENERY[name]).map(([name, x, z, radius, height]) => ({ id: name, name, kind: 'scenic', signal: '#8ff4ff', section: 'Reef feature', position: [x, terrainHeightAt(x, z), z], radius, height, bullets: [SCENERY[name], 'Nothing to read here, just somewhere good to be'] }));
 }
 let sites = [...PRIMARY, ...scenery()], selected = sites[0];
 

@@ -17,6 +17,9 @@ export const RESUME_SITE = { id: 'resume', title: 'Résumé', description: 'Desc
 // The coral nursery: a feature of the reef, not a portfolio site, on the level sand flat north of the About pad (the
 // widest clear sand at nursery depth on this reef). The nurse shark sleeps beside it (user-creature-routes.js).
 export const NURSERY_SITE = { x: -5, z: 4 };
+// The limestone arch: on the deep sand east of the lantern garden, its passage running east to west (x), so from its east
+// mouth the garden and the nautilus on its ledge (LANDMARKS experience) are seen through it.
+export const ARCH = { x: 20, z: -83 };
 
 // Horizontal coordinates are world coordinates; vertical limits are camera
 // offsets from the normal swimming depth, shared with the exploration module.
@@ -55,8 +58,8 @@ export function terrainHeightAt(x, z) {
     const blend = 1 - THREE.MathUtils.smoothstep(radius, pad.flat, 1);
     height = THREE.MathUtils.lerp(height, pad.floor, blend);
   }
-  // A gully swept through the stone arch at (20, -72): it lowers the uphill
-  // mouth by up to 3.2 m so the passage is open end to end over a level floor.
+  // A gully swept down the slope at (20, -72), where the stone arch stood until
+  // it moved down onto the deep sand (ARCH): it lowers the slope by up to 3.2 m.
   // Local by construction: exactly zero 11 m either side of x = 20 and outside
   // -75 < z < -55, so the pads, landmarks, grottos and formations are untouched.
   if (z > -75 && z < -55) {
@@ -118,11 +121,15 @@ const CELL = 31, LOD = .16, BRIEF = .33;
 // keeps only the top of a carpet lying on the sand. brief: the lighter geometry
 // is itself dropped past a third of the haze range (it is baked at the tail of
 // the cell's index, so dropping it is a shorter draw range, not another mesh).
+// While `quiet` is set, the layers take nothing: a colony in the arch's passage still makes every draw it always made (so
+// every other colony stands exactly where it did) but plants nothing there.
+let quiet = false;
 function batch(root, geometry, layer, reef, distant = null, sides = 1, brief = false) {
   const entries = [];
   const dummy = new THREE.Object3D();
   return {
     add(position, scale, rotation, color) {
+      if (quiet) return;
       dummy.position.copy(position);
       dummy.scale.set(...scale);
       if (rotation?.isQuaternion) dummy.quaternion.copy(rotation);
@@ -497,7 +504,12 @@ export function* reefSteps({ economy = false } = {}) {
     [-3, -78, 2.7], [23, -89, 2.5], [-34, -87, 2.8], [48, -16, 2.8],
     [-49, -15, 2.9], [48, -79, 3.3], [-48, -83, 3.2], [3, -103, 3.1]
   ];
-  const archX = 20, archZ = -72, archExitZ = -59;
+  // The gully cut down the slope at (20, -72) (terrainHeightAt) is kept clear of reef from its foot to its lip.
+  const gullyX = 20, gullyZ = -72, gullyExitZ = -59;
+  // The arch stands on the deep sand below the gully, its passage running east to west: from its east mouth the lantern
+  // garden and the nautilus on its ledge are framed in it (ARCH). Its passage, and the sight line through it to the foot of
+  // the nautilus's ledge, are kept clear of reef.
+  const { x: archX, z: archZ } = ARCH, archWest = -6, archEast = ARCH.x + 14;
   const grottoSites=[[-35,-30,4.5,3.5],[36,-48,5,5],[-33,-73,5.5,5.5],[39,-91,4.5,4],[7,18,4,3]];
   // Broad reef beds consist of overlapping small colonies. Keeping their
   // individual height restrained avoids turning the seabed into giant blobs.
@@ -583,15 +595,18 @@ export function* reefSteps({ economy = false } = {}) {
 
   for (const [index, [cx, cz, size]] of clusters.entries()) {
     yield;
+    quiet = false;
     if (Math.hypot(cx, cz) < 6 + size * 3.5 || routeDistance(cx, cz) < 3.2 + size * 3.5) continue;
     if (LANDMARKS.some(({ position: [x, , z] }) => Math.hypot(cx - x, cz - z) < 6 + size * 4.2)) continue;
     // Keep the entire arch corridor and ascent shaft free of rendered reef
     // and colony proxies. Measure to the horizontal route segment and include
     // the full opening width plus the colony's largest outcrop reach.
-    const routeZ = THREE.MathUtils.clamp(cz, Math.min(archZ, archExitZ), Math.max(archZ, archExitZ));
-    if (Math.hypot(cx - archX, cz - routeZ) < 6.5 + size * 3.5) continue;
+    const routeZ = THREE.MathUtils.clamp(cz, Math.min(gullyZ, gullyExitZ), Math.max(gullyZ, gullyExitZ));
+    if (Math.hypot(cx - gullyX, cz - routeZ) < 6.5 + size * 3.5) continue;
     if(grottoSites.some(([x,z,radius,length])=>Math.abs(cx-x)<radius+size*2&&Math.abs(cz-z)<length+3+size*2))continue;
-    colonyCount++;
+    // The arch's passage and the sight line through it to the nautilus's ledge stay clear, quietly (see `quiet`).
+    quiet = Math.hypot(cx - THREE.MathUtils.clamp(cx, archWest, archEast), cz - archZ) < 6.5 + size * 3.5;
+    if (!quiet) colonyCount++;
     const deep = terrainHeightAt(cx, cz) < -28;
     const floor = terrainHeightAt(cx, cz);
     // One hidden rounded-volume proxy per colony blocks its main body while
@@ -731,6 +746,7 @@ export function* reefSteps({ economy = false } = {}) {
   // Connected meadows and encrusting plate carpets fill the spaces between
   // colonies without creating additional solid obstacles. Separate seeding
   // keeps this coverage stable when a coral family's detail level changes.
+  quiet = false;
   const groundRandom = seededRandom(8293);
   const spacing = economy ? 4.8 : 3.5;
   for (let z = -101; z <= 29; z += spacing) {
@@ -738,13 +754,15 @@ export function* reefSteps({ economy = false } = {}) {
     for (let x = -57; x <= 57; x += spacing) {
       const gx = x + (groundRandom() - .5) * spacing * .75;
       const gz = z + (groundRandom() - .5) * spacing * .75;
-      const archRouteZ = THREE.MathUtils.clamp(gz, archZ - 8, archExitZ + 3);
-      if (Math.hypot(gx - archX, gz - archRouteZ) < 7.8) continue;
+      const gullyRouteZ = THREE.MathUtils.clamp(gz, gullyZ - 8, gullyExitZ + 3);
+      if (Math.hypot(gx - gullyX, gz - gullyRouteZ) < 7.8) continue;
       if (Math.hypot(gx, gz) < 5 || routeDistance(gx, gz) < 2.8) continue;
       if (LANDMARKS.some(({ position: [lx, , lz] }) => Math.hypot(gx - lx, gz - lz) < 6)) continue;
       // The coral nursery's sand (its trees and table stand from 1 m west to 7 m east of NURSERY_SITE) is left bare. The
       // random draws still run, so the meadow everywhere else stays exactly where it was.
-      const bare = Math.hypot(gx - NURSERY_SITE.x - 3, gz - NURSERY_SITE.z) < 6.2;
+      // So is the arch's passage and the sight line through it.
+      const bare = Math.hypot(gx - NURSERY_SITE.x - 3, gz - NURSERY_SITE.z) < 6.2
+        || Math.hypot(gx - THREE.MathUtils.clamp(gx, archWest + 6, archEast), gz - archZ) < 7.8;
       const lay = bare ? () => {} : (layer, ...args) => layer.add(...args);
       // Long, organic meadow bands connect shallow shelves and outer ledges.
       const meadow = Math.sin(gx * .10 + gz * .065) + Math.cos(gz * .11 - gx * .045);
@@ -867,19 +885,23 @@ diffuseColor.rgb *= vSandBroad.y + fineMottle * 0.06 - ridgeLines * 0.055;`);
   // Drawn after the coral standing on it, so its costlier shader skips the covered pixels.
   sand.name = 'Sculpted reef shelf and abyss drop-off'; sand.renderOrder = 10; root.add(sand);
 
-  // A limestone arch over the gully cut in terrainHeightAt: a swim-through
-  // 8.4 m wide between the columns, 10 m long and at least 6 m high, so a
-  // diver coming level off the gully's upper lip passes under the roof. Its
-  // three proxies stay separate so the central passage remains traversable.
+  // A limestone arch on the deep sand: a swim-through 8.4 m wide between the columns, 10 m long and at least 8 m high,
+  // its passage running east to west, so a diver at its east mouth sees the lantern garden and the nautilus framed in it.
+  // The seabed falls away to the south here, so each column reaches down to the sand at its own foot. Its three proxies
+  // stay separate so the central passage remains traversable.
   yield;
   const archFloor = terrainHeightAt(archX, archZ);
   const archTop = archFloor + 10.95, archRoofBottom = archFloor + 8.25;
   const rockGeometry = chiselledRock(2);
   const archMat = material('#8092aa', { roughness: .96, flatShading: true });
+  const column = (name, side) => {
+    const z = archZ + side * 5.8, foot = Math.min(archFloor, ...[-4.8, 0, 4.8].map(dx => terrainHeightAt(archX + dx, z))) - .8, top = archFloor + 10;
+    return { name, x: archX, y: (foot + top) / 2, z, sx: 4.8, sy: (top - foot) / 2, sz: 1.6 };
+  };
   const archPieces = [
-    { name: 'Arch left column', x: archX - 5.8, y: archFloor + 4.6, z: archZ, sx: 1.6, sy: 5.4, sz: 4.8 },
-    { name: 'Arch right column', x: archX + 5.8, y: archFloor + 4.6, z: archZ, sx: 1.6, sy: 5.4, sz: 4.8 },
-    { name: 'Arch overhang roof', x: archX, y: archFloor + 9.6, z: archZ, sx: 7.6, sy: 1.25, sz: 5.0 }
+    column('Arch north column', 1),
+    column('Arch south column', -1),
+    { name: 'Arch overhang roof', x: archX, y: archFloor + 9.6, z: archZ, sx: 5.0, sy: 1.25, sz: 7.6 }
   ];
   for (const piece of archPieces) {
     const mesh = new THREE.Mesh(rockGeometry, archMat);
@@ -950,9 +972,7 @@ diffuseColor.rgb *= vSandBroad.y + fineMottle * 0.06 - ridgeLines * 0.055;`);
   yield;
   for(const box of grottoProxies)root.userData.collisions.addBox(box,{mesh:'Grotto rib',kind:'arch'});
   for (const piece of archPieces) {
-    const half = piece.name.includes('roof')
-      ? new THREE.Vector3(7.6, 1.35, 5.0)
-      : new THREE.Vector3(1.6, 5.4, 4.8);
+    const half = new THREE.Vector3(piece.sx, piece.name.includes('roof') ? 1.35 : piece.sy, piece.sz);
     root.userData.collisions.addBox(new THREE.Box3(
       new THREE.Vector3(piece.x, piece.y, piece.z).sub(half),
       new THREE.Vector3(piece.x, piece.y, piece.z).add(half)
@@ -966,14 +986,14 @@ diffuseColor.rgb *= vSandBroad.y + fineMottle * 0.06 - ridgeLines * 0.055;`);
       }
     }
     const dx = position.x - archX, dz = position.z - archZ;
-    const underRoof = Math.abs(dx) < 7.9 && Math.abs(dz) < 5.5
+    const underRoof = Math.abs(dz) < 7.9 && Math.abs(dx) < 5.5
       && position.y < archRoofBottom + .8 && position.y > archFloor - 1;
     if (!underRoof) return [];
-    // Leave by the deep mouth, where the water is open, then rise clear of the roof.
-    const exitZ = archZ - 9.5;
+    // Leave by the nearer mouth, where the water is open, then rise clear of the roof.
+    const exitX = archX + (dx < 0 ? -9.5 : 9.5);
     return [
-      new THREE.Vector3(position.x, Math.min(position.y, archRoofBottom - .9), exitZ),
-      new THREE.Vector3(position.x, archTop + 2.5, exitZ)
+      new THREE.Vector3(exitX, Math.min(position.y, archRoofBottom - .9), position.z),
+      new THREE.Vector3(exitX, archTop + 2.5, position.z)
     ];
   };
   root.userData.terrainHeightAt = terrainHeightAt;
