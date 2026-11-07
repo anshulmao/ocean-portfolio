@@ -125,7 +125,7 @@ let gapCursor=0,stride=1,sinceDraw=0,drawCount=0,lastDraw=0,gpuTier='unknown',st
 // 'auto', the scene idles behind a dialog that covers it, halves behind the settings panel, and halves at the surface
 // once nobody has touched the page for a few seconds; any input brings it straight back.
 const BUDGET_FPS={reduced:30,idle:15},IDLE_AFTER=6000;
-let budgetAsked='auto',lastInput=performance.now(),heldClock=0;
+let budgetAsked='auto',lastInput=performance.now(),heldClock=0,viewMovingUntil=0;
 for(const type of ['pointermove','pointerdown','keydown','wheel','touchstart'])addEventListener(type,()=>{lastInput=performance.now();},{passive:true,capture:true});
 // The HUD is repainted about twelve times a second, and a node is only touched when its value changed.
 const hudNodes=new Map(),hudStyles=new Map(),CARDINALS=['N','NE','E','SE','S','SW','W','NW'];
@@ -1006,6 +1006,9 @@ function updateWorld(dt,clockDt=dt){
   // same controls at that point; waiting for the transition's tail makes aim feel heavy.
   const descentControlled=diveTarget===1&&nav.mode==='diver';
   const settledView=!(ascending||dive!==diveTarget&&!descentControlled||surfaceLandingTime>0||safetyStop.blend>0);
+  // While the view itself glides (an ascent, the safety-stop framing, the landing at the surface, the spring's tail) the
+  // scene is drawn at the full pace whatever panel is up: a 15 or 30 fps budget there moved the camera in visible steps.
+  if(!settledView||safetyStop.active||nav.mode!=='surface'&&cameraVelocity.lengthSq()>1e-3)viewMovingUntil=performance.now()+900;
   if(cameraWas!==nav.perspective){if(cameraWas)cameraShift=1;cameraWas=nav.perspective;}
   if(turningSurface||reducedMotion||snapCamera||diagnostic.frames===0){camera.position.copy(cameraGoal);cameraVelocity.set(0,0,0);cameraShift=0;}
   else {
@@ -1035,7 +1038,7 @@ function updateWorld(dt,clockDt=dt){
   if(surfaceReturn){
     if(nav.mode!=='surface'||diveTarget!==0||nav.exploring||lookHeld||viewerOrbit)surfaceReturn=null;
     else{
-      surfaceReturn.time+=dt;
+      surfaceReturn.time+=dt;viewMovingUntil=performance.now()+900;
       const progress=reducedMotion?1:Math.min(1,surfaceReturn.time/2),blend=(1-Math.cos(Math.PI*progress))/2;
       // Orbit around the diver rather than cutting through them on a day-to-dusk half turn.
       const start=new THREE.Spherical().setFromVector3(scratchA.copy(surfaceReturn.position).sub(playerPosition));
@@ -1203,7 +1206,9 @@ function gpuPoll(){
 }
 function renderBudget(){
   if(budgetAsked!=='auto')return budgetAsked;
-  if(interfaceOpen)return 'idle';
+  if(performance.now()<viewMovingUntil&&!diveHeldFor)return 'full';
+  // A panel open over the reef: the picture behind it is idle. Not before it is up (a landmark's reveal plays first).
+  if(interfaceOpen&&document.querySelector('dialog[open]'))return 'idle';
   if(movementPanelOpen||settingsMenuOpen)return 'reduced';
   // A dive held at the waterline (see updateWorld) waits on the work, not on the picture: the camera is still and the
   // status line says what is happening. Half the frames are drawn there, and what they took goes to the work. On a slow

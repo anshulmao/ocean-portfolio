@@ -134,7 +134,8 @@ let hasLast = false, calmFor = 0, looking = 0, lookPoint = null, lookFish = null
 let held = null;
 // A fly-by that teaches a control waits up to WAIT s for the visitor to try it, the swim at HUSH of its cruise; holdFor: how
 // long the fly-by under way lasts. HOLD_GAP: back-to-back fly-bys nearer than this (m) keep the view on a subject between them.
-const WAIT = 7, HUSH = .12, HOLD_GAP = 30; let waiting = false, holdFor = 0;
+// NEAR_HOLD: a subject nearer than this (m) when its fly-by's time is up stays in view until the swim leaves it abeam.
+const WAIT = 7, HUSH = .12, HOLD_GAP = 30, NEAR_HOLD = 22; let waiting = false, holdFor = 0;
 // ABSENT: the longest a fly-by for a passing animal waits for it to come into sight (s); absent: how long it has waited.
 const ABSENT = 8; let absent = 0;
 // Where the current leg set off along its scenic waypoints, or null on a leg without them.
@@ -412,6 +413,17 @@ function behind(point, at, limit = BEHIND) {
   const dx = point[0] - at[0], dy = point[1] - at[1], dz = point[2] - at[2], length = Math.hypot(dx, dy, dz) || 1;
   return Math.acos(Math.max(-1, Math.min(1, (dx * heading.x + dy * heading.y + dz * heading.z) / length))) > limit;
 }
+// Whether the route a little way on (the first point of the line ahead `far` m off or more) leads away from a point: off
+// the way there by more than ABEAM. A subject the swim is about to turn away from is not held, and is let go before the
+// turn rather than after it, so the view is never left looking back over the diver's shoulder.
+function leaving(point, at, far = 14) {
+  if (!point) return true;
+  const line = [...onward(STEPS[index], at).map(pointOf), goal];
+  const ahead = line.find(p => Math.hypot(p[0] - at[0], p[1] - at[1], p[2] - at[2]) >= far) ?? line.at(-1);
+  const wx = ahead[0] - at[0], wy = ahead[1] - at[1], wz = ahead[2] - at[2], dx = point[0] - at[0], dy = point[1] - at[1], dz = point[2] - at[2];
+  const w = Math.hypot(wx, wy, wz), d = Math.hypot(dx, dy, dz); if (w < 1 || d < 1) return false;
+  return Math.acos(Math.max(-1, Math.min(1, (wx * dx + wy * dy + wz * dz) / (w * d)))) > ABEAM;
+}
 function flyBy(dt, at) {
   const api = controls();
   steer(at);
@@ -446,14 +458,19 @@ function flyBy(dt, at) {
     }
     // A subject the swim has left well behind (BEHIND: the cathedral once the swim is past its front) ends its fly-by early,
     // after BRIEF; one beside the diver never does.
-    const passed = sightTime >= BRIEF && behind(subjectOf(sight.look), at);
+    // A fly-by that stays (the circle round the wreck) keeps its subject whichever way the swim turns, to its end.
+    const passed = !sight.stay && sightTime >= BRIEF && behind(subjectOf(sight.look), at);
     if (passed || sightTime >= holdFor || (due && sightTime >= BRIEF)) {
       // Back to back, the view stays on this subject until the next one's pan, rather than swinging back to the way ahead
       // between them; not one the swim has already left behind.
       // If the next one's subject is already in sight ahead, the view eases straight across to it instead.
       const next = sights[0], subject = subjectOf(sight.look), close = Boolean(sight.look && next?.look && probe.fromArray(at).distanceTo(to.fromArray(next.at)) < HOLD_GAP);
+      // A subject still close by and not yet abeam is kept in view too once its time is up, however the swim turns, and
+      // let go as the swim leaves it (below): the view is the guide's, not the swim's, so it does not swing to the way
+      // ahead while the thing it was showing is still right there.
       const following = close && subjectOf(next.look), across = Boolean(following && !behind(following, at, 1.2));
-      const keep = close && (across || !behind(subject, at, ABEAM));
+      const near = Array.isArray(subject) && probe.fromArray(at).distanceTo(to.fromArray(subject)) < NEAR_HOLD;
+      const keep = (close || near && !leaving(subject, at)) && (across || !behind(subject, at, ABEAM));
       held = keep && !across && Array.isArray(subject) ? subject : null;
       endSight(keep || passed);
       if (across) turn(following); else if (passed) turn(null);
@@ -463,7 +480,7 @@ function flyBy(dt, at) {
   // A subject held between two fly-bys that the swim has passed (more than ABEAM rad off the way it is going: the tower on
   // the way down to the cathedral, the arch once through it) is let go, calmly, in one pan: on to the next fly-by's subject
   // if that is ahead, else to the way ahead.
-  if (held && behind(held, at, ABEAM)) {
+  if (held && (behind(held, at, ABEAM) || leaving(held, at))) {
     held = null; const following = sights[0]?.look && subjectOf(sights[0].look);
     turn(following && !behind(following, at, 1.2) ? following : null);
   }

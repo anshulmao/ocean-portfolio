@@ -50,7 +50,7 @@ addEventListener('pointermove', event => { if (event.pointerType === 'mouse') { 
 
 const at = new THREE.Vector3(), top = new THREE.Vector3(), view = new THREE.Vector3();
 // The card's site, why it is up (tour, near, hover), when it last was, and a site closed by hand until it cools.
-let shown = null, why = '', hotAt = -Infinity, clock = 0, closed = null, drawn = '';
+let shown = null, why = '', hotAt = -Infinity, clock = 0, closed = null, drawn = '', reading = false;
 const positionOf = (controls, id) => {
   const placed = controls.models?.landmarks?.find(item => item.id === id);
   return placed?.position ?? (id === 'resume' ? RESUME_SITE.position : LANDMARKS.find(item => item.id === id)?.position);
@@ -80,8 +80,12 @@ function fill(id, controls) {
   part('.site-card-note').textContent = site.note;
   card.setAttribute('aria-label', `${site.name}. ${site.note}`);
 }
-function hide() {
-  if (card.dataset.show !== 'false') { card.dataset.show = 'false'; card.inert = true; delete document.body.dataset.siteCard; delete document.body.dataset.siteCardDock; dispatchEvent(new CustomEvent('oceansitecard', { detail: null })); }
+// keep: the card goes, but the page stays as it is with a card up (the prompt, the labels and the tour's sheet stay
+// folded away). That is while the site is being read: the panel it opens comes up over the reef, and dropping the card's
+// state then showed the interface it had put away for a moment, between the click and the panel.
+function hide(keep = false) {
+  if (card.dataset.show !== 'false') { card.dataset.show = 'false'; card.inert = true; }
+  if (!keep && document.body.dataset.siteCard) { delete document.body.dataset.siteCard; delete document.body.dataset.siteCardDock; dispatchEvent(new CustomEvent('oceansitecard', { detail: null })); }
   if (ring.dataset.show !== 'false') ring.dataset.show = 'false';
 }
 
@@ -89,6 +93,9 @@ onFrame((dt, controls, state, diving) => {
   // Real seconds, not the scene's: a slow frame should not stretch how long the card stays.
   clock = performance.now() / 1000;
   const camera = controls?.getCamera?.();
+  // Reading the site the card was up for (its Read it, the tour's, F): the controls are suspended under the panel.
+  if (controls?.nav?.suspended && (reading || document.body.dataset.siteCard) && diving) { reading = true; hide(true); return; }
+  reading = false;
   if (!diving || !camera || controls.getMode?.() !== 'diver' || controls.getTransition?.() || controls.nav?.suspended || document.body.dataset.clearUi === 'true') { hide(); shown = null; return; }
   // Which sites are hot now: the tour's, the one in reach, and the one pointed at (the nearest, if several).
   const locked = Boolean(document.pointerLockElement) || !pointer.seen || touch(), px = locked ? innerWidth / 2 : pointer.x, py = locked ? innerHeight / 2 : pointer.y;
@@ -147,7 +154,8 @@ onFrame((dt, controls, state, diving) => {
     part('[data-site="next"]').hidden = waiting !== shown || window.oceanTour?.status !== 'dwell';
     for (const kbd of card.querySelectorAll('kbd')) kbd.hidden = touch();
   }
-  if (card.dataset.show !== 'true') { card.dataset.show = 'true'; card.inert = false; document.body.dataset.siteCard = shown; dispatchEvent(new CustomEvent('oceansitecard', { detail: shown })); }
+  if (card.dataset.show !== 'true') { card.dataset.show = 'true'; card.inert = false; }
+  if (document.body.dataset.siteCard !== shown) { document.body.dataset.siteCard = shown; dispatchEvent(new CustomEvent('oceansitecard', { detail: shown })); }
   card.dataset.fading = String(clock - hotAt > LINGER - 1.2);
   // A ring on the site while it is pointed at, so the pointer knows what it is on, and on a phone, where the card is
   // docked away from it, whenever the card is up.
@@ -158,6 +166,7 @@ onFrame((dt, controls, state, diving) => {
 
 function read() {
   const id = shown; if (!id) return;
+  reading = true;
   if (window.oceanLandmarks?.openSite) window.oceanLandmarks.openSite(id, window.oceanTour?.opens?.(id) ?? id);
   else window.oceanArchive?.open?.(id);
 }
@@ -176,4 +185,4 @@ addEventListener('keydown', event => {
   if (event.target.closest?.('input,textarea,select,[contenteditable="true"]') || document.querySelector('dialog[open]')) return;
   event.preventDefault(); read();
 });
-window.oceanSiteCard = { get shown() { return card.dataset.show === 'true' ? shown : null; }, get why() { return why; } };
+window.oceanSiteCard = { get shown() { return card.dataset.show === 'true' || reading ? shown : null; }, get why() { return why; } };

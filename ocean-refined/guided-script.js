@@ -124,22 +124,17 @@ export const STEPS = [
   // crosses up and to the right, out over the deep water beyond the drop-off, from the west. Then up the slope to the
   // wreck and once round it before the stop: past its bow, along its deck side (out beyond the descent line) and round its
   // stern, and in to its west side, 10 m off, to see it whole. The barracuda patrols off the bow, well clear of the swim.
-  { key: 'projects', kind: 'stop', landmark: 'projects', view: [8, -20, -37.5], place: `Projects · The Wreck · ${depth(-21)}`, signal: '#c9a2ff',
+  { key: 'projects', kind: 'stop', landmark: 'projects', view: [8, -20, -37.5], approach: 4.5, place: `Projects · The Wreck · ${depth(-21)}`, signal: '#c9a2ff',
     title: 'Here’s the wreck', line: 'A trawler, and the fish that live in it now. This is where you’ll find my projects.',
     via: [
       { at: [-9, -43, -86.5], key: 'whale-shark', title: 'Look out to sea', line: 'A whale shark, crossing the deep water above the drop-off.',
         look: { visitor: 'whale-shark' }, teach: 'photo', hold: 12, slow: .12, reach: 6,
         encounter: { id: 'whale-shark', cue: 20, course: { angle: Math.PI / 2, side: 1, pass: 16, y: -34, ahead: 16 } } },
       [-6, -42.5, -91], [4, -41, -89], [10, -39, -78], [14, -31, -66],
-      { at: [21, -22, -59], key: 'wreck-bow', title: 'A trawler, bow first', line: 'She went down by the head and settled on the sand.',
-        look: [16, -23.5, -47.5], hold: 5, slow: .45, reach: 7 },
-      [32, -19, -54],
-      { at: [36, -17, -44], key: 'wreck-deck', title: 'Her working deck', line: 'Winch, net drum and gantry, still where the crew left them.',
-        look: [19.5, -22.5, -38.5], hold: 6, slow: .4, reach: 7 },
-      [36, -16, -30],
-      { at: [27, -17, -21], key: 'wreck-stern', title: 'The stern', line: 'The net that held her is still snagged on the gantry.',
-        look: [22, -22, -31.5], hold: 5, slow: .45, reach: 7 },
-      [12, -18, -27],
+      // Once round her, without a word: in at the bow, down the starboard side, round the stern and up the port side to
+      // the stop, the view held on her all the way (stay) while the swim goes round.
+      { at: [20, -22, -60], key: 'wreck-circle', look: [19, -22.5, -39.5], stay: true, hold: 80, slow: .75, reach: 8 },
+      [29, -20, -56], [35, -18.5, -47], [36.5, -17.5, -36], [33.5, -17.5, -25], [24, -18, -18.5], [12, -19, -22], [5.5, -19.5, -28],
     ] },
   // From the wreck's west side across the top of it, over its rigging, to the descent line just beyond it (return-route.js
   // DESCENT_LINE), and up the line to the résumé's slate at the safety stop. Surface from here: the ascent holds the safety

@@ -760,7 +760,7 @@ export function buildNautilus({ x, z, floorAt, economy = false, diameter = 3.3 }
   }
   life.meshes('Deep ledge life', root);
 
-  // The fish over the shell are the reef's own (user-creature-routes.js SCHOOLS.nautilus), and whitetips patrol the ledge.
+  // The fish by the shell are the reef's own (user-creature-routes.js SCHOOLS.nautilus), and a whitetip patrols the ledge.
 
   let now = 0, openedAt = -100, open = false;
   const levels = materials.map(() => 0);

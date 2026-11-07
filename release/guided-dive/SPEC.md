@@ -525,3 +525,18 @@ stops.
   - **Fish:** a cloud fish eases onto the ground under it rather than snapping, which made the chromis over the
     nautilus's stones jitter.
 
+- **Round 13 (the owner's notes on round 12):**
+  - **The view is the guide's, not the swim's.** A subject still close by (under 22 m, `NEAR_HOLD`) stays in view when
+    its fly-by's time is up, however the swim turns, and is let go only once the swim leaves it abeam, or, looking a
+    little way along the route, is about to turn away from it, so the view is never left looking back over the shoulder.
+    A fly-by may `stay` on its subject to the end of its leg.
+  - **The wreck:** once round her without a caption: in at the bow, down the starboard side, round the stern and up the
+    port side to the stop, the view on her all the way; the stop faces her port side, where her card comes up.
+  - **Read it** keeps the page as it is with a card up while the site's reveal plays and its panel opens; dropping the
+    card's state had shown the bottom prompt, the labels and the tour's sheet for a moment.
+  - **Surfacing:** the scene is drawn at the full pace while the view glides (the ascent, the safety-stop framing, the
+    landing at the surface, a landmark's reveal), whatever panel is up; the 15 fps a panel allowed, and the 30 fps of an
+    idle surface, moved the camera in visible steps.
+  - **The nautilus's fish** keep to the open sand off the shell's east face, clear of the shell and of the stones of its
+    alcove, which they used to rise over and sink off as they went round; the whitetip circles the ledge at one depth
+    above the stones instead of a set height over the bottom.

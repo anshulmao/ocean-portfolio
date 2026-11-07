@@ -501,7 +501,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     const wt = RESIDENTS.whitetips;
     if (gltfs.has(wt.species)) {
       const a = actor(wt.species, { name: 'whitetip reef shark' });
-      if (a) herds.push({ route: route(...wt.patrol.loop, { wobble: .12 }), height: over(wt.patrol.height, -4), speed: wt.patrol.speed, pace: 1, members: [{ actor: a, ...member(0, 0, 0, { drift: .8, bob: .25 }) }], look: 8, bank: .14 });
+      if (a) herds.push({ route: route(...wt.patrol.loop, { wobble: .12 }), height: wt.patrol.y !== undefined ? level(wt.patrol.y, .25, 30, 0) : over(wt.patrol.height, -4), speed: wt.patrol.speed, pace: 1, members: [{ actor: a, ...member(0, 0, 0, { drift: .8, bob: .25 }) }], look: 8, bank: .14 });
       wt.resting.slice(0, economy ? wt.lean : wt.resting.length).forEach((spot, i) => rest(wt.species, spot, 3.5, .32, `resting whitetip ${i + 1}`, rr(.85, 1)));
     }
     // Cuttlefish off the side of tall formations, on the side towards the middle of the reef.
