@@ -568,3 +568,7 @@ stops.
   - **Aura circles** (Settings, Lighting): how bright the rings and glow under the landmarks are, 0–150%; 0 turns them off.
   - The wreck's card stands lower (3.6 m over her middle) and stays up with its anchor a little over the top of the screen,
     so it comes up at her stop, close under her side.
+  - **Cards looked down on:** the card's anchor is over its site on the screen, not only in the water: the steeper the
+    look down at the site, the lower the anchor (to 12% of its height straight down), so looking down on the wreck from
+    close over her its card stands over her middle instead of off to one side. Cards are placed on the canvas's own
+    rectangle, which on a phone can differ from the window's inner size as the browser's bars come and go.

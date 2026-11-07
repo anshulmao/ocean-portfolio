@@ -10,7 +10,8 @@ import { toDisplayDepth } from './depth-metrics.js';
 // aims), when the diver comes within reach of it, or while the guided dive waits there, and stays LINGER seconds once
 // none of those holds any more, then fades. It takes the place of the prompt at the bottom of the screen and the "Here"
 // card for that site.
-//   hover: how far round the site (m) counts as pointing at it; lift: how far over its middle the card stands (m).
+//   hover: how far round the site (m) counts as pointing at it; lift: how far over its middle the card stands (m), seen
+//   from the side (see project: looking down on it, less).
 const SITES = {
   about: { name: 'The Helmet', section: 'About', note: 'Who I am, how I approach the work, and where everything lives.', signal: '#7ff0cf', hover: 2, lift: 1.25 },
   experience: { name: 'The Nautilus', section: 'Experience', note: 'Three roles, 2023 to now, one chamber at a time.', signal: '#ffcf7a', hover: 2.4, lift: 2 },
@@ -31,7 +32,8 @@ function within(id, point, player) {
 // SMALLEST, NEAR_SIZE: drawn at full size out to NEAR_SIZE m, smaller beyond, never below SMALLEST of it.
 // FIT: how small it may be drawn to keep its place close under a site before it slides down to stay on screen.
 // ABOVE: how far over the top of the screen (a share of its height) the anchor may be with the card still up.
-const LINGER = 8, REACH = 45, EDGE = 12, TAIL = 16, SMALLEST = .8, NEAR_SIZE = 16, FIT = .8, ABOVE = .35;
+// LOW: the share of lift the anchor keeps when the site is looked straight down on.
+const LINGER = 8, REACH = 45, EDGE = 12, TAIL = 16, SMALLEST = .8, NEAR_SIZE = 16, FIT = .8, ABOVE = .35, LOW = .12;
 const fingers = () => touch() || innerWidth < 600;
 const touch = () => document.documentElement.dataset.input === 'touch' || (!document.documentElement.dataset.input && matchMedia('(pointer: coarse)').matches);
 
@@ -63,18 +65,37 @@ function tourSite() {
   const step = tour.STEPS?.[window.oceanDiagnostics?.tour?.stop ?? -1];
   return step?.landmark ?? step?.site ?? null;
 }
+// The scene's canvas on the page (px). The projection is mapped onto it, not onto the window: on a phone the two differ
+// as the browser's bars come and go (the canvas is sized by its style, the window's inner size follows the bars), and a
+// card placed by the window's size stood off its site (round 17, the owner's notes: on an iPhone the wreck's card was off
+// centre). Read again when the page is resized, and every half second besides.
+const screen = { left: 0, top: 0, width: innerWidth, height: innerHeight, at: -1 };
+function canvasRect() {
+  const now = performance.now(); if (now - screen.at < 500) return screen;
+  screen.at = now;
+  const r = window.oceanControls?.getRenderer?.()?.domElement?.getBoundingClientRect();
+  if (r && r.width > 0 && r.height > 0) { screen.left = r.left; screen.top = r.top; screen.width = r.width; screen.height = r.height; }
+  else { screen.left = screen.top = 0; screen.width = innerWidth; screen.height = innerHeight; }
+  return screen;
+}
+for (const target of [window, window.visualViewport]) target?.addEventListener('resize', () => { screen.at = -1; });
 // Where a site's middle and the card's foot fall on the screen (px), or null when it is behind the camera or far off.
 function project(camera, id, point) {
   at.fromArray(point); const distance = camera.position.distanceTo(at);
   view.copy(at).applyMatrix4(camera.matrixWorldInverse); if (view.z > -.5 || distance > REACH) return null;
+  const { left, top: edge, width, height } = canvasRect();
   const middle = at.clone().project(camera);
-  const scale = innerHeight / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
-  // The card's anchor, over the site: only while it is in view (in front, and within the screen).
-  top.copy(at).add(lift.set(0, SITES[id].lift, 0)); const anchorDistance = camera.position.distanceTo(top); view.copy(top).applyMatrix4(camera.matrixWorldInverse);
-  top.project(camera); const ax = (top.x * .5 + .5) * innerWidth, ay = (-top.y * .5 + .5) * innerHeight;
+  const scale = height / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+  // The card's anchor, over the site: only while it is in view (in front, and within the screen). Over it means over it
+  // on the screen. Seen from the side that is lift m up; looked down on, a point that far up is near the eye and falls well
+  // off the site on the screen (round 17, the owner's notes: looking down on the wreck, her card stood off to one side),
+  // so the steeper the look down at it, the lower the anchor, down to LOW of lift straight down.
+  const steep = Math.abs(at.y - camera.position.y) / Math.max(distance, 1e-3);
+  top.copy(at).add(lift.set(0, SITES[id].lift * Math.max(LOW, 1 - steep * steep), 0)); const anchorDistance = camera.position.distanceTo(top); view.copy(top).applyMatrix4(camera.matrixWorldInverse);
+  top.project(camera); const ax = left + (top.x * .5 + .5) * width, ay = edge + (-top.y * .5 + .5) * height;
   // A little over the top of the screen still counts (close under a big site, the wreck): the card stays on screen there.
   const anchor = view.z < -.5 && ax >= 0 && ax <= innerWidth && ay >= -innerHeight * ABOVE && ay <= innerHeight ? { x: ax, y: ay, distance: anchorDistance } : null;
-  return { x: (middle.x * .5 + .5) * innerWidth, y: (-middle.y * .5 + .5) * innerHeight, anchor, radius: Math.max(28, SITES[id].hover * scale / distance), distance };
+  return { x: left + (middle.x * .5 + .5) * width, y: edge + (-middle.y * .5 + .5) * height, anchor, radius: Math.max(28, SITES[id].hover * scale / distance), distance };
 }
 function fill(id, controls) {
   const site = SITES[id], point = positionOf(controls, id), depth = Math.round(toDisplayDepth(-(point?.[1] ?? 0)));
