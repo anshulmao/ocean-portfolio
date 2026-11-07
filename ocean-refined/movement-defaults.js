@@ -2,6 +2,7 @@
 export const movementDefaults = Object.freeze({
   "brightnessBoost": 80,
   "waterClarity": 125,
+  "auraBrightness": 100,
   "swimSpeed": 4,
   "reverseMultiplier": 0.75,
   "strafeMultiplier": 0.85,

@@ -1133,7 +1133,7 @@ function updateWorld(dt,clockDt=dt){
   // The module hides its own underwater and surface casts, so it runs above and below the surface.
   livingWorld?.update(paused?0:dt,elapsed,{player:playerPosition,camera,view:viewerOrbit?null:view,underwater,night,depth:depthLight,weather:weather.intensity,lamp:nav.lamp,paused,aim:swimDirection,diver:diver.root.position});
   if(heroFormations){heroFormations.root.visible=Boolean(viewerOrbit)||underwater>.01;if(heroFormations.root.visible)heroFormations.update(elapsed,night,depthLight);}
-  if(setPieces){setPieces.root.visible=Boolean(viewerOrbit)||underwater>.01;if(setPieces.root.visible)setPieces.update(elapsed,camera.position,night,depthLight,uniforms.uRatio.value);}
+  if(setPieces){setPieces.root.visible=Boolean(viewerOrbit)||underwater>.01;if(setPieces.root.visible)setPieces.update(elapsed,camera.position,night,depthLight,uniforms.uRatio.value,settings.auraBrightness/100);}
   if(userCreatures){userCreatures.root.visible=prepared.has(userCreatures.root)&&(Boolean(viewerOrbit)||underwater>.01);if(userCreatures.root.visible)userCreatures.update(paused?0:dt,playerPosition,viewerOrbit?null:view);}
   if(userCorals)userCorals.root.visible=prepared.has(userCorals.root)&&(Boolean(viewerOrbit)||underwater>.01);
   if(built){if(underwater>.01)cullWorld(paused?0:dt);motes.position.y=Math.sin(elapsed*.07)*.2;updateBubbles(underwater);}

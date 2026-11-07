@@ -14,7 +14,7 @@ import { toDisplayDepth } from './depth-metrics.js';
 const SITES = {
   about: { name: 'The Helmet', section: 'About', note: 'Who I am, how I approach the work, and where everything lives.', signal: '#7ff0cf', hover: 2, lift: 1.25 },
   experience: { name: 'The Nautilus', section: 'Experience', note: 'Three roles, 2023 to now, one chamber at a time.', signal: '#ffcf7a', hover: 2.4, lift: 2 },
-  projects: { name: 'The Wreck', section: 'Projects', note: 'Six projects across the AI product loop.', signal: '#c9a2ff', hover: 8, lift: 6.2 },
+  projects: { name: 'The Wreck', section: 'Projects', note: 'Six projects across the AI product loop.', signal: '#c9a2ff', hover: 8, lift: 3.6 },
   resume: { name: 'The Slate', section: 'Résumé', note: 'One page, to read here or take with you.', signal: '#f4e3b5', hover: 1, lift: .9 }
 };
 // How far its card reaches (round 15, the owner's notes): it comes up only within RANGE m of the site itself, measured to
@@ -30,7 +30,8 @@ function within(id, point, player) {
 }
 // SMALLEST, NEAR_SIZE: drawn at full size out to NEAR_SIZE m, smaller beyond, never below SMALLEST of it.
 // FIT: how small it may be drawn to keep its place close under a site before it slides down to stay on screen.
-const LINGER = 8, REACH = 45, EDGE = 12, TAIL = 16, SMALLEST = .8, NEAR_SIZE = 16, FIT = .8;
+// ABOVE: how far over the top of the screen (a share of its height) the anchor may be with the card still up.
+const LINGER = 8, REACH = 45, EDGE = 12, TAIL = 16, SMALLEST = .8, NEAR_SIZE = 16, FIT = .8, ABOVE = .35;
 const fingers = () => touch() || innerWidth < 600;
 const touch = () => document.documentElement.dataset.input === 'touch' || (!document.documentElement.dataset.input && matchMedia('(pointer: coarse)').matches);
 
@@ -71,7 +72,8 @@ function project(camera, id, point) {
   // The card's anchor, over the site: only while it is in view (in front, and within the screen).
   top.copy(at).add(lift.set(0, SITES[id].lift, 0)); const anchorDistance = camera.position.distanceTo(top); view.copy(top).applyMatrix4(camera.matrixWorldInverse);
   top.project(camera); const ax = (top.x * .5 + .5) * innerWidth, ay = (-top.y * .5 + .5) * innerHeight;
-  const anchor = view.z < -.5 && ax >= 0 && ax <= innerWidth && ay >= 0 && ay <= innerHeight ? { x: ax, y: ay, distance: anchorDistance } : null;
+  // A little over the top of the screen still counts (close under a big site, the wreck): the card stays on screen there.
+  const anchor = view.z < -.5 && ax >= 0 && ax <= innerWidth && ay >= -innerHeight * ABOVE && ay <= innerHeight ? { x: ax, y: ay, distance: anchorDistance } : null;
   return { x: (middle.x * .5 + .5) * innerWidth, y: (-middle.y * .5 + .5) * innerHeight, anchor, radius: Math.max(28, SITES[id].hover * scale / distance), distance };
 }
 function fill(id, controls) {

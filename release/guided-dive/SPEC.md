@@ -563,3 +563,8 @@ stops.
     pointed at or its card is up.
   - **Cards up close only:** a site's card comes up only within 8 m of the site itself (measured to its extent: the
     wreck's from bow to stern), and is gone again beyond it.
+- **Round 17 (the owner's notes on round 16):**
+  - **The wreck's aura** is drawn out along her hull and under it, an oval about 18 by 8 m, not a circle round all of her.
+  - **Aura circles** (Settings, Lighting): how bright the rings and glow under the landmarks are, 0–150%; 0 turns them off.
+  - The wreck's card stands lower (3.6 m over her middle) and stays up with its anchor a little over the top of the screen,
+    so it comes up at her stop, close under her side.

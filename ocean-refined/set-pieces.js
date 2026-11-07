@@ -5,12 +5,15 @@ import { DESCENT_LINE } from './return-route.js';
 
 const TAU = Math.PI * 2;
 // span: the beacon's ripple and highlight plane, across (m); ring: the highlight's ring, as a share of its half width
-// (round the helmet's plinth, the nautilus's alcove, the wreck's hull).
+// (round the helmet's plinth, the nautilus's alcove). The wreck's is drawn out along her hull and under it (round 16,
+// the owner's notes: a circle round all of her was too big): stretch, the plane's scale along and across her; turn, her
+// heading (rad, about y; she lies from her bow at 16, -47.5 to her stern at 22, -31.5); shift, from the charted spot to
+// the middle of her hull (x, z, m).
 const SITES = {
   about: { x: -12, z: -15, color: '#7ff0cf', span: 13, ring: .44 },
   // About is the diver's helmet, Experience the nautilus on the deep ledge, Projects the sunken trawler (landmark-builds.js).
   experience: { x: -18, z: -82, color: '#ffcf7a', span: 13, ring: .5 },
-  projects: { x: 18, z: -39, color: '#c9a2ff', span: 30, ring: .82 }
+  projects: { x: 18, z: -39, color: '#c9a2ff', span: 13, ring: .78, stretch: [1.75, .78], turn: Math.atan2(16, -6), shift: [1, -.5] }
 };
 
 const beaconVertex = /* glsl */ `
@@ -38,7 +41,7 @@ void main(){
 // its card is up, a pool of light on the bottom under it and a ring round its foot (uRing, a share of the plane's half
 // width) that pulses, in place of the circle that used to be drawn over it on the screen.
 const ringFragment = /* glsl */ `
-uniform vec3 uColor; uniform float uTime; uniform float uStrength; uniform float uSeed; uniform float uFocus; uniform float uRing; uniform float uRipple;
+uniform vec3 uColor; uniform float uTime; uniform float uStrength; uniform float uSeed; uniform float uFocus; uniform float uRing; uniform float uRipple; uniform float uAura;
 varying vec2 vUv;
 void main(){
   float radius = length(vUv - .5) * 2.0, ripple = radius * uRipple;
@@ -52,7 +55,7 @@ void main(){
   float ring = 1.0 - smoothstep(.012, .045 + beat * .02, abs(radius - uRing * (.96 + beat * .06)));
   float pool = exp(-radius * radius / (uRing * uRing * .7));
   alpha += uFocus * (ring * (.55 + .45 * beat) + pool * .24) * step(radius, 1.0);
-  gl_FragColor = vec4(uColor, alpha);
+  gl_FragColor = vec4(uColor, alpha * uAura);
 }`;
 const sparkVertex = /* glsl */ `
 uniform float uTime; uniform float uHeight; uniform float uRatio;
@@ -224,10 +227,11 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
 
   // Beacons: a soft column, a ripple at its foot and rising motes. They mark
   // each landmark through the haze without adding real lights to the scene.
-  const beacons = [], time = { value: 0 }, ratio = { value: 1 };
+  // aura: how bright the rings and the pool of light are (the visitor's Aura circles setting, movement-settings.js).
+  const beacons = [], time = { value: 0 }, ratio = { value: 1 }, aura = { value: 1 };
   Object.entries(SITES).forEach(([id, site], index) => {
     const base = floor(site.x, site.z), height = Math.min(30, -base - 1.5);
-    const uniforms = { uColor: { value: new THREE.Color(site.color) }, uTime: time, uStrength: { value: .5 }, uSeed: { value: index * 2.1 }, uHeight: { value: height }, uRatio: ratio, uFocus: { value: 0 }, uRing: { value: site.ring }, uRipple: { value: site.span / 13 } };  // the ripple keeps its 13 m
+    const uniforms = { uColor: { value: new THREE.Color(site.color) }, uTime: time, uStrength: { value: .5 }, uSeed: { value: index * 2.1 }, uHeight: { value: height }, uRatio: ratio, uFocus: { value: 0 }, uRing: { value: site.ring }, uRipple: { value: site.span / 13 }, uAura: aura };  // the ripple keeps its 13 m
     const group = new THREE.Group(); group.name = `${id} beacon`; group.position.set(site.x, base + .2, site.z);
     const options = { uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false };
     const column = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 1.5, height, 24, 1, true).translate(0, height / 2, 0),
@@ -235,6 +239,7 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
     const ring = new THREE.Mesh(new THREE.PlaneGeometry(site.span, site.span).rotateX(-Math.PI / 2),
       new THREE.ShaderMaterial({ ...options, vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}', fragmentShader: ringFragment }));
     ring.position.y = .25;
+    if (site.stretch) { ring.scale.set(site.stretch[0], 1, site.stretch[1]); ring.rotation.y = site.turn; ring.position.x = site.shift[0]; ring.position.z = site.shift[1]; }
     const total = economy ? 26 : 44, positions = [], seeds = [];
     for (let i = 0; i < total; i++) { const a = random() * TAU, r = Math.sqrt(random()) * 2.4; positions.push(Math.cos(a) * r, 0, Math.sin(a) * r); seeds.push(random()); }
     const geometry = new THREE.BufferGeometry();
@@ -249,7 +254,7 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
   // The résumé's slate hangs on the descent line in mid-water (reef.js RESUME_SITE): no column or motes there, only its
   // highlight, a ring round the line just under the slate.
   {
-    const uniforms = { uColor: { value: new THREE.Color('#f4e3b5') }, uTime: time, uStrength: { value: 0 }, uSeed: { value: 7.3 }, uFocus: { value: 0 }, uRing: { value: .62 }, uRipple: { value: 0 } };
+    const uniforms = { uColor: { value: new THREE.Color('#f4e3b5') }, uTime: time, uStrength: { value: 0 }, uSeed: { value: 7.3 }, uFocus: { value: 0 }, uRing: { value: .62 }, uRipple: { value: 0 }, uAura: aura };
     const group = new THREE.Group(); group.name = 'resume beacon'; group.position.set(DESCENT_LINE.x, -8.6, DESCENT_LINE.z);
     const ring = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4).rotateX(-Math.PI / 2), new THREE.ShaderMaterial({ uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
       vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}', fragmentShader: ringFragment }));
@@ -274,13 +279,14 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
     return fresh.splice(0);
   }
   function setFound(id, found = true) { const beacon = beacons.find(item => item.id === id); if (beacon) beacon.found = found; }
-  function update(elapsed, cameraPosition, night = 0, depth = 0, pixelRatio = 1) {
+  function update(elapsed, cameraPosition, night = 0, depth = 0, pixelRatio = 1, brightness = 1) {
+    aura.value = brightness;
     const step = Math.min(.1, Math.max(0, elapsed - time.value)); time.value = elapsed; ratio.value = pixelRatio;
     for (const beacon of beacons) {
       // The highlight eases in and out over about half a second.
       beacon.focus += ((focused === beacon.id ? 1 : 0) - beacon.focus) * (1 - Math.exp(-step * 7)); if (beacon.focus < .002) beacon.focus = 0;
       beacon.uniforms.uFocus.value = beacon.focus;
-      if (beacon.quiet) { beacon.group.visible = beacon.focus > 0; continue; }
+      if (beacon.quiet) { beacon.group.visible = beacon.focus > 0 && brightness > 0; continue; }
       // A visited landmark settles to a quieter glow; the next one stays bright.
       const target = (beacon.found ? .2 : .52) + depth * .22 + night * .18;
       beacon.uniforms.uStrength.value += (target - beacon.uniforms.uStrength.value) * .04;
