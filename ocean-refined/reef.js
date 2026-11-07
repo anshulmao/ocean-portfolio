@@ -6,10 +6,17 @@ import { valueTexture } from './shaders.js';
 
 export const LANDMARKS = [
   { id: 'about', title: 'About', description: 'Shallow reef · 8 m', position: [-12, -8, -15] },
-  // Experience lives in the treasure on the deep ledge, Projects in the wreck (swapped 31 Oct 2026).
+  // About is the diver's helmet, Experience the nautilus on the deep ledge, Projects the sunken trawler (landmark-builds.js).
   { id: 'experience', title: 'Experience', description: 'Deep ledge · 45 m', position: [-18, -45, -82] },
   { id: 'projects', title: 'Projects', description: 'Mid-depth wreck · 23 m', position: [18, -23, -39] }
 ];
+// The résumé: a slate on the descent line on the far (west) side of the kelp grove (hero-formations.js), out of the
+// passing visitors' lanes across the reef, hung at safety-stop depth (world y -7.5 reads 5 m). Not one of the three sites of the journey, the map or the dive summary, so it is kept
+// apart from LANDMARKS; landmark-interactions.js offers it like them.
+export const RESUME_SITE = { id: 'resume', title: 'Résumé', description: 'Descent line · 5 m', position: [-56.5, -7.5, -44] };
+// The coral nursery: a feature of the reef, not a portfolio site, on the level sand flat north of the About pad (the
+// widest clear sand at nursery depth on this reef). The nurse shark sleeps beside it (user-creature-routes.js).
+export const NURSERY_SITE = { x: -5, z: 4 };
 
 // Horizontal coordinates are world coordinates; vertical limits are camera
 // offsets from the normal swimming depth, shared with the exploration module.
@@ -735,6 +742,10 @@ export function* reefSteps({ economy = false } = {}) {
       if (Math.hypot(gx - archX, gz - archRouteZ) < 7.8) continue;
       if (Math.hypot(gx, gz) < 5 || routeDistance(gx, gz) < 2.8) continue;
       if (LANDMARKS.some(({ position: [lx, , lz] }) => Math.hypot(gx - lx, gz - lz) < 6)) continue;
+      // The coral nursery's sand (its trees and table stand from 1 m west to 7 m east of NURSERY_SITE) is left bare. The
+      // random draws still run, so the meadow everywhere else stays exactly where it was.
+      const bare = Math.hypot(gx - NURSERY_SITE.x - 3, gz - NURSERY_SITE.z) < 6.2;
+      const lay = bare ? () => {} : (layer, ...args) => layer.add(...args);
       // Long, organic meadow bands connect shallow shelves and outer ledges.
       const meadow = Math.sin(gx * .10 + gz * .065) + Math.cos(gz * .11 - gx * .045);
       if (meadow < -.7 && groundRandom() < .62) continue;
@@ -743,7 +754,7 @@ export function* reefSteps({ economy = false } = {}) {
       for (let blade = 0; blade < blades; blade++) {
         const angle = blade * 2.399, radius = .18 + groundRandom() * .65;
         const bx = gx + Math.cos(angle) * radius, bz = gz + Math.sin(angle) * radius;
-        grass.add(new THREE.Vector3(bx, seabedHeightAt(bx, bz, economy) + .01, bz),
+        lay(grass, new THREE.Vector3(bx, seabedHeightAt(bx, bz, economy) + .01, bz),
           [.9, .3 + groundRandom() * .7, .9], [0, angle, (groundRandom() - .5) * .3],
           blade % 3 ? '#5a9482' : '#8aaa8f');
       }
@@ -752,7 +763,7 @@ export function* reefSteps({ economy = false } = {}) {
       for (let lobe = 0; lobe < (economy ? 2 : 3); lobe++) {
         const px = gx + (groundRandom() - .5) * 1.6, pz = gz + (groundRandom() - .5) * 1.6;
         const width = .45 + groundRandom() * .65;
-        carpets.add(new THREE.Vector3(px, seabedHeightAt(px, pz, economy) + .04, pz),
+        lay(carpets, new THREE.Vector3(px, seabedHeightAt(px, pz, economy) + .04, pz),
           [width, .18, width * (.7 + groundRandom() * .3)], [0, groundRandom() * TAU, 0],
           ['#a59181', '#83a797', '#c49c86', '#b4aa7e'][groundCoverPatches % 4]);
       }

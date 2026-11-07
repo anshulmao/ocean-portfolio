@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.min.js';
-import { LANDMARKS } from './reef.js';
+import { LANDMARKS, RESUME_SITE } from './reef.js';
 import { icon } from './ui-icons.js';
 import * as archive from './archive.js';
 import { onTick, ui } from './ui-ticker.js';
@@ -9,8 +9,11 @@ const panel = document.querySelector('#landmark-dialog');
 const credits = document.querySelector('#credits-dialog');
 const point = new THREE.Vector3(), ray = new THREE.Ray(), direction = new THREE.Vector3(), hit = new THREE.Vector3();
 let eligible = null, opened = null, returnFocus = null, lifting = 0;
-// The most the records wait for a chest's lid before they open (s), whatever the clip's length (the chest's runs 1.97 s).
-const LID_WAIT = 2.2;
+// The most the records wait for a landmark's reveal before they open (s): the helmet's bubbles, the trawler's lights,
+// the nautilus's chambers and the slate's turn all run about a second (landmark-builds.js).
+const REVEAL_WAIT = 1.6;
+// Everything that can be opened where it stands: the three sites, and the résumé slate on the descent line.
+const READABLE = [...LANDMARKS, RESUME_SITE];
 
 function clearSight(start, end, controls) {
   const world = controls.reef?.userData.collisions;
@@ -39,11 +42,11 @@ function openArchive(id, fromWaypoint=false, entry=null, site=id) {
   if (controls?.getTransition() || controls?.getMode() === 'transition' || panel.open || credits.open || lifting) return false;
   if (!fromWaypoint) opened = null;
   returnFocus = document.activeElement;controls?.setInterfaceOpen(true);
-  // A chest swings its lid up first, and the records open once it has (the diver holds still meanwhile).
-  const lid = fromWaypoint ? controls?.models?.interact(site,true) : 0;
-  if (typeof lid === 'number' && lid > 0) {
+  // The landmark plays its reveal first, and the records open once it has (the diver holds still meanwhile).
+  const reveal = fromWaypoint ? controls?.models?.interact(site,true) : 0;
+  if (typeof reveal === 'number' && reveal > 0) {
     prompt.hidden = true;
-    lifting = setTimeout(() => { lifting = 0; showRecords(id, entry); }, Math.min(lid, LID_WAIT) * 1000);
+    lifting = setTimeout(() => { lifting = 0; showRecords(id, entry); }, Math.min(reveal, REVEAL_WAIT) * 1000);
     return true;
   }
   return showRecords(id, entry);
@@ -61,15 +64,15 @@ function interact() {
   const controls = window.oceanControls;
   if (!controls || !eligible || controls.getMode() !== 'diver' || controls.getTransition() || panel.open || credits.open) return;
   opened = eligible;
-  // On the guided dive a site can open another page of the records (the anchor opens At a glance).
+  // On the guided dive a site can open another page of the records (the helmet opens At a glance).
   openArchive(window.oceanTour?.opens?.(opened.id) ?? opened.id,true,null,opened.id);
 }
 // The expedition key handler runs in capture phase so it can prioritize a
 // nearby portfolio site over an artifact. Keeping the same eligibility check
 // here avoids depending on which key listener runs first.
 window.oceanLandmarks = { interactNearby() { if (!eligible) return false; interact(); return panel.open || Boolean(lifting); },
-  // A site opened from further off than its own prompt reaches (the guided dive's stops): its chest plays as from close by.
-  openSite(id, page=id) { const site = LANDMARKS.find(item => item.id === id); if (!site) return false; opened = site; if (openArchive(page, true, null, id)) return true; opened = null; return false; } };
+  // A site opened from further off than its own prompt reaches (the guided dive's stops): its reveal plays as from close by.
+  openSite(id, page=id) { const site = READABLE.find(item => item.id === id); if (!site) return false; opened = site; if (openArchive(page, true, null, id)) return true; opened = null; return false; } };
 
 // A quiet way in for visitors who would rather read than dive (index.html: the hero's links).
 document.getElementById('logbook-link')?.addEventListener('click', () => openArchive('about'));
@@ -176,8 +179,8 @@ function update() {
   if (state.playerPosition) player.fromArray(state.playerPosition); else player.copy(controls.getPlayerPosition());
   const placed = controls.models?.landmarks;
   let nearest = Infinity;
-  for (let i = 0; i < LANDMARKS.length; i++) {
-    const item = LANDMARKS[i];
+  for (let i = 0; i < READABLE.length; i++) {
+    const item = READABLE[i];
     let modelLandmark = null;
     if (placed) for (let j = 0; j < placed.length; j++) if (placed[j].id === item.id) { modelLandmark = placed[j]; break; }
     const target = modelLandmark?.position || item.position;
