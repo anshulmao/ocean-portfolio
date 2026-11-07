@@ -17,6 +17,17 @@ const SITES = {
   projects: { name: 'The Wreck', section: 'Projects', note: 'Six projects across the AI product loop.', signal: '#c9a2ff', hover: 8, lift: 6.2 },
   resume: { name: 'The Slate', section: 'Résumé', note: 'One page, to read here or take with you.', signal: '#f4e3b5', hover: 1, lift: .9 }
 };
+// How far its card reaches (round 15, the owner's notes): it comes up only within RANGE m of the site itself, measured to
+// the site's own extent round its middle (x and z either way, then below and above, m; the wreck's runs from bow to
+// stern, and from its keel to its rigging), and is gone again beyond it.
+const RANGE = 8;
+const EXTENT = { about: [-1.5, 1.5, -1.5, 1.5, 2, 2], experience: [-2, 2, -2, 2, 2, 2.5], projects: [-6, 11, -11, 9, 5, 9], resume: [-.6, .6, -.6, .6, 1.2, 1.2] };
+function within(id, point, player) {
+  const [x0, x1, z0, z1, below, above] = EXTENT[id];
+  const dx = Math.max(point[0] + x0 - player[0], 0, player[0] - point[0] - x1), dz = Math.max(point[2] + z0 - player[2], 0, player[2] - point[2] - z1);
+  const dy = Math.max(point[1] - below - player[1], 0, player[1] - point[1] - above);
+  return Math.hypot(dx, dy, dz) <= RANGE;
+}
 // SMALLEST, NEAR_SIZE: drawn at full size out to NEAR_SIZE m, smaller beyond, never below SMALLEST of it.
 // FIT: how small it may be drawn to keep its place close under a site before it slides down to stay on screen.
 const LINGER = 8, REACH = 45, EDGE = 12, TAIL = 16, SMALLEST = .8, NEAR_SIZE = 16, FIT = .8;
@@ -30,9 +41,7 @@ card.innerHTML = `<button type="button" class="site-card-close" aria-label="Clos
   <div class="site-card-text"><p class="site-card-kicker"></p><h2 class="site-card-title"></h2><p class="site-card-note"></p></div>
   <footer class="site-card-actions"><button type="button" data-site="read">Read it <kbd>F</kbd></button><button type="button" data-site="next">Continue <kbd>N</kbd></button></footer>
   <i class="site-card-tail" aria-hidden="true"></i>`;
-const ring = document.createElement('div');
-ring.className = 'site-ring'; ring.dataset.show = 'false'; ring.setAttribute('aria-hidden', 'true');
-document.body.append(ring, card);
+document.body.append(card);
 const part = selector => card.querySelector(selector), image = part('img');
 
 const pointer = { x: innerWidth / 2, y: innerHeight / 2, seen: false };
@@ -40,7 +49,7 @@ addEventListener('pointermove', event => { if (event.pointerType === 'mouse') { 
 
 const at = new THREE.Vector3(), top = new THREE.Vector3(), view = new THREE.Vector3(), lift = new THREE.Vector3();
 // The card's site, why it is up (tour, near, hover), when it last was, and a site closed by hand until it cools.
-let shown = null, why = '', hotAt = -Infinity, clock = 0, closed = null, drawn = '', reading = false;
+let shown = null, why = '', hotAt = -Infinity, clock = 0, closed = null, drawn = '', reading = false, litSite = null;
 const positionOf = (controls, id) => {
   const placed = controls.models?.landmarks?.find(item => item.id === id);
   return placed?.position ?? (id === 'resume' ? RESUME_SITE.position : LANDMARKS.find(item => item.id === id)?.position);
@@ -80,7 +89,6 @@ function fill(id, controls) {
 function hide(keep = false) {
   if (card.dataset.show !== 'false') { card.dataset.show = 'false'; card.inert = true; }
   if (!keep && document.body.dataset.siteCard) { delete document.body.dataset.siteCard; dispatchEvent(new CustomEvent('oceansitecard', { detail: null })); }
-  if (ring.dataset.show !== 'false') ring.dataset.show = 'false';
 }
 
 onFrame((dt, controls, state, diving) => {
@@ -90,7 +98,7 @@ onFrame((dt, controls, state, diving) => {
   // Reading the site the card was up for (its Read it, the tour's, F): the controls are suspended under the panel.
   if (controls?.nav?.suspended && (reading || document.body.dataset.siteCard) && diving) { reading = true; hide(true); return; }
   reading = false;
-  if (!diving || !camera || controls.getMode?.() !== 'diver' || controls.getTransition?.() || controls.nav?.suspended || document.body.dataset.clearUi === 'true') { hide(); shown = null; return; }
+  if (!diving || !camera || controls.getMode?.() !== 'diver' || controls.getTransition?.() || controls.nav?.suspended || document.body.dataset.clearUi === 'true') { hide(); shown = null; if (litSite) { litSite = null; controls?.setPieces?.focus?.(null); } return; }
   // Which sites are hot now: the tour's, the one in reach, and the one pointed at (the nearest, if several).
   const locked = Boolean(document.pointerLockElement) || !pointer.seen || touch(), px = locked ? innerWidth / 2 : pointer.x, py = locked ? innerHeight / 2 : pointer.y;
   const placed = {}, waiting = tourSite(), near = state?.nearbyLandmark ?? null;
@@ -107,8 +115,13 @@ onFrame((dt, controls, state, diving) => {
   const hot = leading ? null : waiting && placed[waiting] ? waiting : near && placed[near] ? near : pointed;
   if (closed && closed !== hot) closed = null;
   if (hot && hot !== closed) { if (hot !== shown) { shown = hot; fill(hot, controls); } hotAt = clock; why = hot === waiting ? 'tour' : hot === near ? 'near' : 'hover'; }
+  // The site lit on the bottom (set-pieces.js focus): the one pointed at, wherever it is, else the one whose card is up.
+  const player = state?.playerPosition, close = shown && player && within(shown, positionOf(controls, shown), player);
+  const lit = pointed && !leading ? pointed : shown && close && clock - hotAt <= LINGER && shown !== closed ? shown : null;
+  if (lit !== litSite) { litSite = lit; controls.setPieces?.focus?.(lit); }
   const spot = shown && placed[shown];
   if (!shown || !spot || shown === closed || clock - hotAt > LINGER) { hide(); if (shown && clock - hotAt > LINGER) shown = null; return; }
+  if (!close) { hide(); return; }
   // Where the card goes: one place, fixed in the water over the site (lift m above its middle), drawn facing the view
   // (the owner's notes, round 15: it used to choose between several places on screen, and jumped between them). Out of
   // view, it is not there; looked at again while it still lingers, it is back where it was.
@@ -130,10 +143,6 @@ onFrame((dt, controls, state, diving) => {
   if (card.dataset.show !== 'true') { card.dataset.show = 'true'; card.inert = false; place(camera); }
   if (document.body.dataset.siteCard !== shown) { document.body.dataset.siteCard = shown; dispatchEvent(new CustomEvent('oceansitecard', { detail: shown })); }
   card.dataset.fading = String(clock - hotAt > LINGER - 1.2);
-  // A ring on the site while it is pointed at, so the pointer knows what it is on.
-  const ringOn = live && why === 'hover';
-  if (ringOn) { ring.style.transform = `translate(${spot.x.toFixed(1)}px, ${spot.y.toFixed(1)}px)`; ring.style.setProperty('--size', `${Math.min(220, spot.radius * 2).toFixed(0)}px`); ring.style.setProperty('--signal', SITES[shown].signal); }
-  if (ring.dataset.show !== String(ringOn)) ring.dataset.show = String(ringOn);
 });
 
 // Where the card stands on screen this frame: placed after the scene is drawn, with the camera it was drawn with

@@ -325,12 +325,9 @@ html body .site-card-close{position:absolute;top:14px;right:14px;z-index:1;displ
 html body .site-card-close svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 html body .site-card-tail{position:absolute;left:50%;bottom:-8px;width:14px;height:14px;margin-left:-7px;rotate:45deg;background:inherit;border:inherit;border-top-color:transparent;border-left-color:transparent;border-radius:0 0 3px 0;-webkit-backdrop-filter:none;backdrop-filter:none}
 html body .site-card :is(button):focus-visible{outline:2px solid var(--ui-foam);outline-offset:2px}
-/* The ring on a site while it is pointed at. */
-html body .site-ring{position:fixed;left:0;top:0;z-index:var(--o-z-labels);width:var(--size,80px);height:var(--size,80px);margin:calc(var(--size,80px) / -2) 0 0 calc(var(--size,80px) / -2);border:1.5px solid color-mix(in srgb,var(--signal,#9adbd5) 70%,transparent);border-radius:50%;box-shadow:0 0 18px color-mix(in srgb,var(--signal,#9adbd5) 35%,transparent);pointer-events:none;opacity:0;transition:opacity 240ms var(--ui-ease)}
-html body .site-ring[data-show="true"]{opacity:.85}
 /* While a site's card is up it carries that site's action: the prompt at the bottom and the Here card stand down. */
 html body[data-site-card] :is(#interact-prompt,.calm-ahead,#reef-labels){visibility:hidden!important}
-html body:is([data-clear-ui="true"],[data-safety-stop="true"]) :is(.site-card,.site-ring){visibility:hidden!important}
+html body:is([data-clear-ui="true"],[data-safety-stop="true"]) .site-card{visibility:hidden!important}
 /* On a phone, a smaller card: the picture beside the words, the actions under them. */
 @media (max-width:599px),(pointer:coarse) and (max-height:499px){
   html body .site-card{display:grid;grid-template-columns:64px minmax(0,1fr);grid-template-areas:"shot text" "actions actions";column-gap:8px;width:min(250px,72vw);padding:8px 8px 10px;border-radius:12px}

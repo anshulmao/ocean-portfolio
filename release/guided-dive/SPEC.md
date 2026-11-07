@@ -556,3 +556,10 @@ stops.
     80%) before it slides down to stay on screen. The layout check treats it as part of the scene (`data-anchored`).
   - **The barracuda wheel** is passed on its reef side, on the heading the swim sets out on, instead of out round its
     far side facing the open sea; the whipray is seen from the same side.
+- **Round 16 (the owner's notes on round 15):**
+  - **The highlight is on the bottom:** the circle drawn over a pointed-at site on the screen is gone. Instead the site's
+    beacon (set-pieces.js) lights a soft pool on the bottom under it and a pulsing ring round its foot (the helmet's
+    plinth, the nautilus's alcove, the wreck's hull; for the résumé, a ring round the line under the slate) while it is
+    pointed at or its card is up.
+  - **Cards up close only:** a site's card comes up only within 8 m of the site itself (measured to its extent: the
+    wreck's from bow to stern), and is gone again beyond it.
