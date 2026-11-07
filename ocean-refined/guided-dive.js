@@ -54,6 +54,12 @@ const CONTROLS = {
 // On a phone the computer and the view live in the menu, not on the deck, so the welcome asks only for what the deck has and
 // no later beat teaches them there (DESK).
 const PRIMER = { keys: ['swim', 'updown', 'computer', 'view'], touch: ['swim', 'updown'] }, DESK = new Set(['computer', 'view']);
+// Remember the attempt, rather than completion: leaving halfway through must not
+// make a returning visitor repeat the lesson. No data leaves this browser.
+const TUTORIAL_KEY = 'ocean-guided-controls-attempted-v1';
+let tutorial = true;
+function tutorialAttempted() { try { return localStorage.getItem(TUTORIAL_KEY) === '1'; } catch { return false; } }
+function rememberTutorial() { try { localStorage.setItem(TUTORIAL_KEY, '1'); } catch { /* Storage may be disabled. The dive still works. */ } }
 const CHEER = 1.5, MOVED = 1.2;
 // CEILING: in the welcome the visitor may swim anywhere, up and down included, but no higher than this (world y), so rising
 // cannot carry them out of the tour and up to the surface. Only Skip (or Start) leaves the welcome.
@@ -78,7 +84,7 @@ const CALM_FADE = 3.5, QUIET = 6, CALM = 12, LOOK_OUT = .6, LOOK_FAR = 32, LOOK_
 const ASSETS_WAIT = 20;
 const motionMedia = matchMedia('(prefers-reduced-motion: reduce)'), coarse = matchMedia('(pointer: coarse)');
 // The phone layout of the layout contract (tokens.css): there the card is a bottom sheet and the copy is the short one.
-const compact = matchMedia('(max-width:599px),(pointer:coarse) and (max-height:499px)');
+const compact = matchMedia('(max-width:599px),(pointer:coarse)');
 // Kept here rather than imported from journey.js, which the unit tests replace with a stub.
 const touch = () => document.documentElement.dataset.input === 'touch' || (!document.documentElement.dataset.input && coarse.matches);
 // The in-app motion choice is the effective preference, including a full-motion
@@ -92,7 +98,7 @@ card.className = 'tour-card holo holo--reading'; card.setAttribute('aria-label',
 card.innerHTML = '<div class="tour-progress" aria-hidden="true"><i></i></div>'
   + '<button type="button" class="tour-head" data-tour="toggle" aria-expanded="false"><span class="holo-label tour-kicker"></span><span class="holo-value tour-count"></span><i class="tour-chevron" aria-hidden="true"></i></button>'
   + '<h2 class="tour-title"></h2><div class="tour-body"><p class="tour-lines" aria-live="polite"></p><button type="button" class="tour-more" data-tour="more" aria-expanded="false"><span>More</span></button><ul class="tour-keys" aria-label="Controls to try" hidden></ul><p class="tour-teach" hidden></p></div><p class="tour-pace"></p>'
-  + '<footer><button type="button" data-tour="pause">Pause <kbd>P</kbd></button><button type="button" data-tour="read">Read it <kbd>F</kbd></button><button type="button" data-tour="next">Next <kbd>N</kbd></button><button type="button" data-tour="rejoin">Rejoin <kbd>G</kbd></button><button type="button" data-tour="surface">Surface <kbd>N</kbd></button><button type="button" data-tour="explore">Keep exploring</button><button type="button" data-tour="exit">Exit tour</button></footer>';
+  + '<footer><button type="button" data-tour="pause">Pause <kbd>P</kbd></button><button type="button" data-tour="read">Read it <kbd>F</kbd></button><button type="button" data-tour="next">Next <kbd>N</kbd></button><button type="button" data-tour="tutorial">Try the controls again</button><button type="button" data-tour="rejoin">Rejoin <kbd>G</kbd></button><button type="button" data-tour="surface">Surface <kbd>N</kbd></button><button type="button" data-tour="explore">Keep exploring</button><button type="button" data-tour="exit">Exit tour</button></footer>';
 fade.className = 'tour-fade'; fade.setAttribute('aria-hidden', 'true');
 // A fly-by's caption: a title and a line over the water, no card. On a phone it sits under the depth chip, clear of the
 // subject and the controls; the sheet itself stays folded while the tour swims.
@@ -235,27 +241,27 @@ function paint() {
   const head = part('.tour-head');
   head.setAttribute('aria-expanded', String(wide));
   head.setAttribute('aria-label', `${part('.tour-kicker').textContent}. Step ${index + 1} of ${STEPS.length}. ${wide ? 'Fold the guide away' : 'Show the guide'}`);
-  part('.tour-title').textContent = status === 'free' ? 'You have the controls' : step.title;
+  part('.tour-title').textContent = status === 'free' ? 'You have the controls' : status === 'intro' && !tutorial ? 'Welcome back to the reef' : step.title;
   // The caption. On a phone the short one, with More for the full text; the hint follows the input in hand.
   const full = status === 'free' ? `Swim wherever you like. ${fingers ? 'Tap Rejoin' : 'Press G'} when you want me to lead again.`
     : status === 'travel' ? (routeIssue ? 'The route is blocked. Resume to try again, skip this swim, or explore freely.' : fingers ? 'On the way there. Drag the water to look around, or touch the pad to take over.' : 'On the way there. Look around freely; any movement key hands the dive to you.')
-    : step.line;
-  const brief = reading ? step.short ?? full : full;
+    : status === 'intro' && !tutorial ? 'Your guide is ready. Continue to the reef, or try the controls again.' : step.line;
+  const brief = reading && !(status === 'intro' && !tutorial) ? step.short ?? full : full;
   part('.tour-lines').textContent = small && !more ? brief : full;
   const moreButton = part('.tour-more');
   // On a phone the welcome's controls take the caption's place, so More is how it is read there.
-  moreButton.hidden = !(small && wide && (brief !== full || status === 'intro'));
+  moreButton.hidden = !(small && wide && (brief !== full || (status === 'intro' && tutorial)));
   moreButton.setAttribute('aria-expanded', String(more));
   moreButton.firstChild.textContent = more ? 'Less' : 'More';
   card.dataset.more = String(small && more);
   const tip = paintControls(step, fingers);
   // Folded, the row offers one action: the one the moment calls for.
   const primary = status === 'dwell' ? (step.landmark ? 'read' : 'next') : status === 'free' ? 'rejoin' : status === 'done' ? 'surface' : 'next';
-  const show = { pause: status === 'travel', read: status === 'dwell' && Boolean(step.landmark), next: touring(), rejoin: status === 'free', surface: status === 'done', explore: status === 'done', exit: touring() || status === 'free' };
+  const show = { pause: status === 'travel', read: status === 'dwell' && Boolean(step.landmark), next: touring(), tutorial: status === 'intro' && !tutorial, rejoin: status === 'free', surface: status === 'done', explore: status === 'done', exit: touring() || status === 'free' };
   for (const button of card.querySelectorAll('footer [data-tour]')) { const action = button.dataset.tour; button.hidden = wide ? !show[action] : action !== primary; }
   part('[data-tour="pause"]').firstChild.textContent = paused ? 'Resume ' : 'Pause ';
   part('[data-tour="pause"]').setAttribute('aria-pressed', String(paused));
-  part('[data-tour="next"]').firstChild.textContent = status === 'travel' ? (wide ? 'Skip travel ' : 'Skip ') : status === 'intro' ? (primerLeft().length ? 'Skip controls ' : 'Start ') : 'Continue ';
+  part('[data-tour="next"]').firstChild.textContent = status === 'travel' ? (wide ? 'Skip travel ' : 'Skip ') : status === 'intro' && tutorial ? (primerLeft().length ? 'Skip controls ' : 'Start ') : 'Continue ';
   part('.tour-pace').textContent = status === 'intro' ? (primerLeft().length ? (fingers ? 'Or skip the controls and start the tour.' : 'Or press N to skip the controls and start the tour.') : '')
     : status === 'dwell' ? `${step.landmark ? (fingers ? 'Tap Read it to open it. ' : 'Press F to open it. ') : ''}Take your time. Continue when you’re ready.`
     : status === 'travel' ? (routeIssue ? '' : paused ? 'Travel paused. Resume when you’re ready.' : 'You can skip this swim or take the controls at any time.') : '';
@@ -292,13 +298,13 @@ function notice(api) {
 }
 // The welcome's controls, as key buttons ticked once done with the one to try next lit, and one prompt at a time; a beat's
 // one tip. All worded for the input in hand.
-const primer = () => touch() ? PRIMER.touch : PRIMER.keys, primerLeft = () => primer().filter(id => !used.has(id));
+const primer = () => tutorial ? touch() ? PRIMER.touch : PRIMER.keys : [], primerLeft = () => primer().filter(id => !used.has(id));
 // The tick: its key pressed in, then the check drawn on (journey.css tour-press, tour-draw). Built from constants only.
 const TICK = '<svg class="tour-tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.4 6.5 5 9l4.7-5.6" pathLength="1"/></svg>';
 const cheerHTML = (id, fingers) => `<span class="tour-cheer">${fingers ? '' : `<kbd>${CONTROLS[id].key}</kbd>`}${TICK}${fingers ? CONTROLS[id].touch : CONTROLS[id].name}</span>`;
 function paintKeys(fingers) {
   const list = part('.tour-keys'), next = primerLeft()[0];
-  list.hidden = status !== 'intro';
+  list.hidden = status !== 'intro' || !tutorial;
   const shown = list.hidden ? '' : primer().map(id => `${id}:${used.has(id)}`).join() + next + fingers;
   if (shown && shown !== keysShown) list.replaceChildren(...primer().map(id => {
     const control = CONTROLS[id], item = document.createElement('li');
@@ -314,7 +320,7 @@ function paintControls(step, fingers) {
   let text = '', html = '';
   paintKeys(fingers);
   if (status === 'intro' && starting) text = 'Getting the reef ready…';
-  else if (status === 'intro') {
+  else if (status === 'intro' && tutorial) {
     const left = primerLeft(), next = left[0];
     if (cheer) html = cheerHTML(cheer, fingers);
     text = cheer ? `✓ ${CONTROLS[cheer].name}`
@@ -324,7 +330,7 @@ function paintControls(step, fingers) {
     // A stop or the ending teaches once it is reached; a fly-by teaches in its own caption.
     const id = step.teach, here = status === 'dwell' || status === 'done';
     if (here && id && cheer === id) { html = cheerHTML(id, fingers); text = `✓ ${CONTROLS[id].name}`; }
-    else if (here && id && !used.has(id) && !(fingers && DESK.has(id))) text = CONTROLS[id]?.tip?.[input] ?? '';
+    else if (tutorial && here && id && !used.has(id) && !(fingers && DESK.has(id))) text = CONTROLS[id]?.tip?.[input] ?? '';
   }
   if ((html || text) !== tipShown) { tipShown = html || text; if (html) tip.innerHTML = html; else tip.textContent = text; }
   tip.hidden = !text; card.dataset.tip = String(Boolean(text));
@@ -334,7 +340,7 @@ function paintControls(step, fingers) {
 let captionShown = '';
 function paintCaption(fingers) {
   // A glimpse (a fly-by with no title: a look out at the water or the reef on the way) has no caption.
-  const id = sight?.teach, on = status === 'travel' && Boolean(sight?.title) && !paused, tip = on && id && !used.has(id) ? CONTROLS[id]?.tip?.[fingers ? 1 : 0] ?? '' : '';
+  const id = sight?.teach, on = status === 'travel' && Boolean(sight?.title) && !paused, tip = tutorial && on && id && !used.has(id) ? CONTROLS[id]?.tip?.[fingers ? 1 : 0] ?? '' : '';
   // Tried while it was asked for: the caption shows it pressed and ticked, and the deck key flashes.
   const cheering = on && id && cheer === id;
   if (cheering) document.body.dataset.tourCheer = id; else delete document.body.dataset.tourCheer;
@@ -423,8 +429,11 @@ function flyBy(dt, at) {
     }
     // A subject the swim has left well behind (BEHIND: the cathedral once the swim is past its front) ends its fly-by early,
     // after BRIEF; one beside the diver never does.
-    const passed = sightTime >= BRIEF && behind(subjectOf(sight.look), at);
-    if (passed || sightTime >= holdFor || (due && sightTime >= BRIEF)) {
+    // A scripted encounter owns its whole shot. A nearby creature, the next
+    // caption, or a turn in the route cannot steal the whale shark's pan.
+    const protectedShot = Boolean(sight.encounter) && sightTime < holdFor;
+    const passed = !protectedShot && sightTime >= BRIEF && behind(subjectOf(sight.look), at);
+    if (passed || sightTime >= holdFor || (!protectedShot && due && sightTime >= BRIEF)) {
       // Back to back, the view stays on this subject until the next one's pan, rather than swinging back to the way ahead
       // between them; not one the swim has already left behind.
       // If the next one's subject is already in sight ahead, the view eases straight across to it instead.
@@ -449,7 +458,7 @@ function flyBy(dt, at) {
   if (spotted) spotted = null;
   looking = 0; lookFish = null; calmFor = 0; turnedAt = tourTime;
   sights.shift(); passed.add(next.key); sight = next; sightTime = 0; holdFor = next.hold ?? FLYBY; if (next.look?.visitor) spottedAt.set(next.look.visitor, tourTime);
-  waiting = Boolean(next.wait) && !used.has(next.wait);
+  waiting = tutorial && Boolean(next.wait) && !used.has(next.wait);
   api?.pacing(waiting ? HUSH : next.slow ?? SLOW); if (next.look) api?.glance(subjectOf(next.look)); api?.guideScooter(Boolean(next.scooter) && !waiting);
   if (next.through) throughBall(at);
   paint();
@@ -573,6 +582,7 @@ function advance() { if (index < STEPS.length - 1) go(index + 1); }
 function begin() {
   const api = controls(); index = 0; arrived = 0; status = 'intro'; paused = false; inputs = api.nav.inputs;
   roaming = starting = false; introFor = 0; start.fromArray(window.oceanDiagnostics.playerPosition);
+  rememberTutorial();
   // The welcome sheet follows the title card by REVEAL, counted from when the card went up during the descent.
   if (titled < 0) { titled = 0; splash('Guided dive', 'Welcome to the reef'); }
   endPrelude(); reveal = Math.max(.4, REVEAL - titled); titled = -1; note('tour_step');
@@ -608,6 +618,7 @@ export function startTour() {
   const api = controls();
   if (!api || !window.oceanDiagnostics?.ready || status !== 'off') return false;
   if (api.getMode() !== 'surface' && api.getMode() !== 'diver') return false;
+  tutorial = !tutorialAttempted();
   // From the surface the opening plays first; under water the tour starts where the diver is.
   // The ocean starts on what the dive will wait for now, not when the prelude ends 1.6 s from here (world.js expectDive).
   if (api.getMode() === 'surface') { prelude = 0; document.body.dataset.prelude = 'on'; api.expectDive?.(); }
@@ -706,6 +717,10 @@ card.addEventListener('click', event => {
   else if (action === 'exit') stop('Tour ended. The reef is yours.', 'exit');
   else if (action === 'toggle') { open = card.dataset.sheet !== 'expanded'; more = false; paint(); }
   else if (action === 'more') { more = !more; paint(); }
+  else if (action === 'tutorial' && status === 'intro') {
+    tutorial = true; for (const id of [...PRIMER.keys, ...PRIMER.touch]) used.delete(id);
+    cheer = null; cheerFor = 0; keysShown = ''; paint();
+  }
   // The sheet's own toggles keep the focus where it is, for a keyboard; the actions hand it back to the scene.
   if (action && !['read', 'toggle', 'more'].includes(action)) document.querySelector('#world')?.focus({ preventScroll: true });
 });

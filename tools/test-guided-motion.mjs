@@ -23,7 +23,8 @@ class Element {
   addEventListener(name, fn) { const group = this.listeners.get(name) ?? new Set(); group.add(fn); this.listeners.set(name, group); }
   removeEventListener(name, fn) { this.listeners.get(name)?.delete(fn); }
   dispatchEvent(event) { for (const fn of this.listeners.get(event.type) ?? []) fn(event); }
-  setAttribute() {} focus() {} append() {} replaceChildren() {}
+  attributes = {}; children = [];
+  setAttribute(name, value) { this.attributes[name] = value; } focus() {} append(...children) { this.children.push(...children); } replaceChildren() {}
   querySelector(selector) { if (!this.parts.has(selector)) this.parts.set(selector, new Element()); return this.parts.get(selector); }
   querySelectorAll() { return []; }
 }
@@ -725,3 +726,62 @@ console.log('PASS: passing orcas are turned to calmly, after a quiet spell, then
   window.oceanTour.stop(); env.nav.destroy();
   console.log(`PASS: on the way to the anchor the view turns one way at a time (${reversals} reversals).`);
 }
+
+// A scripted whale-shark shot cannot be interrupted by another passing animal
+// or by the whale swimming behind the diver. Keep the complete nine-second shot
+// even while both are visible. The visitor's movement can still take over.
+{
+  const env = environment(60); toTravel(env);
+  for (let i = 0; i < 400 && !(tourStatus() === 'dwell' && env.state.tour.key === 'experience'); i++) { window.oceanTour.next(); env.tick(.5); }
+  window.oceanTour.next();
+  for (let frame = 0; frame < 60 * 90 && env.state.tour.sight !== 'whale-shark'; frame++) env.tick();
+  assert.equal(env.state.tour.sight, 'whale-shark');
+  const targets = [], glance = window.oceanControls.glance;
+  window.oceanControls.glance = (point, ...args) => { targets.push(point && [...point]); glance(point, ...args); };
+  // Put the passing whale behind the moving body and an incidental pod ahead.
+  const whale = () => {
+    const p = env.state.playerPosition, velocity = env.nav.state.velocity.clone().normalize();
+    return { id:'whale-shark', x:p[0]-velocity.x*25, y:p[1]-velocity.y*25, z:p[2]-velocity.z*25 };
+  };
+  window.oceanControls.visitors = () => [
+    {id:'orcas',x:55,y:-30,z:-70}, whale(), {id:'dolphins',x:40,y:-25,z:-85},
+  ];
+  env.tick(8.5);
+  assert.equal(env.state.tour.sight, 'whale-shark', 'scripted shot keeps the camera for its full hold');
+  assert.ok(targets.length > 400 && targets.every(point => point && point[1] !== -30 && point[1] !== -25), 'only the scripted subject is followed');
+  env.tick(.7);
+  assert.notEqual(env.state.tour.sight, 'whale-shark', 'the exclusive shot releases after its hold');
+  window.oceanTour.stop(); env.nav.destroy();
+}
+console.log('PASS: scripted whale-shark shot keeps priority for its full hold, then releases.');
+
+// Remember an interrupted attempt, skip the lesson on the next explicit tour,
+// and keep a discoverable replay. Neither a page visit nor elapsed time starts
+// a tour, and a denied storage API must never prevent the guide from running.
+{
+  const values = new Map();
+  globalThis.localStorage = {getItem:key=>values.get(key) ?? null, setItem:(key,value)=>values.set(key,value)};
+  let env = environment(60);
+  assert.equal(values.size, 0);
+  assert.equal(tourStatus(), 'off');
+  startTour(); env.tick(.5);
+  assert.match(env.state.tour.tip, /Try it/);
+  assert.equal(values.get('ocean-guided-controls-attempted-v1'), '1');
+  window.oceanTour.stop(); env.nav.destroy();
+  env = environment(60); startTour(); env.tick(5);
+  assert.equal(tourStatus(), 'intro', 'a returning visitor still chooses Continue');
+  assert.equal(env.state.tour.tip, '', 'returning visitor is not taught controls again');
+  const card = document.body.children.find(child => child.className?.includes('tour-card'));
+  assert.equal(card.querySelector('.tour-title').textContent, 'Welcome back to the reef');
+  assert.equal(card.querySelector('[data-tour="next"]').firstChild.textContent, 'Continue ');
+  card.dispatchEvent({type:'click',target:{closest:()=>({dataset:{tour:'tutorial'}})}});
+  assert.match(env.state.tour.tip, /Try it, 1 of 4/);
+  key('KeyN'); env.tick(1);
+  assert.equal(tourStatus(), 'travel', 'keyboard Skip still leaves an explicitly replayed lesson');
+  window.oceanTour.stop(); env.nav.destroy();
+  globalThis.localStorage = {getItem(){throw Error('blocked');},setItem(){throw Error('blocked');}};
+  env = environment(60); assert.equal(startTour(), true); env.tick(.5);
+  assert.equal(tourStatus(), 'intro');
+  window.oceanTour.stop(); env.nav.destroy(); delete globalThis.localStorage;
+}
+console.log('PASS: interrupted tutorial attempts persist, repeats skip teaching, replay and blocked storage work.');
