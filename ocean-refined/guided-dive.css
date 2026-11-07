@@ -33,6 +33,17 @@ html body .tour-card [hidden] {display:none}
   html body .tour-card .tour-title {font-size:18px}
   html body .tour-card .tour-lines {font-size:14px;line-height:1.45}
 }
+@media (max-width:599px) and (min-height:500px),(pointer:coarse) and (min-height:500px) {
+  /* The first lesson sits above the touch deck. Reclaim spacing around its
+     noninteractive chips, keeping the instruction type and 44px actions intact
+     so the welcome leaves the reef's central viewing area open. More still
+     expands into the ordinary reading layout; short landscape screens keep
+     their existing horizontal arrangement. */
+  html body .tour-card[data-state="intro"][data-tip="true"]:not([data-more="true"]) .tour-keys {margin-top:2px}
+  html body .tour-card[data-state="intro"][data-tip="true"]:not([data-more="true"]) .tour-keys li {padding-block:3px}
+  html body .tour-card[data-state="intro"][data-tip="true"]:not([data-more="true"]) .tour-teach {margin-top:4px}
+  html body .tour-card[data-state="intro"][data-tip="true"]:not([data-more="true"]) footer {margin-top:8px}
+}
 @media(prefers-reduced-motion:reduce) {
   html body .tour-caption,html body .tour-card {transition:none}
 }
