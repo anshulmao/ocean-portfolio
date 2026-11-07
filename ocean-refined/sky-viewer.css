@@ -1,0 +1,51 @@
+/* The real sky is the canvas; two small reading surfaces leave it open. */
+html body .sky-viewer{position:fixed;inset:0;margin:0;padding:0;width:100%;height:100%;max-width:none;max-height:none;border:0;border-radius:0;background:transparent;color:#e9f6f1;font:400 16px/1.45 var(--o-display,Outfit,system-ui,sans-serif);overflow:hidden}
+.sky-viewer::backdrop{background:transparent}
+.sky-viewer-head{position:absolute;top:max(20px,env(safe-area-inset-top));left:max(24px,env(safe-area-inset-left));right:max(24px,env(safe-area-inset-right));display:flex;align-items:start;justify-content:space-between;gap:16px}
+.sky-viewer-head>div{padding:14px 18px;background:#102e37;border-radius:16px}
+html body .sky-viewer h2{margin:0;font:500 clamp(20px,2vw,27px)/1.15 var(--o-display,Outfit,system-ui,sans-serif);letter-spacing:-.02em}
+.sky-viewer-head p{margin:6px 0 0;font-size:14px;color:#c7dfdb}
+html body .sky-viewer :is(button,select){min-height:44px;border:0;border-radius:24px;padding:10px 16px;font:500 16px/1.2 var(--o-display,Outfit,system-ui,sans-serif);background:#244953;color:#e9f6f1;cursor:pointer;transition:transform 160ms ease,background-color 160ms ease}
+html body .sky-viewer button:hover{background:#32616a;transform:translateY(-1px)}
+html body .sky-viewer button:active{transform:translateY(1px)}
+html body .sky-viewer :is(button,select,a):focus-visible{outline:2px solid #c2eeea;outline-offset:4px}
+.sky-viewer-close{display:flex;align-items:center;gap:14px;flex:none}
+.sky-viewer-close span{font-size:25px;font-weight:300}
+.sky-viewer-panel{position:absolute;left:24px;bottom:max(24px,env(safe-area-inset-bottom));width:min(510px,calc(100% - 48px));padding:22px 24px;background:#102e37;border-radius:20px;box-sizing:border-box;max-height:calc(100dvh - 152px);overflow:auto}
+.sky-viewer-choice{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sky-viewer-choice label{font-size:14px;color:#c7dfdb;flex:none}
+html body .sky-viewer select{min-width:0;max-width:68%;padding-right:28px;font-size:15px}
+html body .sky-viewer h3{margin:20px 0 4px;font:500 27px/1.15 var(--o-display,Outfit,system-ui,sans-serif);letter-spacing:-.02em}
+.sky-target-position{margin:0;font-size:14px;color:#c7dfdb;font-variant-numeric:tabular-nums}
+#sky-target-description{margin:12px 0 18px;max-width:48ch}
+.sky-viewer-actions{display:flex;gap:8px;align-items:center;justify-content:space-between}
+html body .sky-viewer #sky-next{background:#c2eeea;color:#102e37}
+html body .sky-viewer #sky-next:hover{background:#d9f7f2}
+.sky-viewer-source{margin:15px 0 0;font-size:12px;color:#c7dfdb}
+.sky-viewer-source a{color:inherit;text-underline-offset:3px}
+body[data-sky-viewer="open"] :is(.hero,.masthead,.view-controls,.heading-indicator,.scene-footer,#sky-labels,#reef-labels,.status,.settings-menu,.reef-map){visibility:hidden!important;pointer-events:none!important}
+@media(max-width:599px){
+  .sky-viewer-head{top:max(12px,env(safe-area-inset-top));left:12px;right:12px;gap:8px}
+  .sky-viewer-head>div{padding:12px;max-width:calc(100% - 84px)}
+  html body .sky-viewer h2{font-size:20px}
+  .sky-viewer-head p{font-size:12px;max-width:27ch}
+  html body .sky-viewer .sky-viewer-close{font-size:0;padding:8px 14px;min-width:48px;min-height:48px;justify-content:center}
+  .sky-viewer-close span{font-size:26px}
+  .sky-viewer-panel{left:12px;bottom:max(12px,env(safe-area-inset-bottom));width:calc(100% - 24px);padding:18px;max-height:calc(60dvh - 12px)}
+  .sky-viewer-choice{gap:8px}
+  html body .sky-viewer select{max-width:64%;font-size:14px}
+  html body .sky-viewer h3{font-size:24px;margin-top:16px}
+  #sky-target-description{font-size:15px;line-height:1.4;margin:10px 0 14px}
+  html body .sky-viewer .sky-viewer-actions button{padding:10px 12px;font-size:15px}
+}
+@media(max-height:500px) and (min-width:600px){
+  .sky-viewer-head{top:12px;left:12px;right:12px}
+  .sky-viewer-head>div{padding:10px 14px;max-width:calc(50% - 28px)}
+  html body .sky-viewer h2{font-size:21px}
+  .sky-viewer-head p{font-size:12px}
+  .sky-viewer-panel{left:auto;right:12px;bottom:max(12px,env(safe-area-inset-bottom));width:min(400px,49%);padding:16px;max-height:calc(100dvh - 76px)}
+  html body .sky-viewer h3{font-size:23px;margin-top:12px}
+  #sky-target-description{font-size:14px;margin:8px 0 12px}
+  .sky-viewer-source{font-size:11px;margin-top:10px}
+}
+@media(prefers-reduced-motion:reduce){html body .sky-viewer :is(button,select){transition:none;transform:none}}

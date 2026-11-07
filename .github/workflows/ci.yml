@@ -49,6 +49,8 @@ jobs:
       - run: npx playwright install --with-deps --only-shell chromium
       - run: npm run build
       - run: npm run smoke
+      - name: Guided sky viewer
+        run: node tools/test-sky-viewer.mjs
       - run: npm run test:services:browser
       - run: npm run test:banking
       - run: npm run test:ui

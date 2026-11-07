@@ -20,6 +20,7 @@ import { createDistantScenery } from './distant-scenery.js';
 import { createSeabirds } from './seabirds.js';
 import { createWeather } from './weather.js';
 import { createSkySystem } from './sky-system.js';
+import { createSkyViewer } from './sky-viewer.js';
 import { createExploration } from './exploration.js';
 import { createAscentComposition } from './ascent-composition.js';
 import { settings } from './movement-settings.js';
@@ -54,7 +55,7 @@ if(requestedMotion==='full'||requestedMotion==='reduced'){
 // and an explicit saved/query preference still wins; OS changes are honored below.
 let reducedMotion=motionPreference?motionPreference==='reduced':false,paused=reducedMotion;
 let diverProfile,renderer,scene,camera,water,waterCalm,waterRough,waterFine,waterCoarse,diver,reef,skySystem,marine,clouds,sunlight,ambient,beamGroup,motes,bubbleMesh,diveLamp;
-let viewerOrbit=null,scooterModel=null;
+let viewerOrbit=null,scooterModel=null,skyViewer=null;
 let diverAnimator=null;
 const diverAnimationState={};
 const beams=[],beamPose=new THREE.Object3D();
@@ -115,7 +116,7 @@ const RENDER_SCALES=[1,.85,.72,.6],scaler=createScaleController({floor:RENDER_SC
 let tickCount=0,displayHz=60,viewWidth=innerWidth,viewHeight=innerHeight;
 // Projected labels keep out of the HUD's bands: 110 px at the top and bottom, and on a phone (the layout tokens' query)
 // the top bar with the scope under it, and the controls zone with the collapsed sheet above it (hud.css 14).
-const phoneLayout=matchMedia('(max-width:599px),(pointer:coarse) and (max-height:499px)');let labelTop=110,labelBottom=110;
+const phoneLayout=matchMedia('(max-width:599px),(pointer:coarse)');let labelTop=110,labelBottom=110;
 function measureLabelBands(){const phone=phoneLayout.matches;labelTop=phone?180:110;labelBottom=phone?(innerWidth>innerHeight?80:210):110;}
 measureLabelBands();
 // Frame pacing: the display's refresh interval is read from the callbacks themselves, and a frame is drawn every stride-th one.
@@ -513,6 +514,7 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   // Weather: set('clear'|'rain'|'storm') cross-fades to that state and holds it, set('auto') lets it drift again. Time: lock stops the clock advancing by itself; scrubbing and presets still work.
   weather:{get state(){return weather?.state??'clear';},get target(){return weather?.target??'clear';},get locked(){return weather?.locked??false;},set(name){const result=weather?.set(name);wake();return result;},lock(value=true){const result=weather?.lock(value);wake();return result;},states:['clear','rain','storm']},
   time:{get locked(){return timeLocked;},lock(value=true){timeLocked=Boolean(value);diagnostic.timeLocked=timeLocked;try{localStorage.setItem('ocean-time-lock',timeLocked?'1':'0');}catch{}window.dispatchEvent(new CustomEvent('oceantimelockchange',{detail:{locked:timeLocked}}));wake();return timeLocked;}},
+  sky:{get viewer(){return skyViewer;},get state(){return skySystem?.getState(phase);},targets:()=>skySystem?.tourTargets(phase)??[]},
   // QA hook: advance the simulation in fixed steps when the tab is not painting.
   step(seconds=1,dt=1/30){finishUnderwater();for(let t=0;t<seconds;t+=dt){elapsed+=dt;hudForce=t+dt>=seconds;updateWorld(dt,dt);window.oceanJourney?.tick(dt);}drawFrame();diagnostic.frames++;},
   // QA hook: draw the current state once more, exactly as the frame loop draws it (smoothing pass included).
@@ -890,7 +892,7 @@ function paintHud(nav,submerged,depth,edge,skyState){
 }
 function updateWorld(dt,clockDt=dt){
   if(phaseTarget!==null){phase=THREE.MathUtils.lerp(phase,phaseTarget,1-Math.exp(-dt*1.6));if(Math.abs(phase-phaseTarget)<.002){phase=phaseTarget;phaseTarget=null;}}
-  else if(!paused&&!timeLocked&&!expeditionUI?.isScrubbing())phase+=clockDt*Math.PI*2/cycleSeconds;
+  else if(!paused&&!timeLocked&&!skyViewer?.active&&!expeditionUI?.isScrubbing())phase+=clockDt*Math.PI*2/cycleSeconds;
   night=skySystem.getNightFactor?skySystem.getNightFactor(phase):THREE.MathUtils.smoothstep(-Math.cos(phase),-.15,.3);
   // The preset name only changes around dawn and dusk, and finding it costs two more ephemeris evaluations: look twice a second.
   if(phaseTarget===null&&++presetTick>=30){presetTick=0;const altitude=skySystem.getState(phase).sunAltitude;const rising=skySystem.getState(phase+.0001).sunAltitude>altitude;const preset=altitude>-6&&altitude<8?(rising?'dawn':'dusk'):night>.5?'night':'day';if(diagnostic.skyPreset!==preset)paintTheme(night>.5,preset);}
@@ -1048,6 +1050,7 @@ function updateWorld(dt,clockDt=dt){
       if(progress===1)surfaceReturn=null;
     }
   }
+  skyViewer?.update(dt);
   camera.getWorldDirection(viewDirection);camera.updateMatrixWorld(true);
   underwater=THREE.MathUtils.smoothstep(-camera.position.y,-.12,1.2);uniforms.uDive.value=underwater;
   splashState.cameraY=camera.position.y;splashState.transition=dive!==diveTarget||nav.mode==='transition'||surfaceLandingTime>0;splashState.reducedMotion=reducedMotion;waterlineSplash?.update(splashState);
@@ -1087,7 +1090,7 @@ function updateWorld(dt,clockDt=dt){
   clouds?.update(camera.position,underwater);birds?.update(elapsed,camera.position,night,underwater);
   sunlight.color.lerp(goldenSun,golden*.7);distantScenery?.update(elapsed,night,underwater);
   // The scooter widens the lens a little. Its boost is already eased, so the field of view follows it directly.
-  const fovGoal=settings.cameraFov+(mobile?7:0)+(reducedMotion?0:nav.scooter*5);if(Math.abs(camera.fov-fovGoal)>.01){camera.fov=fovGoal;camera.updateProjectionMatrix();}
+  const fovGoal=settings.cameraFov+(mobile?7:0)+(reducedMotion?0:nav.scooter*5);if(!skyViewer?.active&&Math.abs(camera.fov-fovGoal)>.01){camera.fov=fovGoal;camera.updateProjectionMatrix();}
   const scale=settings.diverScale*(mobile?1.03/1.35:camera.aspect<1?1.17/1.35:1);
   diver.root.scale.setScalar(scale);
   diver.root.visible=safetyStop.blend>.01||ascending||diveTarget===0||!(firstPerson&&easedDive>.92);
@@ -1203,6 +1206,7 @@ function gpuPoll(){
 }
 function renderBudget(){
   if(budgetAsked!=='auto')return budgetAsked;
+  if(skyViewer?.active)return reducedMotion?'idle':'full';
   if(interfaceOpen)return 'idle';
   if(movementPanelOpen||settingsMenuOpen)return 'reduced';
   // A dive held at the waterline (see updateWorld) waits on the work, not on the picture: the camera is still and the
@@ -1256,7 +1260,7 @@ function frame(now){
   }else{frameCount=0;tickCount=0;perfDuration=0;drawCount=0;lastDraw=0;windowBusy=false;gpuSum=0;gpuCount=0;}
   // Background work for this thread follows the frame in a task of its own (see afterFrame).
   if(jobs.length&&diagnostic.ready){jobFrameAt=ticking?performance.now():now;jobGap=raw*1000;jobFrameDrew=draw;jobsAt=performance.now();if(ticking)afterFrame();else if(!jobPosted){jobPosted=true;jobPort.port2.postMessage(0);}}
-  if(paused&&!diagnostic.transition&&!exploration.state.moving&&!diagnostic.cameraMoving&&!wristComputer?.diagnostics.animating){running=false;lastFrame=0;pump();return;}
+  if(paused&&!skyViewer?.active&&!diagnostic.transition&&!exploration.state.moving&&!diagnostic.cameraMoving&&!wristComputer?.diagnostics.animating){running=false;lastFrame=0;pump();return;}
   raf=requestAnimationFrame(frame);
 }
 function wake(){if(!running&&renderer&&focused&&started&&!diagnostic.error){running=true;lastFrame=0;raf=requestAnimationFrame(frame);}}
@@ -1313,6 +1317,11 @@ async function boot(){
   skySystem=createSkySystem(uniforms,rng);scene.add(skySystem.root);expeditionUI=createExpeditionUI({sky:skySystem,getPhase:()=>phase,setPhase:value=>{phase=value;phaseTarget=null;wake();},frameSurface:phaseValue=>returnSurfaceView(phaseValue)});
   diagnostic.starCount=skySystem.starCount;diagnostic.constellationCount=skySystem.constellationCount;
   phase=skySystem.openingPhase;paintTheme(false,'day');diagnostic.openingSunAltitude=skySystem.getState(phase).sunAltitude;
+  skyViewer=createSkyViewer({sky:skySystem,camera,wake,reducedMotion:()=>reducedMotion||motionMedia.matches,
+    available:()=>diagnostic.ready&&getMode()==='surface'&&!getTransition()&&!viewerOrbit&&!document.querySelector('dialog[open]')&&!settingsMenuOpen&&(window.oceanTour?.status??'off')==='off',
+    begin:()=>{const saved={phase,phaseTarget,preset:diagnostic.skyPreset,interfaceOpen,surfaceReturn,surfaceHeading,restoreWeather:weather.preview('clear')};phase=skySystem.phaseAtLocalHour(22);phaseTarget=null;surfaceReturn=surfaceHeading=null;cameraVelocity.set(0,0,0);setInterfaceOpen(true);paintTheme(true,'night');return saved;},
+    end:saved=>{phase=saved.phase;phaseTarget=saved.phaseTarget;surfaceReturn=saved.surfaceReturn;surfaceHeading=saved.surfaceHeading;saved.restoreWeather();cameraVelocity.set(0,0,0);setInterfaceOpen(saved.interfaceOpen);paintTheme(skySystem.getNightFactor(phase)>.5,saved.preset);}});
+
   for(const item of skySystem.labels){const label=document.createElement('div');label.className='constellation-label';label.innerHTML=`<i></i>${item.name.toUpperCase()}`;$('#sky-labels').append(label);label.style.left=label.style.top='0';skyLabels.push({label,shift:'',anchor:item.anchor});}
   early(skySystem.root);for(const material of skySystem.prepare(renderer))linking.add(material);
   await stage('sky');

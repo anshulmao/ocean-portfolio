@@ -163,6 +163,21 @@ export function createWeather({ uniforms, scene, economy = false, onChange } = {
     remember(); announce(); return locked;
   }
 
+  // Borrow clear weather for a sky tour without writing a visitor preference.
+  // Restoring resumes even a partially completed weather cross-fade.
+  function preview(name = 'clear') {
+    if (!LEVELS[name]) return () => {};
+    const saved = {target, locked, fade, fadeSeconds, dwell, from: {...from}, intensity: {...intensity}, flashAge, flashPower, nextFlash};
+    target = name; locked = true; fade = 1;
+    Object.assign(intensity, LEVELS[name]); flashPower = flash = 0; announce();
+    let restored = false;
+    return () => {
+      if (restored) return; restored = true;
+      ({target, locked, fade, fadeSeconds, dwell, flashAge, flashPower, nextFlash} = saved);
+      Object.assign(from, saved.from); Object.assign(intensity, saved.intensity); announce();
+    };
+  }
+
   function update(dt, elapsed, cameraPosition, underwater, night) {
     lastDt = dt;
     if (fade < 1) { if (dt > 0) settle(Math.min(1, fade + dt / fadeSeconds)); }
@@ -233,7 +248,7 @@ export function createWeather({ uniforms, scene, economy = false, onChange } = {
     ambient.intensity = ambient.intensity * (1 - .28 * w.cloud - .17 * w.storm) + flash * 1.4 * dry;
   }
   announce();
-  return { root, update, set, lock, surfaceLight, applyLighting, intensity, states: WEATHER_STATES,
+  return { root, update, set, lock, preview, surfaceLight, applyLighting, intensity, states: WEATHER_STATES,
     get state() { return state; }, get target() { return target; }, get locked() { return locked; },
     get flash() { return flash; }, get fading() { return fade < 1; } };
 }

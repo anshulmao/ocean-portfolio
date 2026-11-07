@@ -1683,6 +1683,39 @@ const PATTERNS = [
     edges: [[936,1017],[1017,1122],[1122,1220],[1220,1203]] }
 ];
 
+// Tour copy describes the conventional stick figures above, rather than claiming
+// that their stars are physically close. The existing Yale catalogue is shared
+// with the rendered sphere: the viewer never overlays an invented star map.
+const PATTERN_NOTES = {
+  Orion: 'Start with the three stars of the belt. Follow the outline to the shoulders and feet; warm Betelgeuse and blue-white Rigel mark opposite corners.',
+  Cassiopeia: 'Five bright stars trace a compact W. Its orientation changes as the sky turns, but the spacing between its stars stays the same.',
+  'Ursa Major': 'Trace the bowl and curved handle of the Big Dipper. This familiar pattern is only part of the larger constellation.',
+  Cygnus: 'Follow the long axis of the Northern Cross through the middle of the swan, then find the stars of its outstretched wings.',
+  Scorpius: 'Begin at reddish Antares, then follow the long hooked tail. The wide curve is easiest to see when the whole figure is above the sea.',
+  Crux: 'Look for the compact Southern Cross. The long and short axes help distinguish its four principal stars from nearby patterns.',
+  Taurus: 'Find orange Aldebaran at the face of the bull, then follow the two long horns away from it.',
+  Gemini: 'Begin with the neighbouring heads of the twins, Castor and Pollux. Their two outlines extend across the sky beside one another.',
+  'Canis Major': 'Find Sirius first, then trace the smaller stars around it. It is the brightest star in the night sky.',
+  Leo: 'A backward question-mark shape outlines the head and mane. Follow the long body toward the tail.',
+  'Triangulum Australe': 'Three bright stars make a broad triangle in the southern sky. Compare the spacing of the three sides.',
+  Pegasus: 'Find the four corners of the Great Square. One corner, Alpheratz, belongs to neighbouring Andromeda.',
+  Andromeda: 'From Alpheratz, follow the long branching chain away from the Great Square of Pegasus.',
+  Lyra: 'Start at bright Vega, then find the small tilted parallelogram beside it.',
+  Perseus: 'Follow the branching figure around Mirfak. The outlined shape is a guide to the pattern, not an official constellation boundary.'
+};
+const NAMED_STARS = [
+  [2491,'Sirius','The brightest star in the night sky. Look for the smaller stars of Canis Major around it.'],
+  [2326,'Canopus','A bright southern star. Its low position from Kuala Lumpur makes the sea horizon a useful reference.'],
+  [5340,'Arcturus','A warm-coloured star in Boötes. Compare its colour with the cooler blue-white stars elsewhere in the sky.'],
+  [7001,'Vega','The brightest star in Lyra. Look beside it for the small parallelogram of the lyre.'],
+  [2061,'Betelgeuse','The warm-coloured shoulder of Orion. Compare it with blue-white Rigel across the figure.'],
+  [6134,'Antares','The reddish star near the heart of Scorpius. Follow the constellation’s long curved tail away from it.'],
+  [1713,'Rigel','A bright blue-white star at one foot of Orion, opposite warm-coloured Betelgeuse.'],
+  [7557,'Altair','The brightest star in Aquila. Two fainter neighbouring stars help pick it out.'],
+  [7924,'Deneb','A bright star at one end of the long Northern Cross in Cygnus.'],
+  [8728,'Fomalhaut','A bright, relatively isolated star in the southern part of the sky.']
+];
+
 function equatorial(ra, dec, radius = 680) {
   const a = THREE.MathUtils.degToRad(ra), d = THREE.MathUtils.degToRad(dec);
   return new THREE.Vector3(-Math.cos(d)*Math.sin(a),Math.sin(d),-Math.cos(d)*Math.cos(a)).multiplyScalar(radius);
@@ -1786,6 +1819,27 @@ export function createSkySystem(uniforms, rng) {
   const lines=new THREE.LineSegments(lineGeo,new THREE.ShaderMaterial({uniforms,vertexShader:lineVertex,fragmentShader:lineFragment,
     transparent:true,depthWrite:false,fog:false,blending:THREE.AdditiveBlending}));
   lines.renderOrder=-89;lines.frustumCulled=false;celestial.add(lines);
+  const focusGeometry=new THREE.BufferGeometry();
+  const focusPositions=new THREE.Float32BufferAttribute(new Float32Array(Math.max(64,...PATTERNS.map(pattern=>pattern.edges.length*2))*3),3);
+  focusGeometry.setAttribute('position',focusPositions);focusGeometry.setDrawRange(0,0);
+  const focusLines=new THREE.LineSegments(focusGeometry,new THREE.ShaderMaterial({uniforms,vertexShader:lineVertex,
+    fragmentShader:lineFragment.replace('*.21','*.78').replace('vec4(.46,.67,.86,a)','vec4(.76,.94,.89,a)'),
+    transparent:true,depthWrite:false,fog:false,blending:THREE.AdditiveBlending}));
+  focusLines.renderOrder=-87;focusLines.frustumCulled=false;focusLines.visible=false;celestial.add(focusLines);
+  function focusTarget(id=null) {
+    const pattern=PATTERNS.find(item=>item.name===id);
+    const star=typeof id==='string'&&id.startsWith('HR')?positions.get(Number(id.slice(2))):null;
+    focusLines.visible=Boolean(pattern||star);
+    const points=[];
+    if(pattern)for(const [a,b] of pattern.edges)points.push(...positions.get(a).toArray(),...positions.get(b).toArray());
+    if(star){
+      const normal=star.clone().normalize(),east=new THREE.Vector3().crossVectors(normal,new THREE.Vector3(0,1,0)).normalize();
+      const up=new THREE.Vector3().crossVectors(east,normal).normalize();
+      const point=angle=>star.clone().addScaledVector(east,Math.cos(angle)*5).addScaledVector(up,Math.sin(angle)*5).toArray();
+      for(let i=0;i<32;i++)points.push(...point(i/32*Math.PI*2),...point((i+1)/32*Math.PI*2));
+    }
+    if(points.length){focusPositions.array.set(points);focusPositions.needsUpdate=true;focusGeometry.setDrawRange(0,points.length/3);}
+  }
 
   const observer=new Astronomy.Observer(OBSERVER.latitude,OBSERVER.longitude,OBSERVER.elevation);
   const now=new Date(),localDate=new Date(now.getTime()+8*3600000);
@@ -1803,6 +1857,25 @@ export function createSkySystem(uniforms, rng) {
   const rotationMatrix=new THREE.Matrix4(),sunDirection=new THREE.Vector3(),moonDirection=new THREE.Vector3(),moonLight=new THREE.Vector3();
   let cachedPhase=NaN,cachedState;
   const atPhase=phase=>new Date(reference.getTime()+phase/TAU*DAY_MS);
+  function phaseAtLocalHour(hour=22) {
+    return (localMidnight.getTime()+hour*3600000-reference.getTime())/DAY_MS*TAU;
+  }
+  function tourTargets(phase) {
+    const time=Astronomy.MakeTime(atPhase(phase));
+    const rotation=new THREE.Quaternion().setFromRotationMatrix(catalogWorldRotation(Astronomy.Rotation_EQJ_HOR(time,observer),new THREE.Matrix4()));
+    const world=id=>positions.get(id).clone().normalize().applyQuaternion(rotation);
+    const describe=(id,name,kind,direction,description,extra={})=>({id,name,kind,direction:direction.toArray(),
+      altitude:THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(direction.y,-1,1))),
+      azimuth:(THREE.MathUtils.radToDeg(Math.atan2(-direction.z,-direction.x))+360)%360,description,...extra});
+    const patterns=PATTERNS.map(pattern=>{
+      const members=pattern.ids.map(world),direction=members.reduce((sum,p)=>sum.add(p),new THREE.Vector3()).normalize();
+      return describe(pattern.name,pattern.name,'Constellation',direction,PATTERN_NOTES[pattern.name],{
+        stars:pattern.ids.length,angularRadius:Math.max(...members.map(p=>p.angleTo(direction))),minimumAltitude:Math.min(...members.map(p=>THREE.MathUtils.radToDeg(Math.asin(p.y))))});
+    }).filter(item=>item.altitude>=15&&item.minimumAltitude>=5).sort((a,b)=>b.altitude-a.altitude);
+    const stars=NAMED_STARS.map(([id,name,description])=>describe(`HR${id}`,name,'Star',world(id),description,{magnitude:CATALOG.find(row=>row[0]===id)[3]}))
+      .filter(item=>item.altitude>=15).sort((a,b)=>b.altitude-a.altitude);
+    return [...patterns,...stars];
+  }
   // The ephemeris (the Sun and the Moon to the arcsecond, the Moon's phase, the sky's turn) cost a fraction of a
   // millisecond, and the clock moves the phase every frame: on a phone that was a millisecond of each frame for a sky
   // that turns a quarter of a degree a simulated minute. It is worked out exactly once a simulated minute (0.83 s of the
@@ -1899,5 +1972,5 @@ export function createSkySystem(uniforms, rng) {
   }
   return {root,update,bake,prepare,labels,starCount:CATALOG.length,constellationCount:PATTERNS.length,
     initialPhase,openingPhase,presets,referenceUTC:reference.toISOString(),observer:OBSERVER,
-    getNightFactor:phase=>skyState(phase).night,getState:skyState};
+    getNightFactor:phase=>skyState(phase).night,getState:skyState,tourTargets,focusTarget,phaseAtLocalHour};
 }
