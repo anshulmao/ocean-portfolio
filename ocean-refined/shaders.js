@@ -221,7 +221,14 @@ vec3 skyBase(vec3 ray) { vec3 c=textureLod(uSkyMap,skyUv(ray),0.0).rgb; return c
 // The baked colour, and in w the cloud climate baked with it.
 vec4 skyBaked(vec3 ray) { vec4 c=textureLod(uSkyMap,skyUv(ray),0.0); return vec4(c.rgb*c.rgb*4.0,c.a); }
 vec3 skySun(vec3 color,vec3 ray) {
-  return mix(color,vec3(3.8,2.5,1.05),smoothstep(.99966,.99978,dot(ray,uSun))*(1.0-uNight)*(1.0-smoothstep(.12,.62,uWeather.w)));
+  // A longer atmospheric path removes blue/green first as the Sun nears
+  // the horizon. This is an RGB extinction approximation, not an ephemeris.
+  // NASA explanation: https://spaceplace.nasa.gov/blue-sky/en/
+  float airPath=1.0/max(.04,uSun.y);
+  vec3 transmission=exp(-vec3(.006,.050,.120)*(airPath-1.0));
+  vec3 disc=vec3(4.8,4.5,4.2)*transmission;
+  // About half a degree across, rather than the former three-degree disc.
+  return mix(color,disc,smoothstep(.999986,.999990,dot(ray,uSun))*(1.0-uNight)*(1.0-smoothstep(.12,.62,uWeather.w)));
 }
 // Where cumulus gathers on the sky just now, 0 (a few scattered puffs) to 1 (a bank): a broad field with its own slow
 // drift (uCloudClimate) and a coverage that wanders over the visit (uCloudShape.z). It only varies over tens of degrees,
