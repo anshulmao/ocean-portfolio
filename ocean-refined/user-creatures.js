@@ -91,10 +91,9 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   function coverBoxes(from, local = false) {
     let x0 = local ? GW : 0, x1 = local ? -1 : GW - 1, z0 = local ? GH : 0, z1 = local ? -1 : GH - 1;
     const boxes = collisions?.boxes || [], solids = boxes.slice(from).map(entry => entry.box);
-    // The wreck's collision is two low boxes, bow and stern, leaving the diver a way through amidships and over the
-    // decks. To the animals the whole wreck is solid, decks and masts too (WRECK_HEIGHT): a blacktip cruising low
-    // went through its decks.
-    const hull = boxes.filter(entry => /^ship (bow|stern) hull$/.test(entry.mesh || ''));
+    // The wreck's collision follows its hull, slab by slab, leaving the diver the water over the deck. To the animals the
+    // whole wreck is solid, decks and masts too (WRECK_HEIGHT): a blacktip cruising low went through its decks.
+    const hull = boxes.filter(entry => /^ship hull/.test(entry.mesh || ''));
     if (hull.length > 1 && hull.some(entry => boxes.indexOf(entry) >= from)) { const wreck = hull.reduce((sum, entry) => sum.union(entry.box), hull[0].box.clone()); wreck.max.y = wreck.min.y + WRECK_HEIGHT; solids.push(wreck); }
     for (const box of solids) {
       const bx0 = Math.max(0, Math.floor(box.min.x - GX - .5)), bx1 = Math.min(GW - 1, Math.ceil(box.max.x - GX + .5)), bz0 = Math.max(0, Math.floor(box.min.z - GZ - .5)), bz1 = Math.min(GH - 1, Math.ceil(box.max.z - GZ + .5));
@@ -914,7 +913,12 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
           const nx = Math.sin(facing) * m.scale * .35, nz = Math.cos(facing) * m.scale * .35, sand = Math.max(floor(fx, fz), floor(fx + nx, fz + nz), floor(fx - nx, fz - nz));
           // A cloud that lives in a wreck (`within`) keeps off the sand only: to the animals the whole wreck is a block
           // WRECK_HEIGHT tall, which would lift its fish clear over the masts.
-          write(k, fx, Math.max(g.centre.y - drop + m.hy * tight + .15 * Math.sin(t * m.w2 + m.p2), g.within ? -Infinity : ground(fx, fz) + .35, sand + .35), fz,
+          // The floor under a fish steps where it crosses the edge of a stone or a colony (the map is in 1 m cells), and
+          // set straight onto it the fish jumped up and down on every crossing (the light blue chromis over the nautilus's
+          // stones). It eases there instead: up quickly, so it never sits in the rock for long, and down slowly.
+          const goal = Math.max(g.centre.y - drop + m.hy * tight + .15 * Math.sin(t * m.w2 + m.p2), g.within ? -Infinity : ground(fx, fz) + .35, sand + .35);
+          m.y = m.y === undefined || dt <= 0 ? goal : m.y + (goal - m.y) * ease(dt, goal > m.y ? 9 : 1.6);
+          write(k, fx, Math.max(m.y, sand + .35), fz,
             facing, clamp(Math.atan2(climb, speed), -.3, .3), clamp(-actualRate * .07, -.16, .16), m.scale, m.beat);
         }
       } else if (g.kind === 'burrows') {

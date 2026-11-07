@@ -26,7 +26,7 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
 | R7 | Touch, phone and keyboard all get equal treatment, and every key hint has a tap equivalent. |
 | R8 | The visitor can always exit, surface or keep exploring. The safety stop is offered, never forced. |
 
-## The sequence (round 11)
+## The sequence (round 12)
 
 World coordinates are metres (x, y, z), with y negative below the surface. "Right" is +x, facing −z. The site starts at
 the surface out over the deep end, beyond the treasure, at (−18, −90), facing the reef (`exploration.js` SURFACE_START). The route itself
@@ -100,7 +100,9 @@ Every stop is approached on the line from its subject, so the diver arrives faci
 8. Leaving the nautilus, out to the lip of its ledge: **Look out to sea**, a whale shark crossing out over the deep water
    beyond the drop-off, up and to the right as seen from the nautilus: 16 m out and 9 m above. The swim all but stops
    for it (12% of the cruise, 12 s), and waits up to 8 s if it is late. The look-there marker leaves it to the caption.
-9. **Projects: the Wreck** (stop), seen whole from 16 m to its west. The reef's own fish live round it: along both sides
+9. Up the slope and once round the wreck: **A trawler, bow first** (its bow), **Her working deck** (from out beyond
+   the descent line) and **The stern** (the net on the gantry). Then **Projects: the Wreck** (stop), 10 m off its west
+   side. The reef's own fish live round it: along both sides
    of its hull, under its bow and aft of its net; the barracuda patrols off its bow.
 10. **The ending**: over the top of the wreck to the descent line just beyond it (`return-route.js` DESCENT_LINE), and up
     the line to the résumé's slate, below the safety stop. The choice is **Read it (F)** for the résumé, **Keep
@@ -507,4 +509,19 @@ stops.
   - **Dive log:** a site counts as reached only when the diver is down at it. The dive starts on the surface right above
     the nautilus, which was logged as reached at 0:00 and 5 m, so its real visit never was.
   - `tour_version` is now 11.
+- **Round 12 (the owner's notes on round 11):**
+  - **A card on each site** (`site-cards.js`): a snapshot of the place (`assets/portfolio/sites/`), its name and depth,
+    what is inside, Read it, and Continue while the tour waits there. It stands over the site, or beside it close up,
+    and follows it on screen; it comes up when the site is pointed at (the cursor, or the crosshair while aiming), in
+    reach, or at a tour stop, and lingers 8 s once none of those holds. It replaces the bottom prompt and the Here card
+    for that site; at a tour stop the sheet folds to its row while the card is up.
+  - **Swim about at a site:** at a stop or the ending, swimming no longer takes the tour off; the visitor may swim within
+    18 m of the site (`exploration.js` leash) and Read it or Continue from wherever they are.
+  - **The wreck:** once round it before the stop, which is now 10 m off; its collision follows the hull slab by slab, with
+    its bulwarks, wheelhouse, funnel, mast, gantry, net drum and winch; its foredeck runs to the stem. The barracuda moved
+    further off the bow.
+  - **Teaching:** the guide runs the scooter through the bait ball, and switches the lamp on under the arch if the visitor
+    has not (off again at the nautilus).
+  - **Fish:** a cloud fish eases onto the ground under it rather than snapping, which made the chromis over the
+    nautilus's stones jitter.
 

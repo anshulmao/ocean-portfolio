@@ -257,7 +257,7 @@ async function auditCreatures({seconds, rate, player, spawn, label, until = 0, c
   // At the wreck the animals are measured against the wreck model itself (onLandmark), not its collision boxes: those are
   // loose boxes round a heeled, turned hull, and its fish live in its open hold and round its wheelhouse
   // (user-creature-routes.js SCHOOLS.wreck).
-  const WRECK_BOXES = /^(ship (bow|stern) hull|trawler wheelhouse)$/;
+  const WRECK_BOXES = /^(ship hull|trawler )/;
   const insideSolid = (x, y, z) => { for (const b of solid) if (!WRECK_BOXES.test(b.mesh || '') && inBox(b.box, x, y, z, -.1)) return b.mesh || b.kind; const hit = A.onLandmark(x, y, z); return hit ? `the ${hit} model` : ''; };
   const prev = new Map(), stats = new Map(), encounter = {starts: [], samples: []};
   const BOTTOM = /bluespotted-ray|nurse-shark|garden-eel|giant-moray|ribbon-eel/;

@@ -958,6 +958,8 @@ export function buildFishingBoat({ x, z, floorAt, economy = false }) {
     const rake = 1.4 * smooth((s - .75) / .25) * (y - k0) / (d + BULWARK - k0);
     return new THREE.Vector3(xAt(s) + rake, y, side * zf * b);
   };
+  // How far the bow's rake carries the hull forward at height y (point uses the same).
+  const rakeAt = (s, y) => 1.4 * smooth((s - .75) / .25) * (y - keelAt(s)) / (deckAt(s) + BULWARK - keelAt(s));
   const ringPoint = (s, k) => k < P - 1 ? point(s, P - 1 - k, -1) : point(s, k - (P - 1), 1);
   const share = (s, y) => clamp01((y - keelAt(s)) / (deckAt(s) + BULWARK - keelAt(s)));
   // Heights on the painted hull, as shares of keel to bulwark top at midships (deck 2.8 m, bulwark 0.9 m).
@@ -1015,11 +1017,13 @@ export function buildFishingBoat({ x, z, floorAt, economy = false }) {
   const inside = new THREE.Mesh(insideGeometry, standard({ roughness: .95, side: THREE.BackSide, name: 'trawler hull inside' })); inside.name = 'Trawler hull inside';
   boat.add(outside, inside);
 
-  // The deck (the hold's hatch open in it).
-  { const dp = [], dc = [], du = [], di = [], columns = 10, last = stations - 2;
+  // The deck (the hold's hatch open in it), out to the stem. It follows the bow's rake at deck height, as the hull's sides
+  // do (point), and the hull's breadth at the deck: it used to stop a station short of the bow and ignore the rake, which
+  // left the foredeck open.
+  { const dp = [], dc = [], du = [], di = [], columns = 10, last = stations;
     for (let i = 0; i <= last; i++) for (let c = 0; c <= columns; c++) {
-      const s = i / stations, b = half(s), zc = -b + 2 * b * c / columns;
-      dp.push(xAt(s), deckAt(s), zc); dc.push(1, 1, 1); du.push(s, c / columns);
+      const s = i / stations, b = half(s) * 1.01, zc = -b + 2 * b * c / columns;
+      dp.push(xAt(s) + rakeAt(s, deckAt(s)), deckAt(s), zc); dc.push(1, 1, 1); du.push(s, c / columns);
     }
     for (let i = 0; i < last; i++) for (let c = 0; c < columns; c++) {
       const s = (i + .5) / stations, b = half(s), zc = -b + 2 * b * (c + .5) / columns;
@@ -1238,14 +1242,32 @@ export function buildFishingBoat({ x, z, floorAt, economy = false }) {
   const focus = new THREE.Box3().setFromObject(boat), center = focus.getCenter(new THREE.Vector3());
   const ax = center.x + 8.5, az = center.z;
   const approach = new THREE.Vector3(ax, Math.max(floorAt(ax, az) + 3.5, center.y + .6), az);
-  // Collision: the hull aft of the wheelhouse and the bow with the wheelhouse, as two boxes. Named as the old wreck's
-  // were, so the animals still treat the whole wreck as solid (user-creatures.js).
-  const worldBox = (x0, x1, y0, y1, zh) => { const box = new THREE.Box3(); for (const cx of [x0, x1]) for (const cy of [y0, y1]) for (const cz of [-zh, zh]) box.expandByPoint(new THREE.Vector3(cx, cy, cz).applyMatrix4(boat.matrixWorld)); return box; };
-  const solids = [
-    { box: worldBox(-L / 2, w.x0 - .3, .2, deckAt(.3) + .6, B / 2 * .92), name: 'ship stern hull' },
-    { box: worldBox(w.x0 - .3, L / 2 - .6, .4, deckAt(.65) + .5, B / 2 * .88), name: 'ship bow hull' },
-    { box: worldBox(w.x0, w.x1, w.base, w.base + w.height + .2, w.half + .05), name: 'trawler wheelhouse' }
-  ];
+  // Collision, close to the wreck's shape. The collision world takes boxes square to the world, and the hull is turned and
+  // heeled, so it is cut into short slabs along its length and three strips across its beam, each boxed on its own: solid
+  // from the keel to the deck, with a wall for each bulwark above it, so a diver can swim over the deck but not through
+  // the ship. Then the wheelhouse, the funnel, the mast, the stern gantry, the net drum and the winch. (It used to be
+  // three boxes: the hull below the bulwarks and the wheelhouse, a diver swimming straight through the bulwarks, the
+  // rigging and the gear, and bumping into nothing in the water beside the hull.) The hull's slabs are named `ship hull`,
+  // so the animals still take the whole wreck for one block (user-creatures.js).
+  const worldBox = (x0, x1, y0, y1, z0, z1) => { const box = new THREE.Box3(); for (const cx of [x0, x1]) for (const cy of [y0, y1]) for (const cz of [z0, z1]) box.expandByPoint(new THREE.Vector3(cx, cy, cz).applyMatrix4(boat.matrixWorld)); return box; };
+  const solids = [], SLABS = 16;
+  for (let i = 0; i < SLABS; i++) {
+    const s0 = i / SLABS, s1 = (i + 1) / SLABS, b = Math.max(half(s0), half(s1)) * 1.01;
+    if (b < .08) continue;
+    const deck = Math.max(deckAt(s0), deckAt(s1)), keel = Math.min(keelAt(s0), keelAt(s1)) + .1;
+    const x0 = xAt(s0), x1 = xAt(s1) + rakeAt(s1, deck + BULWARK);
+    for (let strip = 0; strip < 3; strip++) solids.push({ box: worldBox(x0, x1, keel, deck, -b + strip * 2 * b / 3, -b + (strip + 1) * 2 * b / 3), name: `ship hull ${i}.${strip}` });
+    for (const side of [-1, 1]) solids.push({ box: worldBox(x0, x1, deck, deck + BULWARK, side < 0 ? -b : b - .3, side < 0 ? -b + .3 : b), name: `ship hull bulwark ${i}` });
+  }
+  solids.push(
+    { box: worldBox(w.x0, w.x1, w.base, w.base + w.height + .2, -w.half - .05, w.half + .05), name: 'trawler wheelhouse' },
+    { box: worldBox(w.x0 - 1.15, w.x0 - .35, deckAt(.5), deckAt(.5) + 2, -1.35, -.55), name: 'trawler funnel' },
+    { box: worldBox(mx - .15, mx + .15, w.base + w.height, mastTop + .2, -.15, .15), name: 'trawler mast' },
+    { box: worldBox(xs - .45, xs + .45, ds, ds + 3.75, -2.2, -1.65), name: 'trawler gantry' },
+    { box: worldBox(xs - .45, xs + .45, ds, ds + 3.75, 1.65, 2.2), name: 'trawler gantry' },
+    { box: worldBox(xs - .4, xs, ds + 3.4, ds + 3.8, -1.9, 1.9), name: 'trawler gantry' },
+    { box: worldBox(xAt(.13) - .85, xAt(.13) + .85, deckAt(.13), deckAt(.13) + 1.6, -1.3, 1.3), name: 'trawler net drum' },
+    { box: worldBox(xAt(.46) - .5, xAt(.46) + .8, deckAt(.46), deckAt(.46) + .95, -1, 1), name: 'trawler winch' });
 
   let now = 0, open = false, openedAt = -100, glow = 0;
   return {

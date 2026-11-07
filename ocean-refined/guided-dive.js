@@ -64,6 +64,12 @@ const CEILING = -3.5;
 // The welcome's drift toward the reef (m/s), and how long (s) after the visitor lets go of the swim it picks up again.
 const DRIFT = .9, RESUME = 2.5;
 let idle = 0;
+// ROAM: how far (m, across the seabed) the visitor may swim from a site while the tour waits there; wandering: they have.
+const ROAM = 18; let wandering = false;
+function roamAround() {
+  const step = STEPS[index], centre = step.landmark ? resolveAt(step, true) : step.site === 'resume' ? controls()?.models?.landmarks?.find(item => item.id === 'resume')?.position ?? step.at : step.at;
+  controls()?.leash?.(centre, ROAM); controls()?.tether?.(CEILING); controls()?.lookAt?.(null);
+}
 // Big animals passing while the tour swims: the view turns to one coming within its SPOT range (m; the look-there marker's,
 // big-life.js, a little inside it) that is no fly-by's subject, and stays on it SPOT_HOLD s, and not to the same one again
 // within SPOT_AGAIN s.
@@ -225,7 +231,10 @@ function onward(step, at) {
   return legVia.slice(next);
 }
 function paint() {
-  const step = STEPS[index], shown = status !== 'off' && status !== 'starting' && reveal <= 0, reading = status === 'intro' || status === 'dwell' || status === 'done';
+  // At a stop the card on the site itself (site-cards.js) carries the site's name, what is inside, Read it and Continue,
+  // so the sheet folds to its row while that card is up; open, it still has the tour's own words.
+  const onSite = status === 'dwell' && window.oceanSiteCard?.shown === STEPS[index].landmark;
+  const step = STEPS[index], shown = status !== 'off' && status !== 'starting' && reveal <= 0, reading = status === 'intro' || (status === 'dwell' && !onSite) || status === 'done';
   // A new step, or a change of state, starts from the tour's own choice again.
   if (`${status}:${index}` !== shownFor) { shownFor = `${status}:${index}`; open = null; more = false; }
   // Open where there is something to read or decide; folded while the tour swims or waits on hold.
@@ -262,7 +271,7 @@ function paint() {
   part('[data-tour="pause"]').setAttribute('aria-pressed', String(paused));
   part('[data-tour="next"]').firstChild.textContent = status === 'travel' ? (wide ? 'Skip travel ' : 'Skip ') : status === 'intro' ? (primerLeft().length ? 'Skip controls ' : 'Start ') : 'Continue ';
   part('.tour-pace').textContent = status === 'intro' ? (primerLeft().length ? (fingers ? 'Or skip the controls and start the tour.' : 'Or press N to skip the controls and start the tour.') : '')
-    : status === 'dwell' ? `${step.landmark ? (fingers ? 'Tap Read it to open it. ' : 'Press F to open it. ') : ''}Take your time. Continue when you’re ready.`
+    : status === 'dwell' ? `${step.landmark ? (fingers ? 'Tap Read it to open it. ' : 'Press F to open it. ') : ''}Swim around it if you like; continue when you’re ready.`
     : status === 'travel' ? (routeIssue ? '' : paused ? 'Travel paused. Resume when you’re ready.' : 'You can skip this swim or take the controls at any time.')
     : status === 'done' && step.site ? (fingers ? 'Tap Read it to open it.' : 'Press F to read it.') : '';
   setQuiet(touring() || status === 'starting');
@@ -276,7 +285,7 @@ function notice(api) {
     photos: window.oceanExpedition?.photos ?? 0, reading: Boolean(window.oceanArchive?.isOpen) };
   if (!seen) { seen = now; return; }
   const before = used.size;
-  if (now.lamp !== seen.lamp) used.add('lamp');
+  if (now.lamp !== seen.lamp) { used.add('lamp'); lampByGuide = false; }
   if (now.view !== seen.view) used.add('view');
   if (now.computer && !seen.computer) used.add('computer');
   if (now.photos > seen.photos) used.add('photo');
@@ -431,6 +440,8 @@ function flyBy(dt, at) {
       if (!tried && sightTime < WAIT) return;
       waiting = false; sightTime = 0; holdFor = tried ? CHEER + .8 : sight.hold ?? FLYBY;
       api?.pacing(sight.slow ?? SLOW); if (!tried && sight.scooter) api?.guideScooter(true);
+      // The lamp, untried under the arch: the guide switches it on, as it runs the scooter, until the next site.
+      if (!tried && sight.wait === 'lamp') guideLamp(true);
       paint();
     }
     // A subject the swim has left well behind (BEHIND: the cathedral once the swim is past its front) ends its fly-by early,
@@ -558,8 +569,16 @@ function launch() {
 function blockRoute() {
   endSight(); controls()?.cancelTravel(); paused = routeIssue = true; paint();
 }
+// The guide's own lamp: switched on to show it (and the visitor's own notice() does not count it as tried), and off again
+// at the next site, unless the visitor has switched it themselves meanwhile.
+let lampByGuide = false;
+function guideLamp(on) {
+  const api = controls(); if (!api || !('flashlight' in api)) { lampByGuide = false; return; }
+  if (on && !api.flashlight) { api.flashlight = true; lampByGuide = true; if (seen) seen.lamp = true; }
+  else if (!on && lampByGuide) { if (api.flashlight) api.flashlight = false; lampByGuide = false; if (seen) seen.lamp = false; }
+}
 function arrive() {
-  const step = STEPS[index]; endSight(); arrived = index; waited = 0; inputs = controls().nav.inputs; paused = false;
+  const step = STEPS[index]; endSight(); guideLamp(false); arrived = index; waited = 0; inputs = controls().nav.inputs; paused = false;
   status = step.kind === 'stop' ? 'dwell' : 'done';
   if (step.landmark) discover(step.landmark, true);
   note('tour_step'); startPan(); paint();
@@ -567,6 +586,7 @@ function arrive() {
 // A cut: fade the water over, move the diver, fade back. Reduced motion always travels this way.
 function cutTo(then) { endSight(); controls()?.cancelTravel(); cut = then; cutTime = .24; fade.dataset.on = 'true'; }
 function go(next) {
+  wandering = false; controls()?.leash?.(null);
   controls()?.tether?.(null); controls()?.glance?.(null); index = next; resolve(STEPS[index]); status = 'travel'; paused = routeIssue = roaming = false; detours = 0;
   inputs = controls().nav.inputs; paint();
   here.fromArray(window.oceanDiagnostics.playerPosition);
@@ -578,7 +598,7 @@ function go(next) {
   if (!route(here.toArray(), STEPS[index])) { blockRoute(); return; }
   launch();
 }
-function resolveAt(step) { const point = [0, 0, 0]; resolve(step, point, [0, 0, 0]); return point; }
+function resolveAt(step, subject = false) { const point = [0, 0, 0], seen = [0, 0, 0]; resolve(step, point, seen); return subject ? seen : point; }
 function land() { const api = controls(); api.guide(true, true, true); api.place(goal, look); arrive(); }
 function advance() { if (index < STEPS.length - 1) go(index + 1); }
 // The welcome is read where the dive levels out: nothing to swim to, only a look around.
@@ -599,7 +619,7 @@ function drift() {
   if (leg.length) { api.guide(true, true, true); api.travelPath(leg, null, DRIFT); inputs = api.nav.inputs; }
 }
 function endPrelude() { prelude = -1; delete document.body.dataset.prelude; controls()?.frameDiver?.(false); }
-function handOver() { note('tour_taken_over'); endSight(); controls()?.tether?.(null); status = 'free'; paused = false; cut = null; fade.dataset.on = 'false'; controls()?.guide(false); paint(); }
+function handOver() { note('tour_taken_over'); endSight(); controls()?.tether?.(null); controls()?.leash?.(null); wandering = false; status = 'free'; paused = false; cut = null; fade.dataset.on = 'false'; controls()?.guide(false); paint(); }
 // Rejoin takes up the step the tour was on, through the scenic waypoints still ahead of wherever the visitor swam to. It used
 // to take the nearest step left, which, with the ending beside the wreck, could skip the nautilus altogether.
 function rejoin() {
@@ -612,7 +632,8 @@ function stop(message, how = 'stopped') {
   note('tour_ended', { how });
   endSight(); const api = controls(); status = 'off'; paused = false; cut = null; fade.dataset.on = 'false'; reveal = 0; endPrelude(); roaming = starting = false;
   // Let go of the view too, so it does not stay on the last subject the tour showed.
-  if (api) { api.guide(false); api.cancelTravel(); api.lookAt?.(null); api.tether?.(null); }
+  if (api) { api.guide(false); api.cancelTravel(); api.lookAt?.(null); api.tether?.(null); api.leash?.(null); }
+  wandering = false; guideLamp(false);
   paint();
   if (message) say('Guided dive', message, HOLD_SIGNAL, 3200);
 }
@@ -676,7 +697,10 @@ function update(dt, api, state, diving) {
   // off from the overview simply ends the tour; anywhere else it puts the tour on hold.
   if (nav.inputs !== inputs) {
     if (status === 'intro') { roaming = true; idle = 0; inputs = nav.inputs; }
-    else { if (status === 'done') stop(null, 'swam_off'); else handOver(); return; }
+    // At a site, or at the ending, the visitor may swim about it, within ROAM of it, and the tour waits: Read it and
+    // Continue stay where they are (the owner's notes, round 12). Only on the way between sites does swimming take over.
+    else if (status === 'dwell' || status === 'done') { inputs = nav.inputs; if (!wandering) { wandering = true; roamAround(); paint(); } }
+    else { handOver(); return; }
   }
   if (status === 'intro') {
     introFor += dt;
@@ -684,6 +708,8 @@ function update(dt, api, state, diving) {
     if (starting && (assetsIn(state) || introFor > ASSETS_WAIT)) { starting = false; advance(); return; }
   }
   if (cut) { cutTime -= dt; if (cutTime <= 0) { const then = cut; cut = null; then(); fade.dataset.on = 'false'; } return; }
+  // At a stop the sheet folds while the site's own card is up, whenever that card came up (it may have been up already).
+  if (status === 'dwell') { const onSite = window.oceanSiteCard?.shown === STEPS[index].landmark; if (onSite !== cardUp) { cardUp = onSite; paint(); } }
   if (reveal > 0) { reveal -= dt; if (reveal <= 0) paint(); }
   if (cheerFor > 0) { cheerFor -= dt; if (cheerFor <= 0) { cheer = null; paint(); } }
   if (status !== 'travel') { pan(dt); return; }
@@ -721,6 +747,9 @@ card.addEventListener('click', event => {
   // The sheet's own toggles keep the focus where it is, for a keyboard; the actions hand it back to the scene.
   if (action && !['read', 'toggle', 'more'].includes(action)) document.querySelector('#world')?.focus({ preventScroll: true });
 });
+// The card on a site coming up or going changes what the sheet needs to carry at a stop (cardUp: as last painted).
+let cardUp = false;
+addEventListener('oceansitecard', () => { if (status === 'dwell') paint(); });
 // A phone turned on its side, or a window narrowed past the phone width, changes the copy the sheet carries.
 compact.addEventListener?.('change', () => { if (status !== 'off') paint(); });
 // Something to read here: a site's landmark at its stop, or the ending's own (the résumé on the descent line).

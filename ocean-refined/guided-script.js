@@ -108,8 +108,9 @@ export const STEPS = [
       // Out to the bait ball's depth over the spire, a look across at it, then straight through its middle and out the far side.
       { at: [43, -28, -55], key: 'bait-ahead', title: 'A bait ball, ahead', line: 'Thousands of fry turning as one. We’ll swim straight through it.',
         look: { bait: true }, through: true, hold: 5, slow: .35, reach: 8 },
-      { at: [52, -28, -75], key: 'bait-ball', title: 'Through the bait ball', line: 'They open a tunnel around you.',
-        slow: .6, hold: 4, reach: 6 },
+      // The guide runs the scooter through it: the boost (2.2×) on top of slow makes about 4.8 m/s.
+      { at: [52, -28, -75], key: 'bait-ball', title: 'Through the bait ball', line: 'They open a tunnel around you. Scooter on.',
+        scooter: true, slow: .6, hold: 4, reach: 6 },
       // Down the deep slope to the arch's east mouth, the nautilus framed in its passage.
       [46, -38, -80], [38, -48, -83],
       { at: [31, -51.5, -83], key: 'arch', title: 'Through the arch', line: 'Look through it: the nautilus waits on the ledge beyond.',
@@ -120,15 +121,25 @@ export const STEPS = [
       [2, -48, -81.5],
     ] },
   // The way back up. Leaving the nautilus the swim goes out to the lip of its ledge and all but stops, and a whale shark
-  // crosses up and to the right, out over the deep water beyond the drop-off, from the west. Then east under the arch's
-  // hill and up the slope to the wreck's west side (clear of its rigging and of the barracuda off its bow) to see it whole.
-  { key: 'projects', kind: 'stop', landmark: 'projects', view: [2, -19, -36], place: `Projects · The Wreck · ${depth(-21)}`, signal: '#c9a2ff',
+  // crosses up and to the right, out over the deep water beyond the drop-off, from the west. Then up the slope to the
+  // wreck and once round it before the stop: past its bow, along its deck side (out beyond the descent line) and round its
+  // stern, and in to its west side, 10 m off, to see it whole. The barracuda patrols off the bow, well clear of the swim.
+  { key: 'projects', kind: 'stop', landmark: 'projects', view: [8, -20, -37.5], place: `Projects · The Wreck · ${depth(-21)}`, signal: '#c9a2ff',
     title: 'Here’s the wreck', line: 'A trawler, and the fish that live in it now. This is where you’ll find my projects.',
     via: [
       { at: [-9, -43, -86.5], key: 'whale-shark', title: 'Look out to sea', line: 'A whale shark, crossing the deep water above the drop-off.',
         look: { visitor: 'whale-shark' }, teach: 'photo', hold: 12, slow: .12, reach: 6,
         encounter: { id: 'whale-shark', cue: 20, course: { angle: Math.PI / 2, side: 1, pass: 16, y: -34, ahead: 16 } } },
-      [-6, -42.5, -91], [4, -41, -89], [10, -39, -78], [6, -34, -62], [0, -28, -48], [-4, -22, -41],
+      [-6, -42.5, -91], [4, -41, -89], [10, -39, -78], [14, -31, -66],
+      { at: [21, -22, -59], key: 'wreck-bow', title: 'A trawler, bow first', line: 'She went down by the head and settled on the sand.',
+        look: [16, -23.5, -47.5], hold: 5, slow: .45, reach: 7 },
+      [32, -19, -54],
+      { at: [36, -17, -44], key: 'wreck-deck', title: 'Her working deck', line: 'Winch, net drum and gantry, still where the crew left them.',
+        look: [19.5, -22.5, -38.5], hold: 6, slow: .4, reach: 7 },
+      [36, -16, -30],
+      { at: [27, -17, -21], key: 'wreck-stern', title: 'The stern', line: 'The net that held her is still snagged on the gantry.',
+        look: [22, -22, -31.5], hold: 5, slow: .45, reach: 7 },
+      [12, -18, -27],
     ] },
   // From the wreck's west side across the top of it, over its rigging, to the descent line just beyond it (return-route.js
   // DESCENT_LINE), and up the line to the résumé's slate at the safety stop. Surface from here: the ascent holds the safety

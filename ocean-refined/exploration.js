@@ -94,7 +94,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   const glancePoint=new THREE.Vector3(),glanceFrom=new THREE.Vector3(),glanceTo=new THREE.Vector3(),glanceSeen=new THREE.Vector3();
   // tetherTop: a ceiling (world y) the swim may not rise above, set by the guided dive while its welcome lets the visitor try
   // the controls, so rising cannot carry them out of it and up to the surface. Infinity is no tether.
-  let tetherTop=Infinity;
+  let tetherTop=Infinity,leashAt=null;
   // focusLead: how far out (m) a leg's subject starts drawing the view. The guided dive turns to a stop from well back, so
   // the swim's last curve and the turn to the subject happen together rather than one after the other.
   let focusLead=FOCUS_RANGE;
@@ -256,6 +256,9 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   function guideScooter(on){guideScoot=state.guideScooter=Boolean(on);wake();}
   function endFlyBy(){glanceOn=guideScoot=state.guideScooter=false;paceGoal=1;}
   function tether(top){tetherTop=Number.isFinite(top)?top:Infinity;wake();}
+  // A leash ([x, z] and a radius, m): while the guided dive waits at a site, the visitor may swim about it, but not off
+  // beyond this ring; the swim slows as it nears the edge, as it does at the world's bounds. null lets it go.
+  function leash(centre,radius=0){leashAt=centre&&radius>0?{x:centre[0],z:centre[centre.length>2?2:1],r:radius}:null;wake();}
   function lookAt(point,follow=false){if(follow&&point&&hasFocus){const at=coordinate(point);focus.set(at[0],at[1],at[2]);return;}sweep.on=false;if(!point){hasFocus=false;wake();return;}const at=coordinate(point);focus.set(at[0],at[1],at[2]);hasFocus=true;wake();}
   function prepareDive(options){pendingDive=options||null;}
   const travelClear=(a,b)=>!collisions||!settings.collisionEnabled||collisions.segmentClear(scratchA.fromArray(a),scratchB.fromArray(b),Math.max(settings.collisionRadius+.25,.85));
@@ -573,6 +576,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
       const ceiling=Math.min(8-Math.min(1,settings.ascentThreshold*.6),tetherTop+8),floorAhead=afloat?terrain(base.x+velocity.x*LOOK_AHEAD,base.z+velocity.z*LOOK_AHEAD)+settings.floorClearance+8:-Infinity;
       if(afloat){
         desired.x=clamp(desired.x,(-bounds.x-base.x)*SOFT_RATE,(bounds.x-base.x)*SOFT_RATE);desired.z=clamp(desired.z,(bounds.zMin-base.z)*SOFT_RATE,(bounds.zMax-base.z)*SOFT_RATE);
+        if(leashAt){const lx=base.x-leashAt.x,lz=base.z-leashAt.z,ld=Math.hypot(lx,lz);if(ld>.01){const ux=lx/ld,uz=lz/ld,out=desired.x*ux+desired.z*uz,most=(leashAt.r-ld)*SOFT_RATE;if(out>most){desired.x-=(out-most)*ux;desired.z-=(out-most)*uz;}}}
         desired.y=Math.min(Math.max(desired.y,(floorY-base.y)*SOFT_RATE,(floorAhead-base.y)/LOOK_AHEAD),Math.max(0,ceiling-base.y)*SOFT_RATE);
       }
       // The reef gets the same courtesy: the nearer a surface, the slower the swim may close on it, so the diver settles against coral instead of bumping it.
@@ -642,5 +646,5 @@ export function createExploration(canvas, wake, settings=savedSettings) {
   }
   // QA hook: scripted aim (pixels) and a scripted thumb-stick, for checks where no pointer can be captured.
   window.oceanInput={aim:(dx,dy)=>aim(dx,dy),axis(x=0,y=0){stick.x=clamp(x,-1,1);stick.y=clamp(y,-1,1);stick.active=Boolean(x||y);if(stick.active&&state.mode==='diver'&&!suspended){captureRequired=false;state.exploring=true;}wake();},pad,stick,get gamepad(){return gamepad.connected;}};
-  return {state,update,reset,returnToSurface,startDive,prepareDive,travel,travelPath,cancelTravel,stopTravel:cancelTravel,place,lookAt,glance,pacing,guideScooter,tether,setGuided,setLamp,frameSky,setTerrain,setCollisions,suspend,setInterfaceOpen,beginAscent,holdSafetyStop,skipSafetyStop,togglePerspective,toggleFreeCam,setFreeCam:value=>toggleFreeCam(value),recapture,getPlayerPosition,getCameraPose:()=>({perspective:state.perspective}),bounds,destroy(){cleanup.forEach(fn=>fn());}};
+  return {state,update,reset,returnToSurface,startDive,prepareDive,travel,travelPath,cancelTravel,stopTravel:cancelTravel,place,lookAt,glance,pacing,guideScooter,tether,leash,setGuided,setLamp,frameSky,setTerrain,setCollisions,suspend,setInterfaceOpen,beginAscent,holdSafetyStop,skipSafetyStop,togglePerspective,toggleFreeCam,setFreeCam:value=>toggleFreeCam(value),recapture,getPlayerPosition,getCameraPose:()=>({perspective:state.perspective}),bounds,destroy(){cleanup.forEach(fn=>fn());}};
 }

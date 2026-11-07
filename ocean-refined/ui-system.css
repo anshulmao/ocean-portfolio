@@ -292,3 +292,63 @@ html body .tour-card .tour-more{min-height:0;border:0;border-radius:0;background
   html body .tour-card[data-sheet="collapsed"] .tour-head{min-height:44px}
   html body .tour-card[data-sheet="collapsed"] footer button{min-height:40px}
 }
+
+/* The card on a site (site-cards.js): glass like the guided dive's card, standing over the site with its tail pointing
+   at it, following it on screen. Brighter while the site is pointed at, waited at or in reach; it fades once it is only
+   lingering. It stands in for the prompt at the bottom of the screen and the Here card for that site. */
+html body .site-card{
+  --tour-glass:#061c25;--tour-line:#d6f2f02b;
+  position:fixed;left:0;top:0;z-index:var(--o-z-sheet);box-sizing:border-box;width:min(290px,calc(100vw - 24px));padding:10px 10px 12px;
+  border:1px solid var(--tour-line);border-radius:14px;background:color-mix(in srgb,var(--tour-glass) 58%,transparent);
+  -webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3); /* taste-skill-ignore: glass over the moving water, as the tour card */
+  box-shadow:0 16px 40px -16px #00121a80;color:var(--ui-foam);font-family:var(--o-display);
+  opacity:0;visibility:hidden;scale:.96;transform-origin:var(--tail,50%) 100%;
+  transition:opacity 360ms var(--ui-ease),scale 360ms var(--ui-ease),visibility 0s 360ms,border-color 240ms var(--ui-ease)}
+html body .site-card[data-show="true"]{opacity:1;visibility:visible;scale:1;transition:opacity 260ms var(--ui-ease),scale 260ms var(--ui-ease),visibility 0s,border-color 240ms var(--ui-ease)}
+html body .site-card[data-show="true"][data-fading="true"]{opacity:.55;transition:opacity 1.2s linear}
+html body .site-card[data-hot="true"]{border-color:color-mix(in srgb,var(--signal,#9adbd5) 55%,transparent);box-shadow:0 16px 40px -16px #00121a80,0 0 0 1px color-mix(in srgb,var(--signal,#9adbd5) 25%,transparent)}
+html body .site-card-shot{margin:0;overflow:hidden;border-radius:8px;aspect-ratio:2/1;background:#0b2c38}
+html body .site-card-shot img{display:block;width:100%;height:100%;object-fit:cover}
+html body .site-card-text{padding:10px 4px 0}
+html body .site-card-kicker{margin:0;font-size:12.5px;line-height:1.3;color:var(--signal,#9adbd5)}
+html body .site-card-title{margin:2px 0 4px;font:500 19px/1.2 var(--o-display);letter-spacing:-.01em;color:var(--ui-foam)}
+html body .site-card-note{margin:0;font-size:13.5px;line-height:1.45;color:#dcecea}
+html body .site-card-actions{display:flex;gap:6px;margin-top:10px;padding:0 4px}
+html body .site-card-actions button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:0 12px;border:1px solid var(--tour-line);border-radius:5px;background:#ffffff12;color:var(--ui-foam);font:500 13.5px/1 var(--o-display);cursor:pointer}
+html body .site-card-actions button:hover{background:#ffffff24;border-color:#d6f2f066}
+html body .site-card-actions [data-site="read"]{border-color:color-mix(in srgb,var(--signal,#9adbd5) 65%,transparent);background:color-mix(in srgb,var(--signal,#9adbd5) 15%,transparent)}
+html body .site-card-actions button[hidden],html body .site-card kbd[hidden]{display:none}
+html body .site-card kbd{padding:2px 5px;border:1px solid var(--tour-line);border-radius:3px;font:500 10px/1 var(--o-display)}
+html body .site-card-close{position:absolute;top:14px;right:14px;z-index:1;display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:#061c25a6;color:var(--ui-foam);cursor:pointer}
+html body .site-card-close svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+html body .site-card-tail{position:absolute;left:var(--tail,50%);bottom:-8px;width:14px;height:14px;margin-left:-7px;rotate:45deg;background:inherit;border:inherit;border-top-color:transparent;border-left-color:transparent;border-radius:0 0 3px 0;-webkit-backdrop-filter:none;backdrop-filter:none}
+html body .site-card[data-tail="false"] .site-card-tail{display:none}
+html body .site-card :is(button):focus-visible{outline:2px solid var(--ui-foam);outline-offset:2px}
+/* The ring on a site while it is pointed at. */
+html body .site-ring{position:fixed;left:0;top:0;z-index:var(--o-z-labels);width:var(--size,80px);height:var(--size,80px);margin:calc(var(--size,80px) / -2) 0 0 calc(var(--size,80px) / -2);border:1.5px solid color-mix(in srgb,var(--signal,#9adbd5) 70%,transparent);border-radius:50%;box-shadow:0 0 18px color-mix(in srgb,var(--signal,#9adbd5) 35%,transparent);pointer-events:none;opacity:0;transition:opacity 240ms var(--ui-ease)}
+html body .site-ring[data-show="true"]{opacity:.85}
+/* While a site's card is up it carries that site's action: the prompt at the bottom and the Here card stand down. */
+html body[data-site-card] :is(#interact-prompt,.calm-ahead,#reef-labels){visibility:hidden!important}
+html body:is([data-clear-ui="true"],[data-safety-stop="true"]) :is(.site-card,.site-ring){visibility:hidden!important}
+/* Docked on a phone (site-cards.js): compact, just above the touch deck, where the tour's sheet sits; the sheet steps
+   aside while it is up. Sideways, one row at the foot of the screen. */
+html body[data-site-card-dock="true"] section.tour-card{visibility:hidden!important;pointer-events:none}
+@media (max-width:599px),(pointer:coarse) and (max-height:499px){
+  html body .site-card{display:grid;grid-template-columns:88px minmax(0,1fr);grid-template-areas:"shot text" "actions actions";column-gap:10px;width:calc(100vw - 24px);padding:8px 8px 10px;border-radius:12px}
+  html body .site-card-shot{grid-area:shot;aspect-ratio:4/3;align-self:start}
+  html body .site-card-text{grid-area:text;padding:1px 34px 0 0}
+  html body .site-card-kicker{font-size:12px}
+  html body .site-card-title{margin:1px 0 2px;font-size:16px}
+  html body .site-card-note{font-size:12.5px;line-height:1.35;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+  html body .site-card-actions{grid-area:actions;margin-top:8px;padding:0}
+  html body .site-card-actions button{min-height:40px;flex:1}
+  html body .site-card-close{top:2px;right:2px;width:40px;height:40px;background:none}
+}
+@media (pointer:coarse) and (max-height:499px){
+  html body .site-card{grid-template-columns:72px minmax(0,1fr) auto;grid-template-areas:"shot text actions";align-items:center;width:min(60vw,560px)}
+  html body .site-card-actions{flex-direction:column;margin:0}
+  html body .site-card-note{-webkit-line-clamp:1;line-clamp:1}
+  html body .site-card-text{padding-right:0}
+  html body .site-card-close{display:none}
+}
+@media (prefers-reduced-motion:reduce){html body .site-card,html body .site-card[data-show="true"]{scale:1;transition:opacity 120ms linear,visibility 0s}}

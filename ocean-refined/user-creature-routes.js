@@ -59,7 +59,7 @@ export const RESIDENTS = {
   sleeper: { species: 'nurse-shark', near: [-6, 9.5] },
   // The barracuda that patrols a slow oval off the wreck's bow (patrol: x and z radii, m; speed m/s), pauses to hang
   // and watch a diver, and bolts if crowded. It used to patrol east of the wreck, where the descent line now hangs.
-  sentinel: { species: 'great-barracuda', landmark: 'projects', offset: [-3, 7, -15], patrol: [7, 4.5], speed: .8 },
+  sentinel: { species: 'great-barracuda', landmark: 'projects', offset: [-12, 8, -14], patrol: [7, 4.5], speed: .8 },
   // Morays and a ribbon eel look out from the foot of the tall formations, mouths working; too close and they strike.
   dens: [
     // The cathedral's columns are too thin to hold a den: a moray there ended up on open sand by the reef's edge.
