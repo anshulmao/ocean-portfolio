@@ -19,7 +19,7 @@ The Sun now uses an approximately half-degree disc and a simple altitude-depende
 
 `npm run build` and `node tools/test-sky-viewer.mjs` exercise the production build at 1440×900, 390×844, 768×1024 and 844×390. The regression starts in a locked storm, verifies genuine above-horizon targets, framing, automatic advance, pause, keyboard navigation, finger-sized controls, exact time/weather preference restoration and zero script errors. It uses full motion and the site's explicit reduced-motion preference. Browser I/O stays on the local fixture. CI includes the same browser test.
 
-Source lint on the new stylesheet reports zero failures and warnings. [Desktop](sky-viewer/desktop.png), [phone](sky-viewer/phone.png) and [landscape](sky-viewer/landscape.png) captures are of this repository's rendered sky.
+Source lint on the new stylesheet reports zero failures and warnings. The whole-page skill inspector also ran at 1440/768/390: it flags the unchanged atmospheric scrims and legacy instrument microtext, so a globally clean style-inspector result is not claimed. These are retained ocean conventions, outside this component change. [Desktop](sky-viewer/desktop.png), [phone](sky-viewer/phone.png) and [landscape](sky-viewer/landscape.png) captures are of this repository's rendered sky.
 
 ROUND 2
 
