@@ -61,7 +61,13 @@ export function planGuidedRoute(start, goal, { via = [], floor = () => -Infinity
       const grid = current.grid.map((v, i) => v + direction[i]), key = grid.join(',');
       const point = grid.map((v, i) => start[i] + v * step);
       if (Math.abs(point[0]) > 61 || point[2] < -104 || point[2] > 34 || point[1] < -59 || point[1] > -2 || point[1] < floor(point[0], point[2]) + clearance) continue;
-      const cost = current.cost + distance(current.point, point);
+      // Prefer broad changes of heading over grid zigzags. The body still uses
+      // the same checked, rounded path; this biases the detour search toward
+      // calmer turns, including after Pause or a manual takeover.
+      const previous = current.parent && current.point.map((v, i) => v - current.parent.point[i]);
+      const length = Math.hypot(...direction), previousLength = previous && Math.hypot(...previous);
+      const bend = previousLength ? 1 - direction.reduce((sum, v, i) => sum + v * previous[i], 0) / (length * previousLength) : 0;
+      const cost = current.cost + distance(current.point, point) + bend * .75;
       if (cost >= (visited.get(key) ?? Infinity) || !clear(current.point, point)) continue;
       visited.set(key, cost);
       queue.push({ point, grid, cost, score: cost + distance(point, goal) * 1.1, parent: current });
