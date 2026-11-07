@@ -1,14 +1,18 @@
 import {smoothRoute,distance as length} from './cinematic-route.js';
-// World coordinates; -5.5 world metres reads 3.7 m on the dive instrument.
-export function planSurfaceReturn(start, {floor, clear, exits = []}) {
-  const crest = [0, -5.5, -6];
+// The descent line: hung from its buoy just east of the wreck, across the top of it from the side the wreck is seen from
+// (reef.js RESUME_SITE hangs the résumé's slate on it). The way home comes back to it, and the safety stop is held beside
+// it, so the diver surfaces by the buoy, as on a real dive.
+export const DESCENT_LINE = { x: 33, z: -37 };
+// World coordinates; -5.5 world metres reads 3.7 m on the dive instrument. A metre and a half off the line, on the wreck's side.
+export const SAFETY_STOP = [DESCENT_LINE.x - 1.6, -5.5, DESCENT_LINE.z];
+export function planSurfaceReturn(start, {floor, clear, exits = [], crest = SAFETY_STOP}) {
   // A rising bow reaches the upper reef in one sweep instead of completing a
   // vertical climb before starting the horizontal swim. Try open water first;
   // cave/arch exits are only mandatory when that sweep actually intersects them.
   const bow=from=>{
     const span=length(from,crest),count=Math.max(12,Math.ceil(span));
     for(const lift of [.65,.85,1]){
-      const control=[from[0]*.55,from[1]+(crest[1]-from[1])*lift,from[2]+(crest[2]-from[2])*.45];
+      const control=[from[0]+(crest[0]-from[0])*.45,from[1]+(crest[1]-from[1])*lift,from[2]+(crest[2]-from[2])*.45];
       const points=[];let last=from,valid=true;
       for(let i=1;i<=count;i++){
         const t=i/count,u=1-t,p=from.map((v,k)=>u*u*v+2*u*t*control[k]+t*t*crest[k]);
@@ -30,7 +34,7 @@ export function planSurfaceReturn(start, {floor, clear, exits = []}) {
   const count = Math.max(1, Math.ceil(distance/5)), slope = [];
   let height = last[1];
   for (let i=1;i<=count;i++) {
-    const t=i/count, x=last[0]*(1-t), z=last[2]+(crest[2]-last[2])*t;
+    const t=i/count, x=last[0]+(crest[0]-last[0])*t, z=last[2]+(crest[2]-last[2])*t;
     height=Math.max(height,last[1]+(crest[1]-last[1])*t,floor(x,z)+3.2);
     slope.push([x,Math.min(-1.8,height),z]);
   }

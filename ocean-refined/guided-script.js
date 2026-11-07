@@ -41,12 +41,13 @@ import { toDisplayDepth } from './depth-metrics.js';
 // through a phone's narrow portrait lens (about 26° across). Every leg keeps clear of the wreck and its rigging and well wide
 // of the barracuda's beat east of it, so it never bolts.
 // Round 10 (the owner's notes, Nov 2026): the brain coral is passed on its moray's side, the coral nursery is a short pause,
-// the helmet is seen face on, the arch stands on the deep sand with the nautilus framed in it, the whale shark comes by on
-// the way back up, and the tour ends at the descent line, where the résumé hangs.
-// The whale shark's course (SPEC D4): across the deep water, never in over the shallows. Its line lies 15 m up the slope of
-// the drift (side 1 at angle -π/2 puts it at higher z: z -60, over 42 m of water or more) and only 4 m above, so it crosses
-// in front of the diver, side-on, rather than overhead. It starts 24 m short of its closest approach and is called 20 m
-// before the drift, so it is some 16 m off to the right when the caption comes up and crosses ahead while the swim waits.
+// the helmet is seen face on, the arch stands on the deep sand with the nautilus framed in it, the whale shark crosses out
+// over the deep water as the swim leaves the nautilus, and the tour ends up the descent line beside the wreck, where the
+// résumé hangs.
+// The whale shark's course (SPEC D4): across the deep water, never in over the shallows. Its line runs west to east 16 m
+// out to sea of the drift at the lip of the nautilus's ledge (side 1 at angle π/2 puts it at lower z: z -102.5, over 60 m
+// of water), 9 m above the diver: looking up and to the right from the nautilus, out over the drop-off. It starts 16 m
+// short of its closest approach, so it comes in from the right front and crosses ahead while the swim waits.
 // Copy is a signpost, not a summary: one short line. The portfolio itself lives in the archive.
 export const SPEED = 3.6, FLYBY = 5, REACH = 9, SLOW = .5, BRIEF = 2.5;
 const depth = y => `${Math.round(toDisplayDepth(-y))} m`;
@@ -118,25 +119,26 @@ export const STEPS = [
         look: [6, -54.5, -86.5], hold: 6, slow: .4, reach: 5 },
       [2, -48, -81.5],
     ] },
-  // The way back up: off the ledge and up the slope, the swim all but stopping while a whale shark crosses ahead over the
-  // deep water, then up to the wreck's west side (clear of its rigging and the barracuda's beat) to see it whole.
+  // The way back up. Leaving the nautilus the swim goes out to the lip of its ledge and all but stops, and a whale shark
+  // crosses up and to the right, out over the deep water beyond the drop-off, from the west. Then east under the arch's
+  // hill and up the slope to the wreck's west side (clear of its rigging and of the barracuda off its bow) to see it whole.
   { key: 'projects', kind: 'stop', landmark: 'projects', view: [2, -19, -36], place: `Projects · The Wreck · ${depth(-21)}`, signal: '#c9a2ff',
     title: 'Here’s the wreck', line: 'A trawler, and the fish that live in it now. This is where you’ll find my projects.',
     via: [
-      [-1, -45, -78],
-      { at: [1, -43.5, -73], key: 'whale-shark', title: 'Look out ahead', line: 'A whale shark, crossing the deep water.',
-        look: { visitor: 'whale-shark' }, teach: 'photo', hold: 11, slow: .12, reach: 6,
-        encounter: { id: 'whale-shark', cue: 20, course: { angle: -Math.PI / 2, side: 1, pass: 13, y: -39.5, ahead: 24 } } },
-      [3, -36, -58], [0, -28, -48], [-4, -22, -41],
+      { at: [-9, -43, -86.5], key: 'whale-shark', title: 'Look out to sea', line: 'A whale shark, crossing the deep water above the drop-off.',
+        look: { visitor: 'whale-shark' }, teach: 'photo', hold: 12, slow: .12, reach: 6,
+        encounter: { id: 'whale-shark', cue: 20, course: { angle: Math.PI / 2, side: 1, pass: 16, y: -34, ahead: 16 } } },
+      [-6, -42.5, -91], [4, -41, -89], [10, -39, -78], [6, -34, -62], [0, -28, -48], [-4, -22, -41],
     ] },
-  // Back west along the reef to the descent line (reef.js RESUME_SITE), where the dive began and the résumé hangs on its
-  // slate at safety-stop depth: the buoy is straight up the line.
-  { key: 'descent-line', kind: 'end', at: [-50.6, -9.4, -40.6], approach: 8, site: 'resume', teach: 'view', place: `The descent line · ${depth(-9.5)}`, signal: '#ff9d8a',
-    title: 'Back at the line', line: 'My résumé hangs on the slate. Explore the reef on your own, or head up the line when you’re ready.',
+  // From the wreck's west side across the top of it, over its rigging, to the descent line just beyond it (return-route.js
+  // DESCENT_LINE), and up the line to the résumé's slate at the safety stop. Surface from here: the ascent holds the safety
+  // stop beside the line and comes up by the buoy.
+  { key: 'descent-line', kind: 'end', at: [27, -9.4, -37.2], approach: 8, site: 'resume', teach: 'view', place: `The descent line · ${depth(-9.5)}`, signal: '#ff9d8a',
+    title: 'Up the line', line: 'My résumé hangs on the slate. Explore the reef on your own, or head up the line when you’re ready.',
     short: 'My résumé is on the slate. Explore, or head up.',
-    via: [[-14, -16, -34], [-30, -13, -34], [-42, -11, -37]],
-    // The slate, the line up to the buoy, and the reef back the way we came.
-    pan: [[-56.5, -7.8, -44], [-56.5, -1.5, -44], [-30, -16, -30], [-56.5, -7.8, -44]] },
+    via: [[9, -15, -37], [16, -12.5, -37.5]],
+    // The slate, the line up to the buoy, and the wreck below.
+    pan: [[32.6, -7.9, -37], [33, -1.5, -37], [18, -22, -39], [32.6, -7.9, -37]] },
 ];
 // Shown on the At a glance page, only while the tour is on (D6).
 export const WELCOME = 'Hi, I’m Anshul. Welcome to my portfolio: a dive world I made for you to explore my work. You’re free to swim off, or continue the guided dive from here.';

@@ -3,6 +3,7 @@ import { seededRandom } from './assets.js';
 import { collisionWorldSteps } from './collisions.js';
 import { stylize, setLookGlows, nearLookGlow } from './ocean-look.js';
 import { valueTexture } from './shaders.js';
+import { DESCENT_LINE } from './return-route.js';
 
 export const LANDMARKS = [
   { id: 'about', title: 'About', description: 'Shallow reef · 8 m', position: [-12, -8, -15] },
@@ -10,10 +11,10 @@ export const LANDMARKS = [
   { id: 'experience', title: 'Experience', description: 'Deep ledge · 45 m', position: [-18, -45, -82] },
   { id: 'projects', title: 'Projects', description: 'Mid-depth wreck · 23 m', position: [18, -23, -39] }
 ];
-// The résumé: a slate on the descent line on the far (west) side of the kelp grove (hero-formations.js), out of the
-// passing visitors' lanes across the reef, hung at safety-stop depth (world y -7.5 reads 5 m). Not one of the three sites of the journey, the map or the dive summary, so it is kept
-// apart from LANDMARKS; landmark-interactions.js offers it like them.
-export const RESUME_SITE = { id: 'resume', title: 'Résumé', description: 'Descent line · 5 m', position: [-56.5, -7.5, -44] };
+// The résumé: a slate on the descent line, which hangs from its buoy just east of the wreck (return-route.js DESCENT_LINE),
+// at safety-stop depth (world y -7.5 reads 5 m). Not one of the three sites of the journey, the map or the dive summary, so
+// it is kept apart from LANDMARKS; landmark-interactions.js offers it like them.
+export const RESUME_SITE = { id: 'resume', title: 'Résumé', description: 'Descent line · 5 m', position: [DESCENT_LINE.x, -7.5, DESCENT_LINE.z] };
 // The coral nursery: a feature of the reef, not a portfolio site, on the level sand flat north of the About pad (the
 // widest clear sand at nursery depth on this reef). The nurse shark sleeps beside it (user-creature-routes.js).
 export const NURSERY_SITE = { x: -5, z: 4 };

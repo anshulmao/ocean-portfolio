@@ -3,6 +3,7 @@
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import {movementDefaults} from '../ocean-refined/movement-defaults.js';
+import {SAFETY_STOP} from '../ocean-refined/return-route.js';
 const moduleURL=new URL('../ocean-refined/exploration.js',import.meta.url);
 let code=await fs.readFile(moduleURL,'utf8');
 code=code.replace(/import \{ createTouchControls \}[^;]+;/,"const createTouchControls=()=>({destroy(){}});")
@@ -53,7 +54,7 @@ for(const hz of [30,60,120]){
   const v=returning.state.returnRoute,leg=Math.atan2(-(v.at(-1)[0]-v.at(-2)[0]),-(v.at(-1)[2]-v.at(-2)[2])),arrived=returning.state.bodyYaw-leg;
   assert.ok(Math.abs(Math.atan2(Math.sin(arrived),Math.cos(arrived)))<.3,'and still faces that way at the stop: easing back onto the hold is no turn about');
   assert.equal(returning.state.returnPhase,'offer');
-  const held=returning.getPlayerPosition();assert.ok(Math.hypot(held.x,held.z+6)<.5);
+  const held=returning.getPlayerPosition();assert.ok(Math.hypot(held.x-SAFETY_STOP[0],held.z-SAFETY_STOP[2])<.5,'the stop is held beside the descent line');
   returning.holdSafetyStop(true);
   for(let t=0;t<3;t+=dt)returning.update(dt,true);
   assert.ok(returning.getPlayerPosition().distanceTo(held)<.3,'Residual route momentum eases into the safety hold');

@@ -159,7 +159,8 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     { id: 'experience', position: [-18, floorAt(-18, -82) + 1.3, -82], interactionPosition: [-12, floorAt(-18, -82) + 4.3, -82], maxRange: 6.5 },
     { id: 'projects', position: [18, floorAt(18, -39) + 1.6, -39], interactionPosition: [24, floorAt(18, -39) + 4.4, -39], maxRange: 6.5 },
     // The résumé slate hangs at safety-stop depth on the descent line (reef.js RESUME_SITE), not on the sand.
-    { id: 'resume', position: [...RESUME_SITE.position], interactionPosition: [RESUME_SITE.position[0] + 2.8, RESUME_SITE.position[1], RESUME_SITE.position[2]], maxRange: 4 }
+    // Read from the wreck's side of the line (west), where the diver comes up to it.
+    { id: 'resume', position: [...RESUME_SITE.position], interactionPosition: [RESUME_SITE.position[0] - 2.8, RESUME_SITE.position[1], RESUME_SITE.position[2]], maxRange: 4 }
   ];
 
   const positions = new Map(landmarks.map(item => [item.id, item.position]));

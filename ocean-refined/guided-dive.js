@@ -19,8 +19,9 @@ export const STOPS = STEPS.filter(step => step.kind === 'stop');
 // 8: Experience in the treasure and Projects in the wreck, so the step keys swap places, and a direct leg to the cathedral;
 // 9: the scooter first, out to the right of the anchor past the barracuda, the whipray and the brain coral; 10: the moray's
 // side of the brain coral, a pause at the coral nursery, the helmet face on, the bait ball and the arch on the way down, the
-// whale shark on the way up, and the end at the descent line, so the ending's key changes).
-const VERSION = 10;
+// whale shark on the way up, and the end at the descent line, so the ending's key changes; 11: the whale shark out over the
+// deep water as the swim leaves the nautilus, and the descent line moved beside the wreck, reached over the top of it).
+const VERSION = 11;
 const note = (event, extra = {}) => track(event, { step: STEPS[index].key, index, tour_version: VERSION, ...extra });
 const ARRIVE_RADIUS = 1.6, PAN_BEAT = 3, INTRO_BEAT = 4.5, HOLD_SIGNAL = '#8ff4ff';
 // The opening from the surface (SPEC step 0): a held beat while the surface copy fades, the camera eases in on the diver
@@ -405,7 +406,9 @@ function behind(point, at, limit = BEHIND) {
 function flyBy(dt, at) {
   const api = controls();
   steer(at);
-  for (const item of sights) {
+  // The fly-by under way too: one that begins as its leg sets off (the whale shark off the nautilus's ledge) calls its
+  // animal in then.
+  for (const item of sight ? [sight, ...sights] : sights) {
     if (!item.encounter || cued.has(item.key) || probe.fromArray(at).distanceTo(to.fromArray(item.at)) > item.encounter.cue) continue;
     if (api?.encounter?.(item.encounter.id, { ...item.encounter.course, from: item.at })) cued.add(item.key);
   }

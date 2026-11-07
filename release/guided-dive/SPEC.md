@@ -26,7 +26,7 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
 | R7 | Touch, phone and keyboard all get equal treatment, and every key hint has a tap equivalent. |
 | R8 | The visitor can always exit, surface or keep exploring. The safety stop is offered, never forced. |
 
-## The sequence (round 10)
+## The sequence (round 11)
 
 World coordinates are metres (x, y, z), with y negative below the surface. "Right" is +x, facing −z. The site starts at
 the surface out over the deep end, beyond the treasure, at (−18, −90), facing the reef (`exploration.js` SURFACE_START). The route itself
@@ -95,19 +95,21 @@ Every stop is approached on the line from its subject, so the diver arrives faci
 7. **Experience: the Nautilus** (stop), up on its ledge, seen from 9.5 m to its east, the side its spiral and its
    horseshoe of stone open to.
 
-### Act 3: the way up and back to the line
+### Act 3: the way up, the wreck and the line
 
-8. Off the ledge and up the slope: **Look out ahead**, a whale shark crossing in front over the deep water, 13 m up the
-   slope and 4 m above. The swim all but stops for it (12% of the cruise, 11 s), and waits up to 8 s if it is late. The
-   look-there marker leaves it to the caption: it does not point it out before the caption says to look.
-9. **Projects: the Wreck** (stop), seen whole from 16 m to its west.
-10. **The ending**, back at the descent line (`reef.js` RESUME_SITE) beside the résumé's slate, below the safety stop.
-    The choice is **Read it (F)** for the résumé, **Keep exploring** or **Surface (N)**, straight up the line.
+8. Leaving the nautilus, out to the lip of its ledge: **Look out to sea**, a whale shark crossing out over the deep water
+   beyond the drop-off, up and to the right as seen from the nautilus: 16 m out and 9 m above. The swim all but stops
+   for it (12% of the cruise, 12 s), and waits up to 8 s if it is late. The look-there marker leaves it to the caption.
+9. **Projects: the Wreck** (stop), seen whole from 16 m to its west. The reef's own fish live round it: along both sides
+   of its hull, under its bow and aft of its net; the barracuda patrols off its bow.
+10. **The ending**: over the top of the wreck to the descent line just beyond it (`return-route.js` DESCENT_LINE), and up
+    the line to the résumé's slate, below the safety stop. The choice is **Read it (F)** for the résumé, **Keep
+    exploring** or **Surface (N)**.
 
 ### 9. Surface (if chosen)
 
-- N, or the Surface button, plays the existing ascent: rise, open the **safety stop** on the way up (hold, or skip with Esc),
-  surface.
+- N, or the Surface button, plays the ascent: to the descent line, the **safety stop** held beside it (hold, or skip with
+  Esc), and up by the buoy. **Back to the surface** does the same from anywhere on the reef.
 - The old top banner during the ascent ("surfacing early costs nothing") is gone. "Stop complete" stays.
 - Back at the surface, the tour is complete.
 
@@ -493,4 +495,16 @@ stops.
   - **The ending** is at the descent line, where the résumé hangs; F reads it.
   - **The card** is glass over the water with square-cornered keys, and lower on a phone.
   - `tour_version` is now 10, and the ending's key is `descent-line`.
+- **Round 11 (the owner's notes on round 10):**
+  - **The whale shark** crosses out over the deep water as the swim leaves the nautilus, up and to the right, rather than
+    low against the slope to the left. A fly-by that begins as its leg sets off calls its animal in then.
+  - **The descent line** hangs just east of the wreck. The tour goes over the top of the wreck to it and up it to the
+    résumé; every ascent comes back to it for the safety stop and surfaces by its buoy (`planSurfaceReturn`, which used
+    to stop over the middle of the reef). The barracuda's beat moved off the wreck's bow to make room.
+  - **Fish:** the nautilus's and the line's made-up fish are now the reef's own species (the nursery keeps its chromis,
+    which its reveal uses). The wreck's fish live round it, not over it: they used to be lifted over the 9.5 m block the
+    animals treat the wreck as. Whitetips patrol and rest by the nautilus.
+  - **Dive log:** a site counts as reached only when the diver is down at it. The dive starts on the surface right above
+    the nautilus, which was logged as reached at 0:00 and 5 m, so its real visit never was.
+  - `tour_version` is now 11.
 

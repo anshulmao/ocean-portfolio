@@ -580,7 +580,7 @@ export function buildNursery({ x, z, floorAt, economy = false, projects = 6 }) {
 // Experience: a nautilus shell lying on its side on the deep ledge, tipped up towards the approach. The shell is a
 // true logarithmic spiral (each whorl three times the last), cut into chambers along its length, painted with its
 // flame stripes, pearl inside, and the deep ledge's small life around it: shells of real size (two little nautiluses
-// among them), glass sponges, sea pens, feather stars on stones, brittle stars, black coral and a school of anthias.
+// among them), glass sponges, sea pens, feather stars on stones, brittle stars and black coral.
 // Reveal: the chambers light one after another from the centre outwards.
 function nautilusSurface(diameter) {
   const thetaMax = 4 * Math.PI, b = Math.log(3) / TAU, radiusMax = diameter / 2.49;
@@ -760,17 +760,12 @@ export function buildNautilus({ x, z, floorAt, economy = false, diameter = 3.3 }
   }
   life.meshes('Deep ledge life', root);
 
-  // Anthias: a small pink school hovering over the shell, slowly turning.
-  const anthiasMaterial = standard({ roughness: .5, name: 'anthias' });
-  const anthias = new THREE.InstancedMesh(fishGeometry(new Kit(), anthiasMaterial, { length: .07, depth: .03, width: .014, body: '#f08aa8', belly: '#ffd0dc', back: '#d0607e', tail: '#f2c94c' }), anthiasMaterial, economy ? 10 : 18);
-  anthias.name = 'Ledge anthias'; anthias.frustumCulled = false;
-  const shoal = Array.from({ length: anthias.count }, () => ({ radius: 1.4 + random() * 1.4, height: 1.1 + random() * 1.3, speed: (.18 + random() * .12) * (random() < .2 ? -1 : 1), phase: random() * TAU }));
-  const fishDummy = new THREE.Object3D(), floor0 = floorAt(x, z);
+  // The fish over the shell are the reef's own (user-creature-routes.js SCHOOLS.nautilus), and whitetips patrol the ledge.
 
   let now = 0, openedAt = -100, open = false;
   const levels = materials.map(() => 0);
   return {
-    root, free: [anthias], focus, approach, solids,
+    root, focus, approach, solids,
     reveal(isOpen, motion = true) {
       if (isOpen) { open = true; openedAt = motion ? now : now - 10; return motion ? 1.1 : 0; }
       open = false; return true;
@@ -791,14 +786,6 @@ export function buildNautilus({ x, z, floorAt, economy = false, diameter = 3.3 }
         levels[n] += (target - levels[n]) * (step > 0 ? 1 - Math.exp(-step * rate) : 1);
         materials[n].emissiveIntensity = levels[n];
       }
-      if (eye && eye.distanceTo(center) > 50) return;
-      for (let i = 0; i < shoal.length; i++) {
-        const f = shoal[i], a = f.phase + elapsed * f.speed;
-        fishDummy.position.set(x + Math.cos(a) * f.radius, floor0 + f.height + Math.sin(elapsed * .6 + i) * .12, z + Math.sin(a) * f.radius);
-        fishDummy.rotation.set(0, (f.speed > 0 ? -a - Math.PI / 2 : -a + Math.PI / 2) + Math.sin(elapsed * 8 + i) * .08, 0); fishDummy.updateMatrix();
-        anthias.setMatrixAt(i, fishDummy.matrix);
-      }
-      anthias.instanceMatrix.needsUpdate = true;
     }
   };
 }
@@ -862,13 +849,7 @@ export function buildDescentLine({ x, z, floorAt, economy = false, depth = 7.5 }
   }
   kit.meshes('Descent line', root);
 
-  // A school of fusiliers that has made the line its own, circling it around the stop.
-  const schoolKit = new Kit(), schoolMaterial = standard({ roughness: .55, name: 'line fusiliers' });
-  const fusiliers = new THREE.InstancedMesh(fishGeometry(schoolKit, schoolMaterial, { length: .1, depth: .035, width: .018, body: '#5d8fd6', belly: '#e8eef5', back: '#2f5d9a', tail: '#f2c94c' }), schoolMaterial, economy ? 12 : 20);
-  fusiliers.name = 'Line fusiliers'; fusiliers.frustumCulled = false;
-  const lineFish = [], schoolRandom = seededRandom(733);
-  for (let i = 0; i < fusiliers.count; i++) lineFish.push({ radius: 1.1 + schoolRandom() * 1.6, y: -depth - 1 + schoolRandom() * 4.5, speed: .35 + schoolRandom() * .15, phase: schoolRandom() * TAU });
-  const fishDummy = new THREE.Object3D();
+  // The fish round the line are the reef's own fusiliers, wheeling round it at the stop (user-creature-routes.js SCHOOLS.line).
 
   // The slate: clipped to the line, hanging a little off it so it can turn about it, writing on the face towards +x
   // when the pivot is unturned.
@@ -900,22 +881,23 @@ export function buildDescentLine({ x, z, floorAt, economy = false, depth = 7.5 }
   buoyKit.meshes('Surface buoy', surface);
   surface.position.set(x, 0, z);
 
-  const focus = new THREE.Box3().setFromCenterAndSize(clip.clone().add(new THREE.Vector3(.36, -.44, 0)), new THREE.Vector3(.4, .6, .8));
+  // The slate turns about the line facing west (yaw π), towards the wreck the diver comes up from.
+  const focus = new THREE.Box3().setFromCenterAndSize(clip.clone().add(new THREE.Vector3(-.36, -.44, 0)), new THREE.Vector3(.4, .6, .8));
   const center = focus.getCenter(new THREE.Vector3());
-  const approach = new THREE.Vector3(center.x + 2.8, center.y, center.z);
+  const approach = new THREE.Vector3(center.x - 2.8, center.y, center.z);
   const solids = [new THREE.Box3(new THREE.Vector3(foot.x - .3, floor - .1, foot.z - .3), new THREE.Vector3(foot.x + .3, floor + .34, foot.z + .3))];
 
   let now = 0, open = false, turnedAt = -100, releasedAt = -100, from = 0, to = 0, glow = 0, yaw = 0, seen = false;
   const lastEye = new THREE.Vector3();
-  const drift = t => .55 * Math.sin(t * .31) + .25 * Math.sin(t * .13 + 1.3);
+  const drift = t => Math.PI + .55 * Math.sin(t * .31) + .25 * Math.sin(t * .13 + 1.3);
   const toward = new THREE.Vector3();
   return {
-    root, surface, free: [fusiliers], focus, approach, solids,
+    root, surface, focus, approach, solids,
     reveal(isOpen, motion = true, eye = null) {
       open = isOpen;
       if (!isOpen) { releasedAt = now; from = yaw; return true; }
       // Towards the diver (as last seen by update), or straight out along the approach lane.
-      const target = eye ? toward.copy(eye).sub(clip) : seen ? toward.copy(lastEye).sub(clip) : toward.set(1, 0, 0);
+      const target = eye ? toward.copy(eye).sub(clip) : seen ? toward.copy(lastEye).sub(clip) : toward.set(-1, 0, 0);
       const goal = Math.atan2(-target.z, target.x);
       from = yaw; to = from + Math.atan2(Math.sin(goal - from), Math.cos(goal - from));
       turnedAt = motion ? now : now - 10;
@@ -931,15 +913,6 @@ export function buildDescentLine({ x, z, floorAt, economy = false, depth = 7.5 }
       const target = open ? .55 : near(eye, center, 2, 7) * .12;
       glow += (target - glow) * (step > 0 ? 1 - Math.exp(-step * (open ? 5 : 2.5)) : 1);
       face.emissiveIntensity = glow;
-      if (eye && eye.distanceTo(center) > 50) return;
-      for (let i = 0; i < lineFish.length; i++) {
-        const f = lineFish[i], a = f.phase + elapsed * f.speed, at = lineAt(f.y);
-        fishDummy.position.set(at.x + Math.cos(a) * f.radius, f.y + Math.sin(elapsed * .5 + i) * .2, at.z + Math.sin(a) * f.radius);
-        // Swimming round the line: heading along the circle's tangent.
-        fishDummy.rotation.set(0, -a - Math.PI / 2 + Math.sin(elapsed * 9 + i) * .08, 0); fishDummy.updateMatrix();
-        fusiliers.setMatrixAt(i, fishDummy.matrix);
-      }
-      fusiliers.instanceMatrix.needsUpdate = true;
     },
     updateSurface(elapsed) {
       const h = waveHeight(x, z, elapsed), hx = waveHeight(x + .6, z, elapsed) - waveHeight(x - .6, z, elapsed), hz = waveHeight(x, z + .6, elapsed) - waveHeight(x, z - .6, elapsed);

@@ -57,9 +57,9 @@ export const RESIDENTS = {
   bluespots: { species: 'bluespotted-ray', spots: [[8, 6], [-16, 2], [26, -14]], lean: 2 },
   // The nurse shark sleeps on the open sand beside the coral nursery (reef.js NURSERY_SITE, at -5, 4).
   sleeper: { species: 'nurse-shark', near: [-6, 9.5] },
-  // The barracuda that patrols a slow oval off the wreck (patrol: x and z radii, m; speed m/s), pauses to hang
-  // and watch a diver, and bolts if crowded.
-  sentinel: { species: 'great-barracuda', landmark: 'projects', offset: [9, 7, 4], patrol: [7, 4.5], speed: .8 },
+  // The barracuda that patrols a slow oval off the wreck's bow (patrol: x and z radii, m; speed m/s), pauses to hang
+  // and watch a diver, and bolts if crowded. It used to patrol east of the wreck, where the descent line now hangs.
+  sentinel: { species: 'great-barracuda', landmark: 'projects', offset: [-3, 7, -15], patrol: [7, 4.5], speed: .8 },
   // Morays and a ribbon eel look out from the foot of the tall formations, mouths working; too close and they strike.
   dens: [
     // The cathedral's columns are too thin to hold a den: a moray there ended up on open sand by the reef's edge.
@@ -70,9 +70,11 @@ export const RESIDENTS = {
   //   loops: [centre x, centre z, x radius, z radius] (where the reef's turtles always swam, except the one that passed
   //   between the wreck and the pillar cathedral: a turtle that steers round the reef spent that loop detouring).
   turtles: { species: 'green-turtle', loops: [[-24, -6, 8, 6], [36, -50, 7, 6], [-35, -72, 8, 7], [31, 14, 9, 6], [33, -91, 8, 6]], count: [5, 3], height: 3.4, speed: .55, scale: [.8, 1], sleeper: [12, -24] },
-  // Whitetip reef sharks: one patrols the deep reef low over the bottom, two lie resting on the sand by day (the first on
-  // the open sand off the wreck's bow, one of the few patches on this reef clear and level enough for a 5 m shark).
-  whitetips: { species: 'whitetip-reef-shark', patrol: { loop: [-26, -58, 15, 10], height: 2, speed: 1.1 }, resting: [[18, -29], [-42, -90]], lean: 1 },
+  // Whitetip reef sharks: one patrols the deep ledge round the nautilus low over the bottom, two lie resting on the sand by
+  // day (the first on the open sand off the wreck's stern, one of the few patches on this reef clear and level enough for a
+  // 5 m shark).
+  // The patrol circles the nautilus's ledge, low, and the second resting one lies on the sand beside it.
+  whitetips: { species: 'whitetip-reef-shark', patrol: { loop: [-22, -84, 10, 7], height: 2.2, speed: 1.1 }, resting: [[18, -29], [-30, -90]], lean: 1 },
   // Cuttlefish hover off the side of tall formations, watching; crowd one and it backs off, then flashes its arms.
   cuttlefish: { species: 'broadclub-cuttlefish', formations: ['Soft coral spire', 'Brain coral dome', 'Lantern garden'], count: [3, 2], height: 2.4 },
   // Lionfish hang by the coral, fans spread; come close and one turns its spines on you.
@@ -101,13 +103,26 @@ export const SCHOOLS = {
   chromis: { species: 'chromis', lod: 2, kind: 'cloud', over: 'patches', zone: 'mid', count: [16, 9], max: 4 },
   sergeants: { species: 'sergeant-major', kind: 'cloud', at: [[2, -6], [-22, -8], [24, -14]], y: -6, count: [8, 5], size: [3, 1, 3] },
   wrasse: { species: 'cleaner-wrasse', kind: 'cloud', site: 'cleaning-station', count: [3, 3], size: [1.2, .7, 1.2], lift: 1.6 },
-  // The wreck's own: the reef's fish, not fish made for it. Clouds over its deck, by its wheelhouse and off its bow.
-  // at: [x, height over the seabed at the wreck's charted spot, z] from that spot (reef.js LANDMARKS projects); size as a cloud's.
-  wreck: { landmark: 'projects', clouds: [
-    { species: 'anthias', at: [0, 5.5, 0], count: [18, 10], size: [2.6, 1.3, 4.5] },
-    { species: 'sergeant-major', at: [2, 4, 4.5], count: [9, 6], size: [2.2, 1, 2.2] },
-    { species: 'chromis', at: [-1, 3.2, -5], count: [10, 6], size: [1.8, .9, 2.4] }
+  // The wreck's own: the reef's fish, not fish made for it, living round it rather than over it: anthias along the low,
+  // deck side of the heeled hull, sergeant majors along its high side by the breach, chromis in the shade under the bow
+  // and tangs just aft of the net at the stern. at: [x, height over the seabed, z] from the wreck's charted spot (reef.js LANDMARKS
+  // projects: the hull runs from 16, -47 at the bow to 22, -32 at the stern, its deck about 2 m over the sand); size: the
+  // cloud's half-extents. Each fish also swims a loop of up to 0.8 m round its spot, so the clouds keep that clear of the
+  // hull, the wheelhouse and the rigging.
+  // within: they live in it, so they keep only off the sand, not off the wreck's keep-out block (WRECK_HEIGHT).
+  wreck: { landmark: 'projects', within: true, clouds: [
+    { species: 'anthias', at: [7.5, 1.8, -1], count: [16, 9], size: [.6, .6, 2.4] },
+    { species: 'sergeant-major', at: [-4.6, 2.1, .6], count: [9, 6], size: [.7, .8, 3.4] },
+    { species: 'chromis', at: [-3.4, .8, -10.2], count: [8, 5], size: [1.2, .5, 1.2] },
+    { species: 'yellow-tang', at: [4, 1.6, 10.8], count: [4, 3], size: [1.2, .6, .9] }
   ] },
+  // Over the nautilus on its ledge, the reef's anthias (they used to be fish made for it) and a few chromis.
+  nautilus: { landmark: 'experience', clouds: [
+    { species: 'anthias', at: [0, 2.2, 0], count: [14, 8], size: [2.4, .8, 2.4] },
+    { species: 'chromis', at: [2.5, 1.2, -3], count: [6, 4], size: [1.2, .5, 1.2] }
+  ] },
+  // The descent line's own: fusiliers wheeling round it at the safety stop (return-route.js DESCENT_LINE).
+  line: { species: 'fusilier', radius: 3, y: -7, speed: .9, count: [14, 8], stack: 2.5 },
   butterflies: { species: 'butterflyfish', kind: 'pairs', near: 'patches', count: 2, groups: [5, 3], loop: 4.5, height: 1.4 },
   idols: { species: 'moorish-idol', kind: 'pairs', near: 'patches', count: 3, groups: [2, 1], loop: 5, height: 1.8 },
   tangs: { species: 'powder-blue-tang', kind: 'pairs', near: 'patches', count: 5, groups: [2, 1], loop: 6, height: 1.5 },

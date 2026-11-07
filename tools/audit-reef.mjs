@@ -254,7 +254,11 @@ async function auditCreatures({seconds, rate, player, spawn, label, until = 0, c
   // An encounter run follows the visitors only, until its slot is empty again (or `until` seconds).
   const cast = spawn && castOnly ? new Set() : null;
   const solid = A.boxes;
-  const insideSolid = (x, y, z) => { for (const b of solid) if (inBox(b.box, x, y, z, -.1)) return b.mesh || b.kind; const hit = A.onLandmark(x, y, z); return hit ? `the ${hit} model` : ''; };
+  // At the wreck the animals are measured against the wreck model itself (onLandmark), not its collision boxes: those are
+  // loose boxes round a heeled, turned hull, and its fish live in its open hold and round its wheelhouse
+  // (user-creature-routes.js SCHOOLS.wreck).
+  const WRECK_BOXES = /^(ship (bow|stern) hull|trawler wheelhouse)$/;
+  const insideSolid = (x, y, z) => { for (const b of solid) if (!WRECK_BOXES.test(b.mesh || '') && inBox(b.box, x, y, z, -.1)) return b.mesh || b.kind; const hit = A.onLandmark(x, y, z); return hit ? `the ${hit} model` : ''; };
   const prev = new Map(), stats = new Map(), encounter = {starts: [], samples: []};
   const BOTTOM = /bluespotted-ray|nurse-shark|garden-eel|giant-moray|ribbon-eel/;
   const stat = key => { let s = stats.get(key); if (!s) stats.set(key, s = {moving: 0, sideways: 0, backwards: 0, streak: 0, worstStreak: 0, clipFloor: 0, clipSolid: 0, worstDepth: 0, solidName: '', where: null, solidWhere: null, sideWhere: null, rollTurn: 0, turnSamples: 0, wrongBank: 0, clipMismatch: 0, clipWhere: null, distance: 0, time: 0, minDiver: Infinity, maxY: -Infinity, shallow: Infinity, shallowWhere: null, path: []}); return s; };

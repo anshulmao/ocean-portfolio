@@ -4,6 +4,7 @@ import { clone } from './vendor/SkeletonUtils.js';
 import { floatSkinIndices, turn, modelBytes } from './assets.js';
 import { creatureGeometry, speciesById } from './creature-species.js';
 import { ENCOUNTERS, RESIDENTS, SCHOOLS, SEABED, WRECK_HEIGHT } from './user-creature-routes.js';
+import { DESCENT_LINE } from './return-route.js';
 import { fishNavigator } from './fish-navigation.js';
 import { createMorayDenMotion, updateMorayDenMotion } from './moray-resident.js';
 import { terrainHeightAt as reefTerrain, seabedHeightAt } from './reef.js';
@@ -754,6 +755,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     const L = id => facts.get(id)?.lengthMetres || 1;
     const cloud = (species, x, y, z, count, size, extra = {}) => {
       const g = schoolGroup(species, { kind: 'cloud', count, lod: extra.lod, clip: 'idle' }); if (!g) return;
+      g.within = Boolean(extra.within);
       g.centre.set(x, y, z); g.size = size; g.heading = rr(0, TAU); g.radius = Math.max(...size) + L(species);
       for (let i = 0; i < count; i++) { const a = rr(0, TAU), r = Math.cbrt(Math.random()), u = rr(-1, 1), s = Math.sqrt(1 - u * u); g.members.push({ hx: Math.cos(a) * s * r * size[0], hy: u * r * size[1], hz: Math.sin(a) * s * r * size[2], scale: rr(.85, 1.1), w1: rr(.35, 1.1), w2: rr(.4, 1.2), w3: rr(.2, .7), p1: rr(0, TAU), p2: rr(0, TAU), p3: rr(0, TAU), beat: rr(0, TAU), loop: rr(.35, .8), flat: rr(.3, .55), turn: Math.random() < .5 ? 1 : -1 }); }
     };
@@ -773,12 +775,6 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     for (const [x, z] of sg.at.slice(0, economy ? 2 : sg.at.length)) cloud(sg.species, x, Math.max(sg.y, cover(x, z) + 4), z, pair(sg.count), sg.size);
     const wr = SCHOOLS.wrasse, station = lifeSite(wr.site);
     if (station) cloud(wr.species, station.x, cover(station.x, station.z) + wr.lift, station.z, pair(wr.count), wr.size);
-    // The wreck's fish, placed from its charted spot (the wreck itself may still be loading).
-    const wk = SCHOOLS.wreck, hull = landmark(wk.landmark) || { x: 18, z: -39 };
-    if (hull) {
-      const base = bed(hull.x, hull.z);
-      for (const c of wk.clouds) cloud(c.species, hull.x + c.at[0], base + c.at[1], hull.z + c.at[2], pair(c.count), c.size);
-    }
     // Pairs and small parties working the reef close to the bottom.
     // At a formation, on its reef side (toward the middle of the site): on the +x side, the loops round the eastern
     // formations ran out to the edge of the world and round the back of them.
@@ -802,6 +798,15 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     shoal(tr.species, route(bait.x - 1, bait.z, tr.radius * .9, tr.radius, { wobble: .1 }), level(bait.y + tr.lift, 1.6, 26), tr.speed, pair(tr.count), tr.spread);
     const ff = SCHOOLS.flyingFish;
     shoal(ff.species, route(...ff.loop, { wobble: .12 }), level(ff.y, .25, 9), ff.speed, pair(ff.count), ff.spread, { pose: ff.pose, drift: .3, bob: .05 });
+    // Added after the reef's other schools, so every school before them draws the same random numbers as it always did.
+    // The wreck's and the nautilus's fish, placed from their charted spots (the landmarks themselves may still be loading).
+    for (const [group, fallback] of [[SCHOOLS.wreck, { x: 18, z: -39 }], [SCHOOLS.nautilus, { x: -18, z: -82 }]]) {
+      const spot = landmark(group.landmark) || fallback, base = bed(spot.x, spot.z);
+      for (const c of group.clouds) cloud(c.species, spot.x + c.at[0], base + c.at[1], spot.z + c.at[2], pair(c.count), c.size, { within: group.within });
+    }
+    // Fusiliers wheeling round the descent line at the safety stop.
+    const ln = SCHOOLS.line;
+    shoal(ln.species, route(DESCENT_LINE.x, DESCENT_LINE.z, ln.radius, ln.radius, { wobble: .04 }), level(ln.y, .4, 18), ln.speed, pair(ln.count), [0, .8, ln.stack], { ring: true, drift: .2, bob: .12 });
     // Sea stars and urchins on the bottom: still instances, each its own small group so it is culled on its own.
     for (const b of seabedPlaces) {
       const g = schoolGroup(b.species, { kind: 'bed', count: 1, lod: 1, clip: 'idle' }); if (!g) continue;
@@ -907,7 +912,9 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
           m.lx = fx; m.lz = fz; m.at = frame; m.facing = facing;
           // The whole fish clears the sand, nose and tail as well as middle (on a steep slope its nose dug in).
           const nx = Math.sin(facing) * m.scale * .35, nz = Math.cos(facing) * m.scale * .35, sand = Math.max(floor(fx, fz), floor(fx + nx, fz + nz), floor(fx - nx, fz - nz));
-          write(k, fx, Math.max(g.centre.y - drop + m.hy * tight + .15 * Math.sin(t * m.w2 + m.p2), ground(fx, fz) + .35, sand + .35), fz,
+          // A cloud that lives in a wreck (`within`) keeps off the sand only: to the animals the whole wreck is a block
+          // WRECK_HEIGHT tall, which would lift its fish clear over the masts.
+          write(k, fx, Math.max(g.centre.y - drop + m.hy * tight + .15 * Math.sin(t * m.w2 + m.p2), g.within ? -Infinity : ground(fx, fz) + .35, sand + .35), fz,
             facing, clamp(Math.atan2(climb, speed), -.3, .3), clamp(-actualRate * .07, -.16, .16), m.scale, m.beat);
         }
       } else if (g.kind === 'burrows') {
