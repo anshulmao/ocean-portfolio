@@ -1,18 +1,18 @@
 import * as THREE from './vendor/three.module.min.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
-import { clone as cloneSkinned } from './vendor/SkeletonUtils.js';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 import { simplify, breathe, turn as nextTask, floatSkinIndices, modelBytes } from './assets.js';
+import { buildHelmet, buildNursery, buildNautilus, buildDescentLine, buildFishingBoat } from './landmark-builds.js';
+import { RESUME_SITE, NURSERY_SITE } from './reef.js';
 
 const ASSET = new URL('./assets/models/', import.meta.url);
+// The portfolio landmarks are built in code (landmark-builds.js); only the coral habitats are downloaded.
 const MODEL_FILES = {
-  anchor: 'anchor.glb', ship: 'sunken_ship_low_poly.glb', chest: 'treasure_chest.glb',
   coral: [
     'coral_waterverbruik_gezond.glb', 'coral_landbouw_gezond.glb',
     'coral_anker_kleur.glb', 'coral_uitstoot_gezond.glb', 'coral_visnet_gezond_fish.glb'
   ]
 };
-const GLOW_COLOR = new THREE.Color('#e3c585');
 const CORAL_CACHE_SCHEMA = 1;
 const CORAL_CACHE = new URL('./assets/models/prepared-corals/', import.meta.url);
 // Placing a model walks every triangle of it over the terrain: tens of milliseconds for a hull, and it may happen while
@@ -49,32 +49,21 @@ function normalizeWrapper(wrapper, targetLength, alignBottom = true, minScale = 
   return { box: visibleBounds(wrapper), offset, scale };
 }
 
-// The landmark files and the prepared corals, downloaded and parsed while the world under the water is still being
-// built (world.js startUnderwater): placing them needs the finished reef, fetching, checking and parsing them does not,
-// so none of that waits for the build any more. Only the published build's gzipped copies are fetched this way
-// (modelBytes); keyed by URL (the corals by detail level), so what was fetched for another detail level than the one
-// loaded is simply not used.
-const early = new Map();
-const parsedEarly = new Map();
+// The prepared corals, downloaded while the world under the water is still being built (world.js startUnderwater):
+// placing them needs the finished reef, fetching and checking them does not. Only the published build's gzipped
+// copies are fetched this way (modelBytes). The landmarks themselves are built in code and download nothing.
 const coralsEarly = new Map();
 const earlyLoader = new GLTFLoader();
-const landmarkHref = (file, economy) => new URL(economy ? file.replace(/\.glb$/, '-economy.glb') : file, ASSET).href;
-// A parse runs in a turn of the frame loop's queue (see setPacer in assets.js), so it lands between frames.
-const parseLater = bytes => bytes ? nextTask().then(() => earlyLoader.parseAsync(bytes, ASSET.href)).catch(() => null) : Promise.resolve(null);
-// Only the downloads, from the start of the page (world.js boot): the surface's own start-up is busy enough without
-// the parsing, and on a slow connection the files are what a first dive waits for longest.
+// Only the downloads, from the start of the page (world.js boot).
 export function fetchLandmarkFiles(economy = false) {
-  for (const file of [MODEL_FILES.anchor, MODEL_FILES.ship, MODEL_FILES.chest]) { const href = landmarkHref(file, economy); if (!early.has(href)) early.set(href, modelBytes(href)); }
   coralFiles(economy).catch(() => {});
 }
-// Settles when the landmark and prepared coral files are in (or could not be fetched): what follows them on the
-// connection (the creature set, world.js prefetchEnrichment) does not compete with what a first dive waits for. Their
-// parsing and the coral checks go on behind.
+// Settles when the prepared coral files are in (or could not be fetched): what follows them on the connection (the
+// creature set, world.js prefetchEnrichment) does not compete with what a first dive waits for. The coral checks go on behind.
 export function prefetchLandmarks(economy = false) {
   fetchLandmarkFiles(economy);
-  for (const file of [MODEL_FILES.anchor, MODEL_FILES.ship, MODEL_FILES.chest]) { const href = landmarkHref(file, economy); if (!parsedEarly.has(href)) parsedEarly.set(href, early.get(href).then(parseLater)); }
   preparedCoralData(economy).catch(() => {});
-  return Promise.all([...early.values(), coralFiles(economy).then(files => files.geometry).catch(() => {})]);
+  return coralFiles(economy).then(files => files.geometry).catch(() => {});
 }
 
 // The prepared coral cache (tools/prepare-corals.mjs), checked against its sources and parsed: everything about it that
@@ -143,17 +132,17 @@ function report(onStatus, id, status, extra = {}) {
 export function createModelScene({ reef, terrainHeightAt, collisions, economy = false, onStatus, preparedCorals = true } = {}) {
   const root = new THREE.Group();
   root.name = 'Uploaded ocean landmarks';
-  // The landmarks are downloaded before the first dive goes under. In economy detail they come with their textures at
-  // half size (tools/webp-landmarks.py --economy: the GPU's first mipmap level, lossless): 3.6 MB instead of 7, and a
-  // quarter of the decoding, uploads and GPU memory, on screens that seldom show a texel of the full size.
+  // What shows above the water: the descent line's buoy. world.js adds it to the scene beside root, which is hidden at the surface.
+  const surface = new THREE.Group();
+  surface.name = 'Landmark surface markers';
   const loader = new GLTFLoader();
   const landmarkGroups = new Map();
-  const chests = new Map();
+  // The built landmarks by id (landmark-builds.js): their reveals and per-frame motion.
+  const built = new Map();
   const coralCopies = [];
   const coralBatches = [];
   const coralProxyRecords = [];
   const coralCache = { status: 'idle', reason: '', bytes: 0, habitats: 0, batches: 0, durationMs: 0 };
-  const mixers = [];
   let loadPromise = null;
   let disposed = false;
   let motionEnabled = false;
@@ -168,7 +157,10 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
   const landmarks = [
     { id: 'about', position: [-12, floorAt(-12, -15) + 1.4, -15], interactionPosition: [-6.8, floorAt(-12, -15) + 5.3, -15], maxRange: 6.2 },
     { id: 'experience', position: [-18, floorAt(-18, -82) + 1.3, -82], interactionPosition: [-12, floorAt(-18, -82) + 4.3, -82], maxRange: 6.5 },
-    { id: 'projects', position: [18, floorAt(18, -39) + 1.6, -39], interactionPosition: [24, floorAt(18, -39) + 4.4, -39], maxRange: 6.5 }
+    { id: 'projects', position: [18, floorAt(18, -39) + 1.6, -39], interactionPosition: [24, floorAt(18, -39) + 4.4, -39], maxRange: 6.5 },
+    // The résumé slate hangs at safety-stop depth on the descent line (reef.js RESUME_SITE), not on the sand.
+    // Read from the wreck's side of the line (west), where the diver comes up to it.
+    { id: 'resume', position: [...RESUME_SITE.position], interactionPosition: [RESUME_SITE.position[0] - 2.8, RESUME_SITE.position[1], RESUME_SITE.position[2]], maxRange: 4 }
   ];
 
   const positions = new Map(landmarks.map(item => [item.id, item.position]));
@@ -220,16 +212,11 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     return box;
   }
 
-  function updateLandmark(id, box) {
+  // A built landmark sets where it is read from (its focus box's centre) and where the diver hovers to read it.
+  function updateLandmark(id, focus, approach) {
     const landmark = landmarks.find(item => item.id === id);
     if (!landmark) return;
-    const center = box.getCenter(new THREE.Vector3());
-    const size = box.getSize(new THREE.Vector3());
-    const approach = center.clone();
-    // Frame the whole landmark from outside its proxy, including first-person eye offset.
-    if (size.x <= size.z) approach.x = center.x + Math.max(size.x*.5+2.6, Math.max(size.y,size.z)*1.22+1);
-    else approach.z = center.z + Math.max(size.z*.5+2.6, Math.max(size.y,size.x)*1.22+1);
-    approach.y = Math.max(floorAt(approach.x, approach.z) + 2.8, center.y + .6);
+    const center = focus.getCenter(new THREE.Vector3());
     landmark.position.splice(0, 3, ...center.toArray());
     landmark.interactionPosition.splice(0, 3, ...approach.toArray());
     landmark.maxRange = Math.max(landmark.maxRange, approach.distanceTo(center) + .9);
@@ -375,74 +362,24 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     }
   }
 
-  async function addModel(id, gltf, targetLength, rotationY = 0, bottom = true, positionOverride = null) {
-    const wrapper = new THREE.Group();
-    wrapper.name = `${id} placement wrapper`;
-    const model = gltf.scene;
-    model.name = `${id} imported GLB`;
-    wrapper.add(model);
-    wrapper.rotation.y = rotationY;
-    normalizeWrapper(wrapper, targetLength, bottom, .01, 6);
-    const pos = positionOverride?.isVector3 ? positionOverride.clone() : groundPosition(id);
-    wrapper.position.add(pos);
-    root.add(wrapper);
-    landmarkGroups.set(id, wrapper);
-    wrapper.updateMatrixWorld(true);
-    const box = bottom ? await groundModel(wrapper, pos.x, pos.z) : visibleBounds(wrapper);
-    updateLandmark(id, box);
-    return { wrapper, model, box };
-  }
-
-  function openChest(id, open) {
-    const chest = chests.get(id);
-    if (!chest) return false;
-    chest.open = !!open;
-    const settle = action => {
-      if (!action) return;
-      action.reset().play();
-      if (!motionEnabled) {
-        action.time = action.getClip().duration;
-        action.paused = true;
-        chest.mixer.update(0);
-      }
-    };
-    if (chest.open) {
-      chest.closeAction?.stop();
-      settle(chest.openAction);
-    } else {
-      chest.openAction?.stop();
-      settle(chest.closeAction);
-    }
-    // Opening, the seconds its lid takes to swing up (0 where it snaps open: no clip, or motion off), so the records can
-    // wait for it (landmark-interactions.js).
-    return chest.open ? (motionEnabled && chest.openAction ? chest.openAction.getClip().duration : 0) : true;
-  }
-
-  function loadOne(key, file, place) {
-    // The published build's gzipped copy where there is one (modelBytes, assets.js); a copy that does not parse falls back to the plain file.
-    const href = landmarkHref(file, economy), fetched = early.get(href), parsed = parsedEarly.get(href);
-    early.delete(href); parsedEarly.delete(href);
-    return Promise.all([fetched || modelBytes(href), parsed]).then(([bytes, ready]) => new Promise(resolve => {
-      const done = async gltf => {
-        if (disposed) { resolve(null); return; }
-        try {
-          await nextTask(); floatSkinIndices(gltf.scene); await nextTask(); await place(gltf);
-          loaded++;
-          report(onStatus, key, 'loaded', { loaded, total: 8 });
-        } catch (error) {
-          failed++;
-          report(onStatus, key, 'fallback', { message: String(error?.message || error), loaded, total: 8 });
-        }
-        resolve(gltf);
-      }, missing = error => {
-        failed++;
-        report(onStatus, key, 'fallback', { message: String(error?.message || error), loaded, total: 8 });
-        resolve(null);
-      };
-      if (ready) done(ready);
-      else if (bytes) loader.parse(bytes, ASSET.href, done, () => loader.load(href, done, undefined, missing));
-      else loader.load(href, done, undefined, missing);
-    }));
+  // Builds a landmark in place on the terrain, gives it collision boxes and its reading position, and keeps its
+  // reveal. The model status counts it as one of the eight models, as the downloaded landmarks were.
+  // A feature (the nursery) is built the same way at its own spot, with no reading position.
+  async function placeBuilt(id, key, build, counted = true, at = null) {
+    await nextTask();
+    if (disposed) return;
+    const [x, , z] = at ? [at.x, 0, at.z] : positions.get(id);
+    const site = build({ x, z, floorAt, economy });
+    root.add(site.root);
+    for (const object of site.free || []) root.add(object);
+    if (site.surface) surface.add(site.surface);
+    landmarkGroups.set(id, site.root);
+    site.root.updateWorldMatrix(true, true);
+    for (const [index, solid] of site.solids.entries()) addStaticProxy(solid.isBox3 ? solid : solid.box, solid.name || `${id} landmark ${index + 1}`);
+    if (!at) updateLandmark(id, site.focus, site.approach);
+    built.set(id, site);
+    if (counted) { loaded++; report(onStatus, key, 'loaded', { loaded, total: 8 }); }
+    await nextTask();
   }
 
   async function loadCoral(file, index) {
@@ -570,45 +507,11 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     report(onStatus, 'models', 'loading', { loaded: 0, total: 8 });
     const preparedPromise = loadPreparedCorals();
     const jobs = [
-      () => loadOne('about-anchor', MODEL_FILES.anchor, async gltf => {
-        const { wrapper } = await addModel('about', gltf, 3.6, Math.PI * .48);
-        wrapper.rotation.z = -.82;
-        const box = await groundModel(wrapper, -12, -15);
-        updateLandmark('about', box);
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
-        const shank = new THREE.Box3(center.clone().add(new THREE.Vector3(-size.x * .12, -size.y * .22, -size.z * .12)), center.clone().add(new THREE.Vector3(size.x * .12, size.y * .22, size.z * .12)));
-        addStaticProxy(shank, 'fallen anchor shank');
-        if (size.x >= size.z) {
-          addStaticProxy(new THREE.Box3(center.clone().add(new THREE.Vector3(-size.x * .46, -size.y * .16, -size.z * .12)), center.clone().add(new THREE.Vector3(size.x * .46, size.y * .16, size.z * .12))), 'fallen anchor arms');
-        } else {
-          addStaticProxy(new THREE.Box3(center.clone().add(new THREE.Vector3(-size.x * .12, -size.y * .16, -size.z * .46)), center.clone().add(new THREE.Vector3(size.x * .12, size.y * .16, size.z * .46))), 'fallen anchor arms');
-        }
-      }),
-      () => loadOne('projects-ship', MODEL_FILES.ship, async gltf => {
-        const { wrapper, box } = await addModel('projects', gltf, 20, -.28);
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
-        const hullBottom = box.min.y, hullTop = box.min.y + Math.min(1.55, Math.max(.85, size.y * .22));
-        // Two low regions cover the hull and leave a central swim-through open.
-        if (size.z >= size.x) {
-          const halfX = size.x * .38, halfZ = size.z * .24;
-          addStaticProxy(new THREE.Box3(new THREE.Vector3(center.x - halfX, hullBottom, center.z - size.z * .46), new THREE.Vector3(center.x + halfX, hullTop, center.z - halfZ)), 'ship bow hull');
-          addStaticProxy(new THREE.Box3(new THREE.Vector3(center.x - halfX, hullBottom, center.z + halfZ), new THREE.Vector3(center.x + halfX, hullTop, center.z + size.z * .46)), 'ship stern hull');
-        } else {
-          const halfZ = size.z * .38, halfX = size.x * .24;
-          addStaticProxy(new THREE.Box3(new THREE.Vector3(center.x - size.x * .46, hullBottom, center.z - halfZ), new THREE.Vector3(center.x - halfX, hullTop, center.z + halfZ)), 'ship bow hull');
-          addStaticProxy(new THREE.Box3(new THREE.Vector3(center.x + halfX, hullBottom, center.z - halfZ), new THREE.Vector3(center.x + size.x * .46, hullTop, center.z + halfZ)), 'ship stern hull');
-        }
-      }),
-      () => loadOne('experience-chest-a', MODEL_FILES.chest, async gltf => {
-        await addChest('experience', gltf, 2.45, -.3);
-        const secondScene = cloneSkinned(gltf.scene);
-        const floor = groundPosition('experience');
-        const offset = new THREE.Vector3(2.9, 0, -1.35);
-        const secondPosition = floor.add(offset);
-        await addChest('experience-second', { scene: secondScene, animations: gltf.animations }, 2.05, 1.0, secondPosition);
-      }),
+      () => placeBuilt('about', 'about-helmet', buildHelmet),
+      () => placeBuilt('projects', 'projects-trawler', buildFishingBoat),
+      () => placeBuilt('nursery', 'coral-nursery', buildNursery, false, NURSERY_SITE),
+      () => placeBuilt('experience', 'experience-nautilus', buildNautilus),
+      () => placeBuilt('resume', 'resume-line', buildDescentLine, false),
       ...MODEL_FILES.coral.map((file, index) => async () => { if (!await preparedPromise) await loadCoral(file, index); })
     ];
     let cursor = 0;
@@ -623,8 +526,6 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
       }
     };
     loadPromise = Promise.all([worker(), worker()]).then(() => {
-      // Files fetched for the other detail level (the page dropped to economy after the build began) are let go.
-      early.clear(); parsedEarly.clear();
       root.updateWorldMatrix(true, true);
       if (coralCache.status !== 'hit') return batchCoralMeshes();
     }).then(() => {
@@ -634,71 +535,31 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
     return loadPromise;
   }
 
-  async function addChest(id, gltf, target, yaw, positionOverride = null) {
-    const { wrapper, box } = await addModel(id, gltf, target, yaw, true, positionOverride);
-    const center = box.getCenter(new THREE.Vector3());
-    addStaticProxy(new THREE.Box3(center.clone().add(new THREE.Vector3(-.8, -.55, -.72)), center.clone().add(new THREE.Vector3(.8, .72, .72))), `${id} chest`);
-    const emissiveMaterials = new Set();
-    const emissiveState = [];
-    wrapper.traverse(object => {
-      if (!object.isMesh) return;
-      if (id === 'experience-second') {
-        object.material = Array.isArray(object.material)
-          ? object.material.map(material => material.clone())
-          : object.material.clone();
-      }
-      const materials = Array.isArray(object.material) ? object.material : [object.material];
-      materials.forEach(material => {
-        if (material?.isMeshStandardMaterial && !emissiveMaterials.has(material)) {
-          emissiveMaterials.add(material);
-          emissiveState.push({ material, color: material.emissive.clone(), intensity: material.emissiveIntensity });
-        }
-      });
-    });
-    const glowRingMaterial = new THREE.MeshBasicMaterial({ color: '#e3c585', transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
-    const glowRing = new THREE.Mesh(new THREE.TorusGeometry(1.22, .025, 5, 40), glowRingMaterial);
-    glowRing.rotation.x = -Math.PI / 2;
-    glowRing.position.set(center.x, box.min.y + .08, center.z);
-    glowRing.name = `${id} proximity glow`;
-    root.add(glowRing);
-    const mixer = new THREE.AnimationMixer(gltf.scene);
-    const openClip = gltf.animations.find(clip => /open/i.test(clip.name));
-    const closeClip = gltf.animations.find(clip => /close/i.test(clip.name));
-    const chest = { wrapper, worldCenter: center, mixer, open: false, emissiveState, glowRing, glowRingMaterial,
-      openAction: openClip ? mixer.clipAction(openClip) : null,
-      closeAction: closeClip ? mixer.clipAction(closeClip) : null };
-    if (chest.openAction) chest.openAction.setLoop(THREE.LoopOnce, 1).clampWhenFinished = true;
-    if (chest.closeAction) chest.closeAction.setLoop(THREE.LoopOnce, 1).clampWhenFinished = true;
-    mixers.push(mixer);
-    chests.set(id, chest);
-  }
-
   function update(dt, elapsed, playerPosition, night = 0, view = null) {
     // The same 0.1 s cap as the rest of the world, so clips do not slow down against movement below 20 fps.
     const step = Math.min(Math.max(dt || 0, 0), .1);
     motionEnabled = step > 0;
     cull(view);
-    for (const mixer of mixers) mixer.update(step);
-    chests.forEach(chest => {
-      const near = playerPosition?.isVector3
-        ? 1 - THREE.MathUtils.smoothstep(playerPosition.distanceTo(chest.worldCenter), 2.8, 8)
-        : 0;
-      chest.emissiveState.forEach(({ material, color, intensity }) => {
-        material.emissive.setRGB(color.r*intensity+GLOW_COLOR.r*near*.22,color.g*intensity+GLOW_COLOR.g*near*.22,color.b*intensity+GLOW_COLOR.b*near*.22);
-        material.emissiveIntensity = 1;
-      });
-      chest.glowRingMaterial.opacity = near * .28;
-      chest.glowRing.rotation.z = Math.sin(elapsed * .35) * .05;
-    });
+    const eye = playerPosition?.isVector3 ? playerPosition : null;
+    for (const site of built.values()) site.update(step, elapsed, eye);
   }
 
+  // The surface markers move with the waves, above water as well as below (world.js calls this from the sky's update).
+  function updateSurface(elapsed) {
+    for (const site of built.values()) site.updateSurface?.(elapsed);
+  }
+
+  // Opening: the seconds the landmark's reveal takes before its records should open (0 where it is immediate, or motion
+  // is off); closing: true. False for a site with nothing built (landmark-interactions.js then opens at once).
   function interact(id, open = true) {
-    return openChest(id, open);
+    const site = built.get(id);
+    if (!site) return false;
+    return site.reveal(open, motionEnabled);
   }
 
   function dispose() {
     disposed = true;
-    mixers.forEach(mixer => mixer.stopAllAction());
+    for (const site of built.values()) site.dispose?.();
     const release = object => {
       if (!object.isMesh) return;
       object.geometry?.dispose?.();
@@ -706,13 +567,14 @@ export function createModelScene({ reef, terrainHeightAt, collisions, economy = 
       materials.forEach(material => material?.dispose?.());
     };
     root.traverse(release);
+    surface.traverse(release);
     for (const batch of coralBatches) { batch.full.dispose(); batch.light?.dispose(); }
     // Habitats detached after batching still own their hidden meshes.
     for (const habitat of coralCopies) if (!habitat.parent) habitat.traverse(release);
   }
 
   return {
-    root, load, update, interact, dispose, landmarks, prepareCoralCache, loadPreparedCorals, coralCache,
+    root, surface, load, update, updateSurface, interact, dispose, landmarks, prepareCoralCache, loadPreparedCorals, coralCache,
     get fishCount() { return reefFishCount; },
     get reefFishGroups() { return reefFishGroups; }
   };

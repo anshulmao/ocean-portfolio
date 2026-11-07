@@ -243,7 +243,108 @@ html body.reading-page{background:var(--surface);--deep:var(--ui-deep-raised);--
 
 /* Pills are for actions: the buttons that say what they do. Everything else that happens to be a button (animal portraits,
    tiles, a card's header row, pickers, map and touch controls) keeps the small shared corner, like the panels it sits in. */
-html body :is(.dive-button,.guided-button,.ds-open,.holo-chip,.ds-close,.ds-share-open,.ds-share-cancel,.ds-download,.expedition-primary,.plan-start,.plan-tour,.diver-profile-resume,.diver-profile-more,.dialog-return,.archive-toggle,.dive-computer-toggle,.interact-prompt,.movement-reset,.movement-export,.explore-back,.settings-quick>button,.tour-card button[data-tour]:not(.tour-head):not(.tour-more)){border-radius:100px!important}
+html body :is(.dive-button,.guided-button,.ds-open,.holo-chip,.ds-close,.ds-share-open,.ds-share-cancel,.ds-download,.expedition-primary,.plan-start,.plan-tour,.diver-profile-resume,.diver-profile-more,.dialog-return,.archive-toggle,.dive-computer-toggle,.interact-prompt,.movement-reset,.movement-export,.explore-back,.settings-quick>button){border-radius:100px!important}
 
 /* The dive log button is light in every theme, so its New tag keeps dark ink (the page's ink turns white at night). */
 html body .portfolio-actions .ds-open small,html body .portfolio-actions .ds-open[data-seen] small{color:var(--ui-ink)}
+
+/* The guided dive's card (the owner's notes, Nov 2026): glass over the water rather than a solid slab, so the reef shows
+   through it, with square-cornered keys rather than pills. A dark tint under a blur keeps the words legible over the
+   bright shallows. On a phone it is lower and tighter, so it covers less of the view above the touch deck. */
+html body section.tour-card{
+  --tour-glass:#061c25;--tour-line:#d6f2f02b;--tour-key:#ffffff12;--tour-key-hover:#ffffff24;
+  background:color-mix(in srgb,var(--tour-glass) 50%,transparent);
+  -webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3); /* taste-skill-ignore: the card is glass over the moving water */
+  border:1px solid var(--tour-line);border-radius:12px;box-shadow:0 12px 32px -12px #00121a66;
+}
+html body section.tour-card[data-sheet="expanded"]{background:color-mix(in srgb,var(--tour-glass) 58%,transparent)}
+html body .tour-card .tour-head{min-height:40px;border:0;border-radius:0;background:none;font-size:13px}
+html body .tour-card .tour-head:hover{background:none}
+html body .tour-card .tour-title{margin:2px 0 6px;font-size:19px;font-weight:500;line-height:1.2}
+html body .tour-card .tour-lines{color:#e9f5f4}
+html body .tour-card .tour-progress{left:14px;right:14px;background:var(--tour-line)}
+html body .tour-card footer{gap:6px}
+html body .tour-card footer button{min-height:36px;padding:0 12px;border:1px solid var(--tour-line);border-radius:5px;background:var(--tour-key);font-size:13.5px;font-weight:500}
+html body .tour-card footer button:hover{border-color:#d6f2f066;background:var(--tour-key-hover)}
+/* The action the moment calls for carries the stop's colour; Exit is only a word. */
+html body .tour-card footer :is([data-tour="read"],[data-tour="next"],[data-tour="rejoin"],[data-tour="surface"]){border-color:color-mix(in srgb,var(--signal,#9adbd5) 65%,transparent);background:color-mix(in srgb,var(--signal,#9adbd5) 15%,transparent)}
+html body .tour-card footer [data-tour="exit"]{border-color:transparent;background:none;opacity:.78}
+html body .tour-card footer [data-tour="exit"]:hover{opacity:1;background:var(--tour-key)}
+html body .tour-card footer kbd{border-color:var(--tour-line);border-radius:3px;font-size:10px}
+html body .tour-card .tour-keys li{border-radius:5px}
+html body .tour-card .tour-more{min-height:0;border:0;border-radius:0;background:none}
+@media (max-width:599px),(pointer:coarse) and (max-height:499px){
+  html body section.tour-card{border-radius:10px;background:color-mix(in srgb,var(--tour-glass) 44%,transparent)}
+  html body section.tour-card[data-sheet="collapsed"]{padding:0 4px 0 14px}
+  html body section.tour-card[data-sheet="expanded"]{padding:0 10px 8px 14px;background:color-mix(in srgb,var(--tour-glass) 54%,transparent)}
+  html body .tour-card .tour-title{margin:0 0 4px;font-size:15.5px;line-height:19px}
+  html body .tour-card .tour-lines{font-size:13px;line-height:18px;-webkit-line-clamp:2;line-clamp:2}
+  html body .tour-card footer button,html body .tour-card[data-sheet="collapsed"] footer button{min-height:40px;padding:0 12px;font-size:13.5px}
+  html body .tour-card[data-sheet="expanded"] footer{margin-top:8px}
+  /* More sits under the words rather than over the end of the last line: on glass a fade cannot hide what is behind it. */
+  html body .tour-card .tour-more:not([hidden]){position:static;align-items:center;justify-content:flex-end;width:100%;min-height:40px;margin:-8px 0 -8px;padding:0}
+  html body .tour-card .tour-more span{padding:0;background:none}
+  /* In the welcome the caption is folded away for the controls: More sits at the end of the chips' row, costing no height. */
+  html body .tour-card[data-state="intro"]:not([data-more="true"]) .tour-more:not([hidden]){position:absolute;top:-2px;right:0;width:auto;margin:0}
+}
+@media (max-width:599px){
+  /* Folded, the row is one finger tall and its one action fits inside it. */
+  html body .tour-card[data-sheet="collapsed"] .tour-head{min-height:44px}
+  html body .tour-card[data-sheet="collapsed"] footer button{min-height:40px}
+}
+
+/* The card on a site (site-cards.js): glass like the guided dive's card, at a fixed spot in the water over the site with
+   its tail pointing down at it, facing the view; site-cards.js places and sizes it (transform). Brighter while the site
+   is pointed at, waited at or in reach; it fades once it is only lingering. It stands in for the prompt at the bottom of
+   the screen and the Here card for that site. */
+html body .site-card{
+  --tour-glass:#061c25;--tour-line:#d6f2f02b;
+  position:fixed;left:0;top:0;z-index:var(--o-z-sheet);box-sizing:border-box;width:min(270px,calc(100vw - 24px));padding:9px 9px 11px;
+  border:1px solid var(--tour-line);border-radius:14px;background:color-mix(in srgb,var(--tour-glass) 58%,transparent);
+  -webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3); /* taste-skill-ignore: glass over the moving water, as the tour card */
+  box-shadow:0 16px 40px -16px #00121a80;color:var(--ui-foam);font-family:var(--o-display);
+  opacity:0;visibility:hidden;transform-origin:0 0;will-change:transform;
+  transition:opacity 200ms var(--ui-ease),visibility 0s 200ms,border-color 240ms var(--ui-ease)}
+html body .site-card[data-show="true"]{opacity:1;visibility:visible;transition:opacity 220ms var(--ui-ease),visibility 0s,border-color 240ms var(--ui-ease)}
+html body .site-card[data-show="true"][data-fading="true"]{opacity:.55;transition:opacity 1.2s linear}
+html body .site-card[data-out="true"]{visibility:hidden;transition:none}
+html body .site-card[data-hot="true"]{border-color:color-mix(in srgb,var(--signal,#9adbd5) 55%,transparent);box-shadow:0 16px 40px -16px #00121a80,0 0 0 1px color-mix(in srgb,var(--signal,#9adbd5) 25%,transparent)}
+html body .site-card-shot{margin:0;overflow:hidden;border-radius:8px;aspect-ratio:2.3/1;background:#0b2c38}
+html body .site-card-shot img{display:block;width:100%;height:100%;object-fit:cover}
+html body .site-card-text{padding:10px 4px 0}
+html body .site-card-kicker{margin:0;font-size:12.5px;line-height:1.3;color:var(--signal,#9adbd5)}
+html body .site-card-title{margin:2px 0 4px;font:500 19px/1.2 var(--o-display);letter-spacing:-.01em;color:var(--ui-foam)}
+html body .site-card-note{margin:0;font-size:13.5px;line-height:1.45;color:#dcecea}
+html body .site-card-actions{display:flex;gap:6px;margin-top:10px;padding:0 4px}
+html body .site-card-actions button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:0 12px;border:1px solid var(--tour-line);border-radius:5px;background:#ffffff12;color:var(--ui-foam);font:500 13.5px/1 var(--o-display);cursor:pointer}
+html body .site-card-actions button:hover{background:#ffffff24;border-color:#d6f2f066}
+html body .site-card-actions [data-site="read"]{border-color:color-mix(in srgb,var(--signal,#9adbd5) 65%,transparent);background:color-mix(in srgb,var(--signal,#9adbd5) 15%,transparent)}
+html body .site-card-actions button[hidden],html body .site-card kbd[hidden]{display:none}
+html body .site-card kbd{padding:2px 5px;border:1px solid var(--tour-line);border-radius:3px;font:500 10px/1 var(--o-display)}
+html body .site-card-close{position:absolute;top:14px;right:14px;z-index:1;display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:#061c25a6;color:var(--ui-foam);cursor:pointer}
+html body .site-card-close svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+html body .site-card-tail{position:absolute;left:50%;bottom:-8px;width:14px;height:14px;margin-left:-7px;rotate:45deg;background:inherit;border:inherit;border-top-color:transparent;border-left-color:transparent;border-radius:0 0 3px 0;-webkit-backdrop-filter:none;backdrop-filter:none}
+html body .site-card :is(button):focus-visible{outline:2px solid var(--ui-foam);outline-offset:2px}
+/* While a site's card is up it carries that site's action: the prompt at the bottom and the Here card stand down. */
+html body[data-site-card] :is(#interact-prompt,.calm-ahead,#reef-labels){visibility:hidden!important}
+html body:is([data-clear-ui="true"],[data-safety-stop="true"]) .site-card{visibility:hidden!important}
+/* On a phone, a smaller card: the picture beside the words, the actions under them. */
+@media (max-width:599px),(pointer:coarse) and (max-height:499px){
+  html body .site-card{display:grid;grid-template-columns:64px minmax(0,1fr);grid-template-areas:"shot text" "actions actions";column-gap:8px;width:min(250px,72vw);padding:8px 8px 10px;border-radius:12px}
+  html body .site-card-shot{grid-area:shot;aspect-ratio:4/3;align-self:start}
+  html body .site-card-text{grid-area:text;padding:1px 34px 0 0}
+  html body .site-card-kicker{font-size:12px}
+  html body .site-card-title{margin:1px 0 2px;font-size:16px}
+  html body .site-card-note{font-size:12.5px;line-height:1.35;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+  html body .site-card-actions{grid-area:actions;margin-top:8px;padding:0}
+  html body .site-card-actions button{min-height:40px;flex:1}
+  html body .site-card-close{top:2px;right:2px;width:40px;height:40px;background:none}
+}
+@media (pointer:coarse) and (max-height:499px){
+  html body .site-card{grid-template-columns:64px minmax(0,1fr) auto;grid-template-areas:"shot text actions";align-items:center;width:min(46vw,400px)}
+  html body .site-card-actions{flex-direction:column;margin:0}
+  html body .site-card-note{-webkit-line-clamp:1;line-clamp:1}
+  html body .site-card-text{padding-right:0}
+  html body .site-card-close{display:none}
+}
+@media (prefers-reduced-motion:reduce){html body .site-card,html body .site-card[data-show="true"]{scale:1;transition:opacity 120ms linear,visibility 0s}}

@@ -17,8 +17,11 @@ export const STOPS = STEPS.filter(step => step.kind === 'stop');
 // long way up to the shallows; 5: the same three stops, ending in open water above the wreck; 6: in from open water over
 // the far side of the reef, the treasure before the wreck; 7: from out over the treasure, the cathedral from its front;
 // 8: Experience in the treasure and Projects in the wreck, so the step keys swap places, and a direct leg to the cathedral;
-// 9: the scooter first, out to the right of the anchor past the barracuda, the whipray and the brain coral).
-const VERSION = 9;
+// 9: the scooter first, out to the right of the anchor past the barracuda, the whipray and the brain coral; 10: the moray's
+// side of the brain coral, a pause at the coral nursery, the helmet face on, the bait ball and the arch on the way down, the
+// whale shark on the way up, and the end at the descent line, so the ending's key changes; 11: the whale shark out over the
+// deep water as the swim leaves the nautilus, and the descent line moved beside the wreck, reached over the top of it).
+const VERSION = 11;
 const note = (event, extra = {}) => track(event, { step: STEPS[index].key, index, tour_version: VERSION, ...extra });
 const ARRIVE_RADIUS = 1.6, PAN_BEAT = 3, INTRO_BEAT = 4.5, HOLD_SIGNAL = '#8ff4ff';
 // The opening from the surface (SPEC step 0): a held beat while the surface copy fades, the camera eases in on the diver
@@ -48,9 +51,9 @@ const CONTROLS = {
   photo: { key: 'H', name: 'Photo', touch: 'Camera',
     tip: ['Press H to take a photo of it.', 'Tap the camera button to take a photo of it.'] },
 };
-// F is not among them: there is nothing to open where the welcome is read; it is taught at the anchor, where there is.
+// F is not among them: there is nothing to open where the welcome is read; it is taught at the helmet, where there is.
 // The rest are taught by the fly-bys that use them: the guide runs the scooter across the reef shelf, the lamp comes in under
-// the arch and the camera as the whale shark passes; the computer at the treasure, the deepest stop, and the view at the end.
+// the arch and the camera as the whale shark passes; the computer at the nautilus, the deepest stop, and the view at the end.
 // On a phone the computer and the view live in the menu, not on the deck, so the welcome asks only for what the deck has and
 // no later beat teaches them there (DESK).
 const PRIMER = { keys: ['swim', 'updown', 'computer', 'view'], touch: ['swim', 'updown'] }, DESK = new Set(['computer', 'view']);
@@ -61,6 +64,12 @@ const CEILING = -3.5;
 // The welcome's drift toward the reef (m/s), and how long (s) after the visitor lets go of the swim it picks up again.
 const DRIFT = .9, RESUME = 2.5;
 let idle = 0;
+// ROAM: how far (m, across the seabed) the visitor may swim from a site while the tour waits there; wandering: they have.
+const ROAM = 18; let wandering = false;
+function roamAround() {
+  const step = STEPS[index], centre = step.landmark ? resolveAt(step, true) : step.site === 'resume' ? controls()?.models?.landmarks?.find(item => item.id === 'resume')?.position ?? step.at : step.at;
+  controls()?.leash?.(centre, ROAM); controls()?.tether?.(CEILING); controls()?.lookAt?.(null);
+}
 // Big animals passing while the tour swims: the view turns to one coming within its SPOT range (m; the look-there marker's,
 // big-life.js, a little inside it) that is no fly-by's subject, and stays on it SPOT_HOLD s, and not to the same one again
 // within SPOT_AGAIN s.
@@ -125,7 +134,10 @@ let hasLast = false, calmFor = 0, looking = 0, lookPoint = null, lookFish = null
 let held = null;
 // A fly-by that teaches a control waits up to WAIT s for the visitor to try it, the swim at HUSH of its cruise; holdFor: how
 // long the fly-by under way lasts. HOLD_GAP: back-to-back fly-bys nearer than this (m) keep the view on a subject between them.
-const WAIT = 7, HUSH = .12, HOLD_GAP = 30; let waiting = false, holdFor = 0;
+// NEAR_HOLD: a subject nearer than this (m) when its fly-by's time is up stays in view until the swim leaves it abeam.
+const WAIT = 7, HUSH = .12, HOLD_GAP = 30, NEAR_HOLD = 22; let waiting = false, holdFor = 0;
+// ABSENT: the longest a fly-by for a passing animal waits for it to come into sight (s); absent: how long it has waited.
+const ABSENT = 8; let absent = 0;
 // Where the current leg set off along its scenic waypoints, or null on a leg without them.
 let scenicFrom = null;
 // The leg's scenic route as swum: the step's own, with any orbit worked out where things are now, and the approach that
@@ -220,7 +232,10 @@ function onward(step, at) {
   return legVia.slice(next);
 }
 function paint() {
-  const step = STEPS[index], shown = status !== 'off' && status !== 'starting' && reveal <= 0, reading = status === 'intro' || status === 'dwell' || status === 'done';
+  // At a stop the card on the site itself (site-cards.js) carries the site's name, what is inside, Read it and Continue,
+  // so the sheet folds to its row while that card is up; open, it still has the tour's own words.
+  const onSite = status === 'dwell' && window.oceanSiteCard?.shown === STEPS[index].landmark;
+  const step = STEPS[index], shown = status !== 'off' && status !== 'starting' && reveal <= 0, reading = status === 'intro' || (status === 'dwell' && !onSite) || status === 'done';
   // A new step, or a change of state, starts from the tour's own choice again.
   if (`${status}:${index}` !== shownFor) { shownFor = `${status}:${index}`; open = null; more = false; }
   // Open where there is something to read or decide; folded while the tour swims or waits on hold.
@@ -251,14 +266,16 @@ function paint() {
   const tip = paintControls(step, fingers);
   // Folded, the row offers one action: the one the moment calls for.
   const primary = status === 'dwell' ? (step.landmark ? 'read' : 'next') : status === 'free' ? 'rejoin' : status === 'done' ? 'surface' : 'next';
-  const show = { pause: status === 'travel', read: status === 'dwell' && Boolean(step.landmark), next: touring(), rejoin: status === 'free', surface: status === 'done', explore: status === 'done', exit: touring() || status === 'free' };
-  for (const button of card.querySelectorAll('footer [data-tour]')) { const action = button.dataset.tour; button.hidden = wide ? !show[action] : action !== primary; }
+  const show = { pause: status === 'travel', read: readable(), next: touring(), rejoin: status === 'free', surface: status === 'done', explore: status === 'done', exit: touring() || status === 'free' };
+  const near = status === 'travel' && show.read;
+  for (const button of card.querySelectorAll('footer [data-tour]')) { const action = button.dataset.tour; button.hidden = wide ? !show[action] : !(action === primary || near && action === 'read'); }
   part('[data-tour="pause"]').firstChild.textContent = paused ? 'Resume ' : 'Pause ';
   part('[data-tour="pause"]').setAttribute('aria-pressed', String(paused));
   part('[data-tour="next"]').firstChild.textContent = status === 'travel' ? (wide ? 'Skip travel ' : 'Skip ') : status === 'intro' ? (primerLeft().length ? 'Skip controls ' : 'Start ') : 'Continue ';
   part('.tour-pace').textContent = status === 'intro' ? (primerLeft().length ? (fingers ? 'Or skip the controls and start the tour.' : 'Or press N to skip the controls and start the tour.') : '')
-    : status === 'dwell' ? `${step.landmark ? (fingers ? 'Tap Read it to open it. ' : 'Press F to open it. ') : ''}Take your time. Continue when you’re ready.`
-    : status === 'travel' ? (routeIssue ? '' : paused ? 'Travel paused. Resume when you’re ready.' : 'You can skip this swim or take the controls at any time.') : '';
+    : status === 'dwell' ? `${step.landmark ? (fingers ? 'Tap Read it to open it. ' : 'Press F to open it. ') : ''}Swim around it if you like; continue when you’re ready.`
+    : status === 'travel' ? (routeIssue ? '' : paused ? 'Travel paused. Resume when you’re ready.' : 'You can skip this swim or take the controls at any time.')
+    : status === 'done' && step.site ? (fingers ? 'Tap Read it to open it.' : 'Press F to read it.') : '';
   setQuiet(touring() || status === 'starting');
   setBar(status === 'done' ? 1 : (index + (arrived === index ? 1 : 0)) / STEPS.length);
   const flyTip = paintCaption(fingers);
@@ -270,7 +287,7 @@ function notice(api) {
     photos: window.oceanExpedition?.photos ?? 0, reading: Boolean(window.oceanArchive?.isOpen) };
   if (!seen) { seen = now; return; }
   const before = used.size;
-  if (now.lamp !== seen.lamp) used.add('lamp');
+  if (now.lamp !== seen.lamp) { used.add('lamp'); lampByGuide = false; }
   if (now.view !== seen.view) used.add('view');
   if (now.computer && !seen.computer) used.add('computer');
   if (now.photos > seen.photos) used.add('photo');
@@ -397,10 +414,23 @@ function behind(point, at, limit = BEHIND) {
   const dx = point[0] - at[0], dy = point[1] - at[1], dz = point[2] - at[2], length = Math.hypot(dx, dy, dz) || 1;
   return Math.acos(Math.max(-1, Math.min(1, (dx * heading.x + dy * heading.y + dz * heading.z) / length))) > limit;
 }
+// Whether the route a little way on (the first point of the line ahead `far` m off or more) leads away from a point: off
+// the way there by more than ABEAM. A subject the swim is about to turn away from is not held, and is let go before the
+// turn rather than after it, so the view is never left looking back over the diver's shoulder.
+function leaving(point, at, far = 14) {
+  if (!point) return true;
+  const line = [...onward(STEPS[index], at).map(pointOf), goal];
+  const ahead = line.find(p => Math.hypot(p[0] - at[0], p[1] - at[1], p[2] - at[2]) >= far) ?? line.at(-1);
+  const wx = ahead[0] - at[0], wy = ahead[1] - at[1], wz = ahead[2] - at[2], dx = point[0] - at[0], dy = point[1] - at[1], dz = point[2] - at[2];
+  const w = Math.hypot(wx, wy, wz), d = Math.hypot(dx, dy, dz); if (w < 1 || d < 1) return false;
+  return Math.acos(Math.max(-1, Math.min(1, (wx * dx + wy * dy + wz * dz) / (w * d)))) > ABEAM;
+}
 function flyBy(dt, at) {
   const api = controls();
   steer(at);
-  for (const item of sights) {
+  // The fly-by under way too: one that begins as its leg sets off (the whale shark off the nautilus's ledge) calls its
+  // animal in then.
+  for (const item of sight ? [sight, ...sights] : sights) {
     if (!item.encounter || cued.has(item.key) || probe.fromArray(at).distanceTo(to.fromArray(item.at)) > item.encounter.cue) continue;
     if (api?.encounter?.(item.encounter.id, { ...item.encounter.course, from: item.at })) cued.add(item.key);
   }
@@ -410,6 +440,10 @@ function flyBy(dt, at) {
   while (sights.length && !ahead.has(sights[0].key)) sights.shift();
   const next = sights[0], due = next && probe.fromArray(at).distanceTo(to.fromArray(next.at)) <= (next.reach ?? REACH);
   if (sight) {
+    // A fly-by for an animal passing waits for it (up to ABSENT s, the swim all but still), so the view never turns to
+    // empty water and the stop is never skipped because the animal came in late.
+    const missing = sight.look?.visitor && !subjectOf(sight.look) && absent < ABSENT;
+    if (missing) { absent += dt; return; }
     sightTime += dt;
     if (sight.look && !Array.isArray(sight.look)) { const point = subjectOf(sight.look); if (point) api?.glance(point, true); }
     // A fly-by that teaches a control waits (up to WAIT s, the swim all but still) for the visitor to try it, then goes on;
@@ -419,18 +453,25 @@ function flyBy(dt, at) {
       if (!tried && sightTime < WAIT) return;
       waiting = false; sightTime = 0; holdFor = tried ? CHEER + .8 : sight.hold ?? FLYBY;
       api?.pacing(sight.slow ?? SLOW); if (!tried && sight.scooter) api?.guideScooter(true);
+      // The lamp, untried under the arch: the guide switches it on, as it runs the scooter, until the next site.
+      if (!tried && sight.wait === 'lamp') guideLamp(true);
       paint();
     }
     // A subject the swim has left well behind (BEHIND: the cathedral once the swim is past its front) ends its fly-by early,
     // after BRIEF; one beside the diver never does.
-    const passed = sightTime >= BRIEF && behind(subjectOf(sight.look), at);
+    // A fly-by that stays (the circle round the wreck) keeps its subject whichever way the swim turns, to its end.
+    const passed = !sight.stay && sightTime >= BRIEF && behind(subjectOf(sight.look), at);
     if (passed || sightTime >= holdFor || (due && sightTime >= BRIEF)) {
       // Back to back, the view stays on this subject until the next one's pan, rather than swinging back to the way ahead
       // between them; not one the swim has already left behind.
       // If the next one's subject is already in sight ahead, the view eases straight across to it instead.
       const next = sights[0], subject = subjectOf(sight.look), close = Boolean(sight.look && next?.look && probe.fromArray(at).distanceTo(to.fromArray(next.at)) < HOLD_GAP);
+      // A subject still close by and not yet abeam is kept in view too once its time is up, however the swim turns, and
+      // let go as the swim leaves it (below): the view is the guide's, not the swim's, so it does not swing to the way
+      // ahead while the thing it was showing is still right there.
       const following = close && subjectOf(next.look), across = Boolean(following && !behind(following, at, 1.2));
-      const keep = close && (across || !behind(subject, at, ABEAM));
+      const near = Array.isArray(subject) && probe.fromArray(at).distanceTo(to.fromArray(subject)) < NEAR_HOLD;
+      const keep = (close || near && !leaving(subject, at)) && (across || !behind(subject, at, ABEAM));
       held = keep && !across && Array.isArray(subject) ? subject : null;
       endSight(keep || passed);
       if (across) turn(following); else if (passed) turn(null);
@@ -440,7 +481,7 @@ function flyBy(dt, at) {
   // A subject held between two fly-bys that the swim has passed (more than ABEAM rad off the way it is going: the tower on
   // the way down to the cathedral, the arch once through it) is let go, calmly, in one pan: on to the next fly-by's subject
   // if that is ahead, else to the way ahead.
-  if (held && behind(held, at, ABEAM)) {
+  if (held && (behind(held, at, ABEAM) || leaving(held, at))) {
     held = null; const following = sights[0]?.look && subjectOf(sights[0].look);
     turn(following && !behind(following, at, 1.2) ? following : null);
   }
@@ -448,7 +489,7 @@ function flyBy(dt, at) {
   held = null;
   if (spotted) spotted = null;
   looking = 0; lookFish = null; calmFor = 0; turnedAt = tourTime;
-  sights.shift(); passed.add(next.key); sight = next; sightTime = 0; holdFor = next.hold ?? FLYBY; if (next.look?.visitor) spottedAt.set(next.look.visitor, tourTime);
+  sights.shift(); passed.add(next.key); sight = next; sightTime = 0; absent = 0; holdFor = next.hold ?? FLYBY; if (next.look?.visitor) spottedAt.set(next.look.visitor, tourTime);
   waiting = Boolean(next.wait) && !used.has(next.wait);
   api?.pacing(waiting ? HUSH : next.slow ?? SLOW); if (next.look) api?.glance(subjectOf(next.look)); api?.guideScooter(Boolean(next.scooter) && !waiting);
   if (next.through) throughBall(at);
@@ -546,8 +587,16 @@ function launch() {
 function blockRoute() {
   endSight(); controls()?.cancelTravel(); paused = routeIssue = true; paint();
 }
+// The guide's own lamp: switched on to show it (and the visitor's own notice() does not count it as tried), and off again
+// at the next site, unless the visitor has switched it themselves meanwhile.
+let lampByGuide = false;
+function guideLamp(on) {
+  const api = controls(); if (!api || !('flashlight' in api)) { lampByGuide = false; return; }
+  if (on && !api.flashlight) { api.flashlight = true; lampByGuide = true; if (seen) seen.lamp = true; }
+  else if (!on && lampByGuide) { if (api.flashlight) api.flashlight = false; lampByGuide = false; if (seen) seen.lamp = false; }
+}
 function arrive() {
-  const step = STEPS[index]; endSight(); arrived = index; waited = 0; inputs = controls().nav.inputs; paused = false;
+  const step = STEPS[index]; endSight(); guideLamp(false); arrived = index; waited = 0; inputs = controls().nav.inputs; paused = false;
   status = step.kind === 'stop' ? 'dwell' : 'done';
   if (step.landmark) discover(step.landmark, true);
   note('tour_step'); startPan(); paint();
@@ -555,6 +604,7 @@ function arrive() {
 // A cut: fade the water over, move the diver, fade back. Reduced motion always travels this way.
 function cutTo(then) { endSight(); controls()?.cancelTravel(); cut = then; cutTime = .24; fade.dataset.on = 'true'; }
 function go(next) {
+  wandering = false; controls()?.leash?.(null);
   controls()?.tether?.(null); controls()?.glance?.(null); index = next; resolve(STEPS[index]); status = 'travel'; paused = routeIssue = roaming = false; detours = 0;
   inputs = controls().nav.inputs; paint();
   here.fromArray(window.oceanDiagnostics.playerPosition);
@@ -566,7 +616,7 @@ function go(next) {
   if (!route(here.toArray(), STEPS[index])) { blockRoute(); return; }
   launch();
 }
-function resolveAt(step) { const point = [0, 0, 0]; resolve(step, point, [0, 0, 0]); return point; }
+function resolveAt(step, subject = false) { const point = [0, 0, 0], seen = [0, 0, 0]; resolve(step, point, seen); return subject ? seen : point; }
 function land() { const api = controls(); api.guide(true, true, true); api.place(goal, look); arrive(); }
 function advance() { if (index < STEPS.length - 1) go(index + 1); }
 // The welcome is read where the dive levels out: nothing to swim to, only a look around.
@@ -587,9 +637,9 @@ function drift() {
   if (leg.length) { api.guide(true, true, true); api.travelPath(leg, null, DRIFT); inputs = api.nav.inputs; }
 }
 function endPrelude() { prelude = -1; delete document.body.dataset.prelude; controls()?.frameDiver?.(false); }
-function handOver() { note('tour_taken_over'); endSight(); controls()?.tether?.(null); status = 'free'; paused = false; cut = null; fade.dataset.on = 'false'; controls()?.guide(false); paint(); }
+function handOver() { note('tour_taken_over'); endSight(); controls()?.tether?.(null); controls()?.leash?.(null); wandering = false; status = 'free'; paused = false; cut = null; fade.dataset.on = 'false'; controls()?.guide(false); paint(); }
 // Rejoin takes up the step the tour was on, through the scenic waypoints still ahead of wherever the visitor swam to. It used
-// to take the nearest step left, which, with the ending beside the wreck, could skip the treasure altogether.
+// to take the nearest step left, which, with the ending beside the wreck, could skip the nautilus altogether.
 function rejoin() {
   if (status !== 'free') return;
   note('tour_rejoined'); go(Math.min(Math.max(1, arrived + 1), STEPS.length - 1));
@@ -600,7 +650,8 @@ function stop(message, how = 'stopped') {
   note('tour_ended', { how });
   endSight(); const api = controls(); status = 'off'; paused = false; cut = null; fade.dataset.on = 'false'; reveal = 0; endPrelude(); roaming = starting = false;
   // Let go of the view too, so it does not stay on the last subject the tour showed.
-  if (api) { api.guide(false); api.cancelTravel(); api.lookAt?.(null); api.tether?.(null); }
+  if (api) { api.guide(false); api.cancelTravel(); api.lookAt?.(null); api.tether?.(null); api.leash?.(null); }
+  wandering = false; guideLamp(false);
   paint();
   if (message) say('Guided dive', message, HOLD_SIGNAL, 3200);
 }
@@ -664,7 +715,10 @@ function update(dt, api, state, diving) {
   // off from the overview simply ends the tour; anywhere else it puts the tour on hold.
   if (nav.inputs !== inputs) {
     if (status === 'intro') { roaming = true; idle = 0; inputs = nav.inputs; }
-    else { if (status === 'done') stop(null, 'swam_off'); else handOver(); return; }
+    // At a site, or at the ending, the visitor may swim about it, within ROAM of it, and the tour waits: Read it and
+    // Continue stay where they are (the owner's notes, round 12). Only on the way between sites does swimming take over.
+    else if (status === 'dwell' || status === 'done') { inputs = nav.inputs; if (!wandering) { wandering = true; roamAround(); paint(); } }
+    else { handOver(); return; }
   }
   if (status === 'intro') {
     introFor += dt;
@@ -672,8 +726,11 @@ function update(dt, api, state, diving) {
     if (starting && (assetsIn(state) || introFor > ASSETS_WAIT)) { starting = false; advance(); return; }
   }
   if (cut) { cutTime -= dt; if (cutTime <= 0) { const then = cut; cut = null; then(); fade.dataset.on = 'false'; } return; }
+  // At a stop the sheet folds while the site's own card is up, whenever that card came up (it may have been up already).
+  if (status === 'dwell') { const onSite = window.oceanSiteCard?.shown === STEPS[index].landmark; if (onSite !== cardUp) { cardUp = onSite; paint(); } }
   if (reveal > 0) { reveal -= dt; if (reveal <= 0) paint(); }
   if (cheerFor > 0) { cheerFor -= dt; if (cheerFor <= 0) { cheer = null; paint(); } }
+  if (status === 'travel') { const near = nearing(); if (near !== nearShown) { nearShown = near; paint(); } }
   if (status !== 'travel') { pan(dt); return; }
   // Pause the route itself, rather than only its caption.
   if (paused) return;
@@ -709,14 +766,29 @@ card.addEventListener('click', event => {
   // The sheet's own toggles keep the focus where it is, for a keyboard; the actions hand it back to the scene.
   if (action && !['read', 'toggle', 'more'].includes(action)) document.querySelector('#world')?.focus({ preventScroll: true });
 });
+// The card on a site coming up or going changes what the sheet needs to carry at a stop (cardUp: as last painted).
+let cardUp = false, nearShown = null;
+addEventListener('oceansitecard', () => { if (status === 'dwell') paint(); });
 // A phone turned on its side, or a window narrowed past the phone width, changes the copy the sheet carries.
 compact.addEventListener?.('change', () => { if (status !== 'off') paint(); });
+// Something to read here: a site's landmark at its stop, or the ending's own (the résumé on the descent line).
+function readable() { const step = STEPS[index]; return (status === 'dwell' && Boolean(step.landmark)) || (status === 'done' && Boolean(step.site)) || Boolean(nearing()); }
+// On the way in to a site, once within NEAR_READ m of it and with no caption up, it may be read already (the owner's notes,
+// round 14: round the wreck, Read it at any time): the site's card comes up and the sheet offers Read it. Reading holds the
+// swim where it is; closing the page lets it go on.
+const NEAR_READ = 24;
+function nearing() {
+  const step = STEPS[index];
+  if (status !== 'travel' || !step.landmark || paused || routeIssue || sight?.title) return null;
+  const at = window.oceanDiagnostics?.playerPosition; if (!at) return null;
+  return Math.hypot(at[0] - look[0], at[1] - look[1], at[2] - look[2]) < NEAR_READ ? step.landmark : null;
+}
 // On a phone the sheet stands in for the scene's own prompt, so it offers the same action.
 function read() {
-  const prompt = document.querySelector('#interact-prompt'), step = STEPS[index];
+  const prompt = document.querySelector('#interact-prompt'), step = STEPS[index], site = step.landmark ?? step.site;
   if (prompt && !prompt.hidden) prompt.click();
-  else if (window.oceanLandmarks?.openSite) window.oceanLandmarks.openSite(step.landmark, step.opens ?? step.landmark);
-  else window.oceanArchive?.open?.(step.opens ?? step.landmark);
+  else if (window.oceanLandmarks?.openSite) window.oceanLandmarks.openSite(site, step.opens ?? site);
+  else window.oceanArchive?.open?.(step.opens ?? site);
 }
 // The tour's own animals (user-creatures.js: the nurse shark, the whale shark) are in, and drawn, once the optional sets
 // have settled: oceanDiagnostics.enriched says so (the loading work), as optionalModels did before it. userCreatures.ready
@@ -756,9 +828,14 @@ addEventListener('keydown', event => {
   else if (event.code === 'KeyP' && status === 'travel') { event.preventDefault(); togglePause(); }
   // F at a site: its stop viewpoint can stand further off than the landmark's own reach (landmark-interactions.js), so
   // when that prompt is not up, the tour opens the site itself, as Read it does.
-  else if (event.code === 'KeyF' && status === 'dwell' && STEPS[index].landmark && !document.querySelector('#interact-prompt:not([hidden])')) { event.preventDefault(); read(); }
+  else if (event.code === 'KeyF' && readable() && !document.querySelector('#interact-prompt:not([hidden])')) { event.preventDefault(); read(); }
 });
-window.oceanTour = { start: startTour, stop, rejoin, next, plan: tourPlan, get status() { return status; }, STEPS, STOPS, get tried() { return [...used]; },
+// An animal a fly-by ahead is about to show (the whale shark, called in early so it is there): big-life.js leaves it to the
+// tour, so the look-there marker does not point it out before the caption says to look.
+const reserved = id => status === 'travel' && sights.some(item => item.look?.visitor === id) && sight?.look?.visitor !== id;
+window.oceanTour = { start: startTour, stop, rejoin, next, surface: () => { if (status === 'done') surface(); }, plan: tourPlan, reserved, get status() { return status; }, STEPS, STOPS, get tried() { return [...used]; },
   // The archive asks: At a glance carries the welcome only on the tour (SPEC D6), and a site opens the page its step names.
   get welcome() { return status === 'off' ? null : WELCOME; },
-  opens(id) { const step = STEPS[index]; return status !== 'off' && step.landmark === id ? step.opens ?? null : null; } };
+  opens(id) { const step = STEPS[index]; return status !== 'off' && step.landmark === id ? step.opens ?? null : null; },
+  // The site that may be read on the way in to it (nearing), for its card (site-cards.js).
+  get nearSite() { return nearing(); } };

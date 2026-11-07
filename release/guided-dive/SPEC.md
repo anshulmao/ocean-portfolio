@@ -26,7 +26,7 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
 | R7 | Touch, phone and keyboard all get equal treatment, and every key hint has a tap equivalent. |
 | R8 | The visitor can always exit, surface or keep exploring. The safety stop is offered, never forced. |
 
-## The sequence (round 9)
+## The sequence (round 12)
 
 World coordinates are metres (x, y, z), with y negative below the surface. "Right" is +x, facing −z. The site starts at
 the surface out over the deep end, beyond the treasure, at (−18, −90), facing the reef (`exploration.js` SURFACE_START). The route itself
@@ -45,13 +45,13 @@ between them is a **fly-by**:
 - The swim carries on. A subject the swim has left well behind (BEHIND, about 103°) ends its fly-by early, after 2.5 s;
   one beside the diver never does. The guide never looks back over the diver's shoulder.
 - **The view turns one way at a time:** never out to a subject, back to the way ahead and out again. A test counts the
-  reversals on the swim to the anchor (round 8 had 8; now 3, all the course's own bends).
+  reversals on the swim to the helmet (round 8 had 8; now 3, all the course's own bends).
 - **The guide's own looks are calm ones:** a turn to a passing animal, or a look round, eases in and out over 3.5 s (a
   fly-by's takes 2), and none starts within 6 s of the view last turning (QUIET). A look round needs 12 calm seconds, so
   on this route it is rare: the scripted fly-bys and glimpses decide where the view goes.
 
 Every stop is approached on the line from its subject, so the diver arrives facing it. The camera starts turning to it
-16 m out. The visitor's own look always wins (R1, D5).
+16 m out (9 m at the helmet, so it stays on the nursery until the run in). The visitor's own look always wins (R1, D5).
 
 ### 0. Entry: "Show me around" (surface → underwater)
 
@@ -70,43 +70,48 @@ Every stop is approached on the line from its subject, so the diver arrives faci
 - Rising stops 3.5 m below the surface.
 - N starts the tour.
 
-### Act 1: across the reef to the anchor
+### Act 1: across the reef to the helmet
 
 2. **The scooter**, first, on the open-water approach while the reef is still a way off. The fly-by waits up to 7 s for
    the visitor to try E, then the guide runs it.
-3. Out to the right of the anchor, over the far (west) side of the reef: **a barracuda wheel** off to the left,
-   **a pink whipray**, and **the brain coral dome**, with a moray at its foot, each 15-18 m off. Then round the north of
-   the anchor to come in to it from in front.
-4. **About: the Anchor** (stop). The diver stands squarely in front of it, with the nurse shark (where it settled) lined
-   up behind.
+3. Out west, over the far side of the reef: **a barracuda wheel**, **a pink whipray**, and **the brain coral dome**,
+   passed on its east side, where its giant moray looks out of its den (the den faces east). The whipray and the moray
+   are under 30 m apart, so the view hands straight across from one to the other.
+4. **The coral nursery**, a short pause: the swim all but stops (8% of the cruise) for 7 s while the view rests on the
+   trees, the nurse shark asleep beside them.
+5. **About: the Helmet** (stop), seen face on: its faceplate looks east, so the stop stands 7 m east of it, and the swim
+   comes in on that line with nothing else turning the view.
 
-### Act 2: down to the treasure (deepest first, as on a real dive)
-
-4. Fly-bys:
-   - **The nurse shark**, an orbit: the diver strafes round the anchor while the camera stays on the shark.
-   - **The table coral tower.**
-   - Straight down from the tower, under the barracuda's beat.
-   - **The pillar coral cathedral**, seen from its open (west-south-west) front.
-   - Down the east side to the gully, clear of the barracuda's beat, with a glimpse out into the deep blue to the south.
-   - **Through the arch.** The fly-by waits up to 7 s for the visitor to try Q.
-   - **The lantern garden.**
-5. **Experience: the Treasure** (stop), seen from 9 m, the way the anchor is. The camera starts turning to it 30 m out.
-
-### Act 3: the way up
+### Act 2: down to the nautilus (deepest first, as on a real dive)
 
 6. Fly-bys:
-   - **Look out to sea:** the whale shark drift.
-   - **A bait ball, ahead.**
-   - **Through the bait ball.**
-   - Then round the west of the wreck.
-7. **Projects: the Wreck** (stop), seen whole from 16 m to its west.
-8. **The ending**, in open water just seaward of the wreck at about 8 m (shown depth), with the reef rising ahead. The
-   choice is **Keep exploring** or **Surface (N)**.
+   - **The table coral tower**, off to the right across the reef shelf.
+   - **The pillar coral cathedral**, seen from its open (west-south-west) front.
+   - **A bait ball, ahead**, over the soft coral spire, and **through the bait ball**.
+   - Down the deep slope to **the arch**, which now stands on the deep sand east of the lantern garden (`reef.js` ARCH,
+     at 20, −83) with its passage running east to west: from its east mouth the garden and the nautilus on its ledge are
+     framed in it. The fly-by looks through it at the nautilus and waits up to 7 s for the visitor to try Q.
+   - **The lantern garden**, just out of the arch's west mouth.
+7. **Experience: the Nautilus** (stop), up on its ledge, seen from 9.5 m to its east, the side its spiral and its
+   horseshoe of stone open to.
+
+### Act 3: the way up, the wreck and the line
+
+8. Leaving the nautilus, out to the lip of its ledge: **Look out to sea**, a whale shark crossing out over the deep water
+   beyond the drop-off, up and to the right as seen from the nautilus: 16 m out and 9 m above. The swim all but stops
+   for it (12% of the cruise, 12 s), and waits up to 8 s if it is late. The look-there marker leaves it to the caption.
+9. Up the slope and once round the wreck: **A trawler, bow first** (its bow), **Her working deck** (from out beyond
+   the descent line) and **The stern** (the net on the gantry). Then **Projects: the Wreck** (stop), 10 m off its west
+   side. The reef's own fish live round it: along both sides
+   of its hull, under its bow and aft of its net; the barracuda patrols off its bow.
+10. **The ending**: over the top of the wreck to the descent line just beyond it (`return-route.js` DESCENT_LINE), and up
+    the line to the résumé's slate, below the safety stop. The choice is **Read it (F)** for the résumé, **Keep
+    exploring** or **Surface (N)**.
 
 ### 9. Surface (if chosen)
 
-- N, or the Surface button, plays the existing ascent: rise, open the **safety stop** on the way up (hold, or skip with Esc),
-  surface.
+- N, or the Surface button, plays the ascent: to the descent line, the **safety stop** held beside it (hold, or skip with
+  Esc), and up by the buoy. **Back to the surface** does the same from anywhere on the reef.
 - The old top banner during the ascent ("surfacing early costs nothing") is gone. "Stop complete" stays.
 - Back at the surface, the tour is complete.
 
@@ -169,6 +174,8 @@ Every stop is approached on the line from its subject, so the diver arrives faci
   doesn't try them.
 - **Round 5:** about 410 m and roughly **145 s**. The way up ends above the wreck rather than in the shallows, and the
   way down is a little longer round the west of the wreck.
+- **Round 10:** about 445 m and roughly **180 s**, plus up to 7 s at each of the scooter and the arch, and up to 8 s
+  waiting for the whale shark.
 - Reading time is unbounded. The welcome, the three sites and the ending wait for the visitor.
 
 ## Acceptance checks
@@ -477,3 +484,91 @@ stops.
   - **Down to the arch:** one glimpse out into the deep blue instead of the gully floor all the way.
   - `glance()` takes an optional fade (`exploration.js`), so the guide's own looks are slower than a fly-by's.
   - `tour_version` is now 9.
+- **Round 10 (the owner's notes on the naturalist landmarks, Nov 2026):**
+  - **The new landmarks in the tour.** The brain coral is passed on the moray's side; the coral nursery is a short pause;
+    the helmet is seen face on (its stop used to line the nurse shark up behind it, which put the diver at its back once
+    the shark moved to the nursery).
+  - **The arch moved and turned.** It stands on the deep sand below the old gully, its passage east to west, so the
+    nautilus is framed in it. The gully stays, kept clear of reef as before.
+  - **The whale shark on the way up.** It crosses ahead, on a straight course (a guided course no longer takes the random
+    bow that could bring it 26 m nearer or further than planned), and the fly-by waits for it rather than being skipped
+    when it is late. The look-there arrow no longer shows before the caption.
+  - **The bait ball** is now on the way down, between the cathedral and the arch; the open-water glimpse is gone.
+  - **The ending** is at the descent line, where the résumé hangs; F reads it.
+  - **The card** is glass over the water with square-cornered keys, and lower on a phone.
+  - `tour_version` is now 10, and the ending's key is `descent-line`.
+- **Round 11 (the owner's notes on round 10):**
+  - **The whale shark** crosses out over the deep water as the swim leaves the nautilus, up and to the right, rather than
+    low against the slope to the left. A fly-by that begins as its leg sets off calls its animal in then.
+  - **The descent line** hangs just east of the wreck. The tour goes over the top of the wreck to it and up it to the
+    résumé; every ascent comes back to it for the safety stop and surfaces by its buoy (`planSurfaceReturn`, which used
+    to stop over the middle of the reef). The barracuda's beat moved off the wreck's bow to make room.
+  - **Fish:** the nautilus's and the line's made-up fish are now the reef's own species (the nursery keeps its chromis,
+    which its reveal uses). The wreck's fish live round it, not over it: they used to be lifted over the 9.5 m block the
+    animals treat the wreck as. Whitetips patrol and rest by the nautilus.
+  - **Dive log:** a site counts as reached only when the diver is down at it. The dive starts on the surface right above
+    the nautilus, which was logged as reached at 0:00 and 5 m, so its real visit never was.
+  - `tour_version` is now 11.
+- **Round 12 (the owner's notes on round 11):**
+  - **A card on each site** (`site-cards.js`): a snapshot of the place (`assets/portfolio/sites/`), its name and depth,
+    what is inside, Read it, and Continue while the tour waits there. It stands over the site, or beside it close up,
+    and follows it on screen; it comes up when the site is pointed at (the cursor, or the crosshair while aiming), in
+    reach, or at a tour stop, and lingers 8 s once none of those holds. It replaces the bottom prompt and the Here card
+    for that site; at a tour stop the sheet folds to its row while the card is up.
+  - **Swim about at a site:** at a stop or the ending, swimming no longer takes the tour off; the visitor may swim within
+    18 m of the site (`exploration.js` leash) and Read it or Continue from wherever they are.
+  - **The wreck:** once round it before the stop, which is now 10 m off; its collision follows the hull slab by slab, with
+    its bulwarks, wheelhouse, funnel, mast, gantry, net drum and winch; its foredeck runs to the stem. The barracuda moved
+    further off the bow.
+  - **Teaching:** the guide runs the scooter through the bait ball, and switches the lamp on under the arch if the visitor
+    has not (off again at the nautilus).
+  - **Fish:** a cloud fish eases onto the ground under it rather than snapping, which made the chromis over the
+    nautilus's stones jitter.
+
+- **Round 13 (the owner's notes on round 12):**
+  - **The view is the guide's, not the swim's.** A subject still close by (under 22 m, `NEAR_HOLD`) stays in view when
+    its fly-by's time is up, however the swim turns, and is let go only once the swim leaves it abeam, or, looking a
+    little way along the route, is about to turn away from it, so the view is never left looking back over the shoulder.
+    A fly-by may `stay` on its subject to the end of its leg.
+  - **The wreck:** once round her without a caption: in at the bow, down the starboard side, round the stern and up the
+    port side to the stop, the view on her all the way; the stop faces her port side, where her card comes up.
+  - **Read it** keeps the page as it is with a card up while the site's reveal plays and its panel opens; dropping the
+    card's state had shown the bottom prompt, the labels and the tour's sheet for a moment.
+  - **Surfacing:** the scene is drawn at the full pace while the view glides (the ascent, the safety-stop framing, the
+    landing at the surface, a landmark's reveal), whatever panel is up; the 15 fps a panel allowed, and the 30 fps of an
+    idle surface, moved the camera in visible steps.
+  - **The nautilus's fish** keep to the open sand off the shell's east face, clear of the shell and of the stones of its
+    alcove, which they used to rise over and sink off as they went round; the whitetip circles the ledge at one depth
+    above the stones instead of a set height over the bottom.
+- **Round 14 (the owner's notes on round 13):**
+  - **Surface at the ending:** the résumé's card carries Surface beside Read it. On a phone the docked card hides the
+    tour's sheet, so once the résumé was closed there was no way up from the card.
+  - **The wreck** is circled a quarter faster than the cruise and a little closer in (about 17 s round), and her card is
+    up all the way round: on the way in to any site, within 24 m of it and with no caption up, the site may be read
+    (`nearing`); reading holds the swim, and closing the page lets it go on. A fly-by's `slow` may now be up to 1.4.
+  - **The nautilus's fish** are off its stage: anthias at the north end of its ledge and chromis at the south, about
+    10 m from the shell, outside its alcove and the shark's beat.
+- **Round 15 (the owner's notes on round 14):**
+  - **Site cards stay put:** a card is a thing in the water at one spot over its site, turned to face the view, drawn
+    smaller further off and placed in the same frame the scene is drawn (`oceanControls.onDraw`). It no longer chooses
+    between places on screen (it jumped between them) and no longer docks on a phone. Look away and it is out of sight;
+    look back while it lingers and it is where it was. Close under a site it is drawn smaller to keep its place (down to
+    80%) before it slides down to stay on screen. The layout check treats it as part of the scene (`data-anchored`).
+  - **The barracuda wheel** is passed on its reef side, on the heading the swim sets out on, instead of out round its
+    far side facing the open sea; the whipray is seen from the same side.
+- **Round 16 (the owner's notes on round 15):**
+  - **The highlight is on the bottom:** the circle drawn over a pointed-at site on the screen is gone. Instead the site's
+    beacon (set-pieces.js) lights a soft pool on the bottom under it and a pulsing ring round its foot (the helmet's
+    plinth, the nautilus's alcove, the wreck's hull; for the résumé, a ring round the line under the slate) while it is
+    pointed at or its card is up.
+  - **Cards up close only:** a site's card comes up only within 8 m of the site itself (measured to its extent: the
+    wreck's from bow to stern), and is gone again beyond it.
+- **Round 17 (the owner's notes on round 16):**
+  - **The wreck's aura** is drawn out along her hull and under it, an oval about 18 by 8 m, not a circle round all of her.
+  - **Aura circles** (Settings, Lighting): how bright the rings and glow under the landmarks are, 0–150%; 0 turns them off.
+  - The wreck's card stands lower (3.6 m over her middle) and stays up with its anchor a little over the top of the screen,
+    so it comes up at her stop, close under her side.
+  - **Cards looked down on:** the card's anchor is over its site on the screen, not only in the water: the steeper the
+    look down at the site, the lower the anchor (to 12% of its height straight down), so looking down on the wreck from
+    close over her its card stands over her middle instead of off to one side. Cards are placed on the canvas's own
+    rectangle, which on a phone can differ from the window's inner size as the browser's bars come and go.

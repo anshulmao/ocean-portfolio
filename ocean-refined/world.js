@@ -125,7 +125,10 @@ let gapCursor=0,stride=1,sinceDraw=0,drawCount=0,lastDraw=0,gpuTier='unknown',st
 // 'auto', the scene idles behind a dialog that covers it, halves behind the settings panel, and halves at the surface
 // once nobody has touched the page for a few seconds; any input brings it straight back.
 const BUDGET_FPS={reduced:30,idle:15},IDLE_AFTER=6000;
-let budgetAsked='auto',lastInput=performance.now(),heldClock=0;
+// Called with the camera after each drawn frame, as it was drawn: whatever on the page is pinned to a point in the scene
+// (site-cards.js) is placed there in the same frame, so it does not trail the view by one as it turns.
+const drawHooks=[];
+let budgetAsked='auto',lastInput=performance.now(),heldClock=0,viewMovingUntil=0;
 for(const type of ['pointermove','pointerdown','keydown','wheel','touchstart'])addEventListener(type,()=>{lastInput=performance.now();},{passive:true,capture:true});
 // The HUD is repainted about twelve times a second, and a node is only touched when its value changed.
 const hudNodes=new Map(),hudStyles=new Map(),CARDINALS=['N','NE','E','SE','S','SW','W','NW'];
@@ -483,8 +486,8 @@ function beginModels(){
   const busy=promise=>{modelsBusy++;return promise.finally(()=>{modelsBusy--;scaler.state.settling=1;});};
   const landmarksLoad=busy(import('./model-scene.js').then(({createModelScene})=>{
     if(!reef)return;modelScene=createModelScene({reef,terrainHeightAt:reef.userData.terrainHeightAt,collisions,economy:quality==='economy',onStatus:value=>{if(value.status==='loading')diagnostic.modelLoading=true;diagnostic.modelsLoaded=value.loaded??diagnostic.modelsLoaded??0;diagnostic.modelsFailed=value.failed??diagnostic.modelsFailed??0;if(value.status==='fallback'&&value.message&&!exploration.state.transition)status.textContent='Some optional ocean models could not load.';}});
-    scene.add(modelScene.root);interactionTargets=modelScene.landmarks||[];
-    return modelScene.load().then(async result=>{stylizeImported(modelScene.root,{glow:'near'});const ready=prepare(modelScene.root,true);
+    scene.add(modelScene.root);if(modelScene.surface)scene.add(modelScene.surface);interactionTargets=modelScene.landmarks||[];
+    return modelScene.load().then(async result=>{stylizeImported(modelScene.root,{glow:'near'});if(modelScene.surface)stylizeImported(modelScene.surface);const ready=prepare(modelScene.root,true);
       await worldBuilt;for(const box of deferred)reef.userData.collisions.addBox(...box);deferred.length=0;
       if(setPieces)await later('landmark props',()=>{const props=setPieces.place(modelScene.landmarks)||[];stylizeTree(setPieces.root);diagnostic.setPieces=setPieces.counts;for(const mesh of props){mesh.userData.waiting=true;mesh.visible=false;}showWhenReady(props);},{cost:20});modelScene.update(0,elapsed,playerPosition,night);diagnostic.modelLoading=false;diagnostic.modelsLoaded=result.loaded;diagnostic.modelsFailed=result.failed;for(const item of reefLabels){const placed=modelScene.landmarks.find(p=>p.id===item.landmark.id);if(placed){item.anchor.fromArray(placed.position).add(new THREE.Vector3(0,1.2,0));const marker=document.querySelector(`[data-landmark="${placed.id}"]`);if(marker){marker.style.left=`${(placed.position[0]+62)/124*100}%`;marker.style.top=`${(placed.position[2]+105)/140*100}%`;}item.label.querySelector("span").textContent=`Seafloor landmark · ${Math.round(toDisplayDepth(-placed.position[1]))} m`;}}diagnostic.reefFishCount=result.reefFishCount;diagnostic.reefFishGroups=result.reefFishGroups;return ready.then(()=>{diagnostic.landmarksReady=true;startup.landmarksReadyAt=Math.round(performance.now());experienceMetrics.mark('landmarksReady');});});
   }).catch(error=>{console.warn('Optional landmark models could not load:',error);diagnostic.modelLoading=false;}).finally(()=>{modelsLoading=false;diagnostic.landmarksSettled=true;wake();}));
@@ -509,7 +512,7 @@ function beginModels(){
 }
 // Set for one frame when the diver is moved at once (start-at-site, tour cuts): the camera cuts with it instead of sweeping.
 let snapCamera=false;
-Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayerPosition,getCamera:()=>camera,getScene:()=>scene,viewer:{get orbit(){return viewerOrbit;},layers:()=>({reef,creatures:[marine?.root,extraLife?.root,userCreatures?.root],corals:userCorals?.root,models:modelScene?.root,diver:diver?.root,water,coast:distantScenery?.root,clouds:clouds?.group,life:livingWorld?.root,formations:heroFormations?.root}),focusPoint(point,distance=30){if(!viewerOrbit)return;viewerOrbit.target.copy(point);camera.position.copy(point).add(new THREE.Vector3(distance*.6,distance*.3,distance));viewerOrbit.update();wake();},focus(preset){const views={surface:[[0,2,0],35],reef:[[0,-18,-35],25],deep:[[0,-40,-82],25],overview:[[0,-15,-45],110]};const [point,distance]=views[preset]||views.reef;this.focusPoint(new THREE.Vector3(...point),distance);}},getMode,getTransition,getRenderer:()=>renderer,whenQuiet:quietPassed,
+Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayerPosition,getCamera:()=>camera,onDraw(fn){drawHooks.push(fn);},getScene:()=>scene,viewer:{get orbit(){return viewerOrbit;},layers:()=>({reef,creatures:[marine?.root,extraLife?.root,userCreatures?.root],corals:userCorals?.root,models:modelScene?.root,diver:diver?.root,water,coast:distantScenery?.root,clouds:clouds?.group,life:livingWorld?.root,formations:heroFormations?.root}),focusPoint(point,distance=30){if(!viewerOrbit)return;viewerOrbit.target.copy(point);camera.position.copy(point).add(new THREE.Vector3(distance*.6,distance*.3,distance));viewerOrbit.update();wake();},focus(preset){const views={surface:[[0,2,0],35],reef:[[0,-18,-35],25],deep:[[0,-40,-82],25],overview:[[0,-15,-45],110]};const [point,distance]=views[preset]||views.reef;this.focusPoint(new THREE.Vector3(...point),distance);}},getMode,getTransition,getRenderer:()=>renderer,whenQuiet:quietPassed,
   // Weather: set('clear'|'rain'|'storm') cross-fades to that state and holds it, set('auto') lets it drift again. Time: lock stops the clock advancing by itself; scrubbing and presets still work.
   weather:{get state(){return weather?.state??'clear';},get target(){return weather?.target??'clear';},get locked(){return weather?.locked??false;},set(name){const result=weather?.set(name);wake();return result;},lock(value=true){const result=weather?.lock(value);wake();return result;},states:['clear','rain','storm']},
   time:{get locked(){return timeLocked;},lock(value=true){timeLocked=Boolean(value);diagnostic.timeLocked=timeLocked;try{localStorage.setItem('ocean-time-lock',timeLocked?'1':'0');}catch{}window.dispatchEvent(new CustomEvent('oceantimelockchange',{detail:{locked:timeLocked}}));wake();return timeLocked;}},
@@ -530,7 +533,7 @@ Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayer
   // QA hook: after placing the camera by hand, cull the scene for it again.
   recull(){camera.updateMatrixWorld(true);refreshView();userCreatures?.update(0,playerPosition,viewerOrbit?null:view);if(built)cullWorld(0);},
   // Dive planner and guided tour hooks: autopilot, instant placement, dive start / surfacing, and the flashlight and scooter state.
-  travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free,looking){exploration.setGuided(value,free,looking);},frameDiver(value){preludeOn=Boolean(value);if(reducedMotion)prelude=Number(preludeOn);wake();},lookAt(point,follow){exploration.lookAt(point,follow);wake();},glance(point,follow,fade){exploration.glance(point,follow,fade);},pacing(scale){exploration.pacing(scale);},guideScooter(on){exploration.guideScooter(on);},tether(top){exploration.tether(top);},baitBall(){return livingWorld?.baitBall?.()??null;},residentAt(id){return userCreatures?.residentAt?.(id)??null;},
+  travel(point,focus,speed){exploration.travel(point,focus,speed);wake();},place(point,focus){exploration.place(point,focus);snapCamera=true;wake();},guide(value,free,looking){exploration.setGuided(value,free,looking);},frameDiver(value){preludeOn=Boolean(value);if(reducedMotion)prelude=Number(preludeOn);wake();},lookAt(point,follow){exploration.lookAt(point,follow);wake();},glance(point,follow,fade){exploration.glance(point,follow,fade);},pacing(scale){exploration.pacing(scale);},guideScooter(on){exploration.guideScooter(on);},tether(top){exploration.tether(top);},leash(centre,radius){exploration.leash(centre,radius);},baitBall(){return livingWorld?.baitBall?.()??null;},residentAt(id){return userCreatures?.residentAt?.(id)??null;},
   encounter(id,course){return userCreatures?.encounter?.(id,playerPosition,viewerOrbit?null:view,course)??false;},visitors(){return userCreatures?.visitors?.()??[];},
   travelPath(points,focus,speed,lead){return exploration.travelPath(points,focus,speed,lead);},
   cancelTravel(options){return exploration.cancelTravel(options);},
@@ -1006,6 +1009,9 @@ function updateWorld(dt,clockDt=dt){
   // same controls at that point; waiting for the transition's tail makes aim feel heavy.
   const descentControlled=diveTarget===1&&nav.mode==='diver';
   const settledView=!(ascending||dive!==diveTarget&&!descentControlled||surfaceLandingTime>0||safetyStop.blend>0);
+  // While the view itself glides (an ascent, the safety-stop framing, the landing at the surface, the spring's tail) the
+  // scene is drawn at the full pace whatever panel is up: a 15 or 30 fps budget there moved the camera in visible steps.
+  if(!settledView||safetyStop.active||nav.mode!=='surface'&&cameraVelocity.lengthSq()>1e-3)viewMovingUntil=performance.now()+900;
   if(cameraWas!==nav.perspective){if(cameraWas)cameraShift=1;cameraWas=nav.perspective;}
   if(turningSurface||reducedMotion||snapCamera||diagnostic.frames===0){camera.position.copy(cameraGoal);cameraVelocity.set(0,0,0);cameraShift=0;}
   else {
@@ -1035,7 +1041,7 @@ function updateWorld(dt,clockDt=dt){
   if(surfaceReturn){
     if(nav.mode!=='surface'||diveTarget!==0||nav.exploring||lookHeld||viewerOrbit)surfaceReturn=null;
     else{
-      surfaceReturn.time+=dt;
+      surfaceReturn.time+=dt;viewMovingUntil=performance.now()+900;
       const progress=reducedMotion?1:Math.min(1,surfaceReturn.time/2),blend=(1-Math.cos(Math.PI*progress))/2;
       // Orbit around the diver rather than cutting through them on a day-to-dusk half turn.
       const start=new THREE.Spherical().setFromVector3(scratchA.copy(surfaceReturn.position).sub(playerPosition));
@@ -1085,7 +1091,7 @@ function updateWorld(dt,clockDt=dt){
   diagnostic.surfaceLight=surfaceLight;diagnostic.brightnessBoost=settings.brightnessBoost;diagnostic.exposure=renderer.toneMappingExposure;diagnostic.ambientIntensity=ambient.intensity;
   const golden=(1-THREE.MathUtils.smoothstep(Math.abs(uniforms.uSun.value.y),.025,.24))*(1-night*.65);
   clouds?.update(camera.position,underwater);birds?.update(elapsed,camera.position,night,underwater);
-  sunlight.color.lerp(goldenSun,golden*.7);distantScenery?.update(elapsed,night,underwater);
+  sunlight.color.lerp(goldenSun,golden*.7);distantScenery?.update(elapsed,night,underwater);modelScene?.updateSurface?.(elapsed);
   // The scooter widens the lens a little. Its boost is already eased, so the field of view follows it directly.
   const fovGoal=settings.cameraFov+(mobile?7:0)+(reducedMotion?0:nav.scooter*5);if(Math.abs(camera.fov-fovGoal)>.01){camera.fov=fovGoal;camera.updateProjectionMatrix();}
   const scale=settings.diverScale*(mobile?1.03/1.35:camera.aspect<1?1.17/1.35:1);
@@ -1127,7 +1133,7 @@ function updateWorld(dt,clockDt=dt){
   // The module hides its own underwater and surface casts, so it runs above and below the surface.
   livingWorld?.update(paused?0:dt,elapsed,{player:playerPosition,camera,view:viewerOrbit?null:view,underwater,night,depth:depthLight,weather:weather.intensity,lamp:nav.lamp,paused,aim:swimDirection,diver:diver.root.position});
   if(heroFormations){heroFormations.root.visible=Boolean(viewerOrbit)||underwater>.01;if(heroFormations.root.visible)heroFormations.update(elapsed,night,depthLight);}
-  if(setPieces){setPieces.root.visible=Boolean(viewerOrbit)||underwater>.01;if(setPieces.root.visible)setPieces.update(elapsed,camera.position,night,depthLight,uniforms.uRatio.value);}
+  if(setPieces){setPieces.root.visible=Boolean(viewerOrbit)||underwater>.01;if(setPieces.root.visible)setPieces.update(elapsed,camera.position,night,depthLight,uniforms.uRatio.value,settings.auraBrightness/100);}
   if(userCreatures){userCreatures.root.visible=prepared.has(userCreatures.root)&&(Boolean(viewerOrbit)||underwater>.01);if(userCreatures.root.visible)userCreatures.update(paused?0:dt,playerPosition,viewerOrbit?null:view);}
   if(userCorals)userCorals.root.visible=prepared.has(userCorals.root)&&(Boolean(viewerOrbit)||underwater>.01);
   if(built){if(underwater>.01)cullWorld(paused?0:dt);motes.position.y=Math.sin(elapsed*.07)*.2;updateBubbles(underwater);}
@@ -1203,7 +1209,9 @@ function gpuPoll(){
 }
 function renderBudget(){
   if(budgetAsked!=='auto')return budgetAsked;
-  if(interfaceOpen)return 'idle';
+  if(performance.now()<viewMovingUntil&&!diveHeldFor)return 'full';
+  // A panel open over the reef: the picture behind it is idle. Not before it is up (a landmark's reveal plays first).
+  if(interfaceOpen&&document.querySelector('dialog[open]'))return 'idle';
   if(movementPanelOpen||settingsMenuOpen)return 'reduced';
   // A dive held at the waterline (see updateWorld) waits on the work, not on the picture: the camera is still and the
   // status line says what is happening. Half the frames are drawn there, and what they took goes to the work. On a slow
@@ -1241,7 +1249,7 @@ function frame(now){
   heldClock+=raw;
   if(draw){const dt=Math.min(heldClock,.1);if(!paused)elapsed+=dt;try{updateWorld(dt,heldClock);}catch(error){running=false;fail(error);return;}heldClock=0;}
   if(draw){sinceDraw=0;
-    gpuPoll();gpuBegin();drawFrame();gpuEnd();diagnostic.frames++;frameCount++;diagnostic.drawCalls=renderer.info.render.calls;diagnostic.triangles=renderer.info.render.triangles;
+    gpuPoll();gpuBegin();drawFrame();gpuEnd();for(let i=0;i<drawHooks.length;i++)drawHooks[i](camera);diagnostic.frames++;frameCount++;diagnostic.drawCalls=renderer.info.render.calls;diagnostic.triangles=renderer.info.render.triangles;
     if(lastDraw&&full&&!getTransition())experienceMetrics.frame(now-lastDraw);
     if(diagnostic.submerged&&getMode()==='diver'&&!getTransition())experienceMetrics.mark('firstUsableDive');
     if(lastDraw&&drawCount<drawGaps.length)drawGaps[drawCount++]=now-lastDraw;lastDraw=now;}

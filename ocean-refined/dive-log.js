@@ -10,12 +10,14 @@ import { SPECIES_OF_MODEL } from './field-guide.js';
 export { SITES };
 // Reef features as the site map charts them, until the scene's own list is available; the arch is not a formation.
 const CHARTED = [['Table coral tower', 38, -8, 6], ['Brain coral dome', -42, -2, 8], ['Pillar coral cathedral', 48, -28, 8], ['Kelp grove', -50, -52, 8.5], ['Giant clam', -9, -54, 3.5], ['Soft coral spire', 50, -72, 6], ['Lantern garden', 8, -86, 6.5]];
-const ARCH = ['The arch', 20, -72, 6];
+const ARCH = ['The arch', 20, -83, 6];
 // SAMPLE: seconds between points of the profile and the track. LOOK: seconds between looks for animals. SEEN_AFTER:
 // seconds an animal must be in view, and near enough to make out (REACH), before it counts as seen.
 const SAMPLE = 2, LOOK = .5, SEEN_AFTER = 1.5;
 // A site counts as visited within this many metres (horizontal) of it; a feature within its radius plus FEATURE_REACH.
 const SITE_REACH = 16, FEATURE_REACH = 7;
+// ...and within this many metres of it in height (world metres).
+const SITE_DEPTH = 14;
 // Photos and dives kept for the session, oldest let go first.
 const KEEP_PHOTOS = 40, KEEP_DIVES = 20;
 const remember = (key, fallback) => { try { return JSON.parse(sessionStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
@@ -82,9 +84,11 @@ onFrame((dt, controls, state, diving, player) => {
     sampleIn = SAMPLE;
     dive.profile.push([+dive.time.toFixed(1), +depth.toFixed(1)]);
     dive.track.push([+player.x.toFixed(1), +player.z.toFixed(1)]);
+    // Reached means down at it, not passing over it: the dive begins at the surface right above the nautilus, and it was
+    // logged as reached at 0:00 and 5 m, so its real visit at 45 m never was.
     for (const id of Object.keys(SITES)) {
-      const [x, , z] = landmarkAt(id);
-      if (!dive.sites[id] && Math.hypot(player.x - x, player.z - z) < SITE_REACH) dive.sites[id] = { t: Math.round(dive.time), depth: +depth.toFixed(1) };
+      const [x, y, z] = landmarkAt(id);
+      if (!dive.sites[id] && Math.hypot(player.x - x, player.z - z) < SITE_REACH && Math.abs(player.y - y) < SITE_DEPTH) dive.sites[id] = { t: Math.round(dive.time), depth: +depth.toFixed(1) };
     }
     for (const [name, x, z, radius] of features()) if (!dive.features[name] && Math.hypot(player.x - x, player.z - z) < radius + FEATURE_REACH) dive.features[name] = Math.round(dive.time);
   }

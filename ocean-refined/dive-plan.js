@@ -29,8 +29,8 @@ const ART = {
 const list = entries => entries.map(entry => entry.title).join(', ');
 // Portfolio sites are the reason for the dive; the copy takes its section names from the archive itself.
 const PRIMARY = [
-  { id: 'about', name: 'The Anchor', signal: '#7ff0cf', depth: 9, entry: [5.8, 0], bullets: ['Who I am and how I work', PORTFOLIO_CONTENT.about.subtitle, `${PORTFOLIO_CONTENT.about.entries.length} short reads, in the shallows`] },
-  { id: 'experience', name: 'The Treasure', signal: '#ffcf7a', depth: 47, entry: [0, 4], bullets: ['The roles I’ve held and what each one taught me', PORTFOLIO_CONTENT.experience.subtitle, `${PORTFOLIO_CONTENT.experience.entries.length} chapters in the chests`] },
+  { id: 'about', name: 'The Helmet', signal: '#7ff0cf', depth: 9, entry: [5.8, 0], bullets: ['Who I am and how I work', PORTFOLIO_CONTENT.about.subtitle, `${PORTFOLIO_CONTENT.about.entries.length} short reads, in the shallows`] },
+  { id: 'experience', name: 'The Nautilus', signal: '#ffcf7a', depth: 47, entry: [0, 4], bullets: ['The roles I’ve held and what each one taught me', PORTFOLIO_CONTENT.experience.subtitle, `${PORTFOLIO_CONTENT.experience.entries.length} chambers in the shell`] },
   { id: 'projects', name: 'The Wreck', signal: '#c9a2ff', depth: 21, entry: [0, 17.2], bullets: ['The things I’ve built', PORTFOLIO_CONTENT.projects.subtitle, `${PORTFOLIO_CONTENT.projects.entries.length} finds in the hull: ${list(PORTFOLIO_CONTENT.projects.entries)}`] }
 ].map((site, index) => ({ ...site, kind: 'primary', number: index + 1, section: PORTFOLIO_CONTENT[site.id].title, position: LANDMARKS.find(item => item.id === site.id).position }));
 const SCENERY = {
@@ -47,7 +47,7 @@ const SCENERY = {
 const CHARTED = [['Table coral tower', 38, -8, 6, 10.5], ['Brain coral dome', -42, -2, 8, 9.2], ['Pillar coral cathedral', 48, -28, 8, 10.5], ['Kelp grove', -50, -52, 8.5, 15], ['Giant clam', -9, -54, 3.5, 2.6], ['Soft coral spire', 50, -72, 6, 15], ['Lantern garden', 8, -86, 6.5, 5.5]];
 function scenery() {
   const live = controls()?.formations, sites = live?.length ? live.map(item => [item.name, item.position[0], item.position[2], item.radius, item.height]) : CHARTED;
-  return [...sites, ['The arch', 20, -72, 6, 8]].filter(([name]) => SCENERY[name]).map(([name, x, z, radius, height]) => ({ id: name, name, kind: 'scenic', signal: '#8ff4ff', section: 'Reef feature', position: [x, terrainHeightAt(x, z), z], radius, height, bullets: [SCENERY[name], 'Nothing to read here, just somewhere good to be'] }));
+  return [...sites, ['The arch', 20, -83, 6, 8]].filter(([name]) => SCENERY[name]).map(([name, x, z, radius, height]) => ({ id: name, name, kind: 'scenic', signal: '#8ff4ff', section: 'Reef feature', position: [x, terrainHeightAt(x, z), z], radius, height, bullets: [SCENERY[name], 'Nothing to read here, just somewhere good to be'] }));
 }
 let sites = [...PRIMARY, ...scenery()], selected = sites[0];
 
@@ -240,8 +240,9 @@ function follow(dt, api, state, diving) {
 }
 onFrame(follow);
 
-// Deep links: #anchor, #wreck, #treasure, #tour and #plan.
-const LINKS = { anchor: 'about', wreck: 'projects', treasure: 'experience' };
+// Deep links: #helmet, #wreck, #nautilus, #tour and #plan (#anchor and #treasure, from before those landmarks changed,
+// still lead to the same sites).
+const LINKS = { helmet: 'about', wreck: 'projects', nautilus: 'experience', anchor: 'about', treasure: 'experience' };
 function readLink() {
   const key = location.hash.slice(1).toLowerCase();
   if (!ready() || controls().getMode() !== 'surface' || plan.open || prompt.open) return;
