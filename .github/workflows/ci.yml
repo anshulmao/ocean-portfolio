@@ -29,6 +29,8 @@ jobs:
       - run: npm ci
       - run: npm run test:services
       - run: npm run test:unit
+      - name: Ocean rain textures and whale cruise
+        run: node --test tools/test-ocean-textures.mjs
       # test:build owns the clean build, including stale-output regression checks.
       - run: npm run test:build
       # The build regenerates vercel.json; a difference means a build change was not committed.
@@ -51,6 +53,8 @@ jobs:
       - run: npm run smoke
       - run: npm run test:services:browser
       - run: npm run test:banking
+      - name: Offline ocean audio regression
+        run: node tools/test-ocean-sound.mjs
       - run: npm run test:ui
       - uses: actions/upload-artifact@v4
         if: always()

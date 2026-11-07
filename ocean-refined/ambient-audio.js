@@ -1,8 +1,9 @@
 import { intensity } from './weather.js';
 import { onTick } from './ui-ticker.js';
+import { createRainTexture, rainMix } from './rain-acoustics.js';
 
-// Ambient sound, synthesised with the Web Audio API: no audio files and no
-// libraries. It is off until the visitor asks for it. One graph is built once
+// Ambient sound combines Web Audio textures with the attributed local clips.
+// It starts only after a visitor gesture. One graph is built once
 // from a few looped noise buffers and steered ten times a second on the
 // interface's shared clock (ui-ticker.js); while the sound is off there is no
 // AudioContext, no subscription and nothing scheduled. Like the HUD files it
@@ -26,14 +27,16 @@ import { onTick } from './ui-ticker.js';
 // each update takes to land; LOW: sample rate of the buffers that hold
 // nothing above a few kilohertz.
 const MASTER = 1.25;
-const LEVEL = { wind: .4, wave: .9, rain: .3, patter: .16, thunder: .26, drone: .14, tone: .012, rush: .4, motor: .02, inhale: .36, exhale: .2, valve: .03, bubbles: .07, splash: .42, cue: .042, whale: .024,
+const LEVEL = { wind: .4, wave: .9, thunder: .26, drone: .14, tone: .012, rush: .4, motor: .02, inhale: .36, exhale: .2, valve: .03, bubbles: .07, splash: .42, cue: .042, whale: .024,
   surge: .5, fish: .05, wash: .45, fizz: .1 };
 const BREATH = { cycle: 6, effort: .7, inhale: .3, hold: .06, exhale: .44, shallow: .12, deep: .14, pause: [.18, .8, 3] };
 const THUNDER = { delay: [.7, 2.8], attack: .45, tail: 6.5 };
 const WHALE = { first: [25, 60], gap: [65, 130], below: 12 };
 const SURF = { gap: [3.5, 9] }, FISH = { gap: [5, 16], below: 2.5 };
 const CALLS = {
-  whale: { range: 130, near: 35, level: .08, calls: [[['upcall', 'moan', 'groan'], [6, 14], ['whale0', 'whale1']]] },
+  // The visible animal is a right whale: its low contact calls are authored
+  // separately; the existing humpback recordings remain distant ocean ambience.
+  whale: { range: 130, near: 35, level: .09, calls: [[['upcall', 'moan', 'groan'], [10, 22]]] },
   orcas: { range: 100, near: 22, level: .09, calls: [[['orcaA', 'orcaB'], [2.5, 7]], [['clicksB'], [5, 11], ['clicks0', 'clicks1']]] },
   dolphins: { range: 70, near: 12, level: .1, calls: [[['clicksA', 'clicksB'], [.8, 3], ['clicks0', 'clicks1']], [['whistleA', 'whistleB', 'whistleC'], [1.8, 5.5], ['whistleA', 'whistleB', 'whistleC', 'chitter']]] }
 };
@@ -91,11 +94,8 @@ function bake(ctx) {
   for (let i = 0; i < rumble.length; i++) { rumble[i] = i < lap ? raw[i] * Math.sin(i / lap * PI / 2) + raw[rumble.length + i] * Math.cos(i / lap * PI / 2) : raw[i]; power += rumble[i] * rumble[i]; }
   scale(rumble, .2 / Math.sqrt(power / rumble.length));
   twin(white); twin(brown);
-  const rainfall = () => {
-    const patter = make(4);
-    for (let i = 0; i < 400; i++) { const f = 1300 * 2 ** (Math.random() * 2.3); ring(patter, Math.random() * patter.length | 0, f, f * .9, .002 + Math.random() * .006, Math.random() ** 3, Math.random()); }
-    return top(patter, 1);
-  };
+  let rainTexture = null;
+  const rainfall = key => (rainTexture ??= createRainTexture(ctx))[key];
   // Bubbles leave in small clusters; each one is a short blip that rises in pitch, and the big ones ring longer.
   const stream = () => {
     const bubbles = make(7, 2, LOW);
@@ -179,7 +179,7 @@ function bake(ctx) {
     lamp: cue(.3, [[0, 1900, .006, .5], [0, 240, .022, .8]]),
     // The demand valve cracking open at the start of a breath: a dry tick and the faintest whistle.
     valve: (() => { const buffer = make(.08, 1), data = buffer.getChannelData(0); ring(buffer, 0, 3300, 3000, .01, .35); for (let i = 0, level = 1; i < rate * .006; i++, level *= .996) data[i] += (Math.random() * 2 - 1) * level; return top(buffer, LEVEL.valve); })() };
-  const jobs = [['bubbles', stream], ['patter', rainfall], ['whaleA', () => call(170, .85, .35, 3.2)], ['whaleB', () => call(240, .25, 1, 3.8)],
+  const jobs = [['bubbles', stream], ['rainBed', () => rainfall('bed')], ['patter', () => rainfall('drops')], ['whaleA', () => call(170, .85, .35, 3.2)], ['whaleB', () => call(240, .25, 1, 3.8)],
     ['gruntA', () => grunt(130, 6, .07)], ['gruntB', () => grunt(190, 3, .11)], ['crunch', crunch],
     // A right whale's rising "up-call", a long moan and a low groan, each with the echoes of the far calls.
     ['upcall', () => call(72, 0, -1.3, 1.4, 1)], ['moan', () => call(105, .45, .7, 3.2, 1)], ['groan', () => call(58, .2, .4, 2.2, 1)],
@@ -211,11 +211,11 @@ function build(ctx, whole = false) {
   wire(airLP, air, bus); wire(waterLP, water, bus);
   // The patter and bubble loops are wired in now and start playing when their buffers have been drawn.
   const later = () => { const node = made(ctx.createBufferSource()); node.loop = true; return node; };
-  const white = loop(buffers.white), brownA = loop(buffers.brown), brownB = loop(buffers.brown, .5), patterLoop = later(), bubbleLoop = later();
+  const white = loop(buffers.white), brownA = loop(buffers.brown), brownB = loop(buffers.brown, .5), patterLoop = later(), rainLoop = later(), bubbleLoop = later();
 
-  const windBP = filter('bandpass', 400, .7), wind = gain(), waveLP = filter('lowpass', 900, -3), wave = gain(), rainBP = filter('bandpass', 2000, .5), rain = gain(), patter = gain();
+  const windBP = filter('bandpass', 400, .7), wind = gain(), waveLP = filter('lowpass', 900, -3), wave = gain(), rainHP = filter('highpass', 190, -3), rainLP = filter('lowpass', 8000, -3), rain = gain(), patter = gain();
   const thunderLP = filter('lowpass', 120), thunder = gain();
-  wire(brownA, windBP, wind, airLP); wire(white, waveLP, wave, airLP); wire(white, rainBP, rain, airLP); wire(patterLoop, patter, airLP); wire(brownB, thunderLP, thunder, airLP);
+  wire(brownA, windBP, wind, airLP); wire(white, waveLP, wave, airLP); wire(rainLoop, rainHP, rainLP, rain, airLP); wire(patterLoop, patter, airLP); wire(brownB, thunderLP, thunder, airLP);
 
   const droneBP = filter('bandpass', 240, .7), drone = gain(), humA = tone('sine', 73.4), humB = tone('sine', 110), hum = gain();
   const rushBP = filter('bandpass', 500, .8), rush = gain(), motorTone = tone('sawtooth', 96), motorLP = filter('lowpass', 320, 6), motor = gain();
@@ -250,7 +250,7 @@ function build(ctx, whole = false) {
   }
 
   // draw(): the next deferred buffer; true while more are waiting.
-  const loops = { patter: patterLoop, bubbles: bubbleLoop };
+  const loops = { rainBed: rainLoop, patter: patterLoop, bubbles: bubbleLoop };
   const draw = () => {
     const job = jobs.shift();
     if (!job) return false;
@@ -259,7 +259,7 @@ function build(ctx, whole = false) {
     return jobs.length > 0;
   };
   if (whole) while (draw());
-  return { ctx, buffers, draw, open, count, limiter, master, bus, duck, airLP, air, waterLP, water, windBP, waveLP, rainBP, thunderLP, droneBP, humB, rushBP, motorTone, motorLP,
+  return { ctx, buffers, draw, open, count, limiter, master, bus, duck, airLP, air, waterLP, water, windBP, waveLP, rainHP, rainLP, thunderLP, droneBP, humB, rushBP, motorTone, motorLP,
     reg, inA, inB, exLP, flutterOsc, bubbleLoop, splashLP, surgeLP, washBP, voices, seaLoop, far, recorded: [],
     layers: { wind, wave, rain, patter, thunder, drone, tone: hum, rush, motor, inhale, exhale, bubbles, splash, surge, wash, fizz, breaths, sea, peal, ...Object.fromEntries(Object.entries(voices).map(([id, voice]) => [id, voice.level])) },
     aim: new Map(), breathAt: 0, pace: 1 };
@@ -307,9 +307,9 @@ function steer(g, s, at, glide = GLIDE) {
   set(L.wind.gain, LEVEL.wind * (.23 + .5 * blow ** 1.3 + .08 * s.storm) * (1 + (.2 + .2 * blow) * gust));
   set(g.waveLP.frequency, (1500 + 1300 * sea) * (.7 + .6 * swell));
   set(L.wave.gain, LEVEL.wave * (.6 + .2 * sea) * (.3 + .7 * swell * (.55 + .45 * lapping)));
-  set(g.rainBP.frequency, 1700 + 1500 * s.rain);
-  set(L.rain.gain, LEVEL.rain * s.rain ** .9 * (1 - .2 * s.rain));
-  set(L.patter.gain, LEVEL.patter * Math.sqrt(s.rain) * (1 - .45 * s.rain));
+  const rain = rainMix(s.rain, s.wind, at);
+  set(g.rainHP.frequency, rain.highpass); set(g.rainLP.frequency, rain.lowpass);
+  set(L.rain.gain, rain.bed); set(L.patter.gain, rain.drops);
   // Below the surface the weather is a muffled ceiling that fades with depth.
   set(g.airLP.frequency, 600 * (g.open / 600) ** (1 - s.under));
   set(g.air.gain, 1 - s.under + s.under * .5 * Math.exp(-s.depth / 14));

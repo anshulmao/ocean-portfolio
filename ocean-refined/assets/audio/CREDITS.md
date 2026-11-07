@@ -16,8 +16,8 @@ with no attribution required. Credit is kept here regardless. **To confirm:** th
 | `dragon-studio-underwater-ambience-376890.mp3` | Dragon Studio | 376890 | The sea bed under the water | `sea` |
 | `dragon-studio-dolphin-clicking-487655.mp3` | Dragon Studio | 487655 | Dolphin and orca clicks | `clicks0`, `clicks1` |
 | `dragon-studio-dolphin-chittering-487654.mp3` | Dragon Studio | 487654 | Dolphin chatter | `chitter` |
-| `dragon-studio-whale-song-382729.mp3` | Dragon Studio | 382729 | Whale calls, passing and far | `whale0` |
-| `dragon-studio-humpback-whale-382727.mp3` | Dragon Studio | 382727 | Whale calls, passing and far | `whale1` |
+| `dragon-studio-whale-song-382729.mp3` | Dragon Studio | 382729 | Distant ocean whale ambience | `whale0` |
+| `dragon-studio-humpback-whale-382727.mp3` | Dragon Studio | 382727 | Distant humpback ambience | `whale1` |
 | `universfield-loud-thunder-192165.mp3` | Universfield | 192165 | Thunder | `thunder0` |
 | `soundreality-thunder-sound-375727.mp3` | SoundReality | 375727 | Thunder | `thunder1` |
 
@@ -38,3 +38,7 @@ with no attribution required. Credit is kept here regardless. **To confirm:** th
   - peak-normalised to -1 dBFS unless noted above;
   - encoded as MP3 (breaths 64 kb/s, ambience 112 kb/s, the rest 96 kb/s).
 - **Size:** 15 clips, 838 KB, from 3.9 MB of sources.
+
+The visible southern right whale uses authored low contact-call textures from `ambient-audio.js`,
+not the humpback recordings. The distant recordings remain unchanged. Rain is authored Web Audio
+noise and water impacts from `rain-acoustics.js`; it uses no new recordings or external assets.
