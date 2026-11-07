@@ -548,3 +548,11 @@ stops.
     (`nearing`); reading holds the swim, and closing the page lets it go on. A fly-by's `slow` may now be up to 1.4.
   - **The nautilus's fish** are off its stage: anthias at the north end of its ledge and chromis at the south, about
     10 m from the shell, outside its alcove and the shark's beat.
+- **Round 15 (the owner's notes on round 14):**
+  - **Site cards stay put:** a card is a thing in the water at one spot over its site, turned to face the view, drawn
+    smaller further off and placed in the same frame the scene is drawn (`oceanControls.onDraw`). It no longer chooses
+    between places on screen (it jumped between them) and no longer docks on a phone. Look away and it is out of sight;
+    look back while it lingers and it is where it was. Close under a site it is drawn smaller to keep its place (down to
+    80%) before it slides down to stay on screen. The layout check treats it as part of the scene (`data-anchored`).
+  - **The barracuda wheel** is passed on its reef side, on the heading the swim sets out on, instead of out round its
+    far side facing the open sea; the whipray is seen from the same side.

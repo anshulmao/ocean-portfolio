@@ -69,11 +69,16 @@ function measure({phone, dive}) {
     if (el.checkVisibility && !el.checkVisibility()) continue;           // not rendered, e.g. inside a closed <details>
     const c = component(el);
     // r is the part on screen (overlaps); box is the whole control (its size, even when a panel has scrolled half of it away).
-    leaves.push({el, r, box, control, c, name: name(el), text: (el.innerText || el.getAttribute('aria-label') || '').trim().replace(/\s+/g, ' ').slice(0, 40)});
+    // A site's card (site-cards.js) stands in the water over its site, where the owner put it (round 15): part of the
+    // scene, like the labels on the reef, so it is not held to the HUD's spacing or the clear middle of the view. Its
+    // controls are still measured as touch targets.
+    const anchored = Boolean(el.closest('[data-anchored]'));
+    leaves.push({el, r, box, control, c, anchored, name: name(el), text: (el.innerText || el.getAttribute('aria-label') || '').trim().replace(/\s+/g, ' ').slice(0, 40)});
   }
   const overlaps = [];
   for (let i = 0; i < leaves.length; i++) for (let j = i + 1; j < leaves.length; j++) {
     const a = leaves[i], b = leaves[j];
+    if (a.anchored || b.anchored) continue;
     if (a.c === b.c || a.el.contains(b.el) || b.el.contains(a.el) || a.c.contains(b.c) || b.c.contains(a.c)) continue;
     const w = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left), h = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
     if (w <= 2 || h <= 2) continue;
@@ -87,7 +92,7 @@ function measure({phone, dive}) {
   // Screen left for the ocean: sample a grid against the boxes of the components that hold visible leaves.
   let view = null, middle = null;
   if (dive && !modal) {
-    const boxes = [...new Set(leaves.map(l => l.c))].filter(c => c !== document.body).map(c => c.getBoundingClientRect()).filter(r => r.width * r.height < W * H * .9);
+    const boxes = [...new Set(leaves.filter(l => !l.anchored).map(l => l.c))].filter(c => c !== document.body).map(c => c.getBoundingClientRect()).filter(r => r.width * r.height < W * H * .9);
     let covered = 0, total = 0, mid = 0, midTotal = 0;
     for (let y = 4; y < H; y += 8) for (let x = 4; x < W; x += 8) {
       const hit = boxes.some(r => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom); total++; covered += hit;

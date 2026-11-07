@@ -125,6 +125,9 @@ let gapCursor=0,stride=1,sinceDraw=0,drawCount=0,lastDraw=0,gpuTier='unknown',st
 // 'auto', the scene idles behind a dialog that covers it, halves behind the settings panel, and halves at the surface
 // once nobody has touched the page for a few seconds; any input brings it straight back.
 const BUDGET_FPS={reduced:30,idle:15},IDLE_AFTER=6000;
+// Called with the camera after each drawn frame, as it was drawn: whatever on the page is pinned to a point in the scene
+// (site-cards.js) is placed there in the same frame, so it does not trail the view by one as it turns.
+const drawHooks=[];
 let budgetAsked='auto',lastInput=performance.now(),heldClock=0,viewMovingUntil=0;
 for(const type of ['pointermove','pointerdown','keydown','wheel','touchstart'])addEventListener(type,()=>{lastInput=performance.now();},{passive:true,capture:true});
 // The HUD is repainted about twelve times a second, and a node is only touched when its value changed.
@@ -509,7 +512,7 @@ function beginModels(){
 }
 // Set for one frame when the diver is moved at once (start-at-site, tour cuts): the camera cuts with it instead of sweeping.
 let snapCamera=false;
-Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayerPosition,getCamera:()=>camera,getScene:()=>scene,viewer:{get orbit(){return viewerOrbit;},layers:()=>({reef,creatures:[marine?.root,extraLife?.root,userCreatures?.root],corals:userCorals?.root,models:modelScene?.root,diver:diver?.root,water,coast:distantScenery?.root,clouds:clouds?.group,life:livingWorld?.root,formations:heroFormations?.root}),focusPoint(point,distance=30){if(!viewerOrbit)return;viewerOrbit.target.copy(point);camera.position.copy(point).add(new THREE.Vector3(distance*.6,distance*.3,distance));viewerOrbit.update();wake();},focus(preset){const views={surface:[[0,2,0],35],reef:[[0,-18,-35],25],deep:[[0,-40,-82],25],overview:[[0,-15,-45],110]};const [point,distance]=views[preset]||views.reef;this.focusPoint(new THREE.Vector3(...point),distance);}},getMode,getTransition,getRenderer:()=>renderer,whenQuiet:quietPassed,
+Object.defineProperty(window,'oceanControls',{configurable:true,value:{getPlayerPosition,getCamera:()=>camera,onDraw(fn){drawHooks.push(fn);},getScene:()=>scene,viewer:{get orbit(){return viewerOrbit;},layers:()=>({reef,creatures:[marine?.root,extraLife?.root,userCreatures?.root],corals:userCorals?.root,models:modelScene?.root,diver:diver?.root,water,coast:distantScenery?.root,clouds:clouds?.group,life:livingWorld?.root,formations:heroFormations?.root}),focusPoint(point,distance=30){if(!viewerOrbit)return;viewerOrbit.target.copy(point);camera.position.copy(point).add(new THREE.Vector3(distance*.6,distance*.3,distance));viewerOrbit.update();wake();},focus(preset){const views={surface:[[0,2,0],35],reef:[[0,-18,-35],25],deep:[[0,-40,-82],25],overview:[[0,-15,-45],110]};const [point,distance]=views[preset]||views.reef;this.focusPoint(new THREE.Vector3(...point),distance);}},getMode,getTransition,getRenderer:()=>renderer,whenQuiet:quietPassed,
   // Weather: set('clear'|'rain'|'storm') cross-fades to that state and holds it, set('auto') lets it drift again. Time: lock stops the clock advancing by itself; scrubbing and presets still work.
   weather:{get state(){return weather?.state??'clear';},get target(){return weather?.target??'clear';},get locked(){return weather?.locked??false;},set(name){const result=weather?.set(name);wake();return result;},lock(value=true){const result=weather?.lock(value);wake();return result;},states:['clear','rain','storm']},
   time:{get locked(){return timeLocked;},lock(value=true){timeLocked=Boolean(value);diagnostic.timeLocked=timeLocked;try{localStorage.setItem('ocean-time-lock',timeLocked?'1':'0');}catch{}window.dispatchEvent(new CustomEvent('oceantimelockchange',{detail:{locked:timeLocked}}));wake();return timeLocked;}},
@@ -1246,7 +1249,7 @@ function frame(now){
   heldClock+=raw;
   if(draw){const dt=Math.min(heldClock,.1);if(!paused)elapsed+=dt;try{updateWorld(dt,heldClock);}catch(error){running=false;fail(error);return;}heldClock=0;}
   if(draw){sinceDraw=0;
-    gpuPoll();gpuBegin();drawFrame();gpuEnd();diagnostic.frames++;frameCount++;diagnostic.drawCalls=renderer.info.render.calls;diagnostic.triangles=renderer.info.render.triangles;
+    gpuPoll();gpuBegin();drawFrame();gpuEnd();for(let i=0;i<drawHooks.length;i++)drawHooks[i](camera);diagnostic.frames++;frameCount++;diagnostic.drawCalls=renderer.info.render.calls;diagnostic.triangles=renderer.info.render.triangles;
     if(lastDraw&&full&&!getTransition())experienceMetrics.frame(now-lastDraw);
     if(diagnostic.submerged&&getMode()==='diver'&&!getTransition())experienceMetrics.mark('firstUsableDive');
     if(lastDraw&&drawCount<drawGaps.length)drawGaps[drawCount++]=now-lastDraw;lastDraw=now;}

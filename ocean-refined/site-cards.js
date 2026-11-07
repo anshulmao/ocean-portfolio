@@ -4,37 +4,27 @@ import { LANDMARKS, RESUME_SITE } from './reef.js';
 import { toDisplayDepth } from './depth-metrics.js';
 
 // A card on the site itself (the owner's notes, round 12), as the surface diver has its profile card over its head
-// (diver-profile.js): a snapshot of the place, its name and depth, what is inside, and the actions. It stands over the
-// site and follows it on screen as the diver moves and looks around. It comes up when the site is pointed at (the
-// cursor, or the crosshair while the mouse aims), when the diver comes within reach of it, or while the guided dive waits
-// there, and stays LINGER seconds once none of those holds any more, then fades. It takes the place of the prompt at the
-// bottom of the screen and the "Here" card for that site.
+// (diver-profile.js): a snapshot of the place, its name and depth, what is inside, and the actions. It is a card in the
+// water, at one fixed spot over the site, always turned to face the view (round 15): look away and it is out of sight,
+// look back and it is there again. It comes up when the site is pointed at (the cursor, or the crosshair while the mouse
+// aims), when the diver comes within reach of it, or while the guided dive waits there, and stays LINGER seconds once
+// none of those holds any more, then fades. It takes the place of the prompt at the bottom of the screen and the "Here"
+// card for that site.
 //   hover: how far round the site (m) counts as pointing at it; lift: how far over its middle the card stands (m).
 const SITES = {
-  about: { name: 'The Helmet', section: 'About', note: 'Who I am, how I approach the work, and where everything lives.', signal: '#7ff0cf', hover: 2, lift: 1.7 },
+  about: { name: 'The Helmet', section: 'About', note: 'Who I am, how I approach the work, and where everything lives.', signal: '#7ff0cf', hover: 2, lift: 1.25 },
   experience: { name: 'The Nautilus', section: 'Experience', note: 'Three roles, 2023 to now, one chamber at a time.', signal: '#ffcf7a', hover: 2.4, lift: 2 },
   projects: { name: 'The Wreck', section: 'Projects', note: 'Six projects across the AI product loop.', signal: '#c9a2ff', hover: 8, lift: 6.2 },
   resume: { name: 'The Slate', section: 'Résumé', note: 'One page, to read here or take with you.', signal: '#f4e3b5', hover: 1, lift: .9 }
 };
-const LINGER = 8, REACH = 45, EDGE = 12, TOP = 64, TAIL = 16;
-// The interface the card keeps off (read a few times a second), and the middle of the view it keeps clear where it can
-// (the layout contract: x 30–70%, y 30–65%, tools/test-mobile-layout.mjs).
-const HUD = '.reef-map,.heading-indicator,.masthead,.calm-depth,.depth,.air-gauge,.dive-computer,.swim-controls,.touch-actions,.touch-stick,.tour-card[data-show="true"],.tour-caption[data-show="true"],.archive-toggle,.dive-computer-toggle,.dive-button,.quiet-ui-toggle,.expedition-tools,.view-controls,.scene-footer,.lamp-notice[data-show="true"],.journey-toast[data-show="true"]';
-let hud = [], hudAt = -1;
-function keepOut() {
-  const now = performance.now(); if (now - hudAt < 400) return hud;
-  hudAt = now; hud = [];
-  for (const el of document.querySelectorAll(HUD)) { const r = el.getBoundingClientRect(); if (r.width > 4 && r.height > 4 && getComputedStyle(el).visibility !== 'hidden') hud.push(r); }
-  return hud;
-}
-const overlap = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
-// On a phone there is no room by the site without covering it or the controls: the card docks above the controls, where
-// the guided dive's sheet sits (which steps aside meanwhile), and a ring marks the site it is about.
-const docked = () => innerWidth < 600 || (matchMedia('(pointer: coarse)').matches && innerHeight < 500);
+// SMALLEST, NEAR_SIZE: drawn at full size out to NEAR_SIZE m, smaller beyond, never below SMALLEST of it.
+// FIT: how small it may be drawn to keep its place close under a site before it slides down to stay on screen.
+const LINGER = 8, REACH = 45, EDGE = 12, TAIL = 16, SMALLEST = .8, NEAR_SIZE = 16, FIT = .8;
+const fingers = () => touch() || innerWidth < 600;
 const touch = () => document.documentElement.dataset.input === 'touch' || (!document.documentElement.dataset.input && matchMedia('(pointer: coarse)').matches);
 
 const card = document.createElement('section');
-card.className = 'site-card'; card.dataset.show = 'false'; card.setAttribute('aria-live', 'polite'); card.inert = true;
+card.className = 'site-card'; card.dataset.anchored = 'true'; card.dataset.show = 'false'; card.setAttribute('aria-live', 'polite'); card.inert = true;
 card.innerHTML = `<button type="button" class="site-card-close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   <figure class="site-card-shot"><img alt="" decoding="async" width="800" height="500"></figure>
   <div class="site-card-text"><p class="site-card-kicker"></p><h2 class="site-card-title"></h2><p class="site-card-note"></p></div>
@@ -48,7 +38,7 @@ const part = selector => card.querySelector(selector), image = part('img');
 const pointer = { x: innerWidth / 2, y: innerHeight / 2, seen: false };
 addEventListener('pointermove', event => { if (event.pointerType === 'mouse') { pointer.x = event.clientX; pointer.y = event.clientY; pointer.seen = true; } }, { passive: true });
 
-const at = new THREE.Vector3(), top = new THREE.Vector3(), view = new THREE.Vector3();
+const at = new THREE.Vector3(), top = new THREE.Vector3(), view = new THREE.Vector3(), lift = new THREE.Vector3();
 // The card's site, why it is up (tour, near, hover), when it last was, and a site closed by hand until it cools.
 let shown = null, why = '', hotAt = -Infinity, clock = 0, closed = null, drawn = '', reading = false;
 const positionOf = (controls, id) => {
@@ -68,9 +58,12 @@ function project(camera, id, point) {
   at.fromArray(point); const distance = camera.position.distanceTo(at);
   view.copy(at).applyMatrix4(camera.matrixWorldInverse); if (view.z > -.5 || distance > REACH) return null;
   const middle = at.clone().project(camera);
-  top.copy(at).add(new THREE.Vector3(0, SITES[id].lift, 0)).project(camera);
   const scale = innerHeight / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
-  return { x: (middle.x * .5 + .5) * innerWidth, y: (-middle.y * .5 + .5) * innerHeight, footX: (top.x * .5 + .5) * innerWidth, footY: (-top.y * .5 + .5) * innerHeight, radius: Math.max(28, SITES[id].hover * scale / distance), distance };
+  // The card's anchor, over the site: only while it is in view (in front, and within the screen).
+  top.copy(at).add(lift.set(0, SITES[id].lift, 0)); const anchorDistance = camera.position.distanceTo(top); view.copy(top).applyMatrix4(camera.matrixWorldInverse);
+  top.project(camera); const ax = (top.x * .5 + .5) * innerWidth, ay = (-top.y * .5 + .5) * innerHeight;
+  const anchor = view.z < -.5 && ax >= 0 && ax <= innerWidth && ay >= 0 && ay <= innerHeight ? { x: ax, y: ay, distance: anchorDistance } : null;
+  return { x: (middle.x * .5 + .5) * innerWidth, y: (-middle.y * .5 + .5) * innerHeight, anchor, radius: Math.max(28, SITES[id].hover * scale / distance), distance };
 }
 function fill(id, controls) {
   const site = SITES[id], point = positionOf(controls, id), depth = Math.round(toDisplayDepth(-(point?.[1] ?? 0)));
@@ -86,7 +79,7 @@ function fill(id, controls) {
 // state then showed the interface it had put away for a moment, between the click and the panel.
 function hide(keep = false) {
   if (card.dataset.show !== 'false') { card.dataset.show = 'false'; card.inert = true; }
-  if (!keep && document.body.dataset.siteCard) { delete document.body.dataset.siteCard; delete document.body.dataset.siteCardDock; dispatchEvent(new CustomEvent('oceansitecard', { detail: null })); }
+  if (!keep && document.body.dataset.siteCard) { delete document.body.dataset.siteCard; dispatchEvent(new CustomEvent('oceansitecard', { detail: null })); }
   if (ring.dataset.show !== 'false') ring.dataset.show = 'false';
 }
 
@@ -116,58 +109,54 @@ onFrame((dt, controls, state, diving) => {
   if (hot && hot !== closed) { if (hot !== shown) { shown = hot; fill(hot, controls); } hotAt = clock; why = hot === waiting ? 'tour' : hot === near ? 'near' : 'hover'; }
   const spot = shown && placed[shown];
   if (!shown || !spot || shown === closed || clock - hotAt > LINGER) { hide(); if (shown && clock - hotAt > LINGER) shown = null; return; }
-  // Where the card goes. Docked on a phone. Elsewhere it stands on the site: over it with its tail pointing down at it,
-  // or beside it, or in the open band to one side, whichever keeps off the interface and covers least of the middle of
-  // the view, and stays nearest the site.
-  const width = card.offsetWidth || 290, height = card.offsetHeight || 300, dock = docked();
-  let left, topEdge, side = '';
-  if (dock) {
-    // Portrait: just above the touch deck. Sideways: at the foot of the screen between the stick and the keys, as the
-    // tour's sheet sits there.
-    let floor = innerHeight - EDGE;
-    if (innerWidth < 600) for (const el of document.querySelectorAll('.swim-controls,.touch-actions,.touch-stick')) { const r = el.getBoundingClientRect(); if (r.height > 4 && r.top > innerHeight * .5) floor = Math.min(floor, r.top); }
-    left = (innerWidth - width) / 2; topEdge = floor - 8 - height; side = 'dock';
-  } else {
-    const W = innerWidth, H = innerHeight, middle = { left: W * .3, right: W * .7, top: H * .3, bottom: H * .65 }, gap = Math.min(spot.radius * .7, 260) + 18;
-    const candidates = [
-      ['', spot.footX - width / 2, spot.footY - TAIL - height],
-      ['right', spot.x + gap, spot.y - height / 2], ['left', spot.x - gap - width, spot.y - height / 2],
-      ['right', Math.max(W * .7 + 8, spot.x + gap), Math.min(spot.y, H * .3) - height / 3], ['left', Math.min(W * .3 - 8 - width, spot.x - gap - width), Math.min(spot.y, H * .3) - height / 3],
-      ['right', W * .7 + 8, TOP + 140], ['left', W * .3 - 8 - width, TOP + 140]
-    ];
-    let best = Infinity;
-    for (const [where, x, y] of candidates) {
-      const l = Math.min(W - EDGE - width, Math.max(EDGE, x)), t = Math.min(H - EDGE - height, Math.max(TOP, y)), box = { left: l, right: l + width, top: t, bottom: t + height };
-      const score = keepOut().reduce((sum, r) => sum + overlap(box, r), 0) * 10 + overlap(box, middle) * 3 + Math.hypot(l + width / 2 - spot.x, t + height / 2 - spot.y) * 20;
-      if (score < best) { best = score; left = l; topEdge = t; side = where; }
-    }
-  }
-  left = Math.min(innerWidth - EDGE - width, Math.max(EDGE, left)); topEdge = Math.min(innerHeight - EDGE - height, Math.max(dock ? EDGE : TOP, topEdge));
-  const tail = Math.min(width - 22, Math.max(22, spot.footX - left));
-  card.style.transform = `translate(${left.toFixed(1)}px, ${topEdge.toFixed(1)}px)`; card.style.setProperty('--tail', `${tail.toFixed(0)}px`);
-  card.dataset.tail = String(!side && Math.abs(topEdge + height + TAIL - spot.footY) < 4); card.dataset.side = side;
-  if (document.body.dataset.siteCardDock !== String(dock)) document.body.dataset.siteCardDock = String(dock);
+  // Where the card goes: one place, fixed in the water over the site (lift m above its middle), drawn facing the view
+  // (the owner's notes, round 15: it used to choose between several places on screen, and jumped between them). Out of
+  // view, it is not there; looked at again while it still lingers, it is back where it was.
+  if (!spot.anchor) { hide(); return; }
+  pinned = { id: shown, point: positionOf(controls, shown) };
+  if (!controls.onDraw) place(camera);
   // Highlighted while it is pointed at, waited at or in reach; fading meanwhile once it is only lingering.
   const live = clock - hotAt < .3;
   const key = `${shown}|${why}|${live}|${waiting === shown}|${window.oceanTour?.status}|${touch()}`;
   if (key !== drawn) {
     drawn = key; card.dataset.hot = String(live); card.dataset.why = why;
-    // Continue at a stop the tour waits at; at its ending, Surface (the owner's notes, round 14: on a phone the docked card
-    // stands in for the tour's sheet, so with only Read it on it there was no way up once the résumé was closed).
+    // Continue at a stop the tour waits at; at its ending, Surface (the owner's notes, round 14: with only Read it on the
+    // résumé's card there was no way up from it once the résumé was closed).
     const status = window.oceanTour?.status, next = part('[data-site="next"]');
     next.hidden = waiting !== shown || (status !== 'dwell' && status !== 'done');
     next.dataset.act = status === 'done' ? 'surface' : 'next'; next.firstChild.textContent = status === 'done' ? 'Surface ' : 'Continue ';
     for (const kbd of card.querySelectorAll('kbd')) kbd.hidden = touch();
   }
-  if (card.dataset.show !== 'true') { card.dataset.show = 'true'; card.inert = false; }
+  if (card.dataset.show !== 'true') { card.dataset.show = 'true'; card.inert = false; place(camera); }
   if (document.body.dataset.siteCard !== shown) { document.body.dataset.siteCard = shown; dispatchEvent(new CustomEvent('oceansitecard', { detail: shown })); }
   card.dataset.fading = String(clock - hotAt > LINGER - 1.2);
-  // A ring on the site while it is pointed at, so the pointer knows what it is on, and on a phone, where the card is
-  // docked away from it, whenever the card is up.
-  const ringOn = (live && why === 'hover') || dock;
+  // A ring on the site while it is pointed at, so the pointer knows what it is on.
+  const ringOn = live && why === 'hover';
   if (ringOn) { ring.style.transform = `translate(${spot.x.toFixed(1)}px, ${spot.y.toFixed(1)}px)`; ring.style.setProperty('--size', `${Math.min(220, spot.radius * 2).toFixed(0)}px`); ring.style.setProperty('--signal', SITES[shown].signal); }
   if (ring.dataset.show !== String(ringOn)) ring.dataset.show = String(ringOn);
 });
+
+// Where the card stands on screen this frame: placed after the scene is drawn, with the camera it was drawn with
+// (oceanControls.onDraw). Its anchor out of view, it is out of sight at once, not left at the edge.
+let pinned = null, cardHeight = 0;
+function place(camera) {
+  if (!pinned?.point || card.dataset.show !== 'true') return;
+  const spot = project(camera, pinned.id, pinned.point), anchor = spot?.anchor;
+  card.dataset.out = String(!anchor);
+  if (!anchor) return;
+  // Further off it is drawn smaller, as a thing in the water would be, down to SMALLEST of its size.
+  // Close under the site, with too little room over it, it is drawn smaller still to stand where it is (down to FIT), and
+  // only then slides down to stay on screen.
+  // On a touch screen it is the small card already, and never drawn smaller: its keys stay a finger wide.
+  const full = cardHeight || 300, room = (anchor.y - EDGE) / (full + TAIL), least = fingers() ? 1 : SMALLEST;
+  const size = least >= 1 ? 1 : Math.max(FIT, Math.min(1, Math.max(least, NEAR_SIZE / anchor.distance), room));
+  const y = Math.max(anchor.y, EDGE + (full + TAIL) * size);
+  card.style.transform = `translate3d(${anchor.x.toFixed(1)}px, ${y.toFixed(1)}px, 0) scale(${size.toFixed(3)}) translate(-50%, calc(-100% - ${TAIL}px))`;
+}
+const hookDraw = () => { const controls = window.oceanControls; if (controls?.onDraw) controls.onDraw(place); else setTimeout(hookDraw, 250); };
+hookDraw();
+// Its height, read only when what is on it changes (not every frame).
+new ResizeObserver(() => { cardHeight = card.offsetHeight; }).observe(card);
 
 function read() {
   const id = shown; if (!id) return;

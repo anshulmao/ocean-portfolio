@@ -60,8 +60,8 @@ export const STEPS = [
     short: 'My portfolio, as a reef. Try the controls as we swim in.',
     // The reef rising ahead, the barracuda wheel off to the right, the wreck down to the left.
     pan: [[-22, -18, -30], [-36, -20, -44], [18, -21, -39], [-22, -16, -36]] },
-  // The scooter first, the reef being a way off. Then out west past the barracuda wheel, over the pink whipray, round the
-  // brain coral dome on its east side, where its giant moray looks out of its den, a pause at the coral nursery with the
+  // The scooter first, the reef being a way off. Then on past the barracuda wheel on its reef side, by the pink whipray, to the
+  // brain coral dome's east side, where its giant moray looks out of its den, a pause at the coral nursery with the
   // nurse shark asleep beside it, and in to the helmet face on: its faceplate looks east (landmark-builds.js), so the stop
   // stands 7 m east of it and the swim comes in on that line.
   { key: 'about', kind: 'stop', landmark: 'about', opens: 'about', place: `About · The Helmet · ${depth(-9)}`, signal: '#7ff0cf',
@@ -70,15 +70,15 @@ export const STEPS = [
     via: [
       { at: [-28, -12, -56], key: 'scooter', title: 'The scooter', line: 'The reef is a way off yet. Let’s take the scooter.',
         scooter: true, teach: 'scooter', wait: 'scooter', hold: 5, slow: .7 },
-      { at: [-52, -14, -44], key: 'barracuda', title: 'A barracuda wheel', line: 'Young barracuda turning slowly in mid-water.',
+      // On along the way the swim set out on, the barracuda wheel passed on its reef side, off to the right (the owner's notes,
+      // round 15: it used to swing out west round its far side and turn back, facing the open sea).
+      { at: [-22, -14, -45], key: 'barracuda', title: 'A barracuda wheel', line: 'Young barracuda turning slowly in mid-water.',
         look: [-36, -20, -44], hold: 6 },
-      [-54, -15, -34],
-      { at: [-52, -16, -21], key: 'whipray', title: 'A pink whipray', line: 'It glides low over the sand by the cleaning reef.',
+      { at: [-28, -15.5, -27], key: 'whipray', title: 'A pink whipray', line: 'It glides low over the sand by the cleaning reef.',
         look: { resident: 'whipray', near: [-41, -23, -16] }, hold: 6 },
-      // South of the dome and round to its east side: the moray's den faces east (user-creature-routes.js dens, angle 1.5), and
-      // the view follows it where it settled (user-creatures.js resting.moray).
-      // Under 30 m from the whipray's fly-by, so the view hands straight across from the ray to the moray.
-      [-36, -15.5, -15],
+      // On to the dome's east side: the moray's den faces east (user-creature-routes.js dens, angle 1.5), and the view follows
+      // it where it settled (user-creatures.js resting.moray). Under 30 m from the whipray's fly-by, so the view hands
+      // straight across from the ray to the moray.
       { at: [-26, -16, -12], key: 'brain-coral', title: 'The brain coral dome', line: 'A giant moray keeps a den at its foot. There, mouth open.',
         look: { resident: 'moray', near: [-34.2, -21.2, -3.8] }, hold: 6, reach: 8 },
       // Up over the lip of the shelf the nursery stands on.
