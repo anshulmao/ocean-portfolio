@@ -86,7 +86,7 @@ let lastOffset = null, pixel = 1 / (devicePixelRatio || 1), viewBearing = 0;
 addEventListener('resize', () => { pixel = 1 / (devicePixelRatio || 1); lastOffset = null; });
 // Phones hide the tape (hud.css) and read the heading off the scope instead. It is written only while the phone layout
 // is in force (the query of the tokens in tokens.css) and only when the whole degree changes.
-const phone = matchMedia('(max-width:599px),(pointer:coarse) and (max-height:499px)'), bearingMark = $('#map-bearing'), POINTS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+const phone = matchMedia('(max-width:599px),(pointer:coarse)'), bearingMark = $('#map-bearing'), POINTS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 let lastDegrees = null;
 phone.addEventListener('change', () => { lastDegrees = null; });
 function sync() {

@@ -9,7 +9,7 @@
    chapter's title card or a note. On a desktop it sits under the heading tape; on a phone under the top bar and the
    compact map (two bars tall) beside it; on a phone held sideways straight under the top bar, above the middle. */
 :root{--announce-top:max(132px,15vh)}
-@media (max-width:599px),(pointer:coarse) and (max-height:499px){:root{--announce-top:calc(var(--o-under-bar) + 2*var(--o-bar) + 2*var(--o-gap))}}
+@media (max-width:599px),(pointer:coarse){:root{--announce-top:calc(var(--o-under-bar) + 2*var(--o-bar) + 2*var(--o-gap))}}
 /* Sideways the top bar's middle is empty (depth chip left, menu right), and anything lower lands in the middle of a
    390px-tall view, so announcements ride in the bar itself, set smaller. */
 @media (pointer:coarse) and (max-height:499px){
@@ -183,7 +183,7 @@ html[data-input="touch"] .tour-card footer kbd{display:none}
 
 /* Phones: the Sheet zone. Full width at the bottom, above the touch controls, never taller than the contract allows.
    Every target is finger-sized. The caption is the short one, clamped to its lines; More reads on inside the sheet. */
-@media (max-width:599px),(pointer:coarse) and (max-height:499px){
+@media (max-width:599px),(pointer:coarse){
   .journey-toast{padding:9px 16px 10px 22px;font-size:13px}
   .journey-toast strong{font-size:15px}
   .zone-card{gap:5px;padding:12px 32px 14px}
@@ -232,6 +232,14 @@ html[data-input="touch"] .tour-card footer kbd{display:none}
 @media (max-width:599px){
   /* Folded, the row's one action is the size of the row, so the row stays one finger tall. */
   .tour-card[data-sheet="collapsed"] footer button{min-height:var(--o-tap)}
+}
+/* A wider tablet has room between the two thumb zones. Keep the guide low in
+   that space, instead of lifting a full-width sheet across the scene's middle. */
+@media(pointer:coarse) and (min-width:600px) and (min-height:500px) and (orientation:landscape){
+  section.tour-card,body[data-computer-open="true"][data-camera="third"] section.tour-card{
+    left:0;right:0;width:min(560px,calc(100vw - 360px));margin-inline:auto;
+    bottom:calc(var(--o-pad) + var(--o-safe-b));
+  }
 }
 /* A phone held sideways: a bottom-centre panel no wider than 60vw. Open, the actions join the stop's row and the
    caption keeps to two lines, so the panel stays below the middle of the view. */

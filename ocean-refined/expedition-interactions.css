@@ -89,7 +89,7 @@ body:is([data-clear-ui="true"],[data-menu="open"],[data-dialog="open"]) .expedit
 html[data-input="touch"] .artifact-prompt{left:auto;right:max(12px,var(--o-safe-r));bottom:calc(var(--keys-top) + var(--o-gap));z-index:var(--o-z-controls);min-height:var(--o-tap);max-width:calc(100vw - var(--o-pad) - min(176px,40vw + 12px));transform:none;text-align:left}
 /* Phones (the layout tokens' query): the stop offer belongs to the sheet zone, and notices stand in the free row under
    the bar, beside the scope. */
-@media(max-width:599px),(pointer:coarse) and (max-height:499px){
+@media(max-width:599px),(pointer:coarse){
   .expedition-tools,.expedition-tools:has([data-stop]:not([hidden])){top:auto;right:auto;bottom:var(--o-sheet-bottom);left:50%;z-index:var(--o-z-sheet);width:min(300px,calc(100vw - 2*var(--o-pad)));max-width:none;transform:translateX(-50%)}
   .expedition-notice{top:var(--o-under-bar);right:auto;bottom:auto;left:calc(var(--o-pad) + var(--o-safe-l));z-index:var(--o-z-announce);max-width:calc(100vw - 2*var(--o-pad) - var(--map-size) - var(--o-gap))}
 }

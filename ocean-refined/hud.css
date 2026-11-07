@@ -547,7 +547,7 @@ html[data-input="touch"] :is(.capture-hint,.look-hint){display:none!important}
    open or an announcement is up (body[data-sheet] and body[data-announce], kept by the guided dive). Tablets and
    desktops keep the arrangement above. */
 .map-bearing,.settings-quick{display:none}
-@media(max-width:599px),(pointer:coarse) and (max-height:499px){
+@media(max-width:599px),(pointer:coarse){
   :root{--map-size:96px}
   .masthead{height:calc(var(--o-top) + var(--o-bar));box-sizing:border-box;padding:var(--o-top) calc(var(--o-pad) + var(--o-safe-r)) 0 calc(var(--o-pad) + var(--o-safe-l));z-index:var(--o-z-hud)}
   body[data-submerged="true"] .masthead{padding-right:calc(var(--o-pad) + var(--o-safe-r))}

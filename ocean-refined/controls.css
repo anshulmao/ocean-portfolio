@@ -48,7 +48,7 @@ html[data-input="touch"] .swim-controls.touch-deck:not([hidden]){display:block}
    view, under the sheet. Upright, the four keys make one row (flashlight, scooter, rise, sink) with the camera over the
    flashlight, the prompt rests on them and the stick's corner narrows so the two never meet; on its side the corners
    sit beside the sheet and the keys keep their square. */
-@media(max-width:599px),(pointer:coarse) and (max-height:499px){
+@media(max-width:599px),(pointer:coarse){
   :root{--deck-bottom:calc(var(--o-pad) + var(--o-safe-b));--key:44px;--keys-bottom:var(--deck-bottom)}
   .touch-stick{left:max(4px,var(--o-safe-l))}
 }
@@ -58,6 +58,11 @@ html[data-input="touch"] .swim-controls.touch-deck:not([hidden]){display:block}
   .touch-actions [data-lamp]{order:1}.touch-actions [data-swim="KeyE"]{order:2}.touch-actions [data-swim="Space"]{order:3}.touch-actions [data-swim="ShiftLeft"]{order:4}
 }
 @media(pointer:coarse) and (max-height:499px){:root{--key-cols:2;--key-rows:3}}
+/* Tablets reserve the actual deck height, including its third key row, before
+   placing a guided sheet above it. */
+@media(pointer:coarse) and (min-width:600px) and (min-height:500px){
+  :root{--o-controls:calc(var(--keys-top) - var(--o-safe-b) - var(--o-pad) + var(--o-gap))}
+}
 /* While touch is in use the water and the deck never scroll, zoom or select (the deck and its keys set touch-action themselves; panels still scroll). */
 html[data-input="touch"] body[data-submerged="true"]{overscroll-behavior:none}
 html[data-input="touch"] #world{touch-action:none}
@@ -72,4 +77,4 @@ html[data-input="touch"] #world{touch-action:none}
 @media(hover:hover){.movement-preset-row>button:hover{border-color:var(--holo);background:var(--holo-fill-hover)}}
 .movement-preset-note{margin:9px 0 0;font:400 11px/1.55 var(--holo-font);color:#a9d8e3}
 @media(max-width:600px){.movement-preset-row>button{min-height:42px}}
-@media(max-width:599px),(pointer:coarse) and (max-height:499px){.movement-preset-row>button{min-height:var(--o-tap)}}
+@media(max-width:599px),(pointer:coarse){.movement-preset-row>button{min-height:var(--o-tap)}}
