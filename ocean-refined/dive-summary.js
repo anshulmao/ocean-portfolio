@@ -1,6 +1,9 @@
 import { SITES, features } from './dive-log.js';
 import { SPECIES, portraitURL } from './field-guide.js';
-import { LANDMARKS } from './reef.js';
+import { LANDMARKS, terrainHeightAt } from './reef.js';
+import { toDisplayDepth, DISPLAY_MAX_DEPTH } from './depth-metrics.js';
+import { ART, SCENERY } from './site-art.js';
+import { openZoom, zoomOpen } from './photo-zoom.js';
 import { PORTFOLIO_CONTENT } from './portfolio-content.js';
 import { preparedChartsReady, drawPreparedChart } from './prepared-charts.js';
 import { sendPhoto, wordCount, NOTE_WORDS } from './submissions.js';
@@ -49,17 +52,11 @@ dialog.innerHTML = `<div class="ds-inner">
       <svg viewBox="0 0 640 200" role="img"></svg>
       <figcaption><span><i style="--c:#7ff0cf"></i>Dive site</span><span><i style="--c:#eefdff"></i>Photo</span><span><i style="--c:#7ff0cf55"></i>Safety stop</span></figcaption></figure>
   </section>
-  <div class="ds-row">
-    <section class="ds-panel ds-step" style="--i:2" aria-labelledby="ds-sites-title">
-      <div class="ds-label"><span class="holo-label" id="ds-sites-title">Sites checklist</span><span class="ds-sites-count"></span></div>
-      <div class="ds-map"><canvas width="372" height="420" aria-hidden="true"></canvas></div>
-      <ul class="ds-checks"></ul><ul class="ds-features" aria-label="Reef features"></ul>
-    </section>
-    <section class="ds-panel ds-step ds-photos" style="--i:3" aria-labelledby="ds-photos-title" aria-roledescription="carousel">
+  <section class="ds-panel ds-step ds-photos" style="--i:2" aria-labelledby="ds-photos-title" aria-roledescription="carousel">
       <div class="ds-label"><span class="holo-label" id="ds-photos-title">Postcards from the reef</span><span class="ds-count" aria-live="polite"></span></div>
-      <div class="ds-cards" tabindex="0" aria-label="Your photos. Swipe, or use the arrow keys."></div>
+      <div class="ds-cards" tabindex="0" aria-label="Your photos. Swipe or use the arrow keys; Enter opens the photo to zoom."></div>
       <div class="ds-carousel-bar"><div class="ds-dots"></div><div class="ds-arrows"><button type="button" class="holo-chip" data-step="-1" aria-label="Previous photo">←</button><button type="button" class="holo-chip" data-step="1" aria-label="Next photo">→</button></div></div>
-      <div class="ds-photo-actions"><button type="button" class="holo-chip ds-download">Download <span aria-hidden="true">↓</span></button><button type="button" class="holo-chip holo-chip--go ds-share-open" aria-expanded="false" aria-controls="ds-share">Share with Anshul <span aria-hidden="true">→</span></button></div>
+      <div class="ds-photo-actions"><button type="button" class="holo-chip ds-zoom">Zoom <span aria-hidden="true">⤢</span></button><button type="button" class="holo-chip ds-download">Download <span aria-hidden="true">↓</span></button><button type="button" class="holo-chip holo-chip--go ds-share-open" aria-expanded="false" aria-controls="ds-share">Share with Anshul <span aria-hidden="true">→</span></button></div>
       <form class="ds-share" id="ds-share" hidden>
         <label for="ds-note">Add a note <small>(optional, up to ${NOTE_WORDS} words)</small></label>
         <textarea id="ds-note" rows="3" maxlength="400" placeholder="A favourite moment from the dive…"></textarea>
@@ -68,7 +65,18 @@ dialog.innerHTML = `<div class="ds-inner">
       </form>
       <p class="ds-status" role="status"></p>
     </section>
-  </div>
+  <section class="ds-panel ds-step ds-sites" style="--i:3" aria-labelledby="ds-sites-title">
+    <div class="ds-label"><span class="holo-label" id="ds-sites-title">Where you went</span><span class="ds-sites-count"></span></div>
+    <div class="ds-sites-body">
+      <div class="ds-map"><canvas width="372" height="420" aria-hidden="true"></canvas><span class="ds-map-key" aria-hidden="true"><i></i>0<b>${DISPLAY_MAX_DEPTH} m</b></span></div>
+      <div class="ds-sites-side">
+        <p class="ds-sites-hint">Tap a site or a feature, on the chart or below, for more.</p>
+        <ul class="ds-checks" aria-label="Portfolio sites"></ul>
+        <ul class="ds-features" aria-label="Reef features"></ul>
+        <article class="ds-place" aria-live="polite"></article>
+      </div>
+    </div>
+  </section>
   <section class="ds-panel ds-step" style="--i:4" aria-labelledby="ds-guide-title">
     <div class="ds-label"><span class="holo-label" id="ds-guide-title">Field guide · what you saw</span><span class="ds-filter" role="group" aria-label="Show"></span></div>
     <article class="ds-detail" aria-live="polite"></article>
@@ -134,37 +142,76 @@ function smooth(points) {
   }
   return d;
 }
+// The reef chart under the swim: the prepared export of the planner's chart, or else drawn here from the terrain itself
+// (it used to borrow the planner's canvas, which is blank until the planner has been opened, so the chart was empty).
+// Depth bands shade from bright shallows to the deep, 5 m contours are the brightest lines, and a slope light picks out
+// the pads, terraces and gullies.
 async function paintChart(canvas) {
   if (canvas.dataset.source) return;
   if (await preparedChartsReady && drawPreparedChart('planner', canvas)) return;
-  // Without the prepared chart, borrow the planner's once it has drawn its own.
-  const planner = document.querySelector('.dive-plan canvas[data-source]');
-  if (planner) { canvas.width = planner.width; canvas.height = planner.height; canvas.getContext('2d').drawImage(planner, 0, 0); canvas.dataset.source = planner.dataset.source; }
+  const width = canvas.width, height = canvas.height, context = canvas.getContext('2d'), image = context.createImageData(width, height), depths = new Float32Array(width * height);
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) depths[y * width + x] = toDisplayDepth(-terrainHeightAt((x + .5) / width * 124 - 62, (y + .5) / height * 140 - 105));
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+    const i = y * width + x, depth = depths[i], band = Math.floor(depth / 5), shallow = 1 - Math.max(0, Math.min(1, depth / DISPLAY_MAX_DEPTH));
+    const contour = x > 0 && y > 0 && (band !== Math.floor(depths[i - 1] / 5) || band !== Math.floor(depths[i - width] / 5));
+    const dx = depths[y * width + Math.min(width - 1, x + 1)] - depths[y * width + Math.max(0, x - 1)], dz = depths[Math.min(height - 1, y + 1) * width + x] - depths[Math.max(0, y - 1) * width + x];
+    const relief = Math.max(.7, Math.min(1.25, 1 + (dx - dz) * .3));
+    image.data.set(contour ? [201, 251, 255, band % 2 ? 120 : 215] : [(64 + shallow * 91) * relief, (155 + shallow * 78) * relief, (191 + shallow * 64) * relief, 52 + shallow * 50], i * 4);
+  }
+  context.putImageData(image, 0, 0); canvas.dataset.source = 'scene-terrain';
 }
+// What the chart and the chips point at: 'site:<id>' or 'feature:<name>'. The card under the chips tells the rest
+// (progressive disclosure: the chart and chips stay short, the detail is one tap away).
+let place = null;
+const featureDone = name => Boolean(record.features[name]);
 function paintSites() {
   const map = $('.ds-map', dialog), found = foundSites();
   paintChart($('canvas', map));
-  map.querySelectorAll('svg,.ds-pin,.ds-dot').forEach(node => node.remove());
+  map.querySelectorAll('svg,.ds-pin,.ds-glyph').forEach(node => node.remove());
   const track = record.track.map(([x, z]) => [mapX(x), mapY(z)]);
   if (track.length > 1) map.insertAdjacentHTML('beforeend', `<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="ds-track" d="${smooth(track)}" vector-effect="non-scaling-stroke"/></svg>`);
-  const done = name => Boolean(record.features[name]);
-  for (const [name, x, z] of features()) map.insertAdjacentHTML('beforeend', `<i class="ds-dot" data-done="${done(name)}" style="left:${mapX(x)}%;top:${mapY(z)}%" title="${esc(name)}"></i>`);
+  const list = features();
+  // The reef features as their own line drawings, lit once visited; the three sites as numbered pins.
+  for (const [name, x, z] of list) map.insertAdjacentHTML('beforeend', `<button type="button" class="ds-glyph" data-key="feature:${esc(name)}" data-done="${featureDone(name)}" style="left:${mapX(x)}%;top:${mapY(z)}%" aria-label="${esc(name)}${featureDone(name) ? ', visited' : ''}">${ART[name] || ''}</button>`);
   LANDMARKS.forEach((landmark, index) => {
     const site = SITES[landmark.id], ticked = found.has(landmark.id);
-    map.insertAdjacentHTML('beforeend', `<b class="ds-pin" data-done="${ticked}" style="left:${mapX(landmark.position[0])}%;top:${mapY(landmark.position[2])}%;--signal:${site.signal}" aria-hidden="true">${ticked ? '✓' : index + 1}<span>${site.name}</span></b>`);
+    map.insertAdjacentHTML('beforeend', `<button type="button" class="ds-pin" data-key="site:${landmark.id}" data-done="${ticked}" style="left:${mapX(landmark.position[0])}%;top:${mapY(landmark.position[2])}%;--signal:${site.signal}" aria-label="${esc(site.name)}${ticked ? ', found' : ''}">${ticked ? '✓' : index + 1}<span>${site.name}</span></button>`);
   });
   if (track.length) map.insertAdjacentHTML('beforeend', `<b class="ds-pin" data-kind="entry" data-done="true" style="left:${track[0][0]}%;top:${track[0][1]}%;--signal:#eefdff" aria-hidden="true"><span>In</span></b>`);
-  const tick = '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5"/><path d="M6 10.4l2.7 2.7L14.2 7"/></svg>', ring = '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5" stroke-dasharray="3 2.4"/></svg>';
-  $('.ds-checks', dialog).innerHTML = LANDMARKS.map(({ id }) => {
-    const visit = record.sites[id], ticked = found.has(id);
-    const note = visit ? `Reached at ${clock(visit.t)} · ${visit.depth.toFixed(0)} m` : found.has(id) ? 'Found on an earlier dive' : 'Still down there';
-    return `<li data-done="${ticked}" style="--signal:${SITES[id].signal}">${ticked ? tick : ring}<span><b>${SITES[id].name}</b><small>${esc(PORTFOLIO_CONTENT[id]?.title || '')} · ${note}</small></span><em>${siteDepth(id)} m</em></li>`;
-  }).join('');
-  const list = features();
-  $('.ds-features', dialog).innerHTML = list.map(([name]) => `<li data-done="${done(name)}">${esc(name)}</li>`).join('');
-  const featureCount = list.filter(([name]) => done(name)).length;
-  $('.ds-sites-count', dialog).textContent = `${found.size} of 3 · ${featureCount} of ${list.length} features`;
+  // The chips: the three sites, then the features, each a name and a tick; everything else is in the card.
+  $('.ds-checks', dialog).innerHTML = LANDMARKS.map(({ id }) => `<li data-done="${found.has(id)}" style="--signal:${SITES[id].signal}"><button type="button" data-key="site:${id}"><i aria-hidden="true">${found.has(id) ? '✓' : ''}</i>${SITES[id].name}<em>${siteDepth(id)} m</em></button></li>`).join('');
+  $('.ds-features', dialog).innerHTML = list.map(([name]) => `<li data-done="${featureDone(name)}"><button type="button" data-key="feature:${esc(name)}">${esc(name)}</button></li>`).join('');
+  const featureCount = list.filter(([name]) => featureDone(name)).length;
+  $('.ds-sites-count', dialog).textContent = `${found.size} of 3 sites · ${featureCount} of ${list.length} features`;
+  // Open on the last site reached on this dive, else the first one still to find.
+  const reached = Object.entries(record.sites).sort((a, b) => b[1].t - a[1].t)[0]?.[0];
+  if (!place || !dialog.querySelector(`[data-key="${CSS.escape(place)}"]`)) place = `site:${reached || LANDMARKS.find(({ id }) => !found.has(id))?.id || LANDMARKS[0].id}`;
+  paintPlace(place);
 }
+function paintPlace(key) {
+  place = key;
+  const [kind, id] = [key.slice(0, key.indexOf(':')), key.slice(key.indexOf(':') + 1)], card = $('.ds-place', dialog);
+  for (const node of dialog.querySelectorAll('.ds-sites [data-key]')) node.setAttribute('aria-pressed', String(node.dataset.key === key));
+  if (kind === 'site') {
+    const site = SITES[id], visit = record.sites[id], found = foundSites().has(id), content = PORTFOLIO_CONTENT[id] || {};
+    const status = visit ? `Reached ${clock(visit.t)} into the dive, at ${visit.depth.toFixed(0)} m` : found ? 'Found on an earlier dive' : 'Still down there';
+    card.style.setProperty('--signal', site.signal); card.dataset.done = String(found);
+    card.innerHTML = `<div class="art">${ART[id] || ''}</div><div><p class="holo-label">Portfolio site · ${esc(content.title || '')}</p><h3>${esc(site.name)}</h3>
+      <p class="ds-place-status">${found ? '✓ ' : ''}${status} · charted at ${siteDepth(id)} m</p>${content.subtitle ? `<p>${esc(content.subtitle)}</p>` : ''}
+      <div class="row">${found ? `<button type="button" class="holo-chip" data-read="${id}">Read ${esc(content.title || 'it')} <span aria-hidden="true">→</span></button>` : `<button type="button" class="holo-chip holo-chip--go" data-dive="${id}">Dive to ${esc(site.name)} <span aria-hidden="true">→</span></button>`}</div></div>`;
+  } else {
+    const done = featureDone(id);
+    card.style.setProperty('--signal', '#8ff4ff'); card.dataset.done = String(done);
+    card.innerHTML = `<div class="art">${ART[id] || ''}</div><div><p class="holo-label">Reef feature</p><h3>${esc(id)}</h3>
+      <p class="ds-place-status">${done ? '✓ Visited on this dive' : 'Not visited on this dive'}</p>${SCENERY[id] ? `<p>${esc(SCENERY[id])}</p>` : ''}</div>`;
+  }
+}
+$('.ds-sites', dialog).addEventListener('click', event => {
+  const action = event.target.closest('button'); if (!action) return;
+  if (action.dataset.key) { paintPlace(action.dataset.key); return; }
+  if (action.dataset.read) { close(true); window.oceanArchive?.open(action.dataset.read); }
+  else if (action.dataset.dive) { close(true); window.oceanPlan?.startAt(action.dataset.dive); }
+});
 
 // --- Postcards -----------------------------------------------------------------------------------------------------
 function paintPhotos() {
@@ -183,7 +230,7 @@ function paintPhotos() {
   }
   track.tabIndex = 0;
   track.innerHTML = photos.map((photo, i) => `<figure class="postcard" data-current="${i === 0}" role="group" aria-roledescription="slide" aria-label="${i + 1} of ${photos.length}: ${esc(photo.place)}">
-    <img src="${photo.url}" alt="Your photo at ${esc(photo.place)}, ${photo.depth.toFixed(0)} metres down" loading="lazy" decoding="async">${photo.shared ? '<span class="sent">Shared</span>' : ''}
+    <img src="${photo.url}" alt="Your photo at ${esc(photo.place)}, ${photo.depth.toFixed(0)} metres down" loading="lazy" decoding="async"><span class="zoom-hint" aria-hidden="true">⤢ Zoom</span>${photo.shared ? '<span class="sent">Shared</span>' : ''}
     <figcaption><b>${esc(photo.place)}</b><small>${photo.dive === record.number ? `${clock(photo.t)} into the dive` : `Dive ${two(photo.dive)} · ${clock(photo.t)} in`}</small><span class="stamp"><span>${photo.depth.toFixed(0)} m<br><small>depth</small></span></span></figcaption></figure>`).join('');
   $('.ds-dots', dialog).innerHTML = photos.map((photo, i) => `<button type="button" aria-label="Photo ${i + 1}" aria-current="${i === 0}"></button>`).join('');
   current = 0; settle(true);
@@ -213,6 +260,20 @@ $('.ds-cards', dialog).addEventListener('keydown', event => {
 });
 $('.ds-dots', dialog).addEventListener('click', event => { const dot = event.target.closest('button'); if (dot) go([...dot.parentNode.children].indexOf(dot)); });
 dialog.querySelectorAll('[data-step]').forEach(step => step.addEventListener('click', () => go(current + Number(step.dataset.step))));
+// Zoom: the photo full size in its own viewer (photo-zoom.js), from the Zoom button, a click on the photo in the middle
+// of the carousel (a click on one beside it brings it to the middle first), or Enter on the carousel.
+function zoomCurrent(from) {
+  const photo = photos[current]; if (!photo || zoomOpen()) return;
+  openZoom(dialog, { blob: photo.full, src: photo.url, alt: `Your photo at ${photo.place}, ${photo.depth.toFixed(0)} metres down`, label: `${photo.place} · ${photo.depth.toFixed(0)} m · ${photo.dive === record.number ? `${clock(photo.t)} into the dive` : `Dive ${two(photo.dive)}`}` }, from);
+  track('reef_photo_zoomed');
+}
+$('.ds-zoom', dialog).addEventListener('click', event => zoomCurrent(event.currentTarget));
+$('.ds-cards', dialog).addEventListener('click', event => {
+  const card = event.target.closest('.postcard'); if (!card) return;
+  const index = [...card.parentNode.children].indexOf(card);
+  if (index === current) zoomCurrent($('.ds-cards', dialog)); else go(index);
+});
+$('.ds-cards', dialog).addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); zoomCurrent(event.currentTarget); } });
 $('.ds-download', dialog).addEventListener('click', () => {
   const photo = photos[current]; if (!photo) return;
   const url = URL.createObjectURL(photo.full), link = document.createElement('a');
