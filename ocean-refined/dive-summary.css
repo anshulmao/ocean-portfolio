@@ -74,26 +74,45 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
 
 /* Where you went: a large reef chart with the swim, the three sites as pins and the features as their own line
    drawings; beside it short chips, and one card with the detail of whatever is picked (progressive disclosure). */
-.ds-sites-body{display:grid;grid-template-columns:minmax(0,.8fr) minmax(300px,1fr);gap:18px;align-items:start}
-.ds-map{position:relative;aspect-ratio:372/420;width:100%;max-height:600px;margin:0 auto;border:1px solid var(--holo-faint);border-radius:2px;overflow:hidden;background:radial-gradient(120% 90% at 50% 100%,#2a8fae55,#05222f)}
-.ds-map canvas{position:absolute;inset:0;width:100%;height:100%;opacity:.95}
+.ds-sites-body{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(280px,1fr);gap:18px;align-items:start}
+/* The chart (dive-chart.js): north up, the swim area landscape, 140 m by 124 m. */
+.ds-map{position:relative;aspect-ratio:140/124;width:100%;border:1px solid var(--holo-dim);border-radius:4px;overflow:hidden;background:#0b2a54;box-shadow:inset 0 0 0 1px #021a2655,0 10px 30px #021a2666}
+.ds-map canvas{position:absolute;inset:0;width:100%;height:100%}
+.ds-map::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 40px #021a2680;border-radius:inherit}
 .ds-map svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
-.ds-map-key{position:absolute;right:8px;bottom:8px;display:flex;align-items:center;gap:6px;padding:4px 7px;border-radius:2px;background:#05222fcc;font:500 9px/1 var(--holo-mono);color:#bfe9f2;pointer-events:none}
-.ds-map-key i{order:1;width:54px;height:6px;border-radius:1px;background:linear-gradient(90deg,#9be9ff,#4096bf)}
-.ds-map-key b{order:2;font-weight:500}
-.ds-track{fill:none;stroke:var(--holo-strong);stroke-width:1.8;stroke-dasharray:4 3;stroke-linecap:round;filter:drop-shadow(0 0 2px #5fe9ff)}
-.ds-pin{position:absolute;translate:-50% -50%;display:grid;place-items:center;width:28px;height:28px;padding:0;border-radius:50%;border:1.5px solid var(--signal);color:#05222f;background:var(--signal);box-shadow:0 0 12px var(--signal);font:700 13px/1 var(--holo-font);cursor:pointer;z-index:2;transition:scale var(--motion-hover) var(--journey-ease)}
-.ds-pin[data-done="false"]{background:#05222fcc;color:var(--signal);border-style:dashed;box-shadow:none}
-.ds-pin[data-kind="entry"]{width:12px;height:12px;font-size:0;cursor:default;z-index:1}
-.ds-pin[data-kind="entry"] span{left:calc(100% + 4px);top:50%;translate:0 -50%}
-.ds-pin span{position:absolute;left:50%;top:calc(100% + 5px);translate:-50% 0;white-space:nowrap;font:500 11px/1 var(--holo-font);color:var(--holo-ink);text-shadow:0 0 3px #021d2a,0 0 6px #021d2a}
-.ds-glyph{position:absolute;translate:-50% -50%;display:grid;place-items:center;width:46px;height:32px;padding:3px;border:1px solid #8ff4ff40;border-radius:3px;background:#05222fb3;color:#9fcfd9;cursor:pointer;transition:scale var(--motion-hover) var(--journey-ease),border-color var(--motion-hover) var(--journey-ease)}
-.ds-glyph svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.ds-track-glow{fill:none;stroke:#bffaff;stroke-opacity:.22;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;filter:blur(.6px)}
+.ds-track{fill:none;stroke:url(#ds-swim);stroke-width:.7;stroke-linecap:round;stroke-linejoin:round}
+.ds-arrow{fill:#ffffff;opacity:.9}
+.ds-end circle{fill:#7ff0cf;stroke:#05222f;stroke-width:.5}
+.ds-end rect{fill:#ffffff;stroke:#05222f;stroke-width:.5}
+.ds-end text{fill:#ffffff;font:600 2.4px/1 var(--holo-font);paint-order:stroke;stroke:#0c3456;stroke-width:.7px}
+.ds-compass{position:absolute;left:12px;top:12px;display:grid;justify-items:center;gap:2px;padding:6px 8px 8px;border-radius:3px;background:#05222fb3;border:1px solid var(--holo-faint);pointer-events:none}
+.ds-compass b{font:700 11px/1 var(--holo-font);color:var(--holo-ink)}
+.ds-compass i{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:14px solid var(--holo-strong)}
+/* The scale bar: the span is --w of the chart's width (20 m), its bar the whole span. */
+.ds-scale{position:absolute;left:12px;bottom:12px;box-sizing:content-box;display:grid;gap:4px;width:var(--w);padding:6px 8px;border-radius:3px;background:#05222fb3;border:1px solid var(--holo-faint);font:500 10px/1 var(--holo-mono);color:#cdeff6;pointer-events:none}
+.ds-scale i{display:block;width:100%;height:6px;border:1.5px solid #eafcff;border-top:0;box-sizing:border-box}
+.ds-key{position:absolute;right:12px;bottom:12px;display:grid;grid-template-columns:repeat(5,14px);gap:0;padding:6px 8px;border-radius:3px;background:#05222fb3;border:1px solid var(--holo-faint);pointer-events:none}
+.ds-key i{height:8px}
+.ds-key i[data-d="0"]{background:#bef4e9}.ds-key i[data-d="10"]{background:#58b6cd}.ds-key i[data-d="20"]{background:#288cba}.ds-key i[data-d="30"]{background:#1a649e}.ds-key i:last-of-type{background:#0b2a54}
+.ds-key small{grid-row:2;margin-top:4px;font:500 9px/1 var(--holo-mono);color:#cdeff6}
+.ds-key small:first-of-type{grid-column:1}.ds-key small:last-of-type{grid-column:4/6;text-align:right}
+.ds-pin{position:absolute;translate:-50% -50%;display:grid;place-items:center;width:30px;height:30px;padding:0;border-radius:50%;border:2px solid #05222f;color:#05222f;background:var(--signal);box-shadow:0 0 0 2px var(--signal),0 4px 14px #021a26aa;font:700 13px/1 var(--holo-font);cursor:pointer;z-index:3;transition:scale var(--motion-hover) var(--journey-ease)}
+.ds-pin[data-done="false"]{background:#05222fe6;color:var(--signal);border:2px dashed var(--signal);box-shadow:0 4px 14px #021a26aa}
+.ds-pin span{position:absolute;left:50%;top:calc(100% + 6px);translate:-50% 0;padding:3px 6px;border-radius:2px;background:#05222fd9;white-space:nowrap;font:600 11px/1 var(--holo-font);color:var(--holo-ink)}
+.ds-glyph{position:absolute;translate:-50% -50%;display:grid;place-items:center;width:40px;height:28px;padding:0;border:0;background:none;color:#e9fbff;cursor:pointer;z-index:2;filter:drop-shadow(0 0 2px #0c3456) drop-shadow(0 0 4px #0c3456);opacity:.72;transition:scale var(--motion-hover) var(--journey-ease),opacity var(--motion-hover) var(--journey-ease)}
+.ds-glyph svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
 .ds-glyph .art-floor{display:none}
-.ds-glyph[data-done="true"]{color:var(--holo-strong);border-color:var(--holo-dim);box-shadow:0 0 10px #5fe9ff55}
-:is(.ds-pin,.ds-glyph):hover{scale:1.12}
-:is(.ds-pin,.ds-glyph)[aria-pressed="true"]{outline:2px solid var(--holo-focus);outline-offset:2px;scale:1.12}
-:is(.ds-pin,.ds-glyph):focus-visible{outline:2px solid var(--holo-focus);outline-offset:3px}
+.ds-glyph[data-done="true"]{opacity:1;color:#fff4c7}
+.ds-glyph span{position:absolute;left:50%;top:calc(100% + 2px);translate:-50% 0;padding:3px 6px;border-radius:2px;background:#05222fd9;white-space:nowrap;font:500 10px/1 var(--holo-font);color:var(--holo-ink);opacity:0;pointer-events:none;transition:opacity var(--motion-hover) var(--journey-ease)}
+.ds-glyph:is(:hover,:focus-visible,[aria-pressed="true"]) span{opacity:1}
+.ds-glyph:is(:hover,[aria-pressed="true"]){opacity:1;z-index:4}
+.ds-shot{position:absolute;translate:-50% -50%;display:grid;place-items:center;width:22px;height:22px;margin:-20px 0 0 22px;padding:0;border-radius:50%;border:1.5px solid #05222f;background:#ffffff;color:#05222f;cursor:pointer;z-index:3;box-shadow:0 3px 10px #021a26aa;transition:scale var(--motion-hover) var(--journey-ease)}
+.ds-shot svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
+:is(.ds-pin,.ds-glyph,.ds-shot):hover{scale:1.12}
+:is(.ds-pin,.ds-glyph)[aria-pressed="true"]{scale:1.15}
+.ds-pin[aria-pressed="true"]{box-shadow:0 0 0 2px var(--signal),0 0 0 6px #ffffff40,0 4px 14px #021a26aa}
+:is(.ds-pin,.ds-glyph,.ds-shot):focus-visible{outline:2px solid var(--holo-focus);outline-offset:3px}
 .ds-sites-side{display:grid;gap:12px;align-content:start}
 .ds-sites-hint{font:400 12px/1.4 var(--holo-font);color:#bfe9f2}
 .ds-checks,.ds-features{display:flex;flex-wrap:wrap;gap:6px;padding:0;list-style:none}
@@ -118,6 +137,21 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
 .ds-place .ds-place-status{font:500 11px/1.4 var(--holo-mono);color:#bfe9f2}
 .ds-place[data-done="true"] .ds-place-status{color:var(--holo-mint)}
 .ds-place .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+/* The dive in order: a thin timeline, a dot a moment, coloured by what it was. */
+.ds-story{display:grid;gap:8px}
+.ds-story ol{position:relative;display:grid;gap:2px;margin:0;padding:0 0 0 14px;list-style:none;max-height:260px;overflow:auto}
+.ds-story ol::before{content:"";position:absolute;left:4px;top:8px;bottom:8px;width:1px;background:var(--holo-faint)}
+.ds-story li{position:relative;display:grid;grid-template-columns:44px 1fr;align-items:center;gap:8px;min-height:28px}
+.ds-story li::before{content:"";position:absolute;left:-13px;top:50%;width:7px;height:7px;translate:0 -50%;border-radius:50%;background:#05222f;border:1.5px solid var(--holo-dim)}
+.ds-story li[data-kind="site"]::before{background:var(--signal);border-color:var(--signal)}
+.ds-story li[data-kind="feature"]::before{border-color:#fff4c7}
+.ds-story li[data-kind="photo"]::before{background:#ffffff;border-color:#ffffff;border-radius:2px}
+.ds-story li[data-kind="entry"]::before{background:var(--holo-mint);border-color:var(--holo-mint)}
+.ds-story time{font:500 10px/1 var(--holo-mono);color:#9fcfd9}
+.ds-story :is(button,span){justify-self:start;padding:4px 6px;margin-left:-6px;border:0;border-radius:2px;background:none;color:var(--holo-ink);font:400 12px/1.25 var(--holo-font);text-align:left}
+.ds-story button{cursor:pointer}
+.ds-story button:hover,.ds-story button[aria-pressed="true"]{background:#8ff4ff18}
+.ds-story button:focus-visible{outline:2px solid var(--holo-focus);outline-offset:1px}
 
 /* Postcards: this session's photos, newest dive first. */
 .ds-cards{display:grid;grid-auto-flow:column;grid-auto-columns:min(78%,820px);gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:0 11%;padding:6px 11% 14px;margin:0 -14px;scrollbar-width:none;overscroll-behavior-x:contain}
@@ -202,7 +236,6 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
 }
 @media (max-width:860px){
   .ds-stats,.ds-sites-body,.ds-detail{grid-template-columns:minmax(0,1fr)}
-  .ds-map{max-width:520px}
   .ds-detail .art{min-height:200px}
 }
 /* A phone held sideways has no height to spare either: the page takes the whole screen. */
@@ -213,7 +246,9 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
   .ds-head h2{font-size:24px}
   .ds-tiles dd{font-size:20px}
   .ds-cards{grid-auto-columns:92%;scroll-padding:0 4%;padding:6px 4% 12px}
-  .ds-glyph{width:34px;height:24px}
+  .ds-glyph{width:32px;height:22px}
+  .ds-pin{width:26px;height:26px;font-size:12px}
+  :is(.ds-compass,.ds-key){display:none}
   .ds-place{grid-template-columns:64px 1fr}
   .ds-place .art svg{width:64px;height:44px}
   .ds-grid{grid-template-columns:repeat(2,minmax(0,1fr))}

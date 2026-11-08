@@ -1,11 +1,11 @@
 import { SITES, features } from './dive-log.js';
 import { SPECIES, portraitURL } from './field-guide.js';
-import { LANDMARKS, terrainHeightAt } from './reef.js';
-import { toDisplayDepth, DISPLAY_MAX_DEPTH } from './depth-metrics.js';
+import { LANDMARKS } from './reef.js';
+import { DISPLAY_MAX_DEPTH } from './depth-metrics.js';
+import { paintDiveChart, chartUV, CHART } from './dive-chart.js';
 import { ART, SCENERY } from './site-art.js';
 import { openZoom, zoomOpen } from './photo-zoom.js';
 import { PORTFOLIO_CONTENT } from './portfolio-content.js';
-import { preparedChartsReady, drawPreparedChart } from './prepared-charts.js';
 import { sendPhoto, wordCount, NOTE_WORDS } from './submissions.js';
 import { track } from './analytics.js';
 
@@ -32,8 +32,6 @@ const HINT = {
 };
 // Each site's depth as the planner gives it (dive-plan.js), with its values as a fallback.
 const siteDepth = id => window.oceanPlan?.sites?.find(site => site.id === id)?.depth ?? { about: 9, experience: 47, projects: 21 }[id];
-// The planner's chart covers x -62..62 and z -105..35 (dive-plan.js).
-const mapX = x => (x + 62) / 124 * 100, mapY = z => (z + 105) / 140 * 100;
 
 // The way in sits with the hero's calls to action, after Guided dive, and takes its style (surface.css .guided-button).
 const button = document.createElement('button');
@@ -68,12 +66,16 @@ dialog.innerHTML = `<div class="ds-inner">
   <section class="ds-panel ds-step ds-sites" style="--i:3" aria-labelledby="ds-sites-title">
     <div class="ds-label"><span class="holo-label" id="ds-sites-title">Where you went</span><span class="ds-sites-count"></span></div>
     <div class="ds-sites-body">
-      <div class="ds-map"><canvas width="372" height="420" aria-hidden="true"></canvas><span class="ds-map-key" aria-hidden="true"><i></i>0<b>${DISPLAY_MAX_DEPTH} m</b></span></div>
+      <div class="ds-map"><canvas width="840" height="744" aria-hidden="true"></canvas>
+        <span class="ds-compass" aria-hidden="true"><b>N</b><i></i></span>
+        <span class="ds-scale" aria-hidden="true" style="--w:${20 / CHART.width * 100}%"><i></i>20 m</span>
+        <span class="ds-key" aria-hidden="true">${[0, 10, 20, 30, DISPLAY_MAX_DEPTH].map(d => `<i data-d="${d}"></i>`).join('')}<small>0</small><small>${DISPLAY_MAX_DEPTH} m</small></span></div>
       <div class="ds-sites-side">
         <p class="ds-sites-hint">Tap a site or a feature, on the chart or below, for more.</p>
         <ul class="ds-checks" aria-label="Portfolio sites"></ul>
         <ul class="ds-features" aria-label="Reef features"></ul>
         <article class="ds-place" aria-live="polite"></article>
+        <div class="ds-story"><p class="holo-label">The dive, in order</p><ol></ol></div>
       </div>
     </div>
   </section>
@@ -142,23 +144,23 @@ function smooth(points) {
   }
   return d;
 }
-// The reef chart under the swim: the prepared export of the planner's chart, or else drawn here from the terrain itself
-// (it used to borrow the planner's canvas, which is blank until the planner has been opened, so the chart was empty).
-// Depth bands shade from bright shallows to the deep, 5 m contours are the brightest lines, and a slope light picks out
-// the pads, terraces and gullies.
-async function paintChart(canvas) {
-  if (canvas.dataset.source) return;
-  if (await preparedChartsReady && drawPreparedChart('planner', canvas)) return;
-  const width = canvas.width, height = canvas.height, context = canvas.getContext('2d'), image = context.createImageData(width, height), depths = new Float32Array(width * height);
-  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) depths[y * width + x] = toDisplayDepth(-terrainHeightAt((x + .5) / width * 124 - 62, (y + .5) / height * 140 - 105));
-  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-    const i = y * width + x, depth = depths[i], band = Math.floor(depth / 5), shallow = 1 - Math.max(0, Math.min(1, depth / DISPLAY_MAX_DEPTH));
-    const contour = x > 0 && y > 0 && (band !== Math.floor(depths[i - 1] / 5) || band !== Math.floor(depths[i - width] / 5));
-    const dx = depths[y * width + Math.min(width - 1, x + 1)] - depths[y * width + Math.max(0, x - 1)], dz = depths[Math.min(height - 1, y + 1) * width + x] - depths[Math.max(0, y - 1) * width + x];
-    const relief = Math.max(.7, Math.min(1.25, 1 + (dx - dz) * .3));
-    image.data.set(contour ? [201, 251, 255, band % 2 ? 120 : 215] : [(64 + shallow * 91) * relief, (155 + shallow * 78) * relief, (191 + shallow * 64) * relief, 52 + shallow * 50], i * 4);
+// The reef chart under the swim: a dive-site chart of the swim area painted from the scene itself (dive-chart.js).
+const at = (x, z) => { const { u, v } = chartUV(x, z); return [u * 100, v * 100]; };
+// Where the diver was when a photo was taken: the track is sampled with the profile (one point a sample, after the
+// profile's opening [0, 0]), so a photo's time finds its point.
+function photoPoint(photo) {
+  const p = record.profile; let i = 1; while (i < p.length - 1 && p[i][0] < photo.t) i++;
+  return record.track[Math.min(record.track.length - 1, Math.max(0, i - 1))];
+}
+// Arrowheads along the swim, every `gap` metres of it, pointing the way it went (chart units: metres).
+function arrows(points, gap = 16) {
+  let out = '', run = gap * .6;
+  for (let i = 1; i < points.length; i++) {
+    const [x0, y0] = points[i - 1], [x1, y1] = points[i], length = Math.hypot(x1 - x0, y1 - y0); if (!length) continue;
+    while (run <= length) { const k = run / length, x = x0 + (x1 - x0) * k, y = y0 + (y1 - y0) * k, a = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI; out += `<path class="ds-arrow" d="M-.9 -.75L.85 0L-.9 .75z" transform="translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${a.toFixed(1)})"/>`; run += gap; }
+    run -= length;
   }
-  context.putImageData(image, 0, 0); canvas.dataset.source = 'scene-terrain';
+  return out;
 }
 // What the chart and the chips point at: 'site:<id>' or 'feature:<name>'. The card under the chips tells the rest
 // (progressive disclosure: the chart and chips stay short, the detail is one tap away).
@@ -166,21 +168,43 @@ let place = null;
 const featureDone = name => Boolean(record.features[name]);
 function paintSites() {
   const map = $('.ds-map', dialog), found = foundSites();
-  paintChart($('canvas', map));
-  map.querySelectorAll('svg,.ds-pin,.ds-glyph').forEach(node => node.remove());
-  const track = record.track.map(([x, z]) => [mapX(x), mapY(z)]);
-  if (track.length > 1) map.insertAdjacentHTML('beforeend', `<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="ds-track" d="${smooth(track)}" vector-effect="non-scaling-stroke"/></svg>`);
+  paintDiveChart($('canvas', map));
+  map.querySelectorAll('svg,.ds-pin,.ds-glyph,.ds-shot').forEach(node => node.remove());
+  // The swim, in chart metres: a glowing line that brightens from the way in to the way out, arrows along it, and
+  // In and Out at its ends.
+  const track = record.track.map(([x, z]) => { const { u, v } = chartUV(x, z); return [u * CHART.width, v * CHART.height]; });
+  if (track.length > 1) {
+    const [sx, sy] = track[0], [ex, ey] = track[track.length - 1];
+    map.insertAdjacentHTML('beforeend', `<svg viewBox="0 0 ${CHART.width} ${CHART.height}" aria-hidden="true">
+      <defs><linearGradient id="ds-swim" gradientUnits="userSpaceOnUse" x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}"><stop offset="0" stop-color="#7ff0cf"/><stop offset="1" stop-color="#ffffff"/></linearGradient></defs>
+      <path class="ds-track-glow" d="${smooth(track)}"/><path class="ds-track" d="${smooth(track)}"/>${arrows(track)}
+      <g class="ds-end" transform="translate(${sx} ${sy})"><circle r="1.3"/><text x="2.2" y=".9">In</text></g>
+      <g class="ds-end" data-out transform="translate(${ex} ${ey})"><rect x="-1.1" y="-1.1" width="2.2" height="2.2" rx=".4"/><text x="-2.2" y=".9" text-anchor="end">Out</text></g></svg>`);
+  }
   const list = features();
-  // The reef features as their own line drawings, lit once visited; the three sites as numbered pins.
-  for (const [name, x, z] of list) map.insertAdjacentHTML('beforeend', `<button type="button" class="ds-glyph" data-key="feature:${esc(name)}" data-done="${featureDone(name)}" style="left:${mapX(x)}%;top:${mapY(z)}%" aria-label="${esc(name)}${featureDone(name) ? ', visited' : ''}">${ART[name] || ''}</button>`);
+  // The reef features as their own line drawings, named on hover or when picked; lit once visited.
+  for (const [name, x, z] of list) { const [u, v] = at(x, z); map.insertAdjacentHTML('beforeend', `<button type="button" class="ds-glyph" data-key="feature:${esc(name)}" data-done="${featureDone(name)}" style="left:${u}%;top:${v}%" aria-label="${esc(name)}${featureDone(name) ? ', visited' : ''}">${ART[name] || ''}<span>${esc(name)}</span></button>`); }
   LANDMARKS.forEach((landmark, index) => {
-    const site = SITES[landmark.id], ticked = found.has(landmark.id);
-    map.insertAdjacentHTML('beforeend', `<button type="button" class="ds-pin" data-key="site:${landmark.id}" data-done="${ticked}" style="left:${mapX(landmark.position[0])}%;top:${mapY(landmark.position[2])}%;--signal:${site.signal}" aria-label="${esc(site.name)}${ticked ? ', found' : ''}">${ticked ? '✓' : index + 1}<span>${site.name}</span></button>`);
+    const site = SITES[landmark.id], ticked = found.has(landmark.id), [u, v] = at(landmark.position[0], landmark.position[2]);
+    map.insertAdjacentHTML('beforeend', `<button type="button" class="ds-pin" data-key="site:${landmark.id}" data-done="${ticked}" style="left:${u}%;top:${v}%;--signal:${site.signal}" aria-label="${esc(site.name)}${ticked ? ', found' : ''}">${ticked ? '✓' : index + 1}<span>${site.name}</span></button>`);
   });
-  if (track.length) map.insertAdjacentHTML('beforeend', `<b class="ds-pin" data-kind="entry" data-done="true" style="left:${track[0][0]}%;top:${track[0][1]}%;--signal:#eefdff" aria-hidden="true"><span>In</span></b>`);
+  // The photos of this dive, where they were taken: a tap brings that postcard up.
+  photos.forEach((photo, index) => {
+    if (photo.dive !== record.number || !record.track.length) return;
+    const [x, z] = photoPoint(photo), [u, v] = at(x, z);
+    map.insertAdjacentHTML('beforeend', `<button type="button" class="ds-shot" data-photo="${index}" style="left:${u}%;top:${v}%" aria-label="Photo at ${esc(photo.place)}: show the postcard"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.4"/></svg></button>`);
+  });
   // The chips: the three sites, then the features, each a name and a tick; everything else is in the card.
   $('.ds-checks', dialog).innerHTML = LANDMARKS.map(({ id }) => `<li data-done="${found.has(id)}" style="--signal:${SITES[id].signal}"><button type="button" data-key="site:${id}"><i aria-hidden="true">${found.has(id) ? '✓' : ''}</i>${SITES[id].name}<em>${siteDepth(id)} m</em></button></li>`).join('');
   $('.ds-features', dialog).innerHTML = list.map(([name]) => `<li data-done="${featureDone(name)}"><button type="button" data-key="feature:${esc(name)}">${esc(name)}</button></li>`).join('');
+  // The dive in order: in, each site and feature as it was reached, each photo, and out. Sites and features open
+  // their card; a photo brings its postcard up.
+  const story = [[0, 'In', 'entry'],
+    ...Object.entries(record.sites).map(([id, visit]) => [visit.t, SITES[id].name, 'site', `site:${id}`, SITES[id].signal]),
+    ...Object.entries(record.features).map(([name, t]) => [t, name, 'feature', `feature:${name}`]),
+    ...photos.map((photo, index) => photo.dive === record.number ? [photo.t, `Photo · ${photo.place}`, 'photo', null, null, index] : null).filter(Boolean),
+    [record.time, 'Out', 'entry']].sort((a, b) => a[0] - b[0]);
+  $('.ds-story ol', dialog).innerHTML = story.map(([t, name, kind, key, signal, photo]) => `<li data-kind="${kind}"${signal ? ` style="--signal:${signal}"` : ''}><time>${clock(t)}</time>${key ? `<button type="button" data-key="${esc(key)}">${esc(name)}</button>` : photo !== undefined && photo !== null ? `<button type="button" data-photo="${photo}">${esc(name)}</button>` : `<span>${esc(name)}</span>`}</li>`).join('');
   const featureCount = list.filter(([name]) => featureDone(name)).length;
   $('.ds-sites-count', dialog).textContent = `${found.size} of 3 sites · ${featureCount} of ${list.length} features`;
   // Open on the last site reached on this dive, else the first one still to find.
@@ -209,6 +233,7 @@ function paintPlace(key) {
 $('.ds-sites', dialog).addEventListener('click', event => {
   const action = event.target.closest('button'); if (!action) return;
   if (action.dataset.key) { paintPlace(action.dataset.key); return; }
+  if (action.dataset.photo) { const section = $('.ds-photos', dialog); section.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); go(Number(action.dataset.photo)); return; }
   if (action.dataset.read) { close(true); window.oceanArchive?.open(action.dataset.read); }
   else if (action.dataset.dive) { close(true); window.oceanPlan?.startAt(action.dataset.dive); }
 });
