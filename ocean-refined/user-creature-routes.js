@@ -55,8 +55,10 @@ export const RESIDENTS = {
   whipray: { species: 'pink-whipray', loop: [-41, -16, 8, 5], height: 1.4, speed: 1.1 },
   // Bluespotted rays lie on open sand and scoot away when crowded.
   bluespots: { species: 'bluespotted-ray', spots: [[8, 6], [-16, 2], [26, -14]], lean: 2 },
-  // The nurse shark sleeps on the open sand beside the coral nursery (reef.js NURSERY_SITE, at -5, 4).
-  sleeper: { species: 'nurse-shark', near: [-6, 9.5] },
+  // The nurse shark rests on the open sand beside the coral nursery (reef.js NURSERY_SITE, at -5, 4), then swims slowly
+  // round it on one circuit (loop: centre x, z and radii of the oval it is fitted round) a little over the sand (height,
+  // m, at cruise; .45 lying) at speed (m/s), and settles on the next resting spot: rest is how long it lies there (s).
+  sleeper: { species: 'nurse-shark', near: [-6, 9.5], loop: [-3, 5, 9.5, 9], height: .95, speed: .45, rest: [18, 34] },
   // The barracuda that patrols a slow oval off the wreck's bow (patrol: x and z radii, m; speed m/s), pauses to hang
   // and watch a diver, and bolts if crowded. It used to patrol east of the wreck, where the descent line now hangs.
   sentinel: { species: 'great-barracuda', landmark: 'projects', offset: [-12, 8, -14], patrol: [7, 4.5], speed: .8 },
@@ -80,8 +82,6 @@ export const RESIDENTS = {
   whitetips: { species: 'whitetip-reef-shark', patrol: { loop: [-22.5, -81.5, 6, 7], y: -44.6, speed: 1.1 }, resting: [[18, -29], [-30, -90]], lean: 1 },
   // Cuttlefish hover off the side of tall formations, watching; crowd one and it backs off, then flashes its arms.
   cuttlefish: { species: 'broadclub-cuttlefish', formations: ['Soft coral spire', 'Brain coral dome', 'Lantern garden'], count: [3, 2], height: 2.4 },
-  // Lionfish hang by the coral, fans spread; come close and one turns its spines on you.
-  lionfish: { species: 'lionfish', formations: ['Table coral tower', 'Pillar coral cathedral', 'Soft coral spire'], count: [3, 2], height: 1.3 },
   // A humphead wrasse cruises open water west of the wreck on a wide loop, as big as a diver and as unhurried (its first
   // loop circled the giant clam, and it spent its time detouring round the formation).
   humphead: { species: 'humphead-wrasse', loop: [-28, -36, 10, 7], height: 3.2, speed: .8 },

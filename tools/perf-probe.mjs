@@ -41,8 +41,7 @@ const TEXT = /^(?:text\/|application\/(?:json|xml)|image\/svg)/;
 // The server notes every response with its raw size and the size a compressing host would send.
 const wire = new Map();
 async function wireSize(file, bytes, type) { if (!TEXT.test(type)) return bytes.length; if (!wire.has(file)) wire.set(file, zlib.gzipSync(bytes, {level: 6}).length); return wire.get(file); }
-// Headers as the host sends them (vercel.json, written by the build): the coral cache checks its source models by the
-// X-Asset-SHA256 header there, and without it would fall back to downloading and placing the 24 MB of originals.
+// Headers as the host sends them (vercel.json, written by the build).
 const HOST_HEADERS = JSON.parse(await fs.readFile(path.join(dist, '..', 'vercel.json'), 'utf8')).headers.map(rule => ({match: new RegExp(`^${rule.source}$`), headers: rule.headers}));
 const hostHeaders = pathname => Object.fromEntries(HOST_HEADERS.filter(rule => rule.match.test(pathname)).flatMap(rule => rule.headers.map(header => [header.key, header.value])));
 let log = [];

@@ -58,7 +58,7 @@ try {
     assert.match(view.tiles[0], /^\d\d:\d\d$/); assert.match(view.tiles[1], /m$/);
     assert.ok(view.profile > 100, 'Depth profile drawn'); assert.ok(view.track, 'Swim drawn on the chart');
     assert.ok(view.chart, 'Reef chart drawn'); assert.equal(view.anchorTicked, 'true', 'The Anchor is ticked off');
-    assert.equal(view.postcards, 1, 'The photo is a postcard'); assert.equal(view.species, 44, 'The whole field guide');
+    assert.equal(view.postcards, 1, 'The photo is a postcard'); assert.equal(view.species, 43, 'The whole field guide');
     assert.equal(view.overflow, 0, 'No sideways scroll');
     const portrait = await page.evaluate(() => fetch(document.querySelector('.species img').src).then(r => r.blob()).then(createImageBitmap).then(image => image.width));
     assert.equal(portrait, 480, 'Portraits load');

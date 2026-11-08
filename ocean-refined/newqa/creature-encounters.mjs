@@ -45,7 +45,7 @@ for (const id of only ? only.split(',') : ['whale', 'whale-shark', 'orcas', 'man
 }
 for (const [name, filter, gap] of [['bumpheads', 'bumphead-parrotfish', 2], ['whipray', 'pink-whipray', 1.6], ['moray', 'giant-moray', 1.1], ['ribbon-eel', 'ribbon-eel', 1.2], ['sleeper', 'nurse-shark', 1.4], ['sentinel', 'great-barracuda', 2.2], ['bluespot', 'bluespotted-ray', 2], ['anthias', 'anthias', 1.4], ['garden-eels', 'garden-eel', .9], ['fusiliers', 'fusilier', .8], ['wheel', 'shoal', .9], ['trevally', 'giant-trevally', .8], ['butterflies', 'butterflyfish', 3], ['flying-fish', 'flying-fish', 1],
   ['turtle', 'green-turtle', 1.5], ['whitetip', 'whitetip-reef-shark', 1.3], ['cuttlefish', 'broadclub-cuttlefish', 1.8], ['blue-star', 'blue-sea-star', 4], ['chip-star', 'chocolate-chip-sea-star', 4], ['urchin', 'long-spined-urchin', 3],
-  ['lionfish', 'lionfish', 2.2], ['humphead', 'humphead-wrasse', 1.4], ['yellow-tang', 'yellow-tang', 3], ['triggerfish', 'picasso-triggerfish', 3]]) {
+  ['humphead', 'humphead-wrasse', 1.4], ['yellow-tang', 'yellow-tang', 3], ['triggerfish', 'picasso-triggerfish', 3]]) {
   report.residents[name] = await look(filter, gap, name === 'garden-eels' ? .5 : .25);
   await sleep(1600); await snap(`resident-${name}`);
 }

@@ -24,12 +24,13 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
 .ds-step{position:relative;min-width:0}
 .ds :is(h2,h3,p,dl,dd,figure,ul){margin:0}
 
-.ds-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--holo-faint)}
+.ds-head{z-index:5;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--holo-faint)}
 .ds-head h2{margin-top:8px;font:500 30px/1.1 var(--holo-font);text-shadow:var(--holo-text-glow);text-decoration:underline wavy var(--holo-dim) 1px;text-underline-offset:.3em;rotate:-1deg;transform-origin:0 100%}
 .ds-sub{margin-top:12px !important;font:400 13px/1.4 var(--holo-font);color:#cdeff6}
 .ds-close{min-height:40px}
 .ds-head-tools{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-/* View more logs: a small list that drops from the top of the page. */
+/* View more logs: a small list that drops from the top of the page. The header sits above the sections after it
+   (z-index above): each section's entrance animation makes a layer of its own, and the dive profile used to cover the list. */
 .ds-more{position:relative}
 .ds-more[hidden]{display:none}
 .ds-more summary{min-height:40px;list-style:none}
@@ -70,42 +71,124 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
 .pf-mark text{fill:var(--holo-ink);font:500 10px/1 var(--holo-font);paint-order:stroke;stroke:#05222f;stroke-width:3px}
 .pf-cam{fill:none;stroke:var(--holo-ink);stroke-width:1.2}
 
-.ds-row{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:16px}
 
-/* Sites: the reef chart with the swim drawn over it, and the checklist. */
-.ds-map{position:relative;aspect-ratio:372/420;max-height:440px;margin:0 auto;border:1px solid var(--holo-faint);border-radius:2px;overflow:hidden;background:radial-gradient(120% 90% at 50% 100%,#2a8fae55,#05222f)}
-.ds-map canvas{position:absolute;inset:0;width:100%;height:100%;opacity:.9}
-.ds-map svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.ds-track{fill:none;stroke:var(--holo-strong);stroke-width:1.8;stroke-dasharray:4 3;stroke-linecap:round;filter:drop-shadow(0 0 2px #5fe9ff)}
-.ds-pin{position:absolute;translate:-50% -50%;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--signal);color:#05222f;background:var(--signal);box-shadow:0 0 12px var(--signal);font:700 13px/1 var(--holo-font)}
-.ds-pin[data-done="false"]{background:#05222fcc;color:var(--signal);border-style:dashed;box-shadow:none}
-.ds-pin[data-kind="entry"]{width:12px;height:12px;font-size:0}
-.ds-pin[data-kind="entry"] span{left:calc(100% + 4px);top:50%;translate:0 -50%}
-.ds-pin span{position:absolute;left:50%;top:calc(100% + 5px);translate:-50% 0;white-space:nowrap;font:500 10px/1 var(--holo-font);color:var(--holo-ink);text-shadow:0 0 3px #021d2a,0 0 6px #021d2a}
-.ds-dot{position:absolute;translate:-50% -50%;width:10px;height:10px;border-radius:50%;border:1.5px solid #8ff4ff99;background:#05222f}
-.ds-dot[data-done="true"]{background:var(--holo);border-color:var(--holo-strong);box-shadow:0 0 8px #8ff4ff}
-.ds-checks,.ds-features{padding:0;list-style:none}
-.ds-checks{display:grid;gap:6px;margin-top:14px !important}
-.ds-checks li{display:grid;grid-template-columns:22px 1fr auto;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--holo-faint);border-left:2px solid var(--signal);border-radius:2px;font:400 13px/1.3 var(--holo-font)}
-.ds-checks li b{font-weight:500}
-.ds-checks li small{display:block;color:#bfe9f2;font-size:11px}
-.ds-checks li em{font:500 11px/1 var(--holo-mono);font-style:normal;color:#bfe9f2}
-.ds-checks svg{width:20px;height:20px;fill:none;stroke:var(--signal);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.ds-checks li[data-done="false"]{border-left-style:dashed;color:#cdeff6}
-.ds-features{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px !important}
-.ds-features li{padding:5px 8px;border:1px solid var(--holo-faint);border-radius:2px;font:400 11px/1 var(--holo-font);color:#9fcfd9}
-.ds-features li[data-done="true"]{border-color:var(--holo-dim);color:var(--holo-ink)}
-.ds-features li[data-done="true"]::before{content:"✓ ";color:var(--holo-mint)}
+/* Where you went: a large reef chart with the swim, the three sites as pins and the features as their own line
+   drawings; beside it short chips, and one card with the detail of whatever is picked (progressive disclosure). */
+.ds-sites-body{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(280px,1fr);gap:18px;align-items:start}
+/* The chart (dive-chart.js): north up, the swim area landscape, 140 m by 124 m. */
+.ds-map{position:relative;aspect-ratio:140/124;width:100%;border:1px solid var(--holo-dim);border-radius:4px;overflow:hidden;background:#0b2a54;box-shadow:inset 0 0 0 1px #021a2655,0 10px 30px #021a2666}
+.ds-map canvas{position:absolute;inset:0;width:100%;height:100%}
+.ds-map::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 40px #021a2680;border-radius:inherit}
+.ds-map svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.ds-track-glow{fill:none;stroke:#bffaff;stroke-opacity:.12;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round;filter:blur(.5px)}
+/* The swim: a fine dotted line (chart metres: a dot every 1.2 m), brightening from In to Out. */
+.ds-track{fill:none;stroke:url(#ds-swim);stroke-width:.42;stroke-dasharray:.01 1.2;stroke-linecap:round;stroke-linejoin:round}
+.ds-arrow{fill:#ffffff;opacity:.8}
+.ds-end circle{fill:#7ff0cf;stroke:#05222f;stroke-width:.5}
+.ds-end rect{fill:#ffffff;stroke:#05222f;stroke-width:.5}
+.ds-end text{fill:#ffffff;font:600 2.4px/1 var(--holo-font);paint-order:stroke;stroke:#0c3456;stroke-width:.7px}
+.ds-compass{position:absolute;left:12px;top:12px;display:grid;justify-items:center;gap:2px;padding:6px 8px 8px;border-radius:3px;background:#05222fb3;border:1px solid var(--holo-faint);pointer-events:none}
+.ds-compass b{font:700 11px/1 var(--holo-font);color:var(--holo-ink)}
+.ds-compass i{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:14px solid var(--holo-strong)}
+/* The scale bar: the span is --w of the chart's width (20 m), its bar the whole span. */
+.ds-scale{position:absolute;left:12px;bottom:12px;box-sizing:content-box;display:grid;gap:4px;width:var(--w);padding:6px 8px;border-radius:3px;background:#05222fb3;border:1px solid var(--holo-faint);font:500 10px/1 var(--holo-mono);color:#cdeff6;pointer-events:none}
+.ds-scale i{display:block;width:100%;height:6px;border:1.5px solid #eafcff;border-top:0;box-sizing:border-box}
+.ds-key{position:absolute;right:12px;bottom:12px;display:grid;grid-template-columns:repeat(5,14px);gap:0;padding:6px 8px;border-radius:3px;background:#05222fb3;border:1px solid var(--holo-faint);pointer-events:none}
+.ds-key i{height:8px}
+.ds-key i[data-d="0"]{background:#bef4e9}.ds-key i[data-d="10"]{background:#58b6cd}.ds-key i[data-d="20"]{background:#288cba}.ds-key i[data-d="30"]{background:#1a649e}.ds-key i:last-of-type{background:#0b2a54}
+.ds-key small{grid-row:2;margin-top:4px;font:500 9px/1 var(--holo-mono);color:#cdeff6}
+.ds-key small:first-of-type{grid-column:1}.ds-key small:last-of-type{grid-column:4/6;text-align:right}
+.ds-pin{position:absolute;translate:-50% -50%;display:grid;place-items:center;width:30px;height:30px;padding:0;border-radius:50%;border:2px solid #05222f;color:#05222f;background:var(--signal);box-shadow:0 0 0 2px var(--signal),0 4px 14px #021a26aa;font:700 13px/1 var(--holo-font);cursor:pointer;z-index:3;transition:scale var(--motion-hover) var(--journey-ease)}
+.ds-pin[data-done="false"]{background:#05222fe6;color:var(--signal);border:2px dashed var(--signal);box-shadow:0 4px 14px #021a26aa}
+.ds-pin span{position:absolute;left:50%;top:calc(100% + 6px);translate:-50% 0;padding:3px 6px;border-radius:2px;background:#05222fd9;white-space:nowrap;font:600 11px/1 var(--holo-font);color:var(--holo-ink)}
+.ds-glyph{position:absolute;translate:-50% -50%;display:grid;place-items:center;width:40px;height:28px;padding:0;border:0;background:none;color:#e9fbff;cursor:pointer;z-index:2;filter:drop-shadow(0 0 2px #0c3456) drop-shadow(0 0 4px #0c3456);opacity:.72;transition:scale var(--motion-hover) var(--journey-ease),opacity var(--motion-hover) var(--journey-ease)}
+.ds-glyph svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.ds-glyph .art-floor{display:none}
+.ds-glyph[data-done="true"]{opacity:1;color:#fff4c7}
+.ds-glyph span{position:absolute;left:50%;top:calc(100% + 2px);translate:-50% 0;padding:3px 6px;border-radius:2px;background:#05222fd9;white-space:nowrap;font:500 10px/1 var(--holo-font);color:var(--holo-ink);opacity:0;pointer-events:none;transition:opacity var(--motion-hover) var(--journey-ease)}
+.ds-glyph:is(:hover,:focus-visible,[aria-pressed="true"]) span{opacity:1}
+.ds-glyph:is(:hover,[aria-pressed="true"]){opacity:1;z-index:4}
+.ds-shot{position:absolute;translate:-50% -50%;display:grid;place-items:center;width:22px;height:22px;margin:-20px 0 0 22px;padding:0;border-radius:50%;border:1.5px solid #05222f;background:#ffffff;color:#05222f;cursor:pointer;z-index:3;box-shadow:0 3px 10px #021a26aa;transition:scale var(--motion-hover) var(--journey-ease)}
+.ds-shot svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
+:is(.ds-pin,.ds-glyph,.ds-shot):hover{scale:1.12}
+:is(.ds-pin,.ds-glyph)[aria-pressed="true"]{scale:1.15}
+.ds-pin[aria-pressed="true"]{box-shadow:0 0 0 2px var(--signal),0 0 0 6px #ffffff40,0 4px 14px #021a26aa}
+:is(.ds-pin,.ds-glyph,.ds-shot):focus-visible{outline:2px solid var(--holo-focus);outline-offset:3px}
+.ds-sites-side{display:grid;gap:12px;align-content:start}
+.ds-sites-hint{font:400 12px/1.4 var(--holo-font);color:#bfe9f2}
+/* The legend outside the chart: the sites as three cards, the features as a sheet of their drawings. */
+.ds-checks,.ds-features{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.ds-checks{grid-template-columns:repeat(3,minmax(0,1fr))}
+.ds-features{grid-template-columns:repeat(4,minmax(0,1fr))}
+:is(.ds-checks,.ds-features) li{display:grid}
+:is(.ds-checks,.ds-features) button{display:grid;width:100%;border:1px solid var(--holo-faint);border-radius:3px;background:#8ff4ff06;color:var(--holo-ink);font:inherit;text-align:left;cursor:pointer;transition:border-color var(--motion-hover) var(--journey-ease),background var(--motion-hover) var(--journey-ease),translate var(--motion-hover) var(--journey-ease)}
+:is(.ds-checks,.ds-features) button:hover{border-color:var(--holo-dim);background:#8ff4ff10;translate:0 -1px}
+:is(.ds-checks,.ds-features) button[aria-pressed="true"]{border-color:var(--holo-strong);background:#8ff4ff1c;box-shadow:0 0 12px #5fe9ff30}
+:is(.ds-checks,.ds-features) button:focus-visible{outline:2px solid var(--holo-focus);outline-offset:2px}
+.ds-checks button{grid-template-columns:auto 1fr;grid-template-rows:auto auto;align-items:center;gap:2px 9px;padding:10px;border-top:2px solid var(--signal)}
+.ds-checks button i{grid-row:1/3;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:2px solid var(--signal);color:var(--signal);font:700 11px/1 var(--holo-font);font-style:normal}
+.ds-checks li[data-done="true"] button i{background:var(--signal);color:#05222f}
+.ds-checks li[data-done="false"] button{border-top-style:dashed}
+.ds-checks li[data-done="false"] button i{border-style:dashed}
+.ds-checks b{font:500 13px/1.15 var(--holo-font)}
+.ds-checks small{font:500 10px/1.2 var(--holo-mono);color:#9fcfd9}
+.ds-features button{justify-items:center;gap:4px;padding:8px 6px 7px}
+.ds-features button svg{width:46px;height:30px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;color:#7fa8b3}
+.ds-features button svg .art-floor{display:none}
+.ds-features button span{font:400 10px/1.2 var(--holo-font);color:#9fcfd9;text-align:center}
+.ds-features li[data-done="true"] button svg{color:#fff4c7;filter:drop-shadow(0 0 4px #ffe9a055)}
+.ds-features li[data-done="true"] button span{color:var(--holo-ink)}
+.ds-features li[data-done="true"] button::after{content:"✓";position:absolute;margin:2px 0 0 52px;color:var(--holo-mint);font:700 10px/1 var(--holo-font)}
+.ds-features li{position:relative}
+.ds-place{display:grid;grid-template-columns:96px 1fr;gap:14px;padding:14px;border:1px solid var(--holo-dim);border-left:2px solid var(--signal,var(--holo));border-radius:3px;background:#8ff4ff0a;animation:ds-swap var(--motion-settle) var(--journey-in) both}
+.ds-place .art{display:grid;place-items:center;height:64px;color:var(--signal,var(--holo-strong))}
+.ds-place .art svg{width:96px;height:64px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ds-place .art .art-floor{stroke-dasharray:2 5;opacity:.55}
+.ds-place h3{margin:6px 0 6px;font:500 22px/1.15 var(--holo-font)}
+.ds-place p{font:400 13px/1.45 var(--holo-font);color:#cdeff6}
+.ds-place .ds-place-status{font:500 11px/1.4 var(--holo-mono);color:#bfe9f2}
+.ds-place[data-done="true"] .ds-place-status{color:var(--holo-mint)}
+.ds-place .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+
+/* The dive in order: one line left to right, a dot at each moment's time, its label above or below on a stem. */
+.ds-story{display:grid;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid var(--holo-faint)}
+.ds-line-wrap{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding:0 6px}
+.ds-line{position:relative;min-width:620px;height:204px;margin:0 8px;padding:0;list-style:none}
+.ds-line-axis{position:absolute;left:0;right:0;top:50%;height:2px;translate:0 -50%;border-radius:2px;background:linear-gradient(90deg,var(--holo-mint),#8ff4ff 50%,#ffffff)}
+.ds-line>li:not(.ds-line-axis){position:absolute;left:var(--at);top:50%;width:0;height:0;z-index:1}
+.ds-line i{position:absolute;left:0;top:0;width:11px;height:11px;translate:-50% -50%;border-radius:50%;background:#05222f;border:2px solid var(--holo-dim);z-index:2}
+.ds-line li[data-kind="site"] i{width:15px;height:15px;background:var(--signal);border-color:#05222f;box-shadow:0 0 0 2px var(--signal),0 0 10px var(--signal)}
+.ds-line li[data-kind="feature"] i{border-color:#fff4c7}
+.ds-line li[data-kind="photo"] i{border-radius:2px;background:#ffffff;border-color:#05222f}
+.ds-line li[data-kind="entry"] i{background:var(--holo-mint);border-color:#05222f;box-shadow:0 0 0 2px var(--holo-mint)}
+/* The label and its stem: lanes 0 and 2 above the line, 1 and 3 below; 2 and 3 further out. */
+.ds-line li>div{position:absolute;display:grid;gap:3px;width:max-content;max-width:160px;padding:5px 7px;border-radius:3px;background:#05222fd9;border:1px solid var(--holo-faint)}
+.ds-line li[data-lane="0"]>div{bottom:16px}.ds-line li[data-lane="2"]>div{bottom:52px}
+.ds-line li[data-lane="1"]>div{top:16px}.ds-line li[data-lane="3"]>div{top:52px}
+.ds-line li::before{content:"";position:absolute;left:0;width:1px;background:var(--holo-dim)}
+.ds-line li[data-lane="0"]::before{bottom:6px;height:12px}.ds-line li[data-lane="2"]::before{bottom:6px;height:48px}
+.ds-line li[data-lane="1"]::before{top:6px;height:12px}.ds-line li[data-lane="3"]::before{top:6px;height:48px}
+.ds-line li[data-kind="site"]>div{border-color:var(--signal)}
+.ds-line time{font:500 9px/1 var(--holo-mono);color:#9fcfd9}
+.ds-line :is(button,span){padding:0;border:0;background:none;color:var(--holo-ink);font:500 11px/1.2 var(--holo-font);text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ds-line button{cursor:pointer}
+.ds-line button:hover,.ds-line button[aria-pressed="true"]{color:#ffffff;text-decoration:underline;text-underline-offset:3px}
+.ds-line button:focus-visible{outline:2px solid var(--holo-focus);outline-offset:2px}
 
 /* Postcards: this session's photos, newest dive first. */
-.ds-cards{display:grid;grid-auto-flow:column;grid-auto-columns:86%;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:0 7%;padding:6px 7% 14px;margin:0 -14px;scrollbar-width:none;overscroll-behavior-x:contain}
+.ds-cards{display:grid;grid-auto-flow:column;grid-auto-columns:min(78%,820px);gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:0 11%;padding:6px 11% 14px;margin:0 -14px;scrollbar-width:none;overscroll-behavior-x:contain}
 .ds-cards::-webkit-scrollbar{display:none}
 .ds-cards:focus-visible{outline:2px solid var(--holo-focus);outline-offset:-2px}
 .postcard{scroll-snap-align:center;position:relative;padding:10px 10px 0;border:1px solid var(--holo-dim);border-radius:3px;background:#8ff4ff0d;box-shadow:inset 0 0 22px #5fe9ff12;transition:opacity var(--motion-settle) var(--journey-ease),scale var(--motion-settle) var(--journey-ease)}
 .postcard:not([data-current="true"]){opacity:.5;scale:.96}
-.postcard img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:2px;background:#06283a}
+.postcard img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:2px;background:#06283a}
+.postcard[data-current="true"] img{cursor:zoom-in}
+.postcard .zoom-hint{position:absolute;right:18px;top:18px;padding:5px 8px;border-radius:2px;background:#05222fcc;border:1px solid var(--holo-dim);color:var(--holo-ink);font:500 10px/1 var(--holo-font);letter-spacing:.06em;opacity:0;transition:opacity var(--motion-hover) var(--journey-ease);pointer-events:none}
+.postcard[data-current="true"]:hover .zoom-hint,.ds-cards:focus-visible .postcard[data-current="true"] .zoom-hint{opacity:1}
+@media (hover:none){.postcard[data-current="true"] .zoom-hint{opacity:1}}
 .postcard figcaption{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:end;padding:10px 2px 12px}
-.postcard figcaption b{font:500 16px/1.2 var(--holo-font)}
+.postcard figcaption b{font:500 18px/1.2 var(--holo-font)}
 .postcard figcaption small{grid-column:1;font:400 12px/1.3 var(--holo-font);color:#bfe9f2}
 .postcard .stamp{grid-row:1/3;grid-column:2;display:grid;place-items:center;width:62px;height:62px;border:1px dashed var(--holo-dim);border-radius:2px;font:500 15px/1 var(--holo-mono);text-align:center;rotate:4deg;color:var(--holo-strong)}
 .postcard .stamp small{font:500 8px/1.3 var(--holo-font);letter-spacing:.14em;text-transform:uppercase;color:#bfe9f2}
@@ -170,11 +253,12 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
 .ds-foot div{display:flex;gap:8px;flex-wrap:wrap}
 
 @media (prefers-reduced-motion:reduce){
-  dialog.ds[open],dialog.ds[open] .ds-step,dialog.ds[data-closing="true"],.ds-more[open] .ds-more-list,.ds-detail[data-swap="true"] :is(.art img,.copy){animation:none}
+  dialog.ds[open],dialog.ds[open] .ds-step,dialog.ds[data-closing="true"],.ds-more[open] .ds-more-list,.ds-detail[data-swap="true"] :is(.art img,.copy),.ds-place{animation:none}
+  .pz-stage img,:is(.ds-pin,.ds-glyph){transition:none !important}
   .postcard,.species{transition:none}
 }
 @media (max-width:860px){
-  .ds-stats,.ds-row,.ds-detail{grid-template-columns:minmax(0,1fr)}
+  .ds-stats,.ds-sites-body,.ds-detail{grid-template-columns:minmax(0,1fr)}
   .ds-detail .art{min-height:200px}
 }
 /* A phone held sideways has no height to spare either: the page takes the whole screen. */
@@ -185,9 +269,35 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
   .ds-head h2{font-size:24px}
   .ds-tiles dd{font-size:20px}
   .ds-cards{grid-auto-columns:92%;scroll-padding:0 4%;padding:6px 4% 12px}
+  .ds-glyph{width:32px;height:22px}
+  .ds-pin{width:26px;height:26px;font-size:12px}
+  :is(.ds-compass,.ds-key,.ds-scale){display:none}
+  .ds-place{grid-template-columns:64px 1fr}
+  .ds-checks button{grid-template-columns:minmax(0,1fr);justify-items:start;gap:6px;padding:9px 8px}
+  .ds-checks button i{grid-row:auto}
+  .ds-checks b{font-size:12px}
+  .ds-features{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .ds-place .art svg{width:64px;height:44px}
   .ds-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ds :is(.holo-chip){min-height:44px}
 }
+
+/* The postcard zoom (photo-zoom.js): the photo across the whole screen, pinch, wheel or double-tap to zoom, drag to look
+   round. A dialog of its own over the log; only transform and opacity move. */
+dialog.pz{--holo:#8ff4ff;--holo-strong:#c9fbff;--holo-dim:#8ff4ff66;--holo-ink:#eefdff;--holo-focus:#f2feff;position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;display:none;grid-template-rows:auto minmax(0,1fr) auto;background:#020f16f2;color:var(--holo-ink)}
+dialog.pz[open]{display:grid;animation:ds-in var(--motion-settle,.24s) var(--journey-in,ease) both}
+dialog.pz::backdrop{background:#020f16cc}
+.pz-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 16px calc(12px);border-bottom:1px solid #8ff4ff24}
+.pz-bar p{margin:0;font:500 14px/1.3 var(--holo-font)}
+.pz-tools{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pz-tools .holo-chip{min-width:40px;min-height:40px;justify-content:center}
+.pz-level{min-width:48px;text-align:center;font:500 12px/1 var(--holo-mono);color:#bfe9f2}
+.pz-stage{position:relative;display:grid;place-items:center;overflow:hidden;touch-action:none;cursor:zoom-in;user-select:none}
+dialog.pz[data-zoomed="true"] .pz-stage{cursor:grab}
+dialog.pz[data-zoomed="true"] .pz-stage:active{cursor:grabbing}
+.pz-stage:focus-visible{outline:2px solid var(--holo-focus);outline-offset:-4px}
+.pz-stage img{max-width:100%;max-height:100%;object-fit:contain;transform-origin:center;will-change:transform}
+.pz-hint{margin:0;padding:8px 16px calc(10px + env(safe-area-inset-bottom));text-align:center;font:400 11px/1.3 var(--holo-font);color:#9fcfd9}
 
 /* The logbook's Dive log page (dive-log-page.js), in the records' projected light. */
 .dl-page{display:grid;gap:18px}

@@ -74,6 +74,8 @@ export function terrainHeightAt(x, z) {
 // triangles a cell. Across a crease (a pad's rim, a terrace edge) the drawn sand runs up to 1.5 m off terrainHeightAt,
 // so whatever stands on the sand or lies on it is placed on this. Inside the swim area only (the lattice there is
 // uniform); outside it, terrainHeightAt.
+// The seabed beyond the old plane (x +-125, z -215..125): a skirt of `cells` cells a side out to these limits.
+export const SEABED_SKIRT = { standard: { cells: 6, x: 290, zMin: -420, zMax: 250 }, economy: { cells: 4, x: 290, zMin: -420, zMax: 250 } };
 export const SEABED_LATTICE = { standard: { fullX: 128, fullZ: 172, startX: 30, startZ: 52, innerZ: 76 }, economy: { fullX: 96, fullZ: 128, startX: 23, startZ: 39, innerZ: 58 } };
 const seabedVertex = (x, z) => terrainHeightAt(x, z) + .05 * Math.sin(x * 1.3 + z * .22);
 export function seabedHeightAt(x, z, economy = false) {
@@ -129,6 +131,7 @@ function batch(root, geometry, layer, reef, distant = null, sides = 1, brief = f
   const entries = [];
   const dummy = new THREE.Object3D();
   return {
+    entries,
     add(position, scale, rotation, color) {
       if (quiet) return;
       dummy.position.copy(position);
@@ -474,6 +477,8 @@ export function* reefSteps({ economy = false } = {}) {
   const tips = batch(root, new THREE.SphereGeometry(1, 5, 3), layers.solid, parts, new THREE.SphereGeometry(1, 4, 2), 1, true);
   const plates = batch(root, plateGeometry(economy), layers.solid, parts, plateGeometry(economy, false, true), 2);
   const carpets = batch(root, plateGeometry(true,true), layers.solid, parts, null, 'up');
+  // Rubble and shells strewn over the sand: a few centimetres to a hand across, no collision, dropped beyond the near cells.
+  const rubble = batch(root, new THREE.OctahedronGeometry(1, 0), layers.solid, parts, false, 1, true);
   const fans = batch(root, fanGeometry(), layers.fans, parts);
   const colonyProxies = batch(root, new THREE.SphereGeometry(1, 8, 6), null, parts);
   const grass = batch(root, bladeGeometry(), layers.sway, parts, bladeGeometry(2));
@@ -749,6 +754,23 @@ export function* reefSteps({ economy = false } = {}) {
   // keeps this coverage stable when a coral family's detail level changes.
   quiet = false;
   const groundRandom = seededRandom(8293);
+  const rubbleRandom = seededRandom(4421);
+  const bankRandom = seededRandom(7717);
+  // The limestone outcrops already laid, on a 4 m grid: rubble and bank growth keep out of them (dropped inside a rock
+  // they are buried, and the audit says so).
+  const rockGrid = new Map(), rockKey = (x, z) => `${Math.floor(x / 4)},${Math.floor(z / 4)}`;
+  for (const { matrix } of rocks.entries) {
+    const e = matrix.elements, radius = 1.3 * Math.max(Math.hypot(e[0], e[1], e[2]), Math.hypot(e[8], e[9], e[10]));
+    for (let x = Math.floor((e[12] - radius) / 4); x <= Math.floor((e[12] + radius) / 4); x++) for (let z = Math.floor((e[14] - radius) / 4); z <= Math.floor((e[14] + radius) / 4); z++) {
+      const key = `${x},${z}`; let list = rockGrid.get(key); if (!list) rockGrid.set(key, list = []); list.push([e[12], e[14], radius]);
+    }
+  }
+  // (The grottos' side walls are laid later, below: their sites are kept clear as a whole.)
+  const inRock = (x, z, pad = .2) => grottoSites.some(([gx, gz, radius, length]) => Math.abs(x - gx) < radius + 2 + pad && Math.abs(z - gz) < length + 1 + pad)
+    || (rockGrid.get(rockKey(x, z)) || []).some(([rx, rz, r]) => (x - rx) ** 2 + (z - rz) ** 2 < (r + pad) ** 2);
+  // Slope of the drawn sand over a metre, as the audit measures a footing: massive and branching corals keep off faces
+  // steeper than 45 degrees.
+  const footSlope = (x, z) => Math.hypot(seabedHeightAt(x + .5, z, economy) - seabedHeightAt(x - .5, z, economy), seabedHeightAt(x, z + .5, economy) - seabedHeightAt(x, z - .5, economy));
   const spacing = economy ? 4.8 : 3.5;
   for (let z = -101; z <= 29; z += spacing) {
     yield;
@@ -759,12 +781,63 @@ export function* reefSteps({ economy = false } = {}) {
       if (Math.hypot(gx - gullyX, gz - gullyRouteZ) < 7.8) continue;
       if (Math.hypot(gx, gz) < 5 || routeDistance(gx, gz) < 2.8) continue;
       if (LANDMARKS.some(({ position: [lx, , lz] }) => Math.hypot(gx - lx, gz - lz) < 6)) continue;
-      // The coral nursery's sand (its trees and table stand from 1 m west to 7 m east of NURSERY_SITE) is left bare. The
+      // The coral nursery's sand flat (its trees and tables stand from 4 m west to 7 m east of NURSERY_SITE, and the nurse
+      // shark swims its circuit round them, user-creatures.js) is left bare. The
       // random draws still run, so the meadow everywhere else stays exactly where it was.
       // So is the arch's passage and the sight line through it.
-      const bare = Math.hypot(gx - NURSERY_SITE.x - 3, gz - NURSERY_SITE.z) < 6.2
+      const bare = Math.hypot(gx - NURSERY_SITE.x - 1.6, gz - NURSERY_SITE.z - .6) < 12
         || Math.hypot(gx - THREE.MathUtils.clamp(gx, archWest + 6, archEast), gz - archZ) < 7.8;
       const lay = bare ? () => {} : (layer, ...args) => layer.add(...args);
+      // Rubble on the open sand: a small spill of broken coral and stones, now and then a pale shell (their own random
+      // numbers, so every meadow and carpet stays where it was).
+      if (!bare && rubbleRandom() < (economy ? .28 : .4)) {
+        const pieces = 3 + Math.floor(rubbleRandom() * (economy ? 3 : 5));
+        for (let piece = 0; piece < pieces; piece++) {
+          const angle = rubbleRandom() * TAU, radius = rubbleRandom() * 1.1, px = gx + Math.cos(angle) * radius, pz = gz + Math.sin(angle) * radius;
+          const shell = rubbleRandom() < .18, size = shell ? .07 + rubbleRandom() * .06 : .06 + rubbleRandom() * .16;
+          if (inRock(px, pz)) continue;
+          rubble.add(new THREE.Vector3(px, seabedHeightAt(px, pz, economy) + size * (shell ? .15 : .3), pz),
+            shell ? [size, size * .3, size * .8] : [size * (1 + rubbleRandom() * .6), size * (.45 + rubbleRandom() * .4), size],
+            [(rubbleRandom() - .5) * .5, rubbleRandom() * TAU, (rubbleRandom() - .5) * .5],
+            shell ? ['#f1e3d4', '#e9c9c0', '#f4ecdc'][piece % 3] : ['#a9a08c', '#8e968c', '#c2b49a', '#b39a92', '#9aa9a0'][Math.floor(rubbleRandom() * 5)]);
+        }
+      }
+      // Banks: the pad rims, terrace faces and ridge flanks were bare sand (the meadow thins there and every colony
+      // keeps to gentle ground). On ground steeper than about 1 in 3, encrusting coral sheets lie along the bank, a
+      // plate coral juts out from it and a staghorn clump grows up from it (no collision: the bank is the obstacle).
+      if (!bare) {
+        const dx = (terrainHeightAt(gx + .8, gz) - terrainHeightAt(gx - .8, gz)) / 1.6, dz = (terrainHeightAt(gx, gz + .8) - terrainHeightAt(gx, gz - .8)) / 1.6, steep = Math.hypot(dx, dz);
+        if (steep > .26 && bankRandom() < (economy ? .6 : .9)) {
+          const bankNormal = new THREE.Vector3(-dx, 1, -dz).normalize(), onBank = new THREE.Quaternion().setFromUnitVectors(UP, bankNormal);
+          const downhill = Math.atan2(-dx, -dz), bankTone = ['#a88f7c', '#8fa58e', '#b99a86', '#9a9cb0', '#bfa87c', '#a5806f'];
+          for (let k = 0; k < (economy ? 2 : 3); k++) {
+            const px = gx + (bankRandom() - .5) * 2.6, pz = gz + (bankRandom() - .5) * 2.4, w = .35 + bankRandom() * .45;
+            carpets.add(new THREE.Vector3(px, seabedHeightAt(px, pz, economy) + .03, pz), [w, .3 + bankRandom() * .2, w * (.6 + bankRandom() * .4)],
+              onBank.clone().multiply(new THREE.Quaternion().setFromAxisAngle(UP, bankRandom() * TAU)), bankTone[Math.floor(bankRandom() * bankTone.length)]);
+          }
+          if (bankRandom() < .45) {
+            // Now and then a brain coral head set into the bank (it collides, as the reef's other heads do).
+            const r = .35 + bankRandom() * .4, px = gx + (bankRandom() - .5) * 1.6, pz = gz + (bankRandom() - .5) * 1.6;
+            if (!inRock(px, pz, r) && footSlope(px, pz) < .85) brains.add(new THREE.Vector3(px, seabedHeightAt(px, pz, economy) + r * .12, pz), [r, r * .7, r * .9], onBank.clone().multiply(new THREE.Quaternion().setFromAxisAngle(UP, bankRandom() * TAU)), bankRandom() < .5 ? '#d0bc7c' : '#8ebba7');
+          }
+          if (bankRandom() < .6) {
+            // A plate shelf: level, its inner edge set into the bank, reaching out downhill.
+            const r = .45 + bankRandom() * .55, px = gx + Math.sin(downhill) * r * .35, pz = gz + Math.cos(downhill) * r * .35;
+            if (!inRock(px, pz, r) && footSlope(px, pz) < .85) plates.add(new THREE.Vector3(px, Math.max(seabedHeightAt(px, pz, economy), seabedHeightAt(gx, gz, economy) - .1) + .12, pz), [r, .22, r * .85], [0, bankRandom() * TAU, 0], ['#d9a066', '#e48d7a', '#e6c565', '#9fc1a2'][Math.floor(bankRandom() * 4)]);
+          }
+          if (bankRandom() < .5) {
+            // Staghorn: a few branches leaning up and out from the bank, pale tips.
+            const sx = gx + (bankRandom() - .5) * 1.2, sz = gz + (bankRandom() - .5) * 1.2, sy = seabedHeightAt(sx, sz, economy) - .04, tone = ['#c99a7e', '#b3a0c9', '#9fc0a8'][Math.floor(bankRandom() * 3)];
+            const footed = !inRock(sx, sz, .5) && footSlope(sx, sz) < .85;
+            for (let b = 0; footed && b < (economy ? 3 : 5); b++) {
+              const len = .35 + bankRandom() * .45, lean = new THREE.Vector3(bankNormal.x * .6 + (bankRandom() - .5) * .5, 1, bankNormal.z * .6 + (bankRandom() - .5) * .5).normalize();
+              const foot = new THREE.Vector3(sx, sy, sz), tip = foot.clone().addScaledVector(lean, len);
+              segment(branches, foot, tip, .05, tone);
+              tips.add(tip, [.04, .06, .04], null, '#f1e6dc');
+            }
+          }
+        }
+      }
       // Long, organic meadow bands connect shallow shelves and outer ledges.
       const meadow = Math.sin(gx * .10 + gz * .065) + Math.cos(gz * .11 - gx * .045);
       if (meadow < -.7 && groundRandom() < .62) continue;
@@ -795,6 +868,11 @@ export function* reefSteps({ economy = false } = {}) {
   const outerSites=[];
   for(const x of [-91,-75,75,91])for(let z=-108;z<=36;z+=18)outerSites.push([x+(outerRandom()-.5)*6,z+(outerRandom()-.5)*8]);
   for(const z of [-121,47])for(let x=-60;x<=60;x+=20)outerSites.push([x+(outerRandom()-.5)*8,z]);
+  // A second, sparser ring further out, thinning as it goes (its own random numbers, so the first ring is as it was):
+  // the reef does not stop at the swim boundary but fades into the haze in outcrops, as a real reef thins over the sand.
+  const fadeRandom=seededRandom(9127);
+  for(const [x0,step,keep] of [[106,22,.8],[121,26,.55]])for(const side of [-1,1])for(let z=-150;z<=70;z+=step)if(fadeRandom()<keep)outerSites.push([side*(x0+(fadeRandom()-.5)*8),z+(fadeRandom()-.5)*10]);
+  for(const [z0,step,keep] of [[64,24,.8],[84,30,.55],[-140,24,.8],[-162,30,.55]])for(let x=-100;x<=100;x+=step)if(fadeRandom()<keep)outerSites.push([x+(fadeRandom()-.5)*10,z0+(fadeRandom()-.5)*8]);
   for(const [x,z] of outerSites){
     yield;
     if(economy&&outerReefPatches%2){outerReefPatches++;continue;}
@@ -821,17 +899,30 @@ export function* reefSteps({ economy = false } = {}) {
   const lattice = new THREE.PlaneGeometry(250, 340, fullX, fullZ).rotateX(-Math.PI / 2).translate(0, 0, -45), latticePoints = lattice.getAttribute('position');
   const latticeX = Array.from({ length: fullX + 1 }, (_, i) => latticePoints.getX(i)), latticeZ = Array.from({ length: fullZ + 1 }, (_, j) => latticePoints.getZ(j * (fullX + 1)));
   lattice.dispose();
-  const columns = innerX + outerX * 2 + 1;
-  const sandGeometry = new THREE.PlaneGeometry(250, 340, columns - 1, innerZ + nearZ + farZ);
+  // Past the old 250 x 340 m plane a ring of still coarser cells (SEABED_SKIRT) carries the seabed on until it is far
+  // beyond the haze: the plane used to end 63 m outside the swim area's east and west sides and 90 m north of it, well
+  // inside the 100-145 m the water lets you see, so its straight edge and the empty blue under it showed.
+  const skirt = SEABED_SKIRT[economy ? 'economy' : 'standard'];
+  const columns = innerX + (outerX + skirt.cells) * 2 + 1, rows = innerZ + nearZ + farZ + skirt.cells * 2;
+  const sandGeometry = new THREE.PlaneGeometry(250, 340, columns - 1, rows);
   sandGeometry.rotateX(-Math.PI / 2);
   sandGeometry.translate(0, 0, -45);
   const positions = sandGeometry.getAttribute('position'), sandColors = [], sandColor = new THREE.Color();
-  const band = (index, before, inner, after, line, start) => index < before ? line[0] + (line[start] - line[0]) * index / before
-    : index <= before + inner ? line[start + index - before]
-      : line[start + inner] + (line[line.length - 1] - line[start + inner]) * (index - before - inner) / after;
+  // A row or column's coordinate: the skirt from its far edge to the old plane's edge, the old outer band, the exact
+  // inner lattice, and the same again on the other side.
+  const band = (index, before, inner, after, line, start, low, high) => {
+    const s = skirt.cells, end = line.length - 1;
+    if (index < s) return low + (line[0] - low) * index / s;
+    index -= s;
+    if (index < before) return line[0] + (line[start] - line[0]) * index / before;
+    if (index <= before + inner) return line[start + index - before];
+    index -= before + inner;
+    if (index <= after) return line[start + inner] + (line[end] - line[start + inner]) * index / after;
+    return line[end] + (high - line[end]) * (index - after) / s;
+  };
   for (let i = 0; i < positions.count; i++) {
-    positions.setX(i, band(i % columns, outerX, innerX, outerX, latticeX, startX));
-    positions.setZ(i, band(Math.floor(i / columns), farZ, innerZ, nearZ, latticeZ, startZ));
+    positions.setX(i, band(i % columns, outerX, innerX, outerX, latticeX, startX, -skirt.x, skirt.x));
+    positions.setZ(i, band(Math.floor(i / columns), farZ, innerZ, nearZ, latticeZ, startZ, skirt.zMin, skirt.zMax));
   }
   yield;
   const shelfColor = new THREE.Color('#ead9b4'), abyssColor = new THREE.Color('#35557a'), cliffColor = new THREE.Color('#9db9a8');
@@ -878,9 +969,20 @@ vSandBroad = vec3(broadMottle * 1.7, 0.90 + broadMottle * 0.13 + softRipples * 0
       .replace('#include <color_fragment>', `#include <color_fragment>
 float fineMottle = texture2D(uSandValue, (vSandP * 0.31 + vec2(vSandBroad.x)) * .03125).r;
 float ridgeLines = smoothstep(.55, 1.0, sin(vSandP.x * 2.3 + vSandP.y * 1.1 + vSandBroad.z) * .5 + .5);
-diffuseColor.rgb *= vSandBroad.y + fineMottle * 0.06 - ridgeLines * 0.055;`);
+diffuseColor.rgb *= vSandBroad.y + fineMottle * 0.06 - ridgeLines * 0.055;
+// Patches of warmer, pinker coral sand and of cooler grey-green silt, following the broad mottle.
+diffuseColor.rgb *= mix(vec3(1.0), vec3(1.05, .97, .93), smoothstep(1.0, 1.45, vSandBroad.x));
+diffuseColor.rgb *= mix(vec3(1.0), vec3(.9, .97, .96), smoothstep(.55, .15, vSandBroad.x));
+// Grains: in about one cell in four of a 40 cm grid a dark pebble or a pale fleck of shell, faded out where a cell is
+// smaller than a few pixels so it never shimmers.
+vec2 grainP = vSandP * 2.5, grainCell = floor(grainP);
+float grainHash = fract(sin(dot(grainCell, vec2(41.31, 289.17))) * 15731.743);
+vec2 grainAt = vec2(fract(grainHash * 7.31), fract(grainHash * 13.17)) - .5;
+float grain = (1.0 - smoothstep(.07, .13 + grainHash * .1, length(fract(grainP) - .5 - grainAt * .5))) * step(.74, grainHash);
+grain *= 1.0 - smoothstep(.25, .6, fwidth(grainP.x) + fwidth(grainP.y));
+diffuseColor.rgb *= 1.0 - grain * (grainHash > .9 ? -.14 : .2);`);
   };
-  sandMaterial.customProgramCacheKey = () => 'reef-sand-surface-light-v6';
+  sandMaterial.customProgramCacheKey = () => 'reef-sand-surface-light-v7';
   stylize(sandMaterial, { toon: .14, rim: .05, caustics: 1.25, glow: true });
   const sand = new THREE.Mesh(sandGeometry, sandMaterial);
   // Drawn after the coral standing on it, so its costlier shader skips the covered pixels.
@@ -961,7 +1063,7 @@ diffuseColor.rgb *= vSandBroad.y + fineMottle * 0.06 - ridgeLines * 0.055;`);
   // ribs and whips stay swimmable, avoiding thousands of tiny boxes.
   yield;
   rocks.finish('Limestone outcrops', 'solid'); branches.finish('Branching staghorn coral'); tips.finish('Pale growing coral tips');
-  plates.finish('Layered table corals');carpets.finish('Encrusting coral carpets'); fans.finish('Lacy branching sea fans');
+  plates.finish('Layered table corals');carpets.finish('Encrusting coral carpets'); rubble.finish('Sand rubble and shells'); fans.finish('Lacy branching sea fans');
   grass.finish('Curved sea grass'); tentacles.finish('Anemone tentacles'); domes.finish('Anemone cushions', 'solid');
   brains.finish('Grooved brain coral', 'solid'); sponges.finish('Hollow tube sponges', 'solid'); barrels.finish('Barrel sponge coral', 'solid');
   boulders.finish('Boulder coral', 'solid'); whips.finish('Swaying sea whips'); glow.finish('Bioluminescent reef polyps');

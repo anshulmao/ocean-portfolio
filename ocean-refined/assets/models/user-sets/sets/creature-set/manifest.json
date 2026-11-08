@@ -809,11 +809,11 @@
    "lengthMetres": 4.94,
    "realLengthMetres": 1.5,
    "boundsMetres": [
-    1.134,
-    1.63,
-    4.981
+    1.176,
+    1.912,
+    4.965
    ],
-   "triangles": 994,
+   "triangles": 1250,
    "bones": 8,
    "clips": [
     {
@@ -847,9 +847,9 @@
      "loop": false
     }
    ],
-   "note": "A green-blue giant as long as a diver, with a bulging forehead, thick lips and a face scribbled with lines.",
+   "note": "A green-blue giant as long as a diver, with a hump on its forehead, thick lips and a face scribbled with wavy lines.",
    "file": "humphead-wrasse.glb",
-   "bytes": 426332
+   "bytes": 439632
   },
   {
    "id": "great-barracuda",
@@ -909,11 +909,11 @@
    "lengthMetres": 4.26,
    "realLengthMetres": 1.2,
    "boundsMetres": [
-    0.928,
-    1.781,
-    4.322
+    1.004,
+    1.704,
+    4.263
    ],
-   "triangles": 1172,
+   "triangles": 1360,
    "bones": 8,
    "clips": [
     {
@@ -952,9 +952,9 @@
      "loop": false
     }
    ],
-   "note": "A wall of a forehead above a pale beak; it rows with its pectoral fins, bites at the reef and rams it.",
+   "note": "A bulb of a forehead over a pale, fused beak; it rows with its pectoral fins, bites at the reef and rams it.",
    "file": "bumphead-parrotfish.glb",
-   "bytes": 337208
+   "bytes": 367664
   },
   {
    "id": "ribbon-eel",
@@ -1357,66 +1357,6 @@
    "note": "Yellow and royal-blue pinstripes running nose to tail behind a black mask edged in light blue.",
    "file": "emperor-angelfish.glb",
    "bytes": 272684
-  },
-  {
-   "id": "lionfish",
-   "name": "Red lionfish",
-   "scientific": "Pterois volitans",
-   "group": "fish",
-   "lengthMetres": 1.87,
-   "realLengthMetres": 0.35,
-   "boundsMetres": [
-    0.767,
-    1.635,
-    1.87
-   ],
-   "triangles": 1078,
-   "bones": 10,
-   "clips": [
-    {
-     "name": "swim",
-     "seconds": 0.8,
-     "loop": true
-    },
-    {
-     "name": "fast",
-     "seconds": 0.4,
-     "loop": true
-    },
-    {
-     "name": "idle",
-     "seconds": 1.76,
-     "loop": true
-    },
-    {
-     "name": "turn_left",
-     "seconds": 0.8,
-     "loop": true
-    },
-    {
-     "name": "turn_right",
-     "seconds": 0.8,
-     "loop": true
-    },
-    {
-     "name": "dart",
-     "seconds": 0.45,
-     "loop": false
-    },
-    {
-     "name": "hover",
-     "seconds": 2.8,
-     "loop": true
-    },
-    {
-     "name": "threat",
-     "seconds": 1.6,
-     "loop": true
-    }
-   ],
-   "note": "Banded red and white from snout to tail, with fans for pectoral fins and a mane of venomous spines it turns towards a threat.",
-   "file": "lionfish.glb",
-   "bytes": 343540
   },
   {
    "id": "flying-fish",
