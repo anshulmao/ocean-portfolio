@@ -312,24 +312,32 @@ export function* heroFormationSteps({ terrainHeightAt = () => -20, collisions = 
       rocks.add(rockLo, xf(x, g + h + .3, z, [r, 1.6, r * .9], [rr(-.2, .2), R() * TAU, rr(-.2, .2)]), stone);
     }
     solid(cx - 1.4, g, cz - 1.6, cx + 1.7, g + 8.4, cz + 1.2);
-    const table = (x, y, z, r, rotation, tone, stem) => {
+    // A plate on its stalk. On the sand the stalk stands straight under it; on the tower (anchor: a point inside the
+    // trunk) it is a branch that leaves the stone and reaches out and up to the plate's underside, so no plate floats
+    // beside the trunk on a stalk that ends in open water.
+    const table = (x, y, z, r, rotation, tone, stem, anchor = null) => {
       const base = C(tone), under = base.clone().multiplyScalar(.5), rim = base.clone().lerp(C('#fff0c4'), .42);
       corals.add(plate, xf(x, y, z, [r, r * .85, r], rotation), (c, p, n, l) => (n.y < -.2 ? c.copy(under) : c.copy(base).lerp(rim, Math.pow(Math.min(1, Math.hypot(l.x, l.z)), 3))));
-      corals.add(stalk, xf(x, y - stem, z, [r * .2, stem, r * .2]), c => c.copy(under));
+      if (!anchor) { corals.add(stalk, xf(x, y - stem, z, [r * .2, stem, r * .2]), c => c.copy(under)); return; }
+      const [ax, ay, az] = anchor, reach = new THREE.Vector3(x - ax, y - .04 - ay, z - az), length = reach.length(), thick = Math.max(.22, r * .17);
+      corals.add(stalk, xf(ax, ay, az, [thick, length, thick], aim(reach.normalize())), c => c.copy(under));
     };
+    // The trunk's stone reaches about this far from its axis at height h (the stacked boulders taper as they rise).
+    const trunkRadius = h => Math.max(.9, 2.3 - h * .2);
     const tones = ['#ffa23f', '#ff7f50', '#ffc94d', '#f58a80'], tiers = economy ? 7 : 9;
     for (let i = 0; i < tiers; i++) {
-      const h = 1.6 + i * (7.2 / (tiers - 1)), angle = i * 2.4 + .5, [tx, tz] = trunk(h), r = 3.3 - i * .21 + rr(-.2, .2), d = .9 + r * .55;
-      const x = tx + Math.cos(angle) * d, z = tz + Math.sin(angle) * d;
-      table(x, g + h, z, r, lean(angle, .13, R() * TAU), tones[i % tones.length], 1.1);
+      // The plate's inner third overlaps the stone, and its branch springs from inside the trunk a metre below it.
+      const h = 1.6 + i * (7.2 / (tiers - 1)), angle = i * 2.4 + .5, [tx, tz] = trunk(h), r = 3.3 - i * .21 + rr(-.2, .2), d = trunkRadius(h) * .55 + r * .5;
+      const x = tx + Math.cos(angle) * d, z = tz + Math.sin(angle) * d, [bx, bz] = trunk(h - 1);
+      table(x, g + h, z, r, lean(angle, .13, R() * TAU), tones[i % tones.length], 1.1, [bx + Math.cos(angle) * trunkRadius(h - 1) * .35, g + h - 1, bz + Math.sin(angle) * trunkRadius(h - 1) * .35]);
       solid(x - r * .65, g + h - .25, z - r * .65, x + r * .65, g + h + .25, z + r * .65);
       yield;
     }
     { const [tx, tz] = trunk(9.2); table(tx, g + 10, tz, 2.4, lean(1, .06, 2), '#ffd27a', 1.8); solid(tx - 1.5, g + 9.7, tz - 1.5, tx + 1.5, g + 10.3, tz + 1.5); }
     // Brackets on the trunk and seedlings on the sand echo the big plates.
     for (let i = 0, n = economy ? 5 : 8; i < n; i++) {
-      const h = .8 + i * 1.0, angle = i * 2.4 + 2.1, [tx, tz] = trunk(h), d = 2.1 - h * .14;
-      table(tx + Math.cos(angle) * d, g + h + .5, tz + Math.sin(angle) * d, rr(.6, 1.05), lean(angle, .3, R() * TAU), pick(tones), .3);
+      const h = .8 + i * 1.0, angle = i * 2.4 + 2.1, [tx, tz] = trunk(h), r = rr(.6, 1.05), d = trunkRadius(h) * .85 + r * .45;
+      table(tx + Math.cos(angle) * d, g + h + .5, tz + Math.sin(angle) * d, r, lean(angle, .3, R() * TAU), pick(tones), .3, [tx + Math.cos(angle) * trunkRadius(h) * .5, g + h + .1, tz + Math.sin(angle) * trunkRadius(h) * .5]);
     }
     yield;
     for (const [dx, dz, r] of [[5.6, 2.2, 1.5], [-4.8, 4.4, 1.2], [-5.4, -3.6, 1.7], [3.2, -5.8, 1.1], [6.6, -2.8, .9]]) {

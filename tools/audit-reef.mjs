@@ -137,7 +137,8 @@ function auditCorals() {
       // Slope across the footprint, on the drawn seabed.
       let lo = Infinity, hi = -Infinity; const r = Math.max(.3, (max.x - min.x + max.z - min.z) / 4);
       for (let a = 0; a < 8; a++) { const h = floor(c.x + Math.cos(a * Math.PI / 4) * r, c.z + Math.sin(a * Math.PI / 4) * r); lo = Math.min(lo, h); hi = Math.max(hi, h); }
-      if ((hi - lo) / (2 * r) > .45) flag('coral.slope', name, where, `seabed rises ${round((hi - lo) / (2 * r))} m a metre across its footprint`);
+      // (Colonies grown on a bank on purpose, user-corals.js onSlope, lean out from it: their slope is the point.)
+      if (!rec.onSlope && (hi - lo) / (2 * r) > .45) flag('coral.slope', name, where, `seabed rises ${round((hi - lo) / (2 * r))} m a metre across its footprint`);
     }
   }
   // Collision proxies: each colony large enough to have one, and the proxy inside what is drawn.

@@ -153,6 +153,8 @@ document.querySelector('#credits-toggle').addEventListener('click', async () => 
     const response = await fetch('./assets/models/manifest.json');
     if (!response.ok) throw new Error('Credits unavailable');
     const items = await response.json(); container.replaceChildren();
+    // Every model in the ocean is now made in code for this site; the list stays for any attributed model added later.
+    if (!items.length) container.textContent = 'Every model in this ocean is made in code for this site: no third-party models to credit.';
     for (const item of items) {
       const entry = document.createElement('p');
       const link = document.createElement('a'); link.href = item.metadata.source;

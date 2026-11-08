@@ -483,11 +483,16 @@ function nurseryTree({ x, z, floorAt, scale = 1, levels = 5, projects = 0, rando
 export function buildNursery({ x, z, floorAt, economy = false, projects = 6 }) {
   const root = new THREE.Group(); root.name = 'nursery placement wrapper';
   const random = seededRandom(5303);
+  // Seven trees: the big one with the projects' fragments in the middle, a ring of smaller ones round it and the
+  // fragment tables to the east, so the nursery reads as a working site from across the sand, not a lone tree.
   const trees = [
-    { x, z, scale: 1, levels: 5, projects, delay: 0, amplitude: .2 },
-    // The two small trees and the table stand east of the big one, on the open sand (a coral carpet lies to the west).
-    { x: x + 3.4, z: z + 2.7, scale: .78, levels: 3, projects: 0, delay: .18, amplitude: .16 },
-    { x: x + 2.5, z: z - 3.3, scale: .7, levels: 3, projects: 0, delay: .32, amplitude: .15 }
+    { x, z, scale: 1.2, levels: 6, projects, delay: 0, amplitude: .2 },
+    { x: x + 3.4, z: z + 2.7, scale: .8, levels: 3, projects: 0, delay: .18, amplitude: .16 },
+    { x: x + 2.5, z: z - 3.3, scale: .72, levels: 3, projects: 0, delay: .32, amplitude: .15 },
+    { x: x - 3.2, z: z - 2.4, scale: .9, levels: 4, projects: 0, delay: .26, amplitude: .17 },
+    { x: x - 2.4, z: z + 3.3, scale: .76, levels: 3, projects: 0, delay: .4, amplitude: .15 },
+    { x: x + 6.4, z: z - 4.4, scale: .68, levels: 3, projects: 0, delay: .5, amplitude: .14 },
+    { x: x + .8, z: z + 6, scale: .74, levels: 3, projects: 0, delay: .44, amplitude: .15 }
   ].map((spec, index) => {
     const { material, uSwing } = swingMaterial();
     const tree = nurseryTree({ ...spec, floorAt, random, economy, frame: root, fragmentMaterial: material });
@@ -497,17 +502,20 @@ export function buildNursery({ x, z, floorAt, economy = false, projects = 6 }) {
 
   // The fragment table (its smallest pieces grow here) and broken branches on the sand.
   { const ground = new Kit(), pipe = standard({ roughness: .7, name: 'nursery table' });
-    const tx = x + 5.8, tz = z + .3, top = floorAt(tx, tz) + .72;
-    for (const [dx, dz] of [[-.8, -.45], [.8, -.45], [-.8, .45], [.8, .45]]) { const lx = tx + dx, lz = tz + dz; rod(ground, pipe, [lx, floorAt(lx, lz) - .05, lz], [lx, top, lz], .028, .028, { color: '#e6eae0' }, 6); }
-    for (const dz of [-.45, -.15, .15, .45]) rod(ground, pipe, [tx - .85, top, tz + dz], [tx + .85, top, tz + dz], .028, .028, { color: '#e6eae0' }, 6);
-    for (const dx of [-.8, .8]) rod(ground, pipe, [tx + dx, top, tz - .5], [tx + dx, top, tz + .5], .028, .028, { color: '#e6eae0' }, 6);
     const tips = ['#c58cff', '#ffd36a', '#ff8fb0', '#7fe0b0', '#d8c39a', '#e6c9a0'];
-    for (let i = 0; i < 14; i++) {
-      const px = tx - .65 + (i % 7) * .22, pz = tz + (i < 7 ? -.15 : .15), h = .16 + random() * .12;
-      ground.add(pipe, new THREE.ConeGeometry(.035, h, 5), { at: [px, top + h / 2 + .03, pz], turn: [(random() - .5) * .4, random() * TAU, (random() - .5) * .4], color: tips[i % tips.length] });
+    // Two tables, side by side along the current.
+    for (const [tx, tz] of [[x + 5.8, z + .3], [x + 5.4, z + 2.6]]) {
+      const top = floorAt(tx, tz) + .72;
+      for (const [dx, dz] of [[-.8, -.45], [.8, -.45], [-.8, .45], [.8, .45]]) { const lx = tx + dx, lz = tz + dz; rod(ground, pipe, [lx, floorAt(lx, lz) - .05, lz], [lx, top, lz], .028, .028, { color: '#e6eae0' }, 6); }
+      for (const dz of [-.45, -.15, .15, .45]) rod(ground, pipe, [tx - .85, top, tz + dz], [tx + .85, top, tz + dz], .028, .028, { color: '#e6eae0' }, 6);
+      for (const dx of [-.8, .8]) rod(ground, pipe, [tx + dx, top, tz - .5], [tx + dx, top, tz + .5], .028, .028, { color: '#e6eae0' }, 6);
+      for (let i = 0; i < 14; i++) {
+        const px = tx - .65 + (i % 7) * .22, pz = tz + (i < 7 ? -.15 : .15), h = .16 + random() * .12;
+        ground.add(pipe, new THREE.ConeGeometry(.035, h, 5), { at: [px, top + h / 2 + .03, pz], turn: [(random() - .5) * .4, random() * TAU, (random() - .5) * .4], color: tips[i % tips.length] });
+      }
     }
-    for (let i = 0, n = economy ? 22 : 36; i < n; i++) {
-      const angle = random() * TAU, radius = 1.4 + Math.pow(random(), .8) * 2.2, px = x + Math.cos(angle) * radius, pz = z + Math.sin(angle) * radius, len = .18 + random() * .25;
+    for (let i = 0, n = economy ? 34 : 56; i < n; i++) {
+      const angle = random() * TAU, radius = 1.4 + Math.pow(random(), .8) * 4.4, px = x + Math.cos(angle) * radius, pz = z + Math.sin(angle) * radius, len = .18 + random() * .25;
       ground.add(pipe, new THREE.CylinderGeometry(.02, .035, len, 5), { at: [px, floorAt(px, pz) + .03, pz], turn: [Math.PI / 2 + (random() - .5) * .3, random() * TAU, 0], color: random() < .3 ? '#d6c8aa' : '#ede7d6' });
     }
     ground.meshes('Nursery table and rubble', root); }
@@ -517,10 +525,10 @@ export function buildNursery({ x, z, floorAt, economy = false, projects = 6 }) {
   fishKit.add(fishMaterial, new THREE.SphereGeometry(1, 8, 6), { size: [.11, .05, .028], color: '#4fb7c9', paint: (v, c) => v.y < -.01 ? c.lerp(new THREE.Color('#c4ecf0'), .7) : v.y > .025 ? c.lerp(new THREE.Color('#2e6f8a'), .5) : c });
   { const tail = new THREE.BufferGeometry(); tail.setAttribute('position', new THREE.Float32BufferAttribute([-.09, 0, 0, -.17, .045, 0, -.17, -.045, 0, -.09, 0, 0, -.17, -.045, 0, -.17, .045, 0], 3));
     fishKit.add(fishMaterial, tail, { color: '#3a8fb0' }); }
-  const fishCount = economy ? 9 : 14;
+  const fishCount = economy ? 12 : 20;
   const school = new THREE.InstancedMesh(fishKit.geometry(fishMaterial), fishMaterial, fishCount);
   school.name = 'Nursery chromis'; school.frustumCulled = false;
-  const fish = Array.from({ length: fishCount }, (_, i) => ({ radius: 1 + random() * 1.1, height: 1.4 + random() * 2.8, speed: (.22 + random() * .2) * (i % 3 ? 1 : -1), phase: random() * TAU, dart: 2.2 + random() * 1.8,
+  const fish = Array.from({ length: fishCount }, (_, i) => ({ radius: 1.2 + random() * 1.5, height: 1.4 + random() * 3.6, speed: (.22 + random() * .2) * (i % 3 ? 1 : -1), phase: random() * TAU, dart: 2.2 + random() * 1.8,
     position: new THREE.Vector3(), previous: new THREE.Vector3(), yaw: 0 }));
   const dummy = new THREE.Object3D(), outward = new THREE.Vector3();
 
@@ -946,6 +954,7 @@ export function buildFishingBoat({ x, z, floorAt, economy = false }) {
   const L = 16, B = 5.4, BULWARK = .9, stations = economy ? 26 : 44;
   const half = s => B / 2 * (s < .35 ? .82 + .18 * smooth(s / .35) : s < .6 ? 1 : Math.pow(Math.max(0, Math.cos((s - .6) / .4 * Math.PI / 2)), .75));
   const deckAt = s => 2.8 + .6 * smooth((s - .55) / .45);
+  const DECK_SINK = .04;
   const keelAt = s => .3 * (1 - smooth(s / .2)) + 1.3 * smooth((s - .82) / .18);
   const xAt = s => -L / 2 + s * L;
   // The section from the keel up to the deck edge, as [breadth, height] fractions; then the bulwark's top.
@@ -1023,7 +1032,9 @@ export function buildFishingBoat({ x, z, floorAt, economy = false }) {
   { const dp = [], dc = [], du = [], di = [], columns = 10, last = stations;
     for (let i = 0; i <= last; i++) for (let c = 0; c <= columns; c++) {
       const s = i / stations, b = half(s) * 1.01, zc = -b + 2 * b * c / columns;
-      dp.push(xAt(s) + rakeAt(s, deckAt(s)), deckAt(s), zc); dc.push(1, 1, 1); du.push(s, c / columns);
+      // Drawn 4 cm under deckAt, where everything on it (crates, winch, bollards, wheelhouse) stands: their bottoms used to
+      // lie in the deck's own plane and flickered through it seen from under the heeled deck. Now the deck is in front.
+      dp.push(xAt(s) + rakeAt(s, deckAt(s)), deckAt(s) - DECK_SINK, zc); dc.push(1, 1, 1); du.push(s, c / columns);
     }
     for (let i = 0; i < last; i++) for (let c = 0; c < columns; c++) {
       const s = (i + .5) / stations, b = half(s), zc = -b + 2 * b * (c + .5) / columns;

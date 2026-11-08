@@ -403,10 +403,14 @@ const trevally = {
 
 const bumphead = {
   id: 'bumphead-parrotfish', name: 'Bumphead parrotfish', scientific: 'Bolbometopon muricatum', real: 1.2, group: 'fish',
-  note: 'A wall of a forehead above a pale beak; it rows with its pectoral fins, bites at the reef and rams it.',
-  body: { K: 10, ex: .9, maxGap: .085, stations: [
-    [0, .026, .045, .05, .13], [.012, .046, .1, .14, .105], [.035, .06, .125, .23, .11], [.07, .07, .135, .262, .105], [.12, .077, .16, .235, .06], [.19, .083, .185, .19, .012], [.3, .085, .195, .175], [.44, .078, .185, .165],
-    [.58, .06, .14, .13], [.7, .04, .092, .085], [.78, .026, .06, .055], [.83, .02, .05, .046]] },
+  note: 'A bulb of a forehead over a pale, fused beak; it rows with its pectoral fins, bites at the reef and rams it.',
+  // A rounded bulb of a forehead that rises steeply from the beak and rolls back over the eye into a deep, heavy body;
+  // the beak is the front of the head itself, pale and fused, not a ball stuck on (it used to be a flat wall of a face
+  // with a white sphere at its foot).
+  body: { K: 12, ex: .9, maxGap: .06, stations: [
+    [0, .012, .016, .018, -.06], [.012, .03, .036, .036, -.058], [.028, .05, .07, .05, -.046], [.05, .066, .128, .07, -.03], [.075, .078, .178, .09, -.012],
+    [.1, .086, .206, .11, 0], [.135, .091, .216, .135, .006], [.18, .094, .208, .16, .004], [.26, .096, .198, .176, 0], [.36, .092, .19, .178, 0], [.48, .082, .174, .162, 0],
+    [.6, .062, .134, .126, 0], [.7, .042, .09, .086, 0], [.78, .027, .058, .054, 0], [.83, .02, .048, .045, 0]] },
   fins: [
     { name: 'dorsal', plane: 'side', root: [.2], thick: .004, embed: .3, core: [.26, .02], outline: [[0, 0], [.02, .04], [.2, .052], [.42, .046], [.5, .03], [.52, 0]] },
     { name: 'anal', plane: 'side', down: true, root: [.52], thick: .004, embed: .3, outline: [[0, 0], [.02, .04], [.14, .042], [.2, .022], [.21, 0]] },
@@ -416,16 +420,18 @@ const bumphead = {
     { name: 'caudal', plane: 'side', root: [.815, 0], thick: .005, core: [.085, 0],
       outline: [[0, -.05], [0, .05], [.06, .1], [.15, .136], [.184, .13], [.155, .06], [.165, 0], [.155, -.06], [.184, -.13], [.15, -.136], [.06, -.1]] }
   ],
-  eyes: { at: [.1, 62], r: .012, ring: '#cfe3d6' },
-  lumps: [{ at: [.014, 180], size: [.04, .026, .04], color: '#ece6d2', mirror: false, keep: true, lift: .15 }],
+  eyes: { at: [.115, 72], r: .012, ring: '#cfe3d6' },
+  mouth: { t: .012, size: [.02, .006, .016], drop: -.012, color: '#33302a' },
   paint: c => {
-    if (!body(c)) return finNoise(blend(c.name === 'pectoral' ? '#4a9c94' : '#2d7c80', '#63b3a4', ss(c.s, .65, 1)), c);
-    if (c.cap === 'front') return '#c2aaa2';
-    let col = grade(c.h, [[-1, '#78b9a6'], [-.3, '#4f9a90'], [.4, '#3a8783'], [1, '#2d6f71']]);
+    if (!body(c)) return finNoise(blend(c.name === 'pectoral' ? '#4a9c94' : '#2d7c80', '#7cc0ae', ss(c.s, .7, 1) * .6), c);
+    if (c.cap) return '#d2d1bb';
+    let col = grade(c.h, [[-1, '#86b6a2'], [-.3, '#4f8c82'], [.4, '#356f6d'], [1, '#2a5b5f']]);
     // Big scales, each a little lighter at its edge, give the flank its texture.
     col = shadeBy(col, 1 + .08 * (ss(Math.abs(Math.sin(c.t * 70)) * Math.abs(Math.sin(c.a * 9)), .55, .9) - .5));
-    const face = Math.max(1 - ss(c.t, .045, .085), (1 - ss(c.t, .08, .13)) * ss(c.h, .3, .6));        // the pale, scarred face and forehead
-    return mottle(blend(col, c.h > .3 ? '#b9a29c' : '#c9b2a6', face), c, .07, 18);
+    // The bulb is scuffed pale pink-green from ramming the reef, fading into the flank behind the eye; the beak is ivory.
+    const bulb = (1 - ss(c.t, .07, .14)) * ss(c.h, .15, .55), beak = 1 - ss(c.t, .012, .026);
+    col = blend(col, '#a7aa94', bulb * .55);
+    return mottle(blend(col, '#d9d8c2', beak * .85), c, .07, 18);
   },
   rig: { root: .36, head: .15, spine: [.5, .62, .72, .815] },
   clips: k => swimmerClips(k,
@@ -1253,43 +1259,37 @@ const triggerfish = { ...reefFish({ id: 'picasso-triggerfish', name: 'Picasso tr
     return blend(col, '#e2462b', band(c.t, .005, .04, .006) * ss(-c.h, -.2, 0));
   } }), group: 'fish' };
 
-const lionfish = { ...reefFish({ id: 'lionfish', name: 'Red lionfish', scientific: 'Pterois volitans', real: .35, D: .2, W: .075, snout: .02, tail: 'round', dorsal: .25, dorsalFrom: .46, anal: .3, eye: [.1, 62, .018, '#c4402a'], period: .8, amp: .3, pectoral: .1,
-  note: 'Banded red and white from snout to tail, with fans for pectoral fins and a mane of venomous spines it turns towards a threat.',
-  extraFins: [
-    // The fans: wide pectorals of long rays and thin membrane, spread like wings when it hunts or warns.
-    { name: 'fan', mirror: true, bone: 'fan', root: [.25, 105, .2], span: [.3, -.78, -.55], chord: [.1, .55, -.83], thick: .003, hinge: .04, stiff: .3, keep: true,
-      outline: [[0, 0], [-.04, .1], [-.03, .24], [.02, .38], [.09, .46], [.17, .45], [.24, .36], [.28, .22], [.26, .1], [.15, 0]] },
-    // The mane: long dorsal spines with membrane only at their bases.
-    { name: 'spines', plane: 'side', root: [.2], thick: .003, embed: .15, core: [.12, .08],
-      outline: [[0, 0], [.012, .34], [.03, .07], [.05, .38], [.07, .07], [.09, .36], [.11, .07], [.13, .32], [.15, .06], [.17, .26], [.19, .05], [.21, .18], [.24, .03], [.26, 0]] },
-    { name: 'tentacle', mirror: true, root: [.07, 40, .1], span: [.2, 1, .2], thick: .002, outline: [[0, 0], [.004, .05], [.012, .06], [.012, 0]] }],
-  paint: c => {
-    const bands = ss(Math.sin((c.t * (c.part === 'fin' ? 0 : 26) + (c.part === 'fin' ? c.s * 14 : 0)) * Math.PI), -.15, .2);
-    if (!body(c)) {
-      if (c.name === 'fan') return blend(blend('#f4ece4', '#a5372a', band(Math.sin(c.s * 13), .1, 1.1, .25) * .85), '#5e1c14', band(Math.sin(c.u * 70), .85, 1.1, .05) * .5);
-      if (c.name === 'spines') return blend('#f4ebe2', '#9b2e21', bands);
-      return blend('#f1e6da', '#a3392a', band(Math.sin(c.u * 24 + c.s * 10), .6, 1.1, .2) * .7);
-    }
-    return mottle(blend(blend('#f6ece2', '#9f3324', bands), '#f8f1ea', ss(-c.h, .5, .8) * .6), c, .05, 24);
-  },
-  extra: k => [
-    // Hovering, fans out and gently fanning, spines raised.
-    k.swim({ name: 'hover', period: 2.8, amp: .06, mode: 'carangiform', pectoral: .12, pectoralMode: 'row', roll: .015, heave: .008, pose: { fan_L: [{ axis: Y, bias: -.15 }, { axis: Z, amp: .12, bias: .1 }], fan_R: [{ axis: Y, bias: .15 }, { axis: Z, amp: -.12, bias: -.1 }] } }),
-    // The warning: head down, spines tilted at the diver, the fans thrown wide.
-    k.swim({ name: 'threat', period: 1.6, amp: .05, mode: 'carangiform', pectoral: .1, roll: .03, pose: { root: { axis: X, bias: .22 }, fan_L: [{ axis: Y, bias: -.5 }, { axis: Z, amp: .08, bias: .35 }], fan_R: [{ axis: Y, bias: .5 }, { axis: Z, amp: -.08, bias: -.35 }] } })] }), group: 'fish' };
-
-const humphead = { ...reefFish({ id: 'humphead-wrasse', name: 'Humphead wrasse', scientific: 'Cheilinus undulatus', real: 1.5, D: .165, W: .08, K: 12, snout: .05, tail: 'round', dorsal: .3, dorsalFrom: .22, anal: .3, eye: [.1, 56, .012, '#d3b45a'], period: 1.1, amp: .38, pectoral: .3,
-  note: 'A green-blue giant as long as a diver, with a bulging forehead, thick lips and a face scribbled with lines.',
-  paint: c => {
-    if (!body(c)) return blend('#2f7e86', '#9fd6c3', band(Math.sin(c.u * 26 + c.s * 6), .6, 1.1, .2) * .5);
-    // Each scale with a dark bar across it, and wavy yellow-green lines scribbled behind the eye.
-    let col = grade(c.h, [[-1, '#8cc8b3'], [-.3, '#4f9c95'], [.3, '#2f7c83'], [1, '#22656e']]);
-    col = blend(col, '#1b4d55', band(Math.sin(c.t * 120) * Math.sin(c.a * 14), .7, 1.1, .1) * .5);
-    const face = 1 - ss(c.t, .2, .28), lines = band(Math.sin((c.h * 9 + Math.sin(c.t * 50) * .4) * Math.PI), .75, 1.1, .1);
-    return mottle(blend(col, '#c8c56a', face * lines * .8), c, .05, 20);
-  } }), group: 'fish', school: false,
-  lumps: [{ at: [.09, 0], size: [.06, .05, .09], color: '#2a7079', mirror: false, keep: true, lift: -.2 }, { at: [.012, 115], size: [.03, .016, .022], color: '#b9a668' }],
-  rig: { root: .36, head: .17, spine: [.5, .62, .72, .79] } };
+// The humphead wrasse: a long, deep body whose forehead swells into the hump above and behind the eye, and a small mouth
+// of thick yellowish lips well below it. The hump and lips are the body's own shape (its stations), not solids stuck on:
+// a sphere on the brow and a ball for the lips read as a fish wearing a hat and a pacifier.
+const humphead = (() => {
+  const fish = reefFish({ id: 'humphead-wrasse', name: 'Humphead wrasse', scientific: 'Cheilinus undulatus', real: 1.5, D: .17, W: .08, K: 12, tail: 'round', dorsal: .34, dorsalFrom: .2, anal: .34, eye: [.105, 60, .012, '#d9b84a'], period: 1.1, amp: .36, pectoral: .34,
+    note: 'A green-blue giant as long as a diver, with a hump on its forehead, thick lips and a face scribbled with wavy lines.',
+    paint: c => {
+      if (!body(c)) {
+        // Fins: green, finely lined, with a pale rim; the tail with dark wavy bars.
+        const rim = ss(c.s, .82, .97), lines = band(Math.sin(c.u * 34 + c.s * 7), .55, 1.1, .2);
+        return blend(blend('#2f7c7f', '#215c62', lines * .45), '#b9d8a8', rim * .6);
+      }
+      if (c.cap) return '#c9b46a';
+      // Green-blue, darker above; every scale with a fine dark bar across it.
+      let col = grade(c.h, [[-1, '#9fd0b8'], [-.35, '#5aa59b'], [.25, '#357f86'], [1, '#245f6a']]);
+      col = blend(col, '#1d4f58', band(Math.sin(c.t * 150) * Math.sin(c.a * 16), .72, 1.1, .1) * .45 * ss(c.t, .2, .3));
+      // The face: wavy yellow-green lines fanning back from the eye, and two dark lines straight back behind it.
+      const face = 1 - ss(c.t, .16, .26);
+      col = blend(col, '#b9c27a', face * band(Math.sin((c.h * 13 + Math.sin(c.t * 70 + c.h * 4) * .6) * Math.PI), .86, 1.1, .06) * .5);
+      const behind = ss(c.t, .12, .14) * (1 - ss(c.t, .22, .26)), lineA = band(c.h - .3 + (c.t - .12) * 1.2, -.035, .035, .012), lineB = band(c.h + .02 + (c.t - .12) * .6, -.035, .035, .012);
+      col = blend(col, '#173f46', Math.min(1, lineA + lineB) * behind * .8);
+      // Thick lips, pale yellow.
+      return blend(col, '#c8b56c', (1 - ss(c.t, .01, .026)) * .85);
+    } });
+  fish.body = { K: 12, lodK: 7, maxGap: .06, stations: [
+    [0, .006, .008, .012, -.045], [.015, .028, .03, .034, -.042], [.035, .046, .062, .058, -.03], [.06, .058, .108, .084, -.012],
+    [.09, .068, .158, .108, .006], [.13, .075, .198, .13, .016], [.18, .08, .204, .152, .01], [.26, .083, .19, .166, 0],
+    [.36, .081, .178, .166, -.004], [.48, .072, .155, .148, -.004], [.6, .055, .115, .108, 0], [.7, .036, .072, .068, 0], [.78, .024, .042, .04, 0], [.8, .022, .036, .035, 0]] };
+  fish.mouth = { t: .012, size: [.016, .006, .02], drop: -.004, color: '#3a2a22' };
+  return { ...fish, group: 'fish', school: false, rig: { root: .36, head: .17, spine: [.5, .62, .72, .79] } };
+})();
 
 const manta = {
   id: 'manta-ray', name: 'Reef manta ray', scientific: 'Mobula alfredi', real: 3, group: 'ray', span: 3.6,
@@ -1344,7 +1344,7 @@ const eagleRay = {
 /** Every species in the set, largest first, sized for the site (see siteLength; site, where given, is a length in metres). */
 export const SPECIES = [rightWhale, whaleShark, orca(false), orca(true), whipray, dolphin, nurse, blacktip, tuna, barracuda, bumphead, trevally, bluespot, remora, flyingFish, moray, ribbonEel, gardenEel, ...smallFish,
   hammerhead, whitetip, greenTurtle, cuttlefish, puffer, octopus, urchin, blueStar, chipStar, hermit, spottedCrab,
-  clownfish, yellowTang, triggerfish, lionfish, humphead, manta, eagleRay]
+  clownfish, yellowTang, triggerfish, humphead, manta, eagleRay]
   .map(spec => { const length = spec.site ?? siteLength(spec.real); return { ...spec, realLength: spec.real, length, ...(spec.span ? { span: Math.round(spec.span * length / spec.real * 100) / 100, realSpan: spec.span } : {}) }; })
   .sort((a, b) => b.length - a.length);
 export const speciesById = id => SPECIES.find(species => species.id === id);

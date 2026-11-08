@@ -50,8 +50,6 @@ export const SPECIES = [
     fact: 'Its spines are hollow, brittle and mildly venomous; small fish and shrimp shelter between them.' },
   { id: 'white-spotted-puffer', name: 'White-spotted puffer', scientific: 'Arothron hispidus', real: .4, habitat: 'reef',
     fact: 'Threatened, it gulps water until it is a ball too big to swallow, and its organs hold one of the strongest poisons in nature.' },
-  { id: 'lionfish', name: 'Red lionfish', scientific: 'Pterois volitans', real: .35, habitat: 'reef',
-    fact: 'It herds small fish into a corner with its outspread fans, then swallows them in a single gulp.' },
   { id: 'bluespotted-ray', name: 'Bluespotted ribbontail ray', scientific: 'Taeniura lymma', real: .7, habitat: 'floor',
     fact: 'Shelters under ledges by day. Its tail carries one or two venomous spines.' },
   { id: 'remora', name: 'Live sharksucker', scientific: 'Echeneis naucrates', real: .6, habitat: 'open',

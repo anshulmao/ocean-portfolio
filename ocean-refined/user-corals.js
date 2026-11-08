@@ -7,7 +7,8 @@ import { lifeSites } from './living-world.js';
 
 const DIRECTORY=new URL('./assets/models/user-sets/sets/coral-set/',import.meta.url);
 const ZONES={shallow:[5,18],mid:[18,34],deep:[34,65]};
-const LANDMARK_LANES=[[-12,-15,7],[18,-39,9],[-18,-82,7],[0,0,5],[20,-66,7]];
+// The landmarks' lanes, and the coral nursery's sand (reef.js NURSERY_SITE, its trees spread 4 m west to 7 m east).
+const LANDMARK_LANES=[[-12,-15,7],[18,-39,9],[-18,-82,7],[0,0,5],[20,-66,7],[-3.4,4.6,8.5]];
 const UP=new THREE.Vector3(0,1,0);
 function randomSeed(seed=0x431ac8){return()=>{seed=(Math.imul(seed,1664525)+1013904223)|0;return(seed>>>0)/4294967296;};}
 const pause=()=>new Promise(resolve=>setTimeout(resolve,0));
@@ -115,6 +116,30 @@ export function createUserCorals({terrainHeightAt,collisions,economy=false}={}){
             if(collisions?.addBox&&size.y>.4&&Math.max(size.x,size.z)>.45){const center=box.getCenter(new THREE.Vector3()),half=size.multiplyScalar(.32);collisions.addBox(new THREE.Box3(center.clone().sub(half),center.clone().add(half)),{mesh:species.name,kind:'user-coral',species:species.id});diagnostics.proxies++;}
             placements.push({species:species.id,zone:species.zone,x,y:position.y,z,width:species.widthMetres*scale,depth,slope,contact:-.025,maxGap:gap-.025,matrix:matrix.toArray()});diagnostics.maxBaseGap=Math.max(diagnostics.maxBaseGap,gap-.025);diagnostics.minContact=Math.min(diagnostics.minContact,-.025);diagnostics.maxSlope=Math.max(diagnostics.maxSlope,slope);placed=true;
           }
+        }
+        // The hillsides: the gardens keep to gentle ground (no steeper than 1 in 3), which left every bank, pad rim and
+        // terrace face bare sand. A few colonies of each species grow on the slopes in their depth band, leaning out
+        // from the bank most of the way to its normal (as coral on a reef wall does) and set into it, so no edge of the
+        // base stands off the downhill side.
+        const slopeTarget=economy?5:14;
+        for(let i=0,attempt=0;i<slopeTarget&&attempt<1400;attempt++){
+          const x=-56+rng()*112,z=-100+rng()*128,height=floor(x,z),depth=-height,scale=.65+rng()*.4,reachW=species.widthMetres*scale;
+          // A metre inside its band: leaning out from the bank, the colony's middle sits downhill of its foot.
+          if(depth<minDepth+1||depth>=maxDepth-1||isLane(x,z,reachW*.35)||onFormation(x,z,reachW*.35)||onLife(x,z,reachW*.4)){diagnostics.rejected++;continue;}
+          const near=gradient(x,z),slope=gradient(x,z,Math.max(.5,reachW*.25));
+          if(slope<.38||slope>1.3||near>1.6){diagnostics.rejected++;continue;}
+          probe.set(x,height+.3,z);if(occupied(probe)){diagnostics.rejected++;continue;}
+          let overlaps=false;for(let p=0;p<placements.length;p++){const placed=placements[p],dx=placed.x-x,dz=placed.z-z,reach=(placed.width+reachW)*.36;if(dx*dx+dz*dz<reach*reach){overlaps=true;break;}}
+          if(overlaps){diagnostics.rejected++;continue;}
+          tiltQ.setFromUnitVectors(UP,normal);tiltQ.slerp(rotation.identity(),.3);yawQ.setFromAxisAngle(UP,rng()*Math.PI*2);rotation.copy(tiltQ).multiply(yawQ);position.set(x,0,z);scaleV.setScalar(scale);matrix.compose(position,rotation,scaleV);
+          let support=-Infinity,lowest=Infinity;
+          for(const vertex of prepared.base){point.copy(vertex).applyMatrix4(matrix);const offset=floor(point.x,point.z)-point.y;support=Math.max(support,offset);lowest=Math.min(lowest,offset);}
+          const gap=support-lowest,sink=Math.min(gap*.55,.35);
+          if(!Number.isFinite(support)||gap-sink>.16){diagnostics.rejected++;continue;}
+          position.y=support-.025-sink;matrix.compose(position,rotation,scaleV);matrices.push(matrix.clone());
+          const box=new THREE.Box3();for(const vertex of prepared.hull)box.expandByPoint(point.copy(vertex).applyMatrix4(matrix));const size=box.getSize(new THREE.Vector3());
+          if(collisions?.addBox&&size.y>.4&&Math.max(size.x,size.z)>.45){const center=box.getCenter(new THREE.Vector3()),half=size.multiplyScalar(.32);collisions.addBox(new THREE.Box3(center.clone().sub(half),center.clone().add(half)),{mesh:species.name,kind:'user-coral',species:species.id});diagnostics.proxies++;}
+          placements.push({species:species.id,zone:species.zone,x,y:position.y,z,width:reachW,depth,slope,onSlope:true,contact:-.025-sink,maxGap:gap-sink-.025,matrix:matrix.toArray()});diagnostics.maxBaseGap=Math.max(diagnostics.maxBaseGap,gap-sink-.025);diagnostics.slopeColonies=(diagnostics.slopeColonies||0)+1;i++;
         }
         for(const {geometry,material}of prepared.parts){const batch=new THREE.InstancedMesh(geometry,material,matrices.length);batch.name=species.name+' colonies';batch.userData.species=species.id;batch.userData.zone=species.zone;batch.castShadow=false;batch.receiveShadow=false;matrices.forEach((m,i)=>batch.setMatrixAt(i,m));batch.instanceMatrix.setUsage(THREE.StaticDrawUsage);batch.instanceMatrix.needsUpdate=true;batch.computeBoundingBox();batch.computeBoundingSphere();root.add(batch);diagnostics.batches++;}
         diagnostics.loaded++;diagnostics.loadedSpecies++;diagnostics.species++;diagnostics.colonies+=matrices.length;diagnostics.count=diagnostics.colonies;diagnostics.triangles+=prepared.totalTriangles*matrices.length;diagnostics.zones[species.zone]+=matrices.length;diagnostics.speciesCounts[species.id]=matrices.length;
