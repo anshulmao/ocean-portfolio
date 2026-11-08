@@ -22,9 +22,9 @@ function mulberry(seed) {
   return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
 
-// Ground the scene has already spoken for: the start, the three landmarks, the arch, the grottos (12 m each),
-// the gully under the arch, and the lanes between the landmarks and along the guided tour.
-const KEEP = [[0, 0], [-12, -15], [18, -39], [-18, -82], [20, -72], [-35, -30], [36, -48], [-33, -73], [39, -91], [7, 18]];
+// Ground the scene has already spoken for: the start, the three landmarks, the arch and the gully above it, the grottos
+// (12 m each), and the lanes between the landmarks and along the guided tour.
+const KEEP = [[0, 0], [-12, -15], [18, -39], [-18, -82], [20, -72], [20, -83], [-35, -30], [36, -48], [-33, -73], [39, -91], [7, 18]];
 const ROUTE = [[0, 0], [-12, -15], [18, -39], [-18, -82]];
 const TOUR = [[0, -5], [-12, -15], [28.5, -11], [18, -21.8], [31, -30], [31, -48], [25, -58], [20, -62.6], [20, -87.5], [4, -80], [-18, -82]];
 function lineDistance(x, z, line) {

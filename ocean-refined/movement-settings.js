@@ -10,6 +10,7 @@ const choice = (key, label, group, value, options, description = '') => ({key, l
 export const schema = [
   number('brightnessBoost','Increase brightness','Lighting',0,0,100,5,'%', 'Adds neutral illumination to model colors without changing sky tint or gamma.'),
   number('waterClarity','Water clarity','Lighting',100,70,180,5,'%', 'How far you can see under water. Clearer water shows more of the reef at once, which takes more drawing on slower devices.'),
+  number('auraBrightness','Aura circles','Lighting',100,0,150,5,'%', 'How bright the rings and the glow under each landmark are, the ones that pulse as you point at it. 0 turns them off.'),
   number('swimSpeed','Forward speed','Swimming',4,.5,8,.1,'m/s'),
   number('reverseMultiplier','Reverse speed multiplier','Swimming',.75,.1,1,.01,'×'),
   number('strafeMultiplier','Strafe speed multiplier','Swimming',.85,.1,1,.01,'×'),

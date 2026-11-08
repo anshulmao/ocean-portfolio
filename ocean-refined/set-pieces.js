@@ -1,13 +1,21 @@
 import * as THREE from './vendor/three.module.min.js';
 import { seededRandom } from './assets.js';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
+import { DESCENT_LINE } from './return-route.js';
 
 const TAU = Math.PI * 2;
+// How far outside a hull its oval runs (m).
+const OUTSIDE = .9;
+// span: the beacon's ripple and highlight plane, across (m); ring: the highlight's ring, as a share of its half width
+// (round the helmet's plinth, the nautilus's alcove). The wreck's is an oval under her hull (round 16, the owner's notes:
+// a circle round all of her was too big): stretch, the plane's scale along and across her; turn, her heading (rad, about
+// y). Once she is built, place() fits it to her hull as it lies (her collision slabs: middle, heading and length; round
+// 17, the oval stood off to one side of her, laid out from her charted spot and a heading guessed from it).
 const SITES = {
-  about: { x: -12, z: -15, color: '#7ff0cf' },
+  about: { x: -12, z: -15, color: '#7ff0cf', span: 13, ring: .44 },
   // About is the diver's helmet, Experience the nautilus on the deep ledge, Projects the sunken trawler (landmark-builds.js).
-  experience: { x: -18, z: -82, color: '#ffcf7a' },
-  projects: { x: 18, z: -39, color: '#c9a2ff' }
+  experience: { x: -18, z: -82, color: '#ffcf7a', span: 13, ring: .5 },
+  projects: { x: 18, z: -39, color: '#c9a2ff', span: 13, ring: .78, stretch: [2, .87], turn: Math.atan2(-.943, .332), hull: /^ship hull/ }
 };
 
 const beaconVertex = /* glsl */ `
@@ -31,17 +39,25 @@ void main(){
   float far = exp(-distanceToEye * .011);
   gl_FragColor = vec4(uColor, body * rise * drift * near * far * uStrength);
 }`;
+// The ripple at a beacon's foot, and its highlight (uFocus, round 15: the owner's notes): while its site is pointed at or
+// its card is up, a pool of light on the bottom under it and a ring round its foot (uRing, a share of the plane's half
+// width) that pulses, in place of the circle that used to be drawn over it on the screen.
 const ringFragment = /* glsl */ `
-uniform vec3 uColor; uniform float uTime; uniform float uStrength; uniform float uSeed;
+uniform vec3 uColor; uniform float uTime; uniform float uStrength; uniform float uSeed; uniform float uFocus; uniform float uRing; uniform float uRipple; uniform float uAura;
 varying vec2 vUv;
 void main(){
-  float radius = length(vUv - .5) * 2.0;
+  float radius = length(vUv - .5) * 2.0, ripple = radius * uRipple;
   float alpha = 0.0;
   for (int n = 0; n < 2; n++) {
     float phase = fract(uTime * .16 + uSeed + float(n) * .5);
-    alpha += (1.0 - smoothstep(0.0, .07, abs(radius - phase))) * (1.0 - phase) * (1.0 - phase);
+    alpha += (1.0 - smoothstep(0.0, .07, abs(ripple - phase))) * (1.0 - phase) * (1.0 - phase);
   }
-  gl_FragColor = vec4(uColor, alpha * uStrength * .5);
+  alpha *= uStrength * .5 * step(ripple, 1.0);
+  float beat = .5 + .5 * sin(uTime * 3.2);
+  float ring = 1.0 - smoothstep(.012, .045 + beat * .02, abs(radius - uRing * (.96 + beat * .06)));
+  float pool = exp(-radius * radius / (uRing * uRing * .7));
+  alpha += uFocus * (ring * (.55 + .45 * beat) + pool * .24) * step(radius, 1.0);
+  gl_FragColor = vec4(uColor, alpha * uAura);
 }`;
 const sparkVertex = /* glsl */ `
 uniform float uTime; uniform float uHeight; uniform float uRatio;
@@ -213,17 +229,19 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
 
   // Beacons: a soft column, a ripple at its foot and rising motes. They mark
   // each landmark through the haze without adding real lights to the scene.
-  const beacons = [], time = { value: 0 }, ratio = { value: 1 };
+  // aura: how bright the rings and the pool of light are (the visitor's Aura circles setting, movement-settings.js).
+  const beacons = [], time = { value: 0 }, ratio = { value: 1 }, aura = { value: 1 };
   Object.entries(SITES).forEach(([id, site], index) => {
     const base = floor(site.x, site.z), height = Math.min(30, -base - 1.5);
-    const uniforms = { uColor: { value: new THREE.Color(site.color) }, uTime: time, uStrength: { value: .5 }, uSeed: { value: index * 2.1 }, uHeight: { value: height }, uRatio: ratio };
+    const uniforms = { uColor: { value: new THREE.Color(site.color) }, uTime: time, uStrength: { value: .5 }, uSeed: { value: index * 2.1 }, uHeight: { value: height }, uRatio: ratio, uFocus: { value: 0 }, uRing: { value: site.ring }, uRipple: { value: site.span / 13 }, uAura: aura };  // the ripple keeps its 13 m
     const group = new THREE.Group(); group.name = `${id} beacon`; group.position.set(site.x, base + .2, site.z);
     const options = { uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false };
     const column = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 1.5, height, 24, 1, true).translate(0, height / 2, 0),
       new THREE.ShaderMaterial({ ...options, vertexShader: beaconVertex, fragmentShader: beaconFragment }));
-    const ring = new THREE.Mesh(new THREE.PlaneGeometry(13, 13).rotateX(-Math.PI / 2),
+    const ring = new THREE.Mesh(new THREE.PlaneGeometry(site.span, site.span).rotateX(-Math.PI / 2),
       new THREE.ShaderMaterial({ ...options, vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}', fragmentShader: ringFragment }));
     ring.position.y = .25;
+    if (site.stretch) { ring.scale.set(site.stretch[0], 1, site.stretch[1]); ring.rotation.y = site.turn; }
     const total = economy ? 26 : 44, positions = [], seeds = [];
     for (let i = 0; i < total; i++) { const a = random() * TAU, r = Math.sqrt(random()) * 2.4; positions.push(Math.cos(a) * r, 0, Math.sin(a) * r); seeds.push(random()); }
     const geometry = new THREE.BufferGeometry();
@@ -233,26 +251,65 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
     // and ring then cull like any other mesh instead of drawing off screen.
     geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, height / 2, 0), height / 2 + 3);
     for (const mesh of [column, ring, sparks]) { mesh.renderOrder = 3; group.add(mesh); }
-    root.add(group); beacons.push({ id, group, uniforms, found: false });
+    root.add(group); beacons.push({ id, group, ring, uniforms, found: false, focus: 0 });
   });
+  // The résumé's slate hangs on the descent line in mid-water (reef.js RESUME_SITE): no column or motes there, only its
+  // highlight, a ring round the line just under the slate.
+  {
+    const uniforms = { uColor: { value: new THREE.Color('#f4e3b5') }, uTime: time, uStrength: { value: 0 }, uSeed: { value: 7.3 }, uFocus: { value: 0 }, uRing: { value: .62 }, uRipple: { value: 0 }, uAura: aura };
+    const group = new THREE.Group(); group.name = 'resume beacon'; group.position.set(DESCENT_LINE.x, -8.6, DESCENT_LINE.z);
+    const ring = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4).rotateX(-Math.PI / 2), new THREE.ShaderMaterial({ uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+      vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}', fragmentShader: ringFragment }));
+    ring.renderOrder = 3; group.add(ring); group.visible = false;
+    root.add(group); beacons.push({ id: 'resume', group, uniforms, found: true, focus: 0, quiet: true });
+  }
+  // The site highlighted (site-cards.js): pointed at, or its card up; null for none.
+  let focused = null;
+  function focus(id = null) { focused = id; }
 
   /** Build props around the grounded landmarks and seat each beacon on its model. */
+  // The oval under a hull, fitted to its collision slabs: their middle, the line they run along, and their reach along
+  // and across it, the ring just outside them (OUTSIDE m).
+  function fitHull(beacon, site) {
+    const boxes = (collisions?.boxes || []).filter(entry => site.hull.test(entry.mesh || '')); if (boxes.length < 4) return;
+    let mx = 0, mz = 0; for (const { box } of boxes) { mx += (box.min.x + box.max.x) / 2; mz += (box.min.z + box.max.z) / 2; } mx /= boxes.length; mz /= boxes.length;
+    let xx = 0, zz = 0, xz = 0;
+    for (const { box } of boxes) { const dx = (box.min.x + box.max.x) / 2 - mx, dz = (box.min.z + box.max.z) / 2 - mz; xx += dx * dx; zz += dz * dz; xz += dx * dz; }
+    const angle = .5 * Math.atan2(2 * xz, xx - zz), ux = Math.cos(angle), uz = Math.sin(angle);
+    let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
+    for (const { box } of boxes) for (const x of [box.min.x, box.max.x]) for (const z of [box.min.z, box.max.z]) {
+      const a = (x - mx) * ux + (z - mz) * uz, b = -(x - mx) * uz + (z - mz) * ux; a0 = Math.min(a0, a); a1 = Math.max(a1, a); b0 = Math.min(b0, b); b1 = Math.max(b1, b);
+    }
+    const am = (a0 + a1) / 2, bm = (b0 + b1) / 2, cx = mx + ux * am - uz * bm, cz = mz + uz * am + ux * bm, radius = site.ring * site.span / 2;
+    const ring = beacon.ring, group = beacon.group;
+    // The plane's x runs along her (rotation about y: x goes to cos, -sin), its z across.
+    ring.rotation.y = Math.atan2(-uz, ux);
+    ring.scale.set(((a1 - a0) / 2 + OUTSIDE) / radius, 1, ((b1 - b0) / 2 + OUTSIDE) / radius);
+    group.position.set(cx, floor(cx, cz) + .2, cz); ring.position.set(0, .25, 0);
+  }
   function place(landmarks = []) {
     const frames = {};
     for (const [id, site] of Object.entries(SITES)) {
       const landmark = landmarks.find(item => item.id === id), [x, , z] = landmark?.position || [site.x, 0, site.z];
       const [ax, , az] = landmark?.interactionPosition || [x + 1, 0, z];
       frames[id] = { x, z, angle: Math.atan2(az - z, ax - x) };
-      beacons.find(item => item.id === id).group.position.set(x, floor(x, z) + .2, z);
+      const beacon = beacons.find(item => item.id === id);
+      beacon.group.position.set(x, floor(x, z) + .2, z);
+      if (site.hull) fitHull(beacon, site);
     }
     build(frames);
     // The meshes just built, for a caller that wants their shaders ready before they show (userData.waiting keeps one hidden, see cull).
     return fresh.splice(0);
   }
   function setFound(id, found = true) { const beacon = beacons.find(item => item.id === id); if (beacon) beacon.found = found; }
-  function update(elapsed, cameraPosition, night = 0, depth = 0, pixelRatio = 1) {
-    time.value = elapsed; ratio.value = pixelRatio;
+  function update(elapsed, cameraPosition, night = 0, depth = 0, pixelRatio = 1, brightness = 1) {
+    aura.value = brightness;
+    const step = Math.min(.1, Math.max(0, elapsed - time.value)); time.value = elapsed; ratio.value = pixelRatio;
     for (const beacon of beacons) {
+      // The highlight eases in and out over about half a second.
+      beacon.focus += ((focused === beacon.id ? 1 : 0) - beacon.focus) * (1 - Math.exp(-step * 7)); if (beacon.focus < .002) beacon.focus = 0;
+      beacon.uniforms.uFocus.value = beacon.focus;
+      if (beacon.quiet) { beacon.group.visible = beacon.focus > 0 && brightness > 0; continue; }
       // A visited landmark settles to a quieter glow; the next one stays bright.
       const target = (beacon.found ? .2 : .52) + depth * .22 + night * .18;
       beacon.uniforms.uStrength.value += (target - beacon.uniforms.uStrength.value) * .04;
@@ -262,5 +319,5 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
   function cull(view = null) {
     for (const mesh of culled) { const sphere = mesh.geometry.boundingSphere; mesh.visible = !mesh.userData.waiting && (!view || view.eye.distanceTo(sphere.center) - sphere.radius < view.range * .7); }
   }
-  return { root, place, update, cull, setFound, counts, sites: SITES };
+  return { root, place, update, cull, setFound, focus, counts, sites: SITES };
 }

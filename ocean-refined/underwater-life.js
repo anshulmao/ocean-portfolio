@@ -55,7 +55,7 @@ export function* underwaterLifeSteps({ economy = false, terrainHeightAt = () => 
   const seaPen = mergeGeometries([stem, crown], false), glowBands = new Map();
   for(let i=0;i<(economy?66:132);i++){
     const x=Math.sin(i*2.399)* (27 + i%6*7), z=-37-(i*.723)%86, y=floorAt(x,z);
-    if(y>-28 || [[18,-39],[-18,-82],[20,-72],[-33,-73],[39,-91]].some(([px,pz])=>Math.hypot(x-px,z-pz)<7))continue;
+    if(y>-28 || [[18,-39],[-18,-82],[20,-72],[20,-83],[-33,-73],[39,-91]].some(([px,pz])=>Math.hypot(x-px,z-pz)<7))continue;
     const band=Math.floor((z+130)/32), scale=.7+(i%5)*.2;
     part.position.set(x,y-.025,z);part.scale.set(scale,scale,scale);part.rotation.set(0,i*1.7,0);part.updateMatrix();
     if(!glowBands.has(band))glowBands.set(band,[]);glowBands.get(band).push(seaPen.clone().applyMatrix4(part.matrix));

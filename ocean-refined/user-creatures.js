@@ -4,6 +4,7 @@ import { clone } from './vendor/SkeletonUtils.js';
 import { floatSkinIndices, turn, modelBytes } from './assets.js';
 import { creatureGeometry, speciesById } from './creature-species.js';
 import { ENCOUNTERS, RESIDENTS, SCHOOLS, SEABED, WRECK_HEIGHT } from './user-creature-routes.js';
+import { DESCENT_LINE } from './return-route.js';
 import { fishNavigator } from './fish-navigation.js';
 import { createMorayDenMotion, updateMorayDenMotion } from './moray-resident.js';
 import { terrainHeightAt as reefTerrain, seabedHeightAt } from './reef.js';
@@ -90,10 +91,9 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   function coverBoxes(from, local = false) {
     let x0 = local ? GW : 0, x1 = local ? -1 : GW - 1, z0 = local ? GH : 0, z1 = local ? -1 : GH - 1;
     const boxes = collisions?.boxes || [], solids = boxes.slice(from).map(entry => entry.box);
-    // The wreck's collision is two low boxes, bow and stern, leaving the diver a way through amidships and over the
-    // decks. To the animals the whole wreck is solid, decks and masts too (WRECK_HEIGHT): a blacktip cruising low
-    // went through its decks.
-    const hull = boxes.filter(entry => /^ship (bow|stern) hull$/.test(entry.mesh || ''));
+    // The wreck's collision follows its hull, slab by slab, leaving the diver the water over the deck. To the animals the
+    // whole wreck is solid, decks and masts too (WRECK_HEIGHT): a blacktip cruising low went through its decks.
+    const hull = boxes.filter(entry => /^ship hull/.test(entry.mesh || ''));
     if (hull.length > 1 && hull.some(entry => boxes.indexOf(entry) >= from)) { const wreck = hull.reduce((sum, entry) => sum.union(entry.box), hull[0].box.clone()); wreck.max.y = wreck.min.y + WRECK_HEIGHT; solids.push(wreck); }
     for (const box of solids) {
       const bx0 = Math.max(0, Math.floor(box.min.x - GX - .5)), bx1 = Math.min(GW - 1, Math.ceil(box.max.x - GX + .5)), bz0 = Math.max(0, Math.floor(box.min.z - GZ - .5)), bz1 = Math.min(GH - 1, Math.ceil(box.max.z - GZ + .5));
@@ -343,8 +343,10 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     let pass = course?.pass ?? rr(...e.pass), y0 = course?.y ?? rr(...e.depth);
     if (!course && player && y0 - player.y > pass * RISE) { y0 = Math.max(player.y + pass * RISE, y0 - DEEPEN); pass = Math.max(pass, (y0 - player.y) / RISE); }
     const cx = across ? px : px + nx * pass, cz = across ? Math.min(pz - pass, e.across) : pz + nz * pass;
-    // The gentle bow in the line; one swimming across the reef bows out to sea, never in over the shallows.
-    const bow = rr(-1, 1) * e.bulge * R;
+    // The gentle bow in the line; one swimming across the reef bows out to sea, never in over the shallows. The guided dive's
+    // own course is straight (or bows as it says): up to a fifth of the pass out either way at random, and the whale shark it
+    // frames could come by 26 m nearer or further than planned.
+    const bow = course ? course.bow ?? 0 : rr(-1, 1) * e.bulge * R;
     e.path = { sx: cx - dx * R, sz: cz - dz * R, ex: cx + dx * R, ez: cz + dz * R, nx, nz, len: 2 * R, bulge: across ? -Math.sign(nz) * Math.abs(bow) : bow };
     e.u = course?.ahead === undefined ? 0 : clamp(.5 - course.ahead / e.path.len, 0, .5); e.y0 = y0; e.next = clock + rr(4, 8);
     for (const c of e.cast) { c.actor.active = true; c.actor.started = false; play(c.actor, 'swim', 0); }
@@ -481,6 +483,8 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
         a.pos.set(pose.x, pose.y, pose.z); a.pitch = 0;
         a.wrapper.position.copy(a.pos); a.wrapper.rotation.set(0, a.yaw, 0, 'YXZ');
       }
+      // The guided dive frames the giant moray where its den mouth actually is (denMouth may turn from the authored heading).
+      if (d.species === 'giant-moray') resting.moray = [f.x + dx * edge, a.pos.y, f.z + dz * edge];
       dens.push({ actor: a, rest: 0, motion, pose });
     }
     // Turtles, each cruising its own loop; one asleep on the sand.
@@ -497,7 +501,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     const wt = RESIDENTS.whitetips;
     if (gltfs.has(wt.species)) {
       const a = actor(wt.species, { name: 'whitetip reef shark' });
-      if (a) herds.push({ route: route(...wt.patrol.loop, { wobble: .12 }), height: over(wt.patrol.height, -4), speed: wt.patrol.speed, pace: 1, members: [{ actor: a, ...member(0, 0, 0, { drift: .8, bob: .25 }) }], look: 8, bank: .14 });
+      if (a) herds.push({ route: route(...wt.patrol.loop, { wobble: .12 }), height: wt.patrol.y !== undefined ? level(wt.patrol.y, .25, 30, 0) : over(wt.patrol.height, -4), speed: wt.patrol.speed, pace: 1, members: [{ actor: a, ...member(0, 0, 0, { drift: .8, bob: .25 }) }], look: 8, bank: .14 });
       wt.resting.slice(0, economy ? wt.lean : wt.resting.length).forEach((spot, i) => rest(wt.species, spot, 3.5, .32, `resting whitetip ${i + 1}`, rr(.85, 1)));
     }
     // Cuttlefish off the side of tall formations, on the side towards the middle of the reef.
@@ -750,6 +754,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     const L = id => facts.get(id)?.lengthMetres || 1;
     const cloud = (species, x, y, z, count, size, extra = {}) => {
       const g = schoolGroup(species, { kind: 'cloud', count, lod: extra.lod, clip: 'idle' }); if (!g) return;
+      g.within = Boolean(extra.within);
       g.centre.set(x, y, z); g.size = size; g.heading = rr(0, TAU); g.radius = Math.max(...size) + L(species);
       for (let i = 0; i < count; i++) { const a = rr(0, TAU), r = Math.cbrt(Math.random()), u = rr(-1, 1), s = Math.sqrt(1 - u * u); g.members.push({ hx: Math.cos(a) * s * r * size[0], hy: u * r * size[1], hz: Math.sin(a) * s * r * size[2], scale: rr(.85, 1.1), w1: rr(.35, 1.1), w2: rr(.4, 1.2), w3: rr(.2, .7), p1: rr(0, TAU), p2: rr(0, TAU), p3: rr(0, TAU), beat: rr(0, TAU), loop: rr(.35, .8), flat: rr(.3, .55), turn: Math.random() < .5 ? 1 : -1 }); }
     };
@@ -792,6 +797,15 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     shoal(tr.species, route(bait.x - 1, bait.z, tr.radius * .9, tr.radius, { wobble: .1 }), level(bait.y + tr.lift, 1.6, 26), tr.speed, pair(tr.count), tr.spread);
     const ff = SCHOOLS.flyingFish;
     shoal(ff.species, route(...ff.loop, { wobble: .12 }), level(ff.y, .25, 9), ff.speed, pair(ff.count), ff.spread, { pose: ff.pose, drift: .3, bob: .05 });
+    // Added after the reef's other schools, so every school before them draws the same random numbers as it always did.
+    // The wreck's and the nautilus's fish, placed from their charted spots (the landmarks themselves may still be loading).
+    for (const [group, fallback] of [[SCHOOLS.wreck, { x: 18, z: -39 }], [SCHOOLS.nautilus, { x: -18, z: -82 }]]) {
+      const spot = landmark(group.landmark) || fallback, base = bed(spot.x, spot.z);
+      for (const c of group.clouds) cloud(c.species, spot.x + c.at[0], base + c.at[1], spot.z + c.at[2], pair(c.count), c.size, { within: group.within });
+    }
+    // Fusiliers wheeling round the descent line at the safety stop.
+    const ln = SCHOOLS.line;
+    shoal(ln.species, route(DESCENT_LINE.x, DESCENT_LINE.z, ln.radius, ln.radius, { wobble: .04 }), level(ln.y, .4, 18), ln.speed, pair(ln.count), [0, .8, ln.stack], { ring: true, drift: .2, bob: .12 });
     // Sea stars and urchins on the bottom: still instances, each its own small group so it is culled on its own.
     for (const b of seabedPlaces) {
       const g = schoolGroup(b.species, { kind: 'bed', count: 1, lod: 1, clip: 'idle' }); if (!g) continue;
@@ -897,7 +911,14 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
           m.lx = fx; m.lz = fz; m.at = frame; m.facing = facing;
           // The whole fish clears the sand, nose and tail as well as middle (on a steep slope its nose dug in).
           const nx = Math.sin(facing) * m.scale * .35, nz = Math.cos(facing) * m.scale * .35, sand = Math.max(floor(fx, fz), floor(fx + nx, fz + nz), floor(fx - nx, fz - nz));
-          write(k, fx, Math.max(g.centre.y - drop + m.hy * tight + .15 * Math.sin(t * m.w2 + m.p2), ground(fx, fz) + .35, sand + .35), fz,
+          // A cloud that lives in a wreck (`within`) keeps off the sand only: to the animals the whole wreck is a block
+          // WRECK_HEIGHT tall, which would lift its fish clear over the masts.
+          // The floor under a fish steps where it crosses the edge of a stone or a colony (the map is in 1 m cells), and
+          // set straight onto it the fish jumped up and down on every crossing (the light blue chromis over the nautilus's
+          // stones). It eases there instead: up quickly, so it never sits in the rock for long, and down slowly.
+          const goal = Math.max(g.centre.y - drop + m.hy * tight + .15 * Math.sin(t * m.w2 + m.p2), g.within ? -Infinity : ground(fx, fz) + .35, sand + .35);
+          m.y = m.y === undefined || dt <= 0 ? goal : m.y + (goal - m.y) * ease(dt, goal > m.y ? 9 : 1.6);
+          write(k, fx, Math.max(m.y, sand + .35), fz,
             facing, clamp(Math.atan2(climb, speed), -.3, .3), clamp(-actualRate * .07, -.16, .16), m.scale, m.beat);
         }
       } else if (g.kind === 'burrows') {

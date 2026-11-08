@@ -580,7 +580,7 @@ export function buildNursery({ x, z, floorAt, economy = false, projects = 6 }) {
 // Experience: a nautilus shell lying on its side on the deep ledge, tipped up towards the approach. The shell is a
 // true logarithmic spiral (each whorl three times the last), cut into chambers along its length, painted with its
 // flame stripes, pearl inside, and the deep ledge's small life around it: shells of real size (two little nautiluses
-// among them), glass sponges, sea pens, feather stars on stones, brittle stars, black coral and a school of anthias.
+// among them), glass sponges, sea pens, feather stars on stones, brittle stars and black coral.
 // Reveal: the chambers light one after another from the centre outwards.
 function nautilusSurface(diameter) {
   const thetaMax = 4 * Math.PI, b = Math.log(3) / TAU, radiusMax = diameter / 2.49;
@@ -760,17 +760,12 @@ export function buildNautilus({ x, z, floorAt, economy = false, diameter = 3.3 }
   }
   life.meshes('Deep ledge life', root);
 
-  // Anthias: a small pink school hovering over the shell, slowly turning.
-  const anthiasMaterial = standard({ roughness: .5, name: 'anthias' });
-  const anthias = new THREE.InstancedMesh(fishGeometry(new Kit(), anthiasMaterial, { length: .07, depth: .03, width: .014, body: '#f08aa8', belly: '#ffd0dc', back: '#d0607e', tail: '#f2c94c' }), anthiasMaterial, economy ? 10 : 18);
-  anthias.name = 'Ledge anthias'; anthias.frustumCulled = false;
-  const shoal = Array.from({ length: anthias.count }, () => ({ radius: 1.4 + random() * 1.4, height: 1.1 + random() * 1.3, speed: (.18 + random() * .12) * (random() < .2 ? -1 : 1), phase: random() * TAU }));
-  const fishDummy = new THREE.Object3D(), floor0 = floorAt(x, z);
+  // The fish by the shell are the reef's own (user-creature-routes.js SCHOOLS.nautilus), and a whitetip patrols the ledge.
 
   let now = 0, openedAt = -100, open = false;
   const levels = materials.map(() => 0);
   return {
-    root, free: [anthias], focus, approach, solids,
+    root, focus, approach, solids,
     reveal(isOpen, motion = true) {
       if (isOpen) { open = true; openedAt = motion ? now : now - 10; return motion ? 1.1 : 0; }
       open = false; return true;
@@ -791,14 +786,6 @@ export function buildNautilus({ x, z, floorAt, economy = false, diameter = 3.3 }
         levels[n] += (target - levels[n]) * (step > 0 ? 1 - Math.exp(-step * rate) : 1);
         materials[n].emissiveIntensity = levels[n];
       }
-      if (eye && eye.distanceTo(center) > 50) return;
-      for (let i = 0; i < shoal.length; i++) {
-        const f = shoal[i], a = f.phase + elapsed * f.speed;
-        fishDummy.position.set(x + Math.cos(a) * f.radius, floor0 + f.height + Math.sin(elapsed * .6 + i) * .12, z + Math.sin(a) * f.radius);
-        fishDummy.rotation.set(0, (f.speed > 0 ? -a - Math.PI / 2 : -a + Math.PI / 2) + Math.sin(elapsed * 8 + i) * .08, 0); fishDummy.updateMatrix();
-        anthias.setMatrixAt(i, fishDummy.matrix);
-      }
-      anthias.instanceMatrix.needsUpdate = true;
     }
   };
 }
@@ -862,13 +849,7 @@ export function buildDescentLine({ x, z, floorAt, economy = false, depth = 7.5 }
   }
   kit.meshes('Descent line', root);
 
-  // A school of fusiliers that has made the line its own, circling it around the stop.
-  const schoolKit = new Kit(), schoolMaterial = standard({ roughness: .55, name: 'line fusiliers' });
-  const fusiliers = new THREE.InstancedMesh(fishGeometry(schoolKit, schoolMaterial, { length: .1, depth: .035, width: .018, body: '#5d8fd6', belly: '#e8eef5', back: '#2f5d9a', tail: '#f2c94c' }), schoolMaterial, economy ? 12 : 20);
-  fusiliers.name = 'Line fusiliers'; fusiliers.frustumCulled = false;
-  const lineFish = [], schoolRandom = seededRandom(733);
-  for (let i = 0; i < fusiliers.count; i++) lineFish.push({ radius: 1.1 + schoolRandom() * 1.6, y: -depth - 1 + schoolRandom() * 4.5, speed: .35 + schoolRandom() * .15, phase: schoolRandom() * TAU });
-  const fishDummy = new THREE.Object3D();
+  // The fish round the line are the reef's own fusiliers, wheeling round it at the stop (user-creature-routes.js SCHOOLS.line).
 
   // The slate: clipped to the line, hanging a little off it so it can turn about it, writing on the face towards +x
   // when the pivot is unturned.
@@ -900,22 +881,23 @@ export function buildDescentLine({ x, z, floorAt, economy = false, depth = 7.5 }
   buoyKit.meshes('Surface buoy', surface);
   surface.position.set(x, 0, z);
 
-  const focus = new THREE.Box3().setFromCenterAndSize(clip.clone().add(new THREE.Vector3(.36, -.44, 0)), new THREE.Vector3(.4, .6, .8));
+  // The slate turns about the line facing west (yaw π), towards the wreck the diver comes up from.
+  const focus = new THREE.Box3().setFromCenterAndSize(clip.clone().add(new THREE.Vector3(-.36, -.44, 0)), new THREE.Vector3(.4, .6, .8));
   const center = focus.getCenter(new THREE.Vector3());
-  const approach = new THREE.Vector3(center.x + 2.8, center.y, center.z);
+  const approach = new THREE.Vector3(center.x - 2.8, center.y, center.z);
   const solids = [new THREE.Box3(new THREE.Vector3(foot.x - .3, floor - .1, foot.z - .3), new THREE.Vector3(foot.x + .3, floor + .34, foot.z + .3))];
 
   let now = 0, open = false, turnedAt = -100, releasedAt = -100, from = 0, to = 0, glow = 0, yaw = 0, seen = false;
   const lastEye = new THREE.Vector3();
-  const drift = t => .55 * Math.sin(t * .31) + .25 * Math.sin(t * .13 + 1.3);
+  const drift = t => Math.PI + .55 * Math.sin(t * .31) + .25 * Math.sin(t * .13 + 1.3);
   const toward = new THREE.Vector3();
   return {
-    root, surface, free: [fusiliers], focus, approach, solids,
+    root, surface, focus, approach, solids,
     reveal(isOpen, motion = true, eye = null) {
       open = isOpen;
       if (!isOpen) { releasedAt = now; from = yaw; return true; }
       // Towards the diver (as last seen by update), or straight out along the approach lane.
-      const target = eye ? toward.copy(eye).sub(clip) : seen ? toward.copy(lastEye).sub(clip) : toward.set(1, 0, 0);
+      const target = eye ? toward.copy(eye).sub(clip) : seen ? toward.copy(lastEye).sub(clip) : toward.set(-1, 0, 0);
       const goal = Math.atan2(-target.z, target.x);
       from = yaw; to = from + Math.atan2(Math.sin(goal - from), Math.cos(goal - from));
       turnedAt = motion ? now : now - 10;
@@ -931,15 +913,6 @@ export function buildDescentLine({ x, z, floorAt, economy = false, depth = 7.5 }
       const target = open ? .55 : near(eye, center, 2, 7) * .12;
       glow += (target - glow) * (step > 0 ? 1 - Math.exp(-step * (open ? 5 : 2.5)) : 1);
       face.emissiveIntensity = glow;
-      if (eye && eye.distanceTo(center) > 50) return;
-      for (let i = 0; i < lineFish.length; i++) {
-        const f = lineFish[i], a = f.phase + elapsed * f.speed, at = lineAt(f.y);
-        fishDummy.position.set(at.x + Math.cos(a) * f.radius, f.y + Math.sin(elapsed * .5 + i) * .2, at.z + Math.sin(a) * f.radius);
-        // Swimming round the line: heading along the circle's tangent.
-        fishDummy.rotation.set(0, -a - Math.PI / 2 + Math.sin(elapsed * 9 + i) * .08, 0); fishDummy.updateMatrix();
-        fusiliers.setMatrixAt(i, fishDummy.matrix);
-      }
-      fusiliers.instanceMatrix.needsUpdate = true;
     },
     updateSurface(elapsed) {
       const h = waveHeight(x, z, elapsed), hx = waveHeight(x + .6, z, elapsed) - waveHeight(x - .6, z, elapsed), hz = waveHeight(x, z + .6, elapsed) - waveHeight(x, z - .6, elapsed);
@@ -955,9 +928,8 @@ export function buildDescentLine({ x, z, floorAt, economy = false, depth = 7.5 }
 // approach. Its hull is painted (plating, freeing ports weeping rust, the boot stripe, portholes, draft marks and her
 // name), its deck plated and silted, and it carries what a trawler carries: wheelhouse, mast and funnel, gantry with
 // its trawl doors and a net still snagged on it, net drum, winch, crane, crates, bollards, tyres, anchor, propeller and
-// rudder. A breach is torn in its high side, and the fish hold's hatch stands open: a school of glassy sweepers lives
-// in the hold, cardinalfish in the wheelhouse, snappers round the hull and a grouper by the breach. Reveal: the
-// wheelhouse lights flicker on and the sweepers pour up out of the hatch, swirl, and settle back in.
+// rudder. A breach is torn in its high side, and the fish hold's hatch stands open. The reef's own fish live round it
+// (user-creature-routes.js SCHOOLS.wreck). Reveal: the wheelhouse lights flicker on.
 function fishGeometry(kit, material, { length = .07, depth = .045, width = .018, body = '#c98a4b', belly = '#efd2a8', back = '#8a5a30', tail = '#b77a40' } = {}) {
   kit.add(material, new THREE.SphereGeometry(1, 8, 6), { size: [length, depth, width], color: body,
     paint: (v, c) => v.y < -depth * .2 ? c.lerp(new THREE.Color(belly), .6) : v.y > depth * .45 ? c.lerp(new THREE.Color(back), .5) : c });
@@ -986,6 +958,8 @@ export function buildFishingBoat({ x, z, floorAt, economy = false }) {
     const rake = 1.4 * smooth((s - .75) / .25) * (y - k0) / (d + BULWARK - k0);
     return new THREE.Vector3(xAt(s) + rake, y, side * zf * b);
   };
+  // How far the bow's rake carries the hull forward at height y (point uses the same).
+  const rakeAt = (s, y) => 1.4 * smooth((s - .75) / .25) * (y - keelAt(s)) / (deckAt(s) + BULWARK - keelAt(s));
   const ringPoint = (s, k) => k < P - 1 ? point(s, P - 1 - k, -1) : point(s, k - (P - 1), 1);
   const share = (s, y) => clamp01((y - keelAt(s)) / (deckAt(s) + BULWARK - keelAt(s)));
   // Heights on the painted hull, as shares of keel to bulwark top at midships (deck 2.8 m, bulwark 0.9 m).
@@ -1043,11 +1017,13 @@ export function buildFishingBoat({ x, z, floorAt, economy = false }) {
   const inside = new THREE.Mesh(insideGeometry, standard({ roughness: .95, side: THREE.BackSide, name: 'trawler hull inside' })); inside.name = 'Trawler hull inside';
   boat.add(outside, inside);
 
-  // The deck (the hold's hatch open in it).
-  { const dp = [], dc = [], du = [], di = [], columns = 10, last = stations - 2;
+  // The deck (the hold's hatch open in it), out to the stem. It follows the bow's rake at deck height, as the hull's sides
+  // do (point), and the hull's breadth at the deck: it used to stop a station short of the bow and ignore the rake, which
+  // left the foredeck open.
+  { const dp = [], dc = [], du = [], di = [], columns = 10, last = stations;
     for (let i = 0; i <= last; i++) for (let c = 0; c <= columns; c++) {
-      const s = i / stations, b = half(s), zc = -b + 2 * b * c / columns;
-      dp.push(xAt(s), deckAt(s), zc); dc.push(1, 1, 1); du.push(s, c / columns);
+      const s = i / stations, b = half(s) * 1.01, zc = -b + 2 * b * c / columns;
+      dp.push(xAt(s) + rakeAt(s, deckAt(s)), deckAt(s), zc); dc.push(1, 1, 1); du.push(s, c / columns);
     }
     for (let i = 0; i < last; i++) for (let c = 0; c < columns; c++) {
       const s = (i + .5) / stations, b = half(s), zc = -b + 2 * b * (c + .5) / columns;
@@ -1262,41 +1238,40 @@ export function buildFishingBoat({ x, z, floorAt, economy = false }) {
   }
   boat.position.y = lift - .55; boat.updateMatrixWorld(true);
 
-  // The fish, in the boat's own frame: sweepers schooling in the hold, cardinalfish in the wheelhouse, yellow snappers
-  // circling the hull, and a grouper holding station by the breach.
-  const fishFrame = new THREE.Group(); fishFrame.name = 'Trawler fish'; fishFrame.matrixAutoUpdate = false; fishFrame.matrix.copy(boat.matrixWorld);
-  const fishMaterial = standard({ roughness: .5, name: 'wreck fish' });
-  const sweeperCount = economy ? 18 : 30, cardinalCount = economy ? 4 : 6, snapperCount = economy ? 9 : 16;
-  const sweepers = new THREE.InstancedMesh(fishGeometry(new Kit(), fishMaterial), fishMaterial, sweeperCount);
-  const cardinals = new THREE.InstancedMesh(fishGeometry(new Kit(), fishMaterial, { length: .055, depth: .03, width: .015, body: '#d6553e', belly: '#f0a58a', back: '#9a3020', tail: '#c4482f' }), fishMaterial, cardinalCount);
-  const snappers = new THREE.InstancedMesh(fishGeometry(new Kit(), fishMaterial, { length: .16, depth: .06, width: .03, body: '#f0c040', belly: '#f6e6b0', back: '#5d8fd6', tail: '#f2c94c' }), fishMaterial, snapperCount);
-  const grouper = new THREE.Mesh(fishGeometry(new Kit(), fishMaterial, { length: .42, depth: .2, width: .13, body: '#6e5f4a', belly: '#a89676', back: '#4a3f30', tail: '#5a4d3a' }), fishMaterial);
-  for (const mesh of [sweepers, cardinals, snappers]) { mesh.frustumCulled = false; fishFrame.add(mesh); }
-  fishFrame.add(grouper);
-  sweepers.name = 'Hold sweepers'; cardinals.name = 'Wheelhouse cardinalfish'; snappers.name = 'Wreck snappers'; grouper.name = 'Wreck grouper';
-  const holdCenter = new THREE.Vector3((xAt(hatch.s0) + xAt(hatch.s1)) / 2, keelAt(.27) + .5 * (deckAt(.27) - keelAt(.27)), 0);
-  const exit = new THREE.Vector3(holdCenter.x, deckAt(.27) + 2.4, -.4);
-  const offsets = Array.from({ length: sweeperCount }, () => new THREE.Vector3((random() - .5) * 1.1, (random() - .5) * .55, (random() - .5) * .9));
-  const cardinalSpots = Array.from({ length: cardinalCount }, () => ({ at: new THREE.Vector3(w.x0 + .5 + random() * (w.x1 - w.x0 - 1.3), w.base + .9 + random() * .9, (random() - .5) * 2.2), phase: random() * TAU }));
-  const snapperPaths = Array.from({ length: snapperCount }, () => ({ rx: 6 + random() * 1.6, rz: 3.6 + random() * 1.2, y: deckAt(.5) + 1 + random() * 2.2, phase: random() * TAU, speed: .2 + random() * .06 }));
-  const grouperHome = point(breach.s, Math.round(breach.f * (P - 1)), -1).add(new THREE.Vector3(.2, -.3, -.75));
-  const school = new THREE.Vector3(), previous = new THREE.Vector3(), heading = new THREE.Vector3(), dummy = new THREE.Object3D(), spot = new THREE.Vector3();
-
+  // The fish round it are the reef's own (user-creature-routes.js SCHOOLS.wreck), drawn with the rest of the reef's fish.
   const focus = new THREE.Box3().setFromObject(boat), center = focus.getCenter(new THREE.Vector3());
   const ax = center.x + 8.5, az = center.z;
   const approach = new THREE.Vector3(ax, Math.max(floorAt(ax, az) + 3.5, center.y + .6), az);
-  // Collision: the hull aft of the wheelhouse and the bow with the wheelhouse, as two boxes. Named as the old wreck's
-  // were, so the animals still treat the whole wreck as solid (user-creatures.js).
-  const worldBox = (x0, x1, y0, y1, zh) => { const box = new THREE.Box3(); for (const cx of [x0, x1]) for (const cy of [y0, y1]) for (const cz of [-zh, zh]) box.expandByPoint(new THREE.Vector3(cx, cy, cz).applyMatrix4(boat.matrixWorld)); return box; };
-  const solids = [
-    { box: worldBox(-L / 2, w.x0 - .3, .2, deckAt(.3) + .6, B / 2 * .92), name: 'ship stern hull' },
-    { box: worldBox(w.x0 - .3, L / 2 - .6, .4, deckAt(.65) + .5, B / 2 * .88), name: 'ship bow hull' },
-    { box: worldBox(w.x0, w.x1, w.base, w.base + w.height + .2, w.half + .05), name: 'trawler wheelhouse' }
-  ];
+  // Collision, close to the wreck's shape. The collision world takes boxes square to the world, and the hull is turned and
+  // heeled, so it is cut into short slabs along its length and three strips across its beam, each boxed on its own: solid
+  // from the keel to the deck, with a wall for each bulwark above it, so a diver can swim over the deck but not through
+  // the ship. Then the wheelhouse, the funnel, the mast, the stern gantry, the net drum and the winch. (It used to be
+  // three boxes: the hull below the bulwarks and the wheelhouse, a diver swimming straight through the bulwarks, the
+  // rigging and the gear, and bumping into nothing in the water beside the hull.) The hull's slabs are named `ship hull`,
+  // so the animals still take the whole wreck for one block (user-creatures.js).
+  const worldBox = (x0, x1, y0, y1, z0, z1) => { const box = new THREE.Box3(); for (const cx of [x0, x1]) for (const cy of [y0, y1]) for (const cz of [z0, z1]) box.expandByPoint(new THREE.Vector3(cx, cy, cz).applyMatrix4(boat.matrixWorld)); return box; };
+  const solids = [], SLABS = 16;
+  for (let i = 0; i < SLABS; i++) {
+    const s0 = i / SLABS, s1 = (i + 1) / SLABS, b = Math.max(half(s0), half(s1)) * 1.01;
+    if (b < .08) continue;
+    const deck = Math.max(deckAt(s0), deckAt(s1)), keel = Math.min(keelAt(s0), keelAt(s1)) + .1;
+    const x0 = xAt(s0), x1 = xAt(s1) + rakeAt(s1, deck + BULWARK);
+    for (let strip = 0; strip < 3; strip++) solids.push({ box: worldBox(x0, x1, keel, deck, -b + strip * 2 * b / 3, -b + (strip + 1) * 2 * b / 3), name: `ship hull ${i}.${strip}` });
+    for (const side of [-1, 1]) solids.push({ box: worldBox(x0, x1, deck, deck + BULWARK, side < 0 ? -b : b - .3, side < 0 ? -b + .3 : b), name: `ship hull bulwark ${i}` });
+  }
+  solids.push(
+    { box: worldBox(w.x0, w.x1, w.base, w.base + w.height + .2, -w.half - .05, w.half + .05), name: 'trawler wheelhouse' },
+    { box: worldBox(w.x0 - 1.15, w.x0 - .35, deckAt(.5), deckAt(.5) + 2, -1.35, -.55), name: 'trawler funnel' },
+    { box: worldBox(mx - .15, mx + .15, w.base + w.height, mastTop + .2, -.15, .15), name: 'trawler mast' },
+    { box: worldBox(xs - .45, xs + .45, ds, ds + 3.75, -2.2, -1.65), name: 'trawler gantry' },
+    { box: worldBox(xs - .45, xs + .45, ds, ds + 3.75, 1.65, 2.2), name: 'trawler gantry' },
+    { box: worldBox(xs - .4, xs, ds + 3.4, ds + 3.8, -1.9, 1.9), name: 'trawler gantry' },
+    { box: worldBox(xAt(.13) - .85, xAt(.13) + .85, deckAt(.13), deckAt(.13) + 1.6, -1.3, 1.3), name: 'trawler net drum' },
+    { box: worldBox(xAt(.46) - .5, xAt(.46) + .8, deckAt(.46), deckAt(.46) + .95, -1, 1), name: 'trawler winch' });
 
   let now = 0, open = false, openedAt = -100, glow = 0;
   return {
-    root, free: [fishFrame], focus, approach, solids,
+    root, focus, approach, solids,
     reveal(isOpen, motion = true) {
       open = isOpen;
       if (!isOpen) return true;
@@ -1310,36 +1285,6 @@ export function buildFishingBoat({ x, z, floorAt, economy = false }) {
       const target = open ? (t < .4 ? (Math.sin(t * 70) > -.2 ? 1.2 : .1) : 1.1) : near(eye, center, 6, 16) * .12;
       glow += (target - glow) * (step > 0 ? 1 - Math.exp(-step * (open ? 30 : 2.5)) : 1);
       glass.emissiveIntensity = glow;
-      if (eye && eye.distanceTo(center) > 60) return;
-      // The school: milling in the hold, or, after a reveal, up through the hatch and back down.
-      const pull = smooth(t / .55) * (1 - smooth((t - 1.4) / 1.8));
-      previous.copy(school);
-      school.set(holdCenter.x + Math.sin(elapsed * .35) * 1, holdCenter.y + Math.sin(elapsed * .5 + 1) * .25, Math.sin(elapsed * .27 + 2) * .6).lerp(exit, pull);
-      heading.subVectors(school, previous);
-      const turn = heading.lengthSq() > 1e-8 ? Math.atan2(-heading.z, heading.x) : 0;
-      for (let i = 0; i < sweeperCount; i++) {
-        const o = offsets[i], spread = 1 + pull * 1.2;
-        dummy.position.set(school.x + o.x * spread + Math.sin(elapsed * 1.3 + i) * .06, school.y + o.y * spread, school.z + o.z * spread + Math.cos(elapsed * 1.1 + i * 2) * .06);
-        dummy.rotation.set(0, turn + Math.sin(elapsed * 2 + i) * .25, 0); dummy.updateMatrix();
-        sweepers.setMatrixAt(i, dummy.matrix);
-      }
-      sweepers.instanceMatrix.needsUpdate = true;
-      for (let i = 0; i < cardinalCount; i++) {
-        const c = cardinalSpots[i];
-        spot.copy(c.at).add(new THREE.Vector3(Math.sin(elapsed * .4 + c.phase) * .15, Math.sin(elapsed * .6 + c.phase) * .05, 0));
-        dummy.position.copy(spot); dummy.rotation.set(0, Math.sin(elapsed * .3 + c.phase) * 1.2, 0); dummy.updateMatrix();
-        cardinals.setMatrixAt(i, dummy.matrix);
-      }
-      cardinals.instanceMatrix.needsUpdate = true;
-      for (let i = 0; i < snapperCount; i++) {
-        const f = snapperPaths[i], a = f.phase + elapsed * f.speed;
-        dummy.position.set(Math.cos(a) * f.rx, f.y + Math.sin(elapsed * .5 + i) * .15, Math.sin(a) * f.rz);
-        dummy.rotation.set(0, Math.atan2(-Math.cos(a) * f.rz, -Math.sin(a) * f.rx) + Math.sin(elapsed * 7 + i) * .06, 0); dummy.updateMatrix();
-        snappers.setMatrixAt(i, dummy.matrix);
-      }
-      snappers.instanceMatrix.needsUpdate = true;
-      grouper.position.copy(grouperHome).add(spot.set(Math.sin(elapsed * .3) * .12, Math.sin(elapsed * .5) * .06, 0));
-      grouper.rotation.set(0, Math.sin(elapsed * .2) * .3, 0);
     }
   };
 }

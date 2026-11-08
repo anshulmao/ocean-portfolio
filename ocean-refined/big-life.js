@@ -27,7 +27,8 @@ function lookThere(dt, api, state, live) {
   for (const id of pointed) if (!live.some(item => item.id === id)) pointed.delete(id);
   let subject = null, nearest = Infinity;
   for (const item of live) {
-    const noted = NOTED[item.id]; if (!noted || pointed.has(item.id)) continue;
+    // One the guided dive is about to show (it calls the whale shark in early) waits for the tour's own caption first.
+    const noted = NOTED[item.id]; if (!noted || pointed.has(item.id) || window.oceanTour?.reserved?.(item.id)) continue;
     const d = Math.hypot(item.x - px, item.y - py, item.z - pz);
     if (d < noted[1] && d < nearest) { nearest = d; subject = item; }
   }
