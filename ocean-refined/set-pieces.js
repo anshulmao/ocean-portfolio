@@ -4,16 +4,18 @@ import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 import { DESCENT_LINE } from './return-route.js';
 
 const TAU = Math.PI * 2;
+// How far outside a hull its oval runs (m).
+const OUTSIDE = .9;
 // span: the beacon's ripple and highlight plane, across (m); ring: the highlight's ring, as a share of its half width
-// (round the helmet's plinth, the nautilus's alcove). The wreck's is drawn out along her hull and under it (round 16,
-// the owner's notes: a circle round all of her was too big): stretch, the plane's scale along and across her; turn, her
-// heading (rad, about y; she lies from her bow at 16, -47.5 to her stern at 22, -31.5); shift, from the charted spot to
-// the middle of her hull (x, z, m).
+// (round the helmet's plinth, the nautilus's alcove). The wreck's is an oval under her hull (round 16, the owner's notes:
+// a circle round all of her was too big): stretch, the plane's scale along and across her; turn, her heading (rad, about
+// y). Once she is built, place() fits it to her hull as it lies (her collision slabs: middle, heading and length; round
+// 17, the oval stood off to one side of her, laid out from her charted spot and a heading guessed from it).
 const SITES = {
   about: { x: -12, z: -15, color: '#7ff0cf', span: 13, ring: .44 },
   // About is the diver's helmet, Experience the nautilus on the deep ledge, Projects the sunken trawler (landmark-builds.js).
   experience: { x: -18, z: -82, color: '#ffcf7a', span: 13, ring: .5 },
-  projects: { x: 18, z: -39, color: '#c9a2ff', span: 13, ring: .78, stretch: [1.75, .78], turn: Math.atan2(16, -6), shift: [1, -.5] }
+  projects: { x: 18, z: -39, color: '#c9a2ff', span: 13, ring: .78, stretch: [2, .87], turn: Math.atan2(-.943, .332), hull: /^ship hull/ }
 };
 
 const beaconVertex = /* glsl */ `
@@ -239,7 +241,7 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
     const ring = new THREE.Mesh(new THREE.PlaneGeometry(site.span, site.span).rotateX(-Math.PI / 2),
       new THREE.ShaderMaterial({ ...options, vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}', fragmentShader: ringFragment }));
     ring.position.y = .25;
-    if (site.stretch) { ring.scale.set(site.stretch[0], 1, site.stretch[1]); ring.rotation.y = site.turn; ring.position.x = site.shift[0]; ring.position.z = site.shift[1]; }
+    if (site.stretch) { ring.scale.set(site.stretch[0], 1, site.stretch[1]); ring.rotation.y = site.turn; }
     const total = economy ? 26 : 44, positions = [], seeds = [];
     for (let i = 0; i < total; i++) { const a = random() * TAU, r = Math.sqrt(random()) * 2.4; positions.push(Math.cos(a) * r, 0, Math.sin(a) * r); seeds.push(random()); }
     const geometry = new THREE.BufferGeometry();
@@ -249,7 +251,7 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
     // and ring then cull like any other mesh instead of drawing off screen.
     geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, height / 2, 0), height / 2 + 3);
     for (const mesh of [column, ring, sparks]) { mesh.renderOrder = 3; group.add(mesh); }
-    root.add(group); beacons.push({ id, group, uniforms, found: false, focus: 0 });
+    root.add(group); beacons.push({ id, group, ring, uniforms, found: false, focus: 0 });
   });
   // The résumé's slate hangs on the descent line in mid-water (reef.js RESUME_SITE): no column or motes there, only its
   // highlight, a ring round the line just under the slate.
@@ -266,13 +268,34 @@ export function createSetPieces({ terrainHeightAt = () => -20, collisions = null
   function focus(id = null) { focused = id; }
 
   /** Build props around the grounded landmarks and seat each beacon on its model. */
+  // The oval under a hull, fitted to its collision slabs: their middle, the line they run along, and their reach along
+  // and across it, the ring just outside them (OUTSIDE m).
+  function fitHull(beacon, site) {
+    const boxes = (collisions?.boxes || []).filter(entry => site.hull.test(entry.mesh || '')); if (boxes.length < 4) return;
+    let mx = 0, mz = 0; for (const { box } of boxes) { mx += (box.min.x + box.max.x) / 2; mz += (box.min.z + box.max.z) / 2; } mx /= boxes.length; mz /= boxes.length;
+    let xx = 0, zz = 0, xz = 0;
+    for (const { box } of boxes) { const dx = (box.min.x + box.max.x) / 2 - mx, dz = (box.min.z + box.max.z) / 2 - mz; xx += dx * dx; zz += dz * dz; xz += dx * dz; }
+    const angle = .5 * Math.atan2(2 * xz, xx - zz), ux = Math.cos(angle), uz = Math.sin(angle);
+    let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
+    for (const { box } of boxes) for (const x of [box.min.x, box.max.x]) for (const z of [box.min.z, box.max.z]) {
+      const a = (x - mx) * ux + (z - mz) * uz, b = -(x - mx) * uz + (z - mz) * ux; a0 = Math.min(a0, a); a1 = Math.max(a1, a); b0 = Math.min(b0, b); b1 = Math.max(b1, b);
+    }
+    const am = (a0 + a1) / 2, bm = (b0 + b1) / 2, cx = mx + ux * am - uz * bm, cz = mz + uz * am + ux * bm, radius = site.ring * site.span / 2;
+    const ring = beacon.ring, group = beacon.group;
+    // The plane's x runs along her (rotation about y: x goes to cos, -sin), its z across.
+    ring.rotation.y = Math.atan2(-uz, ux);
+    ring.scale.set(((a1 - a0) / 2 + OUTSIDE) / radius, 1, ((b1 - b0) / 2 + OUTSIDE) / radius);
+    group.position.set(cx, floor(cx, cz) + .2, cz); ring.position.set(0, .25, 0);
+  }
   function place(landmarks = []) {
     const frames = {};
     for (const [id, site] of Object.entries(SITES)) {
       const landmark = landmarks.find(item => item.id === id), [x, , z] = landmark?.position || [site.x, 0, site.z];
       const [ax, , az] = landmark?.interactionPosition || [x + 1, 0, z];
       frames[id] = { x, z, angle: Math.atan2(az - z, ax - x) };
-      beacons.find(item => item.id === id).group.position.set(x, floor(x, z) + .2, z);
+      const beacon = beacons.find(item => item.id === id);
+      beacon.group.position.set(x, floor(x, z) + .2, z);
+      if (site.hull) fitHull(beacon, site);
     }
     build(frames);
     // The meshes just built, for a caller that wants their shaders ready before they show (userData.waiting keeps one hidden, see cull).

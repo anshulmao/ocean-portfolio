@@ -572,3 +572,6 @@ stops.
     look down at the site, the lower the anchor (to 12% of its height straight down), so looking down on the wreck from
     close over her its card stands over her middle instead of off to one side. Cards are placed on the canvas's own
     rectangle, which on a phone can differ from the window's inner size as the browser's bars come and go.
+  - **The wreck's aura is fitted to her hull** once she is built (set-pieces.js fitHull): the middle, heading and length of
+    her collision slabs, the ring 0.9 m outside them. Laid out from her charted spot and a guessed heading, it stood about
+    3 m off to one side of her.
