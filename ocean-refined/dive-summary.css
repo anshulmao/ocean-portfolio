@@ -80,9 +80,10 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
 .ds-map canvas{position:absolute;inset:0;width:100%;height:100%}
 .ds-map::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 40px #021a2680;border-radius:inherit}
 .ds-map svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
-.ds-track-glow{fill:none;stroke:#bffaff;stroke-opacity:.22;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;filter:blur(.6px)}
-.ds-track{fill:none;stroke:url(#ds-swim);stroke-width:.7;stroke-linecap:round;stroke-linejoin:round}
-.ds-arrow{fill:#ffffff;opacity:.9}
+.ds-track-glow{fill:none;stroke:#bffaff;stroke-opacity:.12;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round;filter:blur(.5px)}
+/* The swim: a fine dotted line (chart metres: a dot every 1.2 m), brightening from In to Out. */
+.ds-track{fill:none;stroke:url(#ds-swim);stroke-width:.42;stroke-dasharray:.01 1.2;stroke-linecap:round;stroke-linejoin:round}
+.ds-arrow{fill:#ffffff;opacity:.8}
 .ds-end circle{fill:#7ff0cf;stroke:#05222f;stroke-width:.5}
 .ds-end rect{fill:#ffffff;stroke:#05222f;stroke-width:.5}
 .ds-end text{fill:#ffffff;font:600 2.4px/1 var(--holo-font);paint-order:stroke;stroke:#0c3456;stroke-width:.7px}
@@ -115,19 +116,30 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
 :is(.ds-pin,.ds-glyph,.ds-shot):focus-visible{outline:2px solid var(--holo-focus);outline-offset:3px}
 .ds-sites-side{display:grid;gap:12px;align-content:start}
 .ds-sites-hint{font:400 12px/1.4 var(--holo-font);color:#bfe9f2}
-.ds-checks,.ds-features{display:flex;flex-wrap:wrap;gap:6px;padding:0;list-style:none}
-.ds-checks li,.ds-features li{display:contents}
-.ds-checks button,.ds-features button{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:6px 10px;border:1px solid var(--holo-faint);border-radius:2px;background:none;color:#cdeff6;font:400 12px/1 var(--holo-font);cursor:pointer;transition:border-color var(--motion-hover) var(--journey-ease),background var(--motion-hover) var(--journey-ease)}
-.ds-checks button{border-left:2px solid var(--signal);color:var(--holo-ink);font-weight:500}
-.ds-checks li[data-done="false"] button{border-left-style:dashed}
-.ds-checks button i{display:grid;place-items:center;width:16px;height:16px;border-radius:50%;border:1.5px dashed var(--signal);color:#05222f;font:700 10px/1 var(--holo-font);font-style:normal}
-.ds-checks li[data-done="true"] button i{border-style:solid;background:var(--signal)}
-.ds-checks em{font:500 10px/1 var(--holo-mono);font-style:normal;color:#9fcfd9}
-.ds-features li[data-done="true"] button{border-color:var(--holo-dim);color:var(--holo-ink)}
-.ds-features li[data-done="true"] button::before{content:"✓";color:var(--holo-mint)}
-:is(.ds-checks,.ds-features) button:hover{background:#8ff4ff12;border-color:var(--holo-dim)}
-:is(.ds-checks,.ds-features) button[aria-pressed="true"]{background:#8ff4ff22;border-color:var(--holo-strong)}
+/* The legend outside the chart: the sites as three cards, the features as a sheet of their drawings. */
+.ds-checks,.ds-features{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.ds-checks{grid-template-columns:repeat(3,minmax(0,1fr))}
+.ds-features{grid-template-columns:repeat(4,minmax(0,1fr))}
+:is(.ds-checks,.ds-features) li{display:grid}
+:is(.ds-checks,.ds-features) button{display:grid;width:100%;border:1px solid var(--holo-faint);border-radius:3px;background:#8ff4ff06;color:var(--holo-ink);font:inherit;text-align:left;cursor:pointer;transition:border-color var(--motion-hover) var(--journey-ease),background var(--motion-hover) var(--journey-ease),translate var(--motion-hover) var(--journey-ease)}
+:is(.ds-checks,.ds-features) button:hover{border-color:var(--holo-dim);background:#8ff4ff10;translate:0 -1px}
+:is(.ds-checks,.ds-features) button[aria-pressed="true"]{border-color:var(--holo-strong);background:#8ff4ff1c;box-shadow:0 0 12px #5fe9ff30}
 :is(.ds-checks,.ds-features) button:focus-visible{outline:2px solid var(--holo-focus);outline-offset:2px}
+.ds-checks button{grid-template-columns:auto 1fr;grid-template-rows:auto auto;align-items:center;gap:2px 9px;padding:10px;border-top:2px solid var(--signal)}
+.ds-checks button i{grid-row:1/3;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:2px solid var(--signal);color:var(--signal);font:700 11px/1 var(--holo-font);font-style:normal}
+.ds-checks li[data-done="true"] button i{background:var(--signal);color:#05222f}
+.ds-checks li[data-done="false"] button{border-top-style:dashed}
+.ds-checks li[data-done="false"] button i{border-style:dashed}
+.ds-checks b{font:500 13px/1.15 var(--holo-font)}
+.ds-checks small{font:500 10px/1.2 var(--holo-mono);color:#9fcfd9}
+.ds-features button{justify-items:center;gap:4px;padding:8px 6px 7px}
+.ds-features button svg{width:46px;height:30px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;color:#7fa8b3}
+.ds-features button svg .art-floor{display:none}
+.ds-features button span{font:400 10px/1.2 var(--holo-font);color:#9fcfd9;text-align:center}
+.ds-features li[data-done="true"] button svg{color:#fff4c7;filter:drop-shadow(0 0 4px #ffe9a055)}
+.ds-features li[data-done="true"] button span{color:var(--holo-ink)}
+.ds-features li[data-done="true"] button::after{content:"✓";position:absolute;margin:2px 0 0 52px;color:var(--holo-mint);font:700 10px/1 var(--holo-font)}
+.ds-features li{position:relative}
 .ds-place{display:grid;grid-template-columns:96px 1fr;gap:14px;padding:14px;border:1px solid var(--holo-dim);border-left:2px solid var(--signal,var(--holo));border-radius:3px;background:#8ff4ff0a;animation:ds-swap var(--motion-settle) var(--journey-in) both}
 .ds-place .art{display:grid;place-items:center;height:64px;color:var(--signal,var(--holo-strong))}
 .ds-place .art svg{width:96px;height:64px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
@@ -137,21 +149,32 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
 .ds-place .ds-place-status{font:500 11px/1.4 var(--holo-mono);color:#bfe9f2}
 .ds-place[data-done="true"] .ds-place-status{color:var(--holo-mint)}
 .ds-place .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-/* The dive in order: a thin timeline, a dot a moment, coloured by what it was. */
-.ds-story{display:grid;gap:8px}
-.ds-story ol{position:relative;display:grid;gap:2px;margin:0;padding:0 0 0 14px;list-style:none;max-height:260px;overflow:auto}
-.ds-story ol::before{content:"";position:absolute;left:4px;top:8px;bottom:8px;width:1px;background:var(--holo-faint)}
-.ds-story li{position:relative;display:grid;grid-template-columns:44px 1fr;align-items:center;gap:8px;min-height:28px}
-.ds-story li::before{content:"";position:absolute;left:-13px;top:50%;width:7px;height:7px;translate:0 -50%;border-radius:50%;background:#05222f;border:1.5px solid var(--holo-dim)}
-.ds-story li[data-kind="site"]::before{background:var(--signal);border-color:var(--signal)}
-.ds-story li[data-kind="feature"]::before{border-color:#fff4c7}
-.ds-story li[data-kind="photo"]::before{background:#ffffff;border-color:#ffffff;border-radius:2px}
-.ds-story li[data-kind="entry"]::before{background:var(--holo-mint);border-color:var(--holo-mint)}
-.ds-story time{font:500 10px/1 var(--holo-mono);color:#9fcfd9}
-.ds-story :is(button,span){justify-self:start;padding:4px 6px;margin-left:-6px;border:0;border-radius:2px;background:none;color:var(--holo-ink);font:400 12px/1.25 var(--holo-font);text-align:left}
-.ds-story button{cursor:pointer}
-.ds-story button:hover,.ds-story button[aria-pressed="true"]{background:#8ff4ff18}
-.ds-story button:focus-visible{outline:2px solid var(--holo-focus);outline-offset:1px}
+
+
+/* The dive in order: one line left to right, a dot at each moment's time, its label above or below on a stem. */
+.ds-story{display:grid;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid var(--holo-faint)}
+.ds-line-wrap{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding:0 6px}
+.ds-line{position:relative;min-width:620px;height:204px;margin:0 8px;padding:0;list-style:none}
+.ds-line-axis{position:absolute;left:0;right:0;top:50%;height:2px;translate:0 -50%;border-radius:2px;background:linear-gradient(90deg,var(--holo-mint),#8ff4ff 50%,#ffffff)}
+.ds-line>li:not(.ds-line-axis){position:absolute;left:var(--at);top:50%;width:0;height:0;z-index:1}
+.ds-line i{position:absolute;left:0;top:0;width:11px;height:11px;translate:-50% -50%;border-radius:50%;background:#05222f;border:2px solid var(--holo-dim);z-index:2}
+.ds-line li[data-kind="site"] i{width:15px;height:15px;background:var(--signal);border-color:#05222f;box-shadow:0 0 0 2px var(--signal),0 0 10px var(--signal)}
+.ds-line li[data-kind="feature"] i{border-color:#fff4c7}
+.ds-line li[data-kind="photo"] i{border-radius:2px;background:#ffffff;border-color:#05222f}
+.ds-line li[data-kind="entry"] i{background:var(--holo-mint);border-color:#05222f;box-shadow:0 0 0 2px var(--holo-mint)}
+/* The label and its stem: lanes 0 and 2 above the line, 1 and 3 below; 2 and 3 further out. */
+.ds-line li>div{position:absolute;display:grid;gap:3px;width:max-content;max-width:160px;padding:5px 7px;border-radius:3px;background:#05222fd9;border:1px solid var(--holo-faint)}
+.ds-line li[data-lane="0"]>div{bottom:16px}.ds-line li[data-lane="2"]>div{bottom:52px}
+.ds-line li[data-lane="1"]>div{top:16px}.ds-line li[data-lane="3"]>div{top:52px}
+.ds-line li::before{content:"";position:absolute;left:0;width:1px;background:var(--holo-dim)}
+.ds-line li[data-lane="0"]::before{bottom:6px;height:12px}.ds-line li[data-lane="2"]::before{bottom:6px;height:48px}
+.ds-line li[data-lane="1"]::before{top:6px;height:12px}.ds-line li[data-lane="3"]::before{top:6px;height:48px}
+.ds-line li[data-kind="site"]>div{border-color:var(--signal)}
+.ds-line time{font:500 9px/1 var(--holo-mono);color:#9fcfd9}
+.ds-line :is(button,span){padding:0;border:0;background:none;color:var(--holo-ink);font:500 11px/1.2 var(--holo-font);text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ds-line button{cursor:pointer}
+.ds-line button:hover,.ds-line button[aria-pressed="true"]{color:#ffffff;text-decoration:underline;text-underline-offset:3px}
+.ds-line button:focus-visible{outline:2px solid var(--holo-focus);outline-offset:2px}
 
 /* Postcards: this session's photos, newest dive first. */
 .ds-cards{display:grid;grid-auto-flow:column;grid-auto-columns:min(78%,820px);gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:0 11%;padding:6px 11% 14px;margin:0 -14px;scrollbar-width:none;overscroll-behavior-x:contain}
@@ -248,8 +271,12 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
   .ds-cards{grid-auto-columns:92%;scroll-padding:0 4%;padding:6px 4% 12px}
   .ds-glyph{width:32px;height:22px}
   .ds-pin{width:26px;height:26px;font-size:12px}
-  :is(.ds-compass,.ds-key){display:none}
+  :is(.ds-compass,.ds-key,.ds-scale){display:none}
   .ds-place{grid-template-columns:64px 1fr}
+  .ds-checks button{grid-template-columns:minmax(0,1fr);justify-items:start;gap:6px;padding:9px 8px}
+  .ds-checks button i{grid-row:auto}
+  .ds-checks b{font-size:12px}
+  .ds-features{grid-template-columns:repeat(3,minmax(0,1fr))}
   .ds-place .art svg{width:64px;height:44px}
   .ds-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ds :is(.holo-chip){min-height:44px}

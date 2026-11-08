@@ -71,13 +71,13 @@ dialog.innerHTML = `<div class="ds-inner">
         <span class="ds-scale" aria-hidden="true" style="--w:${20 / CHART.width * 100}%"><i></i>20 m</span>
         <span class="ds-key" aria-hidden="true">${[0, 10, 20, 30, DISPLAY_MAX_DEPTH].map(d => `<i data-d="${d}"></i>`).join('')}<small>0</small><small>${DISPLAY_MAX_DEPTH} m</small></span></div>
       <div class="ds-sites-side">
-        <p class="ds-sites-hint">Tap a site or a feature, on the chart or below, for more.</p>
+        <p class="ds-sites-hint">Tap a site or a feature, here or on the chart, for more.</p>
         <ul class="ds-checks" aria-label="Portfolio sites"></ul>
         <ul class="ds-features" aria-label="Reef features"></ul>
         <article class="ds-place" aria-live="polite"></article>
-        <div class="ds-story"><p class="holo-label">The dive, in order</p><ol></ol></div>
       </div>
     </div>
+    <div class="ds-story"><p class="holo-label">The dive, in order</p><div class="ds-line-wrap"><ol class="ds-line"></ol></div></div>
   </section>
   <section class="ds-panel ds-step" style="--i:4" aria-labelledby="ds-guide-title">
     <div class="ds-label"><span class="holo-label" id="ds-guide-title">Field guide · what you saw</span><span class="ds-filter" role="group" aria-label="Show"></span></div>
@@ -153,11 +153,11 @@ function photoPoint(photo) {
   return record.track[Math.min(record.track.length - 1, Math.max(0, i - 1))];
 }
 // Arrowheads along the swim, every `gap` metres of it, pointing the way it went (chart units: metres).
-function arrows(points, gap = 16) {
+function arrows(points, gap = 22) {
   let out = '', run = gap * .6;
   for (let i = 1; i < points.length; i++) {
     const [x0, y0] = points[i - 1], [x1, y1] = points[i], length = Math.hypot(x1 - x0, y1 - y0); if (!length) continue;
-    while (run <= length) { const k = run / length, x = x0 + (x1 - x0) * k, y = y0 + (y1 - y0) * k, a = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI; out += `<path class="ds-arrow" d="M-.9 -.75L.85 0L-.9 .75z" transform="translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${a.toFixed(1)})"/>`; run += gap; }
+    while (run <= length) { const k = run / length, x = x0 + (x1 - x0) * k, y = y0 + (y1 - y0) * k, a = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI; out += `<path class="ds-arrow" d="M-.55 -.48L.55 0L-.55 .48z" transform="translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${a.toFixed(1)})"/>`; run += gap; }
     run -= length;
   }
   return out;
@@ -195,8 +195,13 @@ function paintSites() {
     map.insertAdjacentHTML('beforeend', `<button type="button" class="ds-shot" data-photo="${index}" style="left:${u}%;top:${v}%" aria-label="Photo at ${esc(photo.place)}: show the postcard"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.4"/></svg></button>`);
   });
   // The chips: the three sites, then the features, each a name and a tick; everything else is in the card.
-  $('.ds-checks', dialog).innerHTML = LANDMARKS.map(({ id }) => `<li data-done="${found.has(id)}" style="--signal:${SITES[id].signal}"><button type="button" data-key="site:${id}"><i aria-hidden="true">${found.has(id) ? '✓' : ''}</i>${SITES[id].name}<em>${siteDepth(id)} m</em></button></li>`).join('');
-  $('.ds-features', dialog).innerHTML = list.map(([name]) => `<li data-done="${featureDone(name)}"><button type="button" data-key="feature:${esc(name)}">${esc(name)}</button></li>`).join('');
+  // Outside the chart, a legend of tiles: the three sites as cards with their pin, depth and how they went, and the
+  // features as a sheet of their own line drawings, lit once visited. Each opens the card.
+  $('.ds-checks', dialog).innerHTML = LANDMARKS.map(({ id }, index) => {
+    const visit = record.sites[id], done = found.has(id);
+    return `<li data-done="${done}" style="--signal:${SITES[id].signal}"><button type="button" data-key="site:${id}"><i aria-hidden="true">${done ? '✓' : index + 1}</i><b>${SITES[id].name}</b><small>${visit ? clock(visit.t) : done ? 'Earlier dive' : 'Not yet'} · ${siteDepth(id)} m</small></button></li>`;
+  }).join('');
+  $('.ds-features', dialog).innerHTML = list.map(([name]) => `<li data-done="${featureDone(name)}"><button type="button" data-key="feature:${esc(name)}">${ART[name] || ''}<span>${esc(name)}</span></button></li>`).join('');
   // The dive in order: in, each site and feature as it was reached, each photo, and out. Sites and features open
   // their card; a photo brings its postcard up.
   const story = [[0, 'In', 'entry'],
@@ -204,7 +209,14 @@ function paintSites() {
     ...Object.entries(record.features).map(([name, t]) => [t, name, 'feature', `feature:${name}`]),
     ...photos.map((photo, index) => photo.dive === record.number ? [photo.t, `Photo · ${photo.place}`, 'photo', null, null, index] : null).filter(Boolean),
     [record.time, 'Out', 'entry']].sort((a, b) => a[0] - b[0]);
-  $('.ds-story ol', dialog).innerHTML = story.map(([t, name, kind, key, signal, photo]) => `<li data-kind="${kind}"${signal ? ` style="--signal:${signal}"` : ''}><time>${clock(t)}</time>${key ? `<button type="button" data-key="${esc(key)}">${esc(name)}</button>` : photo !== undefined && photo !== null ? `<button type="button" data-photo="${photo}">${esc(name)}</button>` : `<span>${esc(name)}</span>`}</li>`).join('');
+  // Left to right along one line, each moment at its time; labels take turns above and below and step further out
+  // when they would overlap (layoutStory, once the page has a width).
+  const span = Math.max(1, record.time);
+  $('.ds-line', dialog).innerHTML = story.map(([t, name, kind, key, signal, photo]) => {
+    const label = key ? `<button type="button" data-key="${esc(key)}">${esc(name)}</button>` : photo !== undefined && photo !== null ? `<button type="button" data-photo="${photo}">${esc(name)}</button>` : `<span>${esc(name)}</span>`;
+    return `<li data-kind="${kind}" style="--at:${(t / span * 100).toFixed(2)}%${signal ? `;--signal:${signal}` : ''}"><i aria-hidden="true"></i><div><time>${clock(t)}</time>${label}</div></li>`;
+  }).join('') + `<li class="ds-line-axis" aria-hidden="true"></li>`;
+  requestAnimationFrame(layoutStory);
   const featureCount = list.filter(([name]) => featureDone(name)).length;
   $('.ds-sites-count', dialog).textContent = `${found.size} of 3 sites · ${featureCount} of ${list.length} features`;
   // Open on the last site reached on this dive, else the first one still to find.
@@ -212,6 +224,21 @@ function paintSites() {
   if (!place || !dialog.querySelector(`[data-key="${CSS.escape(place)}"]`)) place = `site:${reached || LANDMARKS.find(({ id }) => !found.has(id))?.id || LANDMARKS[0].id}`;
   paintPlace(place);
 }
+// Lanes for the timeline's labels: 0 and 1 just above and below the line, 2 and 3 further out. Each label takes the
+// first lane, alternating sides, where it clears the one before it in that lane.
+function layoutStory() {
+  const line = $('.ds-line', dialog), width = line.clientWidth; if (!width) return;
+  const ends = [-Infinity, -Infinity, -Infinity, -Infinity], items = [...line.querySelectorAll('li:not(.ds-line-axis)')];
+  items.forEach((item, index) => {
+    const label = item.lastElementChild, w = label.offsetWidth + 10, x = parseFloat(item.style.getPropertyValue('--at')) / 100 * width;
+    // Centred on its moment, but kept inside the line's ends.
+    const left = Math.min(Math.max(0, x - w / 2), Math.max(0, width - w));
+    const order = index % 2 ? [1, 0, 3, 2] : [0, 1, 2, 3];
+    const lane = order.find(l => left > ends[l]) ?? order.reduce((best, l) => ends[l] < ends[best] ? l : best, order[0]);
+    ends[lane] = left + w; item.dataset.lane = lane; label.style.left = `${(left - x).toFixed(1)}px`;
+  });
+}
+new ResizeObserver(() => { if (dialog.open) layoutStory(); }).observe($('.ds-line', dialog));
 function paintPlace(key) {
   place = key;
   const [kind, id] = [key.slice(0, key.indexOf(':')), key.slice(key.indexOf(':') + 1)], card = $('.ds-place', dialog);
