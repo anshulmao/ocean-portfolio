@@ -55,7 +55,8 @@ export const RESIDENTS = {
   whipray: { species: 'pink-whipray', loop: [-41, -16, 8, 5], height: 1.4, speed: 1.1 },
   // Bluespotted rays lie on open sand and scoot away when crowded.
   bluespots: { species: 'bluespotted-ray', spots: [[8, 6], [-16, 2], [26, -14]], lean: 2 },
-  sleeper: { species: 'nurse-shark', near: [-21, -24] },
+  // The nurse shark sleeps on the open sand beside the coral nursery (reef.js NURSERY_SITE, at -5, 4).
+  sleeper: { species: 'nurse-shark', near: [-6, 9.5] },
   // The barracuda that patrols a slow oval off the wreck (patrol: x and z radii, m; speed m/s), pauses to hang
   // and watch a diver, and bolts if crowded.
   sentinel: { species: 'great-barracuda', landmark: 'projects', offset: [9, 7, 4], patrol: [7, 4.5], speed: .8 },

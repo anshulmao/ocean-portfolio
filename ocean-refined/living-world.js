@@ -563,7 +563,7 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
   }
   const morayStates = [
     moray(0, 'moray-den-wreck', 'Moray den', 34, -25, 31, -31, '#ffffff', 'A moray in a den of leaning stones beside the way down to the wreck. Its head follows you; crowd it and it withdraws.'),
-    moray(1, 'moray-den-deep', 'Deep moray den', -1, -71, 4, -80, '#e8d2b4', 'A second moray on the deep ledge, facing the way to the treasure.')
+    moray(1, 'moray-den-deep', 'Deep moray den', -1, -71, 4, -80, '#e8d2b4', 'A second moray on the deep ledge, facing the way to the nautilus.')
   ];
 
   // --- A blue-spotted ray under the sand ----------------------------------------------------------
@@ -682,7 +682,7 @@ export function* livingWorldSteps({ terrainHeightAt = () => -30, collisions = nu
   const perPatch = Math.ceil(CRABS / 6);
   crabPatch('crabs-shallows', 'Crab flat', 9, -9, perPatch, 'Crabs and a hermit crab working the sand beside the first leg of the tour. They freeze in the lamp and their eyes shine back.');
   crabPatch('crabs-brain-dome', 'Brain dome crabs', -45, 6, perPatch, 'More come out at dusk.');
-  crabPatch('crabs-deep', 'Deep ledge crabs', -30, -93, perPatch, 'On the deep sand west of the treasure.');
+  crabPatch('crabs-deep', 'Deep ledge crabs', -30, -93, perPatch, 'On the deep sand west of the nautilus.');
   crabPatch('crabs-east', 'East slope crabs', 26, -97, perPatch, 'Below the arch on the eastern side.');
   crabPatch('crabs-west', 'West coral crabs', -49, -47, perPatch, 'Larger crabs crawling across the western coral shelf.');
   crabPatch('crabs-outer', 'Outer shelf crabs', 50, 13, perPatch, 'Crabs on the bright sand near the edge of the reef.');
