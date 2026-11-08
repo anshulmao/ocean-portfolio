@@ -7,8 +7,8 @@ import { lifeSites } from './living-world.js';
 
 const DIRECTORY=new URL('./assets/models/user-sets/sets/coral-set/',import.meta.url);
 const ZONES={shallow:[5,18],mid:[18,34],deep:[34,65]};
-// The landmarks' lanes, and the coral nursery's sand (reef.js NURSERY_SITE, its trees spread 4 m west to 7 m east).
-const LANDMARK_LANES=[[-12,-15,7],[18,-39,9],[-18,-82,7],[0,0,5],[20,-66,7],[-3.4,4.6,8.5]];
+// The landmarks' lanes, and the coral nursery's sand flat (reef.js NURSERY_SITE), where the nurse shark swims.
+const LANDMARK_LANES=[[-12,-15,7],[18,-39,9],[-18,-82,7],[0,0,5],[20,-66,7],[-3.4,4.6,12]];
 const UP=new THREE.Vector3(0,1,0);
 function randomSeed(seed=0x431ac8){return()=>{seed=(Math.imul(seed,1664525)+1013904223)|0;return(seed>>>0)/4294967296;};}
 const pause=()=>new Promise(resolve=>setTimeout(resolve,0));

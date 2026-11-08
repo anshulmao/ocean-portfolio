@@ -781,10 +781,11 @@ export function* reefSteps({ economy = false } = {}) {
       if (Math.hypot(gx - gullyX, gz - gullyRouteZ) < 7.8) continue;
       if (Math.hypot(gx, gz) < 5 || routeDistance(gx, gz) < 2.8) continue;
       if (LANDMARKS.some(({ position: [lx, , lz] }) => Math.hypot(gx - lx, gz - lz) < 6)) continue;
-      // The coral nursery's sand (its trees and tables stand from 4 m west to 7 m east of NURSERY_SITE) is left bare. The
+      // The coral nursery's sand flat (its trees and tables stand from 4 m west to 7 m east of NURSERY_SITE, and the nurse
+      // shark swims its circuit round them, user-creatures.js) is left bare. The
       // random draws still run, so the meadow everywhere else stays exactly where it was.
       // So is the arch's passage and the sight line through it.
-      const bare = Math.hypot(gx - NURSERY_SITE.x - 1.6, gz - NURSERY_SITE.z - .6) < 8.6
+      const bare = Math.hypot(gx - NURSERY_SITE.x - 1.6, gz - NURSERY_SITE.z - .6) < 12
         || Math.hypot(gx - THREE.MathUtils.clamp(gx, archWest + 6, archEast), gz - archZ) < 7.8;
       const lay = bare ? () => {} : (layer, ...args) => layer.add(...args);
       // Rubble on the open sand: a small spill of broken coral and stones, now and then a pale shell (their own random
