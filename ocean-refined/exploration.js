@@ -145,7 +145,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
     if(e.code==='Escape'||(e.code==='Semicolon'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.target.closest?.('input,textarea,select,[contenteditable="true"]'))){if(e.code==='Semicolon')e.preventDefault();requireRecapture();return;}
     if(e.target.closest?.('input,textarea,select,button,[contenteditable="true"]'))return;
     if(e.code==='KeyV'&&!suspended&&!e.repeat&&lastSubmerged){e.preventDefault();togglePerspective();return;}
-    if(e.code==='KeyQ'&&!suspended&&!e.repeat&&lastSubmerged&&!e.ctrlKey&&!e.metaKey){e.preventDefault();setLamp(!state.lamp);return;}
+    if(e.code==='KeyH'&&!suspended&&!e.repeat&&lastSubmerged&&!e.ctrlKey&&!e.metaKey){e.preventDefault();setLamp(!state.lamp);return;}
     if(suspended||captureRequired||!controls.has(e.code))return;
     e.preventDefault();state.device='keys';press(e.code);
   });
