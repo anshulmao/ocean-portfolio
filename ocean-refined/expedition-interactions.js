@@ -55,7 +55,7 @@ function showPhotoPreview(photo, width, height) {
       {transform: 'translate(0, 0) scale(1)', filter: 'brightness(1)', offset: 1}
     ], {duration: 550, easing: 'cubic-bezier(.2, 0, 0, 1)'});
   }
-  previewTimer = setTimeout(() => { photoPreview.hidden = true; }, 4000);
+  previewTimer = setTimeout(() => { photoPreview.hidden = true; }, 2000);
 }
 const stopClock = createSafetyStopClock();
 let countdown = null, countdownFill = null, countdownTime = null, completion = null, completionLeft = 0, lastSecond = -1;
