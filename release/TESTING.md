@@ -67,9 +67,7 @@ Paths are relative to the indicated directory. “Historical” means retained f
 | `test-services-browser.mjs` | Repair and promote to CI; see privacy contract above and the 3 November form update. |
 | `test-ui-system.mjs` | Preserve merged PR #37 coverage and screenshot artifacts; run in CI and local check. |
 | `audit-reef.mjs` | Keep: actual geometry and deterministic production simulation; never turn findings into warnings to obtain green. |
-| `test-portfolio-experience.mjs` | Historical overlap with smoke/build/layout; exact copy, project count and no-script assumptions are stale (reading pages now deliberately include analytics). Do not run as a second broad gate. |
-| `test-settings-menu.mjs`, `test-settings-sidebar.mjs` | Historical rounds of settings UI; duplicate broad state/layout coverage and exact default assertions. Use focused Escape/layout checks for CI; revalidate specific keyboard controls before migrating anything else. |
-| `test-control-refinement.mjs` | Historical mixed defaults/UI/teleport checks. Avoid duplicating unit settings and layout; retain as a source of focused control scenarios. |
+| `test-portfolio-experience.mjs`, `test-settings-menu.mjs`, `test-settings-sidebar.mjs`, `test-control-refinement.mjs` | Deleted 10 November 2026. Historical, with stale assertions; their current coverage is smoke, build, layout, `test-settings-escape.mjs` and the unit settings tests. Older release notes still name them; they remain in git history. |
 | `test-quiet-ui.mjs` | Useful isolated keyboard/clear-UI behavior, but legacy fixture and hardcoded Chrome. Candidate for a current fixture test, not deleted. |
 | `test-quiet-live.mjs` | Manual real-world clear-UI check; overlaps isolated quiet test but verifies integration. |
 | `test-return-controls.mjs`, `test-cinematic-return.mjs` | Manual return integration. Route/clock/pose behavior is covered in unit; keep browser-only input/handoff coverage for release work. |
