@@ -35,10 +35,17 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
   picture (`site-cards.js` WORK), six seconds each. The four chips sit on one line; a chip picks one, and Tab (Shift+Tab)
   turns to the next while the view has the keyboard. Open it (F, or the sheet's Read it) opens the project shown, whose
   page leads on to the rest. Reduced motion: no turning.
-- **The ending is the dive log in small.** After any dive worth the name (40 s, or a site reached) a card meets the
-  diver at the surface (`surface-ending.js`) in the Dive log button's place: time, depth, sites and species, the depth
-  profile, what is still down there, the animals met, Open dive log and Dive again. It is not a dialog; it goes when
-  closed, when the full log is opened from it, or when the next dive starts, and the button is then the way back.
+- **The ending is a page of the diver's card.** When a dive ends, the card over the surface diver (`diver-profile.js`)
+  gains a Last dive page (`surface-ending.js`): time, depth, sites and species, the depth profile, what is still down
+  there, the animals met, Open dive log and Dive again. After any dive worth the name (40 s, or a site reached) the
+  card opens on that page by itself; its tabs turn to About me and back. It is one card in one place, so the dive's
+  card and the profile can never be up side by side. Closed, the hero's Dive log button is there as before.
+- **One row of tools.** Under water on a desktop: Dive computer (C), Photo (H) and Clear screen (U), in a row at the
+  bottom left under the depth card (`dive-focus.js`). The Portfolio button is retired under water.
+- **One thing names a site.** Far off, the Ahead card; in reach, the site's own card, whose Open it is the only one on
+  screen (the tour's sheet does not repeat it). The prompt (Open About, F) stands in when the card is not up.
+- **A photo is named for its animal.** The animal nearest the middle of the frame, if one is near enough to be made
+  out, titles the photo and tags it (`dive-log.js` subjectInView); otherwise the place does, as before.
 - **The nurse shark stays put.** It lies by the nursery until a diver comes within 3.5 m, lifts off the sand, moves about
   five metres to a second clear spot and settles; crowded there by a diver who has backed off and come again, it turns
   and goes home (`user-creatures.js` driveNurse).

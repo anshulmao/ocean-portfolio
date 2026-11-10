@@ -1,25 +1,47 @@
-/* Less on the screen under water (dive-focus.js). The dive's interface had grown to nine regions round the view; these
-   rules decide which of them a moment needs. Nothing is removed: every control keeps its key, the menu and Instruments
-   (C) still show everything, and Clear screen (U) still hides the lot.
+/* Less on the screen under water (dive-focus.js), and one look for what is left. The dive's interface had grown to
+   nine regions round the view, some from an older design; these rules decide which of them a moment needs. Every
+   control keeps its key, the menu and Instruments (C) still show everything, and Clear screen (U) still hides the lot.
 
-   1. The welcome of the guided dive is the water, the depth and the guide's card. The compass, the chart and the page
-      buttons come in with the first swim, when there is somewhere to go. */
-html body:is([data-tour="starting"],[data-tour="intro"]) :is(.heading-indicator,.reef-map,.archive-toggle,.quiet-ui-toggle){opacity:0;visibility:hidden;pointer-events:none}
-html body[data-submerged="true"] :is(.heading-indicator,.reef-map,.archive-toggle,.quiet-ui-toggle){transition:opacity 600ms var(--ui-ease,ease),visibility 0s}
+   1. The dive's tools are one row at the bottom left, under the depth card: the dive computer, a photo, Clear screen.
+      The Portfolio button that stood with them is retired under water. On a phone the row is not drawn (its buttons
+      keep the places the phone layout gives them, and the photo is on the touch deck). */
+html body .archive-toggle{display:none}
+.dive-tools{display:contents}
+.dive-photo{display:none}
+@media (min-width:600px) and (min-height:500px),(min-width:600px) and (pointer:fine){
+  html body .dive-tools{position:fixed;left:var(--pad);bottom:22px;z-index:8;display:flex;gap:6px}
+  html body:not([data-submerged="true"]) .dive-tools{display:none}
+  html body .dive-tools>button{position:static;display:inline-flex;align-items:center;gap:8px;min-height:36px;margin:0;padding:0 12px;border:1px solid #d6f2f02b;border-radius:999px;
+    background:color-mix(in srgb,#061c25 58%,transparent);-webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3); /* taste-skill-ignore: glass over the moving water, as the site card */
+    box-shadow:none;color:#eefdff;font:500 13px/1 var(--o-display);letter-spacing:0;text-transform:none;white-space:nowrap;transform:none;translate:none;animation:none;cursor:pointer}
+  html body .dive-tools>button[hidden]{display:none}
+  html body .dive-tools>button:hover{background:color-mix(in srgb,#0d3442 70%,transparent);border-color:#d6f2f066;transform:none}
+  html body .dive-tools>button:is([aria-pressed="true"],[aria-expanded="true"]){border-color:#9adbd5aa;background:color-mix(in srgb,#9adbd5 18%,#061c25 60%)}
+  html body .dive-tools>button:focus-visible{outline:2px solid #eefdff;outline-offset:2px}
+  html body .dive-tools>button:disabled{opacity:.5;cursor:default}
+  html body .dive-tools svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;color:inherit}
+  html body .dive-tools kbd{min-width:0;height:auto;padding:2px 5px;border:1px solid #d6f2f02b;border-radius:3px;background:none;color:inherit;font:500 10px/1 var(--o-display);opacity:.8}
+  html body:is([data-clear-ui="true"],[data-safety-stop="true"],[data-dialog="open"],[data-menu="open"],[data-movement-panel="open"],[data-summary="true"]) .dive-tools,html body:has(dialog[open]) .dive-tools{visibility:hidden}
+  /* The depth card stands on the row, and the notices (a photo saved, a find) over the depth card. */
+  html body .calm-depth{bottom:68px}
+  html body .expedition-notice{bottom:196px}
+  /* With Instruments open (C) the depth is on the scale and the wrist computer; the old line of it along the bottom
+     edge would sit under the row. */
+  html body[data-submerged="true"] .scene-footer .location{display:none}
+}
 
-/* 2. While the guide leads it teaches each key where it is first of use, so the line of keys at the bottom is not shown
+/* 2. The welcome of the guided dive is the water, the depth and the guide's card. The compass and the chart come in
+      with the first swim, when there is somewhere to go, and with them the photo and Clear screen. */
+html body:is([data-tour="starting"],[data-tour="intro"]) :is(.heading-indicator,.reef-map,.quiet-ui-toggle,.dive-photo){opacity:0;visibility:hidden;pointer-events:none}
+html body[data-submerged="true"] :is(.heading-indicator,.reef-map){transition:opacity 600ms var(--ui-ease,ease),visibility 0s}
+
+/* 3. While the guide leads it teaches each key where it is first of use, so the line of keys at the bottom is not shown
       twice. Taking the controls (on hold) brings it back. */
 html body:is([data-tour="starting"],[data-tour="intro"],[data-tour="travel"],[data-tour="dwell"],[data-tour="done"]) .look-hint{opacity:0;visibility:hidden}
 
-/* 3. The line of keys is read once, then rests until it changes. */
+/* 4. The line of keys is read once, then rests until it changes. */
 html body[data-submerged="true"] .look-hint{transition:opacity 600ms var(--ui-ease,ease)}
 html body[data-submerged="true"] .look-hint[data-rested="true"]{opacity:0}
-
-/* 4. While the mouse aims the view the cursor cannot reach a button: the two that are only buttons step back. The
-      dive computer's stays, as it names its key. */
-@media (hover:hover) and (pointer:fine){
-  html body[data-submerged="true"][data-aiming="true"] :is(.archive-toggle,.quiet-ui-toggle){opacity:0;visibility:hidden;pointer-events:none;transition:opacity 400ms var(--ui-ease,ease),visibility 0s 400ms}
-}
 
 /* 5. The depth card is the depth and where that is. Air and the no-stop limit are on the dive computer (C); here they
       show only when they need attention (a stop due, a low limit). */
@@ -29,84 +51,67 @@ html body .calm-depth:not([data-alert="true"]) .calm-depth-gauge{margin-bottom:2
 /* 6. The round chart shows where the diver is; the same position in metres is on the opened chart and the computer. */
 html body[data-submerged="true"]:not([data-computer-open="true"]) .reef-map[data-view="round"] .map-coords{display:none}
 
+/* 7. One thing points to a site at a time. Far off, the Ahead card names it (hud-calm.js); the older chip that named it
+      too, by the chart, is left to the phone, where there is no Ahead card. In reach, the site's own card carries its
+      actions (site-cards.js); the prompt stands in only when that card is not up, and looks and reads as the card does. */
+@media (min-width:600px) and (min-height:500px),(min-width:600px) and (pointer:fine){
+  html body[data-submerged="true"]:not([data-computer-open="true"]):has(.calm-ahead[data-show="true"]) .waypoint{display:none}
+}
+html body .interact-prompt.holo{gap:9px;padding:0 14px 0 16px;min-height:40px;border:1px solid #d6f2f02b;border-radius:999px;background:color-mix(in srgb,#061c25 58%,transparent);
+  -webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3); /* taste-skill-ignore: glass over the moving water, as the site card */
+  box-shadow:0 16px 40px -16px #00121a80;color:#eefdff;font:500 14px/1 var(--o-display);letter-spacing:0;text-transform:none}
+html body .interact-prompt.holo::before,html body .interact-prompt.holo::after{display:none}
+html body .interact-prompt.holo kbd{order:2;min-width:0;height:auto;padding:2px 5px;border:1px solid #d6f2f02b;border-radius:3px;background:none;color:inherit;font:500 10px/1 var(--o-display);opacity:.85}
+html body .interact-prompt.holo:hover{background:color-mix(in srgb,#0d3442 70%,transparent);border-color:#d6f2f066}
+
 @media (prefers-reduced-motion:reduce){
-  html body[data-submerged="true"] :is(.heading-indicator,.reef-map,.archive-toggle,.quiet-ui-toggle,.look-hint){transition:none}
+  html body[data-submerged="true"] :is(.heading-indicator,.reef-map,.look-hint){transition:none}
 }
 
-/* The card back at the surface after a dive (surface-ending.js): the dive log in small, in the hero's palette like the
-   diver's profile card (diver-profile.css): pale by day, deep at night (tokens.css). Beside the hero where the hero
-   leaves room (it is 58vw wide above 900px, surface.css); bottom right on a narrower screen; a sheet along the bottom
-   on a phone. No backdrop blur over the moving sea. While it is up, or on its way, it stands in for the hero's Dive
-   log button. */
-html body:is([data-ending="pending"],[data-ending="true"]) .portfolio-actions .ds-open{display:none}
-.surface-ending{position:fixed;right:var(--pad,24px);top:clamp(96px,15vh,150px);z-index:20;box-sizing:border-box;width:min(380px,calc(42vw - 2*var(--pad,24px) - 16px));max-height:calc(100vh - clamp(96px,15vh,150px) - 16px);overflow:auto;padding:20px 20px 12px;
-  border:1px solid color-mix(in srgb,var(--o-ink) 12%,transparent);border-radius:18px;background:color-mix(in srgb,var(--o-surface-0) 95%,transparent);color:var(--o-ink);font-family:var(--o-display);
-  box-shadow:0 1px 0 #ffffff80 inset,0 24px 50px -22px #052c3a73,0 4px 14px -6px #052c3a33;animation:surface-ending-in 420ms var(--ui-ease,cubic-bezier(.2,.7,.2,1)) both}
-.surface-ending[hidden]{display:none}
-@keyframes surface-ending-in{from{opacity:0;translate:0 14px}}
+/* The Last dive page of the diver's card (surface-ending.js fills it; diver-profile.js owns the card and its tabs):
+   the dive log in small, in the card's own palette (pale by day, deep at night, tokens.css). */
+.diver-profile-tabs{display:flex;gap:4px;margin:-4px 44px 14px -4px;padding:3px;border-radius:999px;background:color-mix(in srgb,var(--o-ink) 6%,transparent);width:max-content}
+.diver-profile-tabs[hidden]{display:none}
+.diver-profile-tabs button{min-height:32px;padding:0 14px;border:0;border-radius:999px;background:none;color:var(--o-ink-2);font:500 13.5px/1 var(--o-display);cursor:pointer}
+.diver-profile-tabs button:hover{color:var(--o-ink)}
+.diver-profile-tabs button[aria-selected="true"]{background:var(--o-surface-0);color:var(--o-ink);box-shadow:0 1px 3px #052c3a2e}
+.diver-profile-tabs button:focus-visible{outline:2px solid var(--o-ink);outline-offset:2px}
+.diver-profile-page[hidden]{display:none}
 .surface-ending :is(p,h2,ul,dl,dd){margin:0;padding:0}
-.surface-ending-close{position:absolute;top:8px;right:8px;display:grid;place-items:center;width:40px;height:40px;padding:0;border:0;border-radius:50%;background:none;color:var(--o-ink-2);cursor:pointer}
-.surface-ending-close:hover{background:color-mix(in srgb,var(--o-ink) 7%,transparent);color:var(--o-ink)}
-.surface-ending-close svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
-.surface-ending-kicker{padding-right:36px;font-size:12.5px;line-height:1.3;color:var(--o-ink-2);font-variant-numeric:tabular-nums}
-.surface-ending h2{margin-top:6px;font:500 26px/1.15 var(--o-display);letter-spacing:-.02em;color:var(--o-ink)}
-.surface-ending-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:14px}
-.surface-ending-tiles div{display:flex;flex-direction:column;gap:7px;padding:9px 9px 10px;border:1px solid color-mix(in srgb,var(--o-ink) 10%,transparent);border-radius:10px;background:color-mix(in srgb,var(--o-ink) 3%,transparent)}
-.surface-ending-tiles dt{font-size:11px;line-height:1.1;color:var(--o-ink-2);white-space:nowrap}
-.surface-ending-tiles dd{font:500 20px/1 var(--o-display);font-variant-numeric:tabular-nums;letter-spacing:-.01em;white-space:nowrap}
-.surface-ending-tiles dd small{font-size:11px;font-weight:400;color:var(--o-ink-2)}
-.surface-ending-profile{display:block;width:100%;height:56px;margin-top:10px;border-radius:10px;background:color-mix(in srgb,var(--o-sunlit) 8%,transparent)}
+.surface-ending-kicker{font-size:12.5px;line-height:1.3;color:var(--o-ink-2);font-variant-numeric:tabular-nums}
+.surface-ending h2{margin-top:4px;font:500 24px/1.15 var(--o-display);letter-spacing:-.02em;color:var(--o-ink)}
+.surface-ending-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-top:12px}
+.surface-ending-tiles div{display:flex;flex-direction:column;gap:7px;padding:8px 8px 9px;border:1px solid color-mix(in srgb,var(--o-ink) 10%,transparent);border-radius:10px;background:color-mix(in srgb,var(--o-ink) 3%,transparent)}
+.surface-ending-tiles dt{font-size:10.5px;line-height:1.1;color:var(--o-ink-2);white-space:nowrap}
+.surface-ending-tiles dd{font:500 18px/1 var(--o-display);font-variant-numeric:tabular-nums;letter-spacing:-.01em;white-space:nowrap}
+.surface-ending-tiles dd small{font-size:10.5px;font-weight:400;color:var(--o-ink-2)}
+.surface-ending-profile{display:block;width:100%;height:52px;margin-top:10px;border-radius:10px;background:color-mix(in srgb,var(--o-sunlit) 8%,transparent)}
 .surface-ending-profile .fill{fill:color-mix(in srgb,var(--o-sunlit) 22%,transparent)}
 .surface-ending-profile .line{fill:none;stroke:var(--o-sunlit);stroke-width:1.6;vector-effect:non-scaling-stroke;stroke-linejoin:round}
 .surface-ending-line{margin-top:10px;font-size:14px;line-height:1.4;color:var(--o-ink-2)}
 .surface-ending-faces{list-style:none;display:flex;gap:6px;margin-top:10px}
 .surface-ending-faces[hidden]{display:none}
-.surface-ending-faces li{flex:none;width:44px;height:44px;border-radius:50%;overflow:hidden;background:linear-gradient(#49bcd4,#147090)}
+.surface-ending-faces li{flex:none;width:40px;height:40px;border-radius:50%;overflow:hidden;background:linear-gradient(#49bcd4,#147090)}
 .surface-ending-faces img{display:block;width:100%;height:100%;object-fit:cover}
 .surface-ending-faces .more{display:grid;place-items:center;background:color-mix(in srgb,var(--o-ink) 7%,transparent);font-size:13px;color:var(--o-ink-2)}
 .surface-ending-actions{display:flex;gap:8px;margin-top:14px}
-.surface-ending-actions button{flex:1;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border:1px solid color-mix(in srgb,var(--o-ink) 22%,transparent);border-radius:100px;background:none;color:var(--o-ink);font:500 15px/1 var(--o-display);cursor:pointer}
-.surface-ending-actions button:hover{background:color-mix(in srgb,var(--o-ink) 7%,transparent)}
-.surface-ending-actions .surface-ending-primary{border-color:var(--o-ink);background:var(--o-ink);color:var(--o-surface-0)}
-.surface-ending-actions .surface-ending-primary:hover{background:color-mix(in srgb,var(--o-ink) 86%,var(--o-surface-0))}
+html body .diver-profile .surface-ending-actions button{flex:1;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 12px;border:1px solid color-mix(in srgb,var(--o-ink) 22%,transparent);border-radius:100px;background:none;color:var(--o-ink);font:500 15px/1 var(--o-display);white-space:nowrap;cursor:pointer}
+html body .diver-profile .surface-ending-actions button:hover{background:color-mix(in srgb,var(--o-ink) 7%,transparent)}
+html body .diver-profile .surface-ending-actions .surface-ending-primary{border-color:var(--o-ink);background:var(--o-ink);color:var(--o-surface-0)}
+html body .diver-profile .surface-ending-actions .surface-ending-primary:hover{background:color-mix(in srgb,var(--o-ink) 86%,var(--o-surface-0))}
+html body .diver-profile .diver-profile-tabs button{min-height:32px;border-radius:999px;font-size:13.5px}
+/* A finger needs the full target (44px, tokens.css --o-tap). */
+@media (pointer:coarse),(max-width:599px){html body .diver-profile .diver-profile-tabs button{min-height:44px;padding:0 16px}}
+html body .diver-profile .surface-ending-more :is(a,button){min-height:40px;border-radius:3px}
 .surface-ending-more{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 18px;margin-top:4px}
 .surface-ending-more :is(a,button){display:inline-flex;align-items:center;min-height:40px;padding:0;border:0;background:none;color:var(--o-ink-2);font:400 14px/1.3 var(--o-display);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);text-underline-offset:4px;cursor:pointer}
 .surface-ending-more :is(a,button):hover{color:var(--o-ink);text-decoration-color:currentColor}
 .surface-ending :is(a,button):focus-visible{outline:2px solid var(--o-ink);outline-offset:2px}
-/* It keeps out of the way of whatever is opened over the surface, as the hero does. */
-body:is([data-menu="open"],[data-movement-panel="open"],[data-exploring="true"],[data-submerged="true"]) .surface-ending{display:none}
-@media (max-width:1099px){
-  .surface-ending{left:auto;right:12px;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(420px,calc(100vw - 24px));max-height:calc(100vh - 24px);padding:16px 16px 8px}
-  .surface-ending h2{font-size:22px}
-}
-/* A phone: a solid sheet along the bottom, under the hero's buttons. */
-@media (max-width:599px){
-  .surface-ending{left:12px;width:auto;background:var(--o-surface-0);padding:14px 14px 4px}
-  .surface-ending-tiles{margin-top:10px}
-  .surface-ending-tiles dd{font-size:18px}
-  .surface-ending-profile{height:44px}
-  .surface-ending-faces li{width:38px;height:38px}
-  .surface-ending-actions{margin-top:12px}
-}
-/* A short phone: the numbers and the way into the log; the chart, the faces and the links the hero already has are
-   left to the log itself, so the sheet stays under the hero. */
-@media (max-width:599px) and (max-height:740px){
-  .surface-ending-profile,.surface-ending-faces,.surface-ending-more{display:none}
-  .surface-ending{padding-bottom:14px}
-}
-/* A phone held sideways: the hero fills the height and its buttons run along the left, so the card stands on the
-   right, under the menu button, in its smallest form. */
-@media (max-height:499px){
-  .surface-ending{left:auto;right:calc(12px + env(safe-area-inset-right,0px));top:calc(var(--o-top,12px) + var(--o-bar,44px) + 8px);bottom:auto;width:min(340px,42vw);max-height:calc(100vh - var(--o-top,12px) - var(--o-bar,44px) - 20px);background:var(--o-surface-0);padding:12px 12px 4px}
-  /* The hero's lines run the width of the screen there; while the card is up they keep to the left of it. */
-  html body[data-ending="true"]:not([data-submerged="true"]):not([data-exploring="true"]) .hero{right:calc(min(340px,42vw) + 24px + env(safe-area-inset-right,0px));width:auto}
-  .surface-ending h2{font-size:18px;margin-top:2px}
-  .surface-ending-tiles{margin-top:8px;gap:4px}
-  .surface-ending-tiles div{padding:6px 7px 7px;gap:5px}
-  .surface-ending-tiles dd{font-size:16px}
+/* A short screen (a phone held sideways, a small phone): the numbers and the way into the log; the chart and the faces
+   are left to the log itself, so the card fits over the diver. */
+@media (max-height:620px){
   .surface-ending-profile,.surface-ending-faces{display:none}
-  .surface-ending-line{margin-top:8px;font-size:13px}
-  .surface-ending-actions{margin-top:8px}
-  .surface-ending-actions button{min-height:40px;font-size:14px;padding:0 10px}
+  .surface-ending-actions{margin-top:10px}
+  .surface-ending-more{display:none}
+  .diver-profile-tabs{margin-bottom:8px}
 }
-@media (prefers-reduced-motion:reduce){.surface-ending{animation:none}}

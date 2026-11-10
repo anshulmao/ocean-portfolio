@@ -4,7 +4,7 @@ import { onTick, ui } from './ui-ticker.js';
 import { safetyRatingMarkup } from './safety-rating.js';
 import { createSafetyStopClock, SAFETY_STOP_SECONDS, inSafetyStopRange } from './safety-stop-clock.js';
 import {sendFeedback} from './submissions.js';
-import {addPhoto} from './dive-log.js';
+import {addPhoto, subjectInView} from './dive-log.js';
 import {track} from './analytics.js';
 import {FINDS, createReefFindsInSteps} from './reef-finds.js';
 import {seabedHeightAt} from './reef.js';
@@ -164,9 +164,11 @@ function takePhoto() {
     const ratio = Math.min(1, 1280 / canvas.width, 720 / canvas.height), share = document.createElement('canvas');
     share.width = Math.max(1, Math.round(canvas.width * ratio)); share.height = Math.max(1, Math.round(canvas.height * ratio));
     share.getContext('2d').drawImage(canvas, 0, 0, share.width, share.height);
-    photos++; track('reef_photo_taken'); say('Photo saved to your dive log.');
+    // The animal in the frame, read now: by the time the picture is encoded it may have swum on.
+    const subject = subjectInView(controls);
+    photos++; track('reef_photo_taken'); say(subject ? `${subject.name}: photo saved to your dive log.` : 'Photo saved to your dive log.');
     Promise.all([blobOf(full, .92), blobOf(share, .8).then(blob => blob.size <= 1048576 ? blob : blobOf(share, .6))])
-      .then(([large, small]) => addPhoto(large, small)).catch(() => say('This photo could not be kept. Please try again.'));
+      .then(([large, small]) => addPhoto(large, small, subject)).catch(() => say('This photo could not be kept. Please try again.'));
   } catch { say('This browser could not take a photo. Please try again after the scene finishes loading.'); }
 }
 const blobOf = (canvas, quality) => new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(Error('photo')), 'image/jpeg', quality));

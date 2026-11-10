@@ -37,10 +37,10 @@ try {
   assert.ok(during.sites.includes('about'), `The Anchor is logged as visited (${during.sites})`);
   assert.ok(during.samples > 10, 'The profile is sampled');
   await page.evaluate(() => { oceanControls.surface({instant: true}); oceanJourney.tick(.1); });
-  // The dive log in small comes up first (surface-ending.js) and stands in for the button; closed, the button is there.
+  // The diver's card opens first on its Last dive page (surface-ending.js), with the frame to itself; closed, the
+  // hero and its Dive log button are there.
   await page.locator('.surface-ending [data-ending="log"]').waitFor({state: 'visible'});
-  assert.equal(await open.isVisible(), false, 'The card stands in for the button while it is up');
-  await page.locator('.surface-ending [data-ending="close"]').click();
+  await page.locator('#diver-profile .diver-profile-close').click();
   await open.waitFor({state: 'visible'});
   assert.match(await open.innerText(), /Dive log\s*New/);
   assert.equal(await dialog.evaluate(node => node.open), false, 'Surfacing never opens the page by itself');

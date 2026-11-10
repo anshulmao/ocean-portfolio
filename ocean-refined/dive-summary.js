@@ -192,7 +192,7 @@ function paintSites() {
   photos.forEach((photo, index) => {
     if (photo.dive !== record.number || !record.track.length) return;
     const [x, z] = photoPoint(photo), [u, v] = at(x, z);
-    map.insertAdjacentHTML('beforeend', `<button type="button" class="ds-shot" data-photo="${index}" style="left:${u}%;top:${v}%" aria-label="Photo at ${esc(photo.place)}: show the postcard"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.4"/></svg></button>`);
+    map.insertAdjacentHTML('beforeend', `<button type="button" class="ds-shot" data-photo="${index}" style="left:${u}%;top:${v}%" aria-label="Photo: ${esc(photo.title)}: show the postcard"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.4"/></svg></button>`);
   });
   // The chips: the three sites, then the features, each a name and a tick; everything else is in the card.
   // Outside the chart, a legend of tiles: the three sites as cards with their pin, depth and how they went, and the
@@ -207,7 +207,7 @@ function paintSites() {
   const story = [[0, 'In', 'entry'],
     ...Object.entries(record.sites).map(([id, visit]) => [visit.t, SITES[id].name, 'site', `site:${id}`, SITES[id].signal]),
     ...Object.entries(record.features).map(([name, t]) => [t, name, 'feature', `feature:${name}`]),
-    ...photos.map((photo, index) => photo.dive === record.number ? [photo.t, `Photo · ${photo.place}`, 'photo', null, null, index] : null).filter(Boolean),
+    ...photos.map((photo, index) => photo.dive === record.number ? [photo.t, `Photo · ${photo.title}`, 'photo', null, null, index] : null).filter(Boolean),
     [record.time, 'Out', 'entry']].sort((a, b) => a[0] - b[0]);
   // Left to right along one line, each moment at its time; labels take turns above and below and step further out
   // when they would overlap (layoutStory, once the page has a width).
@@ -281,9 +281,9 @@ function paintPhotos() {
     return;
   }
   track.tabIndex = 0;
-  track.innerHTML = photos.map((photo, i) => `<figure class="postcard" data-current="${i === 0}" role="group" aria-roledescription="slide" aria-label="${i + 1} of ${photos.length}: ${esc(photo.place)}">
-    <img src="${photo.url}" alt="Your photo at ${esc(photo.place)}, ${photo.depth.toFixed(0)} metres down" loading="lazy" decoding="async"><span class="zoom-hint" aria-hidden="true">⤢ Zoom</span>${photo.shared ? '<span class="sent">Shared</span>' : ''}
-    <figcaption><b>${esc(photo.place)}</b><small>${photo.dive === record.number ? `${clock(photo.t)} into the dive` : `Dive ${two(photo.dive)} · ${clock(photo.t)} in`}</small><span class="stamp"><span>${photo.depth.toFixed(0)} m<br><small>depth</small></span></span></figcaption></figure>`).join('');
+  track.innerHTML = photos.map((photo, i) => `<figure class="postcard" data-current="${i === 0}" role="group" aria-roledescription="slide" aria-label="${i + 1} of ${photos.length}: ${esc(photo.title)}">
+    <img src="${photo.url}" alt="Your photo: ${esc(photo.title)}, ${photo.depth.toFixed(0)} metres down" loading="lazy" decoding="async"><span class="zoom-hint" aria-hidden="true">⤢ Zoom</span>${photo.shared ? '<span class="sent">Shared</span>' : ''}
+    <figcaption><b>${esc(photo.title)}</b><small>${photo.species ? `${esc(photo.place)} · ` : ''}${photo.dive === record.number ? `${clock(photo.t)} into the dive` : `Dive ${two(photo.dive)} · ${clock(photo.t)} in`}</small><span class="stamp"><span>${photo.depth.toFixed(0)} m<br><small>depth</small></span></span></figcaption></figure>`).join('');
   $('.ds-dots', dialog).innerHTML = photos.map((photo, i) => `<button type="button" aria-label="Photo ${i + 1}" aria-current="${i === 0}"></button>`).join('');
   current = 0; settle(true);
 }
@@ -316,7 +316,7 @@ dialog.querySelectorAll('[data-step]').forEach(step => step.addEventListener('cl
 // of the carousel (a click on one beside it brings it to the middle first), or Enter on the carousel.
 function zoomCurrent(from) {
   const photo = photos[current]; if (!photo || zoomOpen()) return;
-  openZoom(dialog, { blob: photo.full, src: photo.url, alt: `Your photo at ${photo.place}, ${photo.depth.toFixed(0)} metres down`, label: `${photo.place} · ${photo.depth.toFixed(0)} m · ${photo.dive === record.number ? `${clock(photo.t)} into the dive` : `Dive ${two(photo.dive)}`}` }, from);
+  openZoom(dialog, { blob: photo.full, src: photo.url, alt: `Your photo: ${photo.title}, ${photo.depth.toFixed(0)} metres down`, label: `${photo.title} · ${photo.depth.toFixed(0)} m · ${photo.dive === record.number ? `${clock(photo.t)} into the dive` : `Dive ${two(photo.dive)}`}` }, from);
   track('reef_photo_zoomed');
 }
 $('.ds-zoom', dialog).addEventListener('click', event => zoomCurrent(event.currentTarget));

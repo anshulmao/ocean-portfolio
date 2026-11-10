@@ -200,8 +200,9 @@ function update() {
   const touch = document.documentElement.dataset.input === 'touch', key = eligible && `${eligible.id}|${touch}`;
   if (eligible && key !== prompted) {
     prompted = key;
-    promptLabel.textContent = touch ? `Read · ${eligible.title}` : `Explore ${eligible.title}`;
-    prompt.setAttribute('aria-label', touch ? `Read ${eligible.title}` : `Explore ${eligible.title}. Press F.`);
+    // The same words as the site's card (site-cards.js: Open it), which this stands in for when the card is not up.
+    promptLabel.textContent = `Open ${eligible.title}`;
+    prompt.setAttribute('aria-label', touch ? `Open ${eligible.title}` : `Open ${eligible.title}. Press F.`);
   }
   state.nearbyLandmark = eligible?.id || null;
 }

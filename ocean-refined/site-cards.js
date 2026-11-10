@@ -52,7 +52,7 @@ card.innerHTML = `<button type="button" class="site-card-close" aria-label="Clos
   <figure class="site-card-shot"><img alt="" decoding="async" width="800" height="500"></figure>
   <div class="site-card-text"><p class="site-card-kicker"></p><h2 class="site-card-title"></h2><p class="site-card-note"></p>
     <div class="site-card-work" role="group" aria-label="Projects in the wreck" hidden>${WORK.map((entry, i) => `<button type="button" data-work="${i}">${entry.title}</button>`).join('')}<kbd title="Tab turns to the next project">Tab</kbd></div></div>
-  <footer class="site-card-actions"><button type="button" data-site="read">Read it <kbd>F</kbd></button><button type="button" data-site="next">Continue <kbd>N</kbd></button></footer>
+  <footer class="site-card-actions"><button type="button" data-site="read">Open it <kbd>F</kbd></button><button type="button" data-site="next">Continue <kbd>N</kbd></button></footer>
   <i class="site-card-tail" aria-hidden="true"></i>`;
 document.body.append(card);
 const part = selector => card.querySelector(selector), image = part('img');
@@ -114,7 +114,6 @@ function fill(id, controls) {
   card.dataset.work = String(showcase); part('.site-card-work').hidden = !showcase;
   // The turning card is not read out each time it turns; a project picked by hand is.
   card.setAttribute('aria-live', showcase ? 'off' : 'polite');
-  part('[data-site="read"]').firstChild.textContent = showcase ? 'Open it ' : 'Read it ';
   if (showcase) { siteLine = fingers() ? `${site.section} · ${depth} m` : `${site.name} · ${site.section} · ${depth} m`; workAt = clock; paintWork(); return; }
   image.src = `./assets/portfolio/sites/${id}.jpg`; image.alt = `${site.name}, on the reef`;
   part('.site-card-kicker').textContent = `${site.section} · ${depth} m`;

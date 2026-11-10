@@ -1,7 +1,7 @@
 // The guided dive's payoff, against the built site (run `npm run build` first):
 //   - the welcome is the water, the depth and the guide's card: compass, chart and page buttons come in with the swim;
 //   - the wreck's card shows the projects themselves, and opening the wreck opens the project it is showing;
-//   - back at the surface the dive log comes up in small, in the Dive log button's place, and opens the full log.
+//   - back at the surface the diver's card opens on its Last dive page, the dive log in small, which opens the full log.
 // Each assertion is a visitor-visible contract (release/TESTING.md); the swims are skipped, not the states.
 import assert from 'node:assert/strict';
 import http from 'node:http';
@@ -49,11 +49,18 @@ try {
   await page.evaluate(() => window.oceanTour.next());
   await page.waitForFunction(() => window.oceanTour.status === 'travel', null, {timeout:60000});
   assert.equal(await visible('.reef-map'), true, 'the chart comes in with the swim');
+  // The dive's tools are one row: the computer, a photo and Clear screen. The Portfolio button is retired under water.
+  assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('.dive-tools > button')].map(button => button.id)), ['dive-computer-toggle', 'dive-photo', 'clear-ui-toggle']);
+  assert.equal(await page.locator('#dive-photo').isVisible(), true, 'the photo button is on the row');
+  assert.equal(await page.locator('#archive-toggle').isVisible(), false, 'no Portfolio button under water');
   await page.evaluate(() => window.oceanTour.next());
   await page.waitForFunction(() => window.oceanTour.status === 'dwell', null, {timeout:60000});
   await hop(); await hop();
   assert.equal(await page.evaluate(() => window.oceanDiagnostics.tour.key), 'projects');
   await page.waitForFunction(() => window.oceanSiteCard?.shown === 'projects' && document.querySelector('.site-card')?.dataset.show === 'true', null, {timeout:30000});
+  // One Open it on screen: while the site's card is up, the tour's sheet does not offer it again.
+  assert.equal(await page.locator('.tour-card [data-tour="read"]').isVisible(), false, 'the sheet leaves Open it to the site’s card');
+  assert.equal(await page.locator('.site-card [data-site="read"]').isVisible(), true);
   const work = await page.evaluate(() => window.oceanSiteCard.work);
   assert.ok(work.length >= 3, 'the wreck has projects to show');
   // Tab turns to the next project while the view has the keyboard, Shift+Tab to the one before.
@@ -91,9 +98,14 @@ try {
   assert.equal(await page.locator('.surface-ending h2').textContent(), 'That’s the whole reef.');
   assert.equal(await page.locator('.surface-ending-tiles div').count(), 4, 'time, depth, sites and species');
   assert.match(await page.locator('.surface-ending-profile .line').getAttribute('d'), /^M[\d.,L-]+$/, 'the depth profile is drawn');
-  assert.equal(await visible('.portfolio-actions .ds-open'), false, 'the card stands in for the Dive log button');
-  const box = await page.locator('.surface-ending').boundingBox(), hero = await page.locator('.hero .portfolio-actions').boundingBox();
-  assert.ok(box.x >= hero.x + hero.width || box.y >= hero.y + hero.height, 'the card stands clear of the hero’s buttons');
+  // It is a page of the diver's own card, not a card of its own: one card over the diver, with tabs between the two.
+  assert.equal(await page.evaluate(() => window.oceanProfile.isOpen && window.oceanProfile.page), 'dive', 'it is the Last dive page of the diver’s card');
+  assert.equal(await page.locator('#diver-profile .surface-ending').count(), 1);
+  await page.locator('#diver-profile [role="tab"][data-page="about"]').click();
+  assert.equal(await page.locator('#diver-profile .diver-profile-head').isVisible(), true, 'the tabs turn to About me');
+  assert.equal(await page.locator('#diver-profile .surface-ending').isVisible(), false);
+  await page.locator('#diver-profile [role="tab"][data-page="dive"]').click();
+  assert.equal(await page.locator('#diver-profile .surface-ending').isVisible(), true, 'and back to Last dive');
   await page.locator('.surface-ending [data-ending="log"]').click();
   await page.waitForFunction(() => window.oceanDiveSummary?.isOpen, null, {timeout:30000});
   assert.equal(await page.evaluate(() => window.oceanEnding.shown), false, 'the full log takes over from the card');

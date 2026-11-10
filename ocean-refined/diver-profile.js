@@ -29,12 +29,41 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
   const card = document.createElement('section');
   card.id = 'diver-profile'; card.className = 'diver-profile'; card.hidden = true; card.tabIndex = -1;
   card.setAttribute('role', 'dialog'); card.setAttribute('aria-labelledby', 'diver-profile-name');
-  card.innerHTML = `<button type="button" class="diver-profile-close" aria-label="Close the profile"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  // Two pages (round 19, the owner's notes): About me, as ever, and Last dive, the dive log in small, which
+  // surface-ending.js hands over when a dive ends (setDive). Until there has been a dive the card is the one page and
+  // has no tabs. After one, Last dive is the page it opens on, and the tabs turn between the two, so the dive's card
+  // and the profile are one card in one place over the diver, never two side by side.
+  card.innerHTML = `<button type="button" class="diver-profile-close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  <div class="diver-profile-tabs" role="tablist" aria-label="Pages" hidden><button type="button" role="tab" id="diver-profile-tab-dive" data-page="dive" aria-controls="diver-profile-page-dive">Last dive</button><button type="button" role="tab" id="diver-profile-tab-about" data-page="about" aria-controls="diver-profile-page-about">About me</button></div>
+  <div class="diver-profile-page" id="diver-profile-page-dive" role="tabpanel" aria-labelledby="diver-profile-tab-dive" hidden></div>
+  <div class="diver-profile-page" id="diver-profile-page-about" role="tabpanel" aria-labelledby="diver-profile-tab-about">
   <header class="diver-profile-head"><img alt="" width="72" height="72" decoding="async"><div><p class="diver-profile-kicker">Hi, I’m</p><h2 id="diver-profile-name"></h2><p class="diver-profile-role"></p><p class="diver-profile-base"></p></div></header>
   <p class="diver-profile-body"></p>
   <p class="diver-profile-note"></p>
   <footer class="diver-profile-actions"><button type="button" class="diver-profile-more" data-section="profile">More about me <span aria-hidden="true">→</span></button><button type="button" class="diver-profile-resume" data-section="resume">Résumé</button><span class="diver-profile-links"></span></footer>
+  </div>
   <i class="diver-profile-tail" aria-hidden="true"></i>`;
+  const tabs = card.querySelector('.diver-profile-tabs'), pages = { dive: card.querySelector('#diver-profile-page-dive'), about: card.querySelector('#diver-profile-page-about') };
+  let page = 'about', hasDive = false;
+  function showPage(name) {
+    page = name === 'dive' && hasDive ? 'dive' : 'about';
+    for (const [id, node] of Object.entries(pages)) node.hidden = id !== page;
+    for (const tab of tabs.querySelectorAll('[role="tab"]')) { const on = tab.dataset.page === page; tab.setAttribute('aria-selected', String(on)); tab.tabIndex = on ? 0 : -1; }
+    card.setAttribute('aria-labelledby', page === 'dive' ? 'diver-profile-tab-dive' : 'diver-profile-name');
+    card.dataset.page = page;
+    if (shown) { place(); document.body.dataset.profilePage = page; }
+  }
+  // The dive's page: its content (a node), or null for none.
+  function setDive(node) {
+    hasDive = Boolean(node); pages.dive.replaceChildren(...(node ? [node] : [])); tabs.hidden = !hasDive;
+    showPage(hasDive ? 'dive' : 'about');
+  }
+  tabs.addEventListener('click', event => { const tab = event.target.closest('[role="tab"]'); if (tab) showPage(tab.dataset.page); });
+  // Left and right turn the page, as on any set of tabs.
+  tabs.addEventListener('keydown', event => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault(); showPage(page === 'dive' ? 'about' : 'dive'); tabs.querySelector('[aria-selected="true"]')?.focus({ preventScroll: true });
+  });
   card.querySelector('h2').textContent = fullName;
   card.querySelector('.diver-profile-role').textContent = about.role || '';
   card.querySelector('.diver-profile-base').textContent = about.base || '';
@@ -124,9 +153,12 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
   card.querySelector('.diver-profile-close').addEventListener('click', () => close(true, 'press'));
   for (const button of card.querySelectorAll('[data-section]')) button.addEventListener('click', () => { close(false); openSection(button.dataset.section); });
 
-  function open() {
-    if (shown) return true;
+  // which: the page to open on ('dive' or 'about'); left out, Last dive when there is one. A card already open turns
+  // to the page asked for.
+  function open(which) {
+    if (shown) { if (which) showPage(which); return true; }
     if (!available()) return false;
+    showPage(which ?? (hasDive ? 'dive' : 'about'));
     track('profile_opened', { input: touchInput() ? 'touch' : locked() ? 'crosshair' : 'mouse' });
     if (!met) { met = true; try { localStorage.setItem(MET, '1'); } catch {} }
     const img = card.querySelector('img');
@@ -138,7 +170,7 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
     // Under the masthead where there is room for it there (it stays over the diver's head otherwise).
     ceiling = Math.max(EDGE, (document.querySelector('.masthead')?.getBoundingClientRect().bottom ?? 0) + 8);
     shown = true; card.hidden = false; hint.hidden = true;
-    document.body.dataset.profile = 'open';
+    document.body.dataset.profile = 'open'; document.body.dataset.profilePage = page;
     if (fromFreeLook) keepLooking?.(true);
     setInterfaceOpen(true);
     place();
@@ -151,7 +183,7 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
   function close(restore = true, how = 'key') {
     if (!shown) return;
     shown = false; card.hidden = true;
-    delete document.body.dataset.profile;
+    delete document.body.dataset.profile; delete document.body.dataset.profilePage;
     setInterfaceOpen(false);
     if (fromFreeLook) {
       fromFreeLook = false;
@@ -241,8 +273,8 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
   const diagnostics = { hovered: false, get inviting() { return inviting; } };
 
   return {
-    update, open, close, diagnostics,
-    get isOpen() { return shown; },
+    update, open, close, diagnostics, setDive, showPage,
+    get isOpen() { return shown; }, get page() { return page; },
     // Where the diver is on screen (client pixels), for tests and for anyone pointing at them.
     screenPoint(share = .9) { const { x, y } = anchor(share); return [x, y]; },
   };
