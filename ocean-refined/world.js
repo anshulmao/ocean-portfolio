@@ -39,7 +39,7 @@ import { refreshRate, drawStride, windowPace, windowHitch, workBudget, createSca
 // one; the values written are the same.
 const intoFloats=(array,offset,e)=>{for(let i=0;i<16;i++)array[offset+i]=e[i];return array;},matrixToArray=THREE.Matrix4.prototype.toArray;
 THREE.Matrix4.prototype.toArray=function(array=[],offset=0){return array instanceof Float32Array?intoFloats(array,offset,this.elements):matrixToArray.call(this,array,offset);};
-const $=s=>document.querySelector(s), canvas=$('#world'), status=$('#status');
+const $=s=>document.querySelector(s), canvas=$('#world'), status=$('#status-text');
 const themeMedia=matchMedia('(prefers-color-scheme: dark)'), motionMedia=matchMedia('(prefers-reduced-motion: reduce)');
 let selectedNight=false;
 // Respect the system by default, but let a visitor explicitly resume the ocean.
@@ -902,8 +902,8 @@ function updateWorld(dt,clockDt=dt){
   // still above the surface, while the rest is built with most of every frame's time (see afterFrame); the status line
   // says so if that takes more than a moment. The first draws get up to two and a half seconds of it as well (of the
   // page's clock as well as the scene's: on a slow device frames come so far apart that the scene's ran at half speed).
-  if(diveTarget===1&&(!underReady||!diagnostic.landmarksSettled||warmQueue.length&&diveHeldFor>0&&diveHeldFor<2.5&&performance.now()-startup.heldFrom<2500)){if(!diveHeldFor)startup.heldFrom=Math.round(performance.now());if(!buildSteps)startUnderwater();modelsWanted=true;if(built)beginModels();dive=Math.min(dive,DIVE_HOLD);diveHeldFor+=Math.max(dt,1e-4);hurry=2;if(diveHeldFor>.7&&(!underReady||!diagnostic.landmarksSettled)&&!holdNoted){holdNoted=true;status.textContent=HOLD_NOTE;}}
-  else if(diveHeldFor){diveHeldFor=0;hurry=1;startup.heldMs=Math.round(performance.now())-startup.heldFrom;if(holdNoted){holdNoted=false;if(status.textContent===HOLD_NOTE)status.textContent='';}if(reducedMotion&&diveTarget===1)dive=diveTarget;}
+  if(diveTarget===1&&(!underReady||!diagnostic.landmarksSettled||warmQueue.length&&diveHeldFor>0&&diveHeldFor<2.5&&performance.now()-startup.heldFrom<2500)){if(!diveHeldFor)startup.heldFrom=Math.round(performance.now());if(!buildSteps)startUnderwater();modelsWanted=true;if(built)beginModels();dive=Math.min(dive,DIVE_HOLD);diveHeldFor+=Math.max(dt,1e-4);hurry=2;if(diveHeldFor>.7&&(!underReady||!diagnostic.landmarksSettled)&&!holdNoted){holdNoted=true;status.textContent=HOLD_NOTE;document.body.dataset.loading='true';}}
+  else if(diveHeldFor){diveHeldFor=0;hurry=1;startup.heldMs=Math.round(performance.now())-startup.heldFrom;if(holdNoted){holdNoted=false;delete document.body.dataset.loading;if(status.textContent===HOLD_NOTE)status.textContent='';}if(reducedMotion&&diveTarget===1)dive=diveTarget;}
   let easedDive=THREE.MathUtils.smoothstep(dive,0,1);let underwater=THREE.MathUtils.smoothstep(easedDive,.13,.27);
   uniforms.uTime.value=elapsed;uniforms.uNight.value=night;uniforms.uDive.value=underwater;
   let turningSurface=false;
