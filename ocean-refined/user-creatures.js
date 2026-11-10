@@ -899,6 +899,8 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   // Where each sea star and urchin lies (open sand near its spot, on the slope there), worked out a dozen at a time
   // before the schools are built: all at once it was a single task of 30 ms here, several times that on a tablet.
   const seabedPlaces = [];
+  // Two bottom animals touch when their centres are closer than half of each one's span plus a hand's width.
+  const crowded = (x, z, length) => seabedPlaces.some(b => Math.hypot(b.x - x, b.z - z) < (b.length + length) * .5 + .15);
   async function placeSeabed() {
     let done = 0;
     for (const bed of Object.values(SEABED)) {
@@ -909,11 +911,21 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
         let [x, z] = seabedSpot(i, n, bed.phase);
         if (solid(x, z) || steep(x, z)) { const spot = sand(x, z, .8, true); if (!spot || steep(...spot)) continue; [x, z] = spot; }
         const scale = bed.scale[0] + (bed.scale[1] - bed.scale[0]) * ((i * .618) % 1), yaw = i * 1.7, length = (facts.get(species)?.lengthMetres || 1) * scale, lift = bottomOf(species) * scale;
+        // Not on top of one already lying there (an urchin used to land on a sea star): step round it, or leave it out.
+        if (crowded(x, z, length)) {
+          let free = null;
+          for (let k = 0; k < 24 && !free; k++) { const r = .7 + (k >> 3) * .8, a = k * 2.399 + i, nx = x + Math.cos(a) * r, nz = z + Math.sin(a) * r; if (!solid(nx, nz) && !steep(nx, nz) && !crowded(nx, nz, length)) free = [nx, nz]; }
+          if (!free) continue; [x, z] = free;
+        }
         settleFlat(x, z, yaw, length, lift);
         seabedPlaces.push({ species, length, x, y: LIE.y, z, yaw, pitch: LIE.pitch, roll: LIE.roll, scale, beat: 0 });
         if (++done % 12 === 0) await turn();
       }
     }
+    // How many lie on the reef and the smallest clear water between two of them (m): below zero, two overlap.
+    let gap = Infinity;
+    for (let i = 0; i < seabedPlaces.length; i++) for (let j = 0; j < i; j++) { const p = seabedPlaces[i], q = seabedPlaces[j]; gap = Math.min(gap, Math.hypot(p.x - q.x, p.z - q.z) - (p.length + q.length) * .5); }
+    diagnostics.seabed = { placed: seabedPlaces.length, gap: +gap.toFixed(2) };
   }
   // Where the reef's sea stars and urchins have always been: a staggered zigzag from the shallows to the deep ledge, kept
   // off the landmarks' pads and the arch's gully (as underwater-life.js placed them).
