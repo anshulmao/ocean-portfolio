@@ -1,7 +1,7 @@
 // The guided dive's payoff, against the built site (run `npm run build` first):
 //   - the welcome is the water, the depth and the guide's card: compass, chart and page buttons come in with the swim;
 //   - the wreck's card shows the projects themselves, and opening the wreck opens the project it is showing;
-//   - back at the surface a card offers the work, the résumé and the ways to get in touch, once per dive.
+//   - back at the surface the dive log comes up in small, in the Dive log button's place, and opens the full log.
 // Each assertion is a visitor-visible contract (release/TESTING.md); the swims are skipped, not the states.
 import assert from 'node:assert/strict';
 import http from 'node:http';
@@ -56,6 +56,15 @@ try {
   await page.waitForFunction(() => window.oceanSiteCard?.shown === 'projects' && document.querySelector('.site-card')?.dataset.show === 'true', null, {timeout:30000});
   const work = await page.evaluate(() => window.oceanSiteCard.work);
   assert.ok(work.length >= 3, 'the wreck has projects to show');
+  // Tab turns to the next project while the view has the keyboard, Shift+Tab to the one before.
+  await page.evaluate(() => document.activeElement?.blur?.());
+  const before = await page.evaluate(() => window.oceanSiteCard.entryFor('projects'));
+  await page.keyboard.press('Tab');
+  assert.equal(await page.evaluate(() => window.oceanSiteCard.entryFor('projects')), work[(work.indexOf(before) + 1) % work.length], 'Tab turns to the next project');
+  await page.keyboard.press('Shift+Tab');
+  assert.equal(await page.evaluate(() => window.oceanSiteCard.entryFor('projects')), before, 'Shift+Tab turns back');
+  const chips = await page.evaluate(() => [...document.querySelectorAll('.site-card [data-work]')].map(chip => Math.round(chip.getBoundingClientRect().top)));
+  assert.equal(new Set(chips).size, 1, 'the project chips sit on one line');
   // Picked by hand, as the card is drawn in the water and may be scaled: a click on the chip itself.
   await page.evaluate(() => document.querySelector('.site-card [data-work="2"]').click());
   assert.equal(await page.evaluate(() => window.oceanSiteCard.entryFor('projects')), work[2], 'a chip picks its project');
@@ -80,19 +89,19 @@ try {
   }
   assert.equal(await page.evaluate(() => window.oceanEnding.shown), true, 'the ending card meets the diver at the surface');
   assert.equal(await page.locator('.surface-ending h2').textContent(), 'That’s the whole reef.');
-  assert.equal(await page.locator('.surface-ending [data-ending="project"]').count(), 3);
-  assert.match(await page.locator('.surface-ending [data-ending="email"]').getAttribute('href'), /^mailto:/);
+  assert.equal(await page.locator('.surface-ending-tiles div').count(), 4, 'time, depth, sites and species');
+  assert.match(await page.locator('.surface-ending-profile .line').getAttribute('d'), /^M[\d.,L-]+$/, 'the depth profile is drawn');
+  assert.equal(await visible('.portfolio-actions .ds-open'), false, 'the card stands in for the Dive log button');
   const box = await page.locator('.surface-ending').boundingBox(), hero = await page.locator('.hero .portfolio-actions').boundingBox();
   assert.ok(box.x >= hero.x + hero.width || box.y >= hero.y + hero.height, 'the card stands clear of the hero’s buttons');
-  await page.locator('.surface-ending [data-ending="project"]').first().click();
-  await page.waitForFunction(() => window.oceanArchive?.isOpen, null, {timeout:30000});
-  assert.deepEqual(await page.evaluate(() => window.oceanArchive.current), {section:'projects', entry:work[0]});
-  await page.evaluate(() => window.oceanArchive.close());
-  await page.waitForFunction(() => !window.oceanArchive.isOpen, null, {timeout:30000});
-  await page.locator('.surface-ending [data-ending="close"]').click();
-  assert.equal(await page.evaluate(() => window.oceanEnding.shown), false, 'closed, it stays closed');
+  await page.locator('.surface-ending [data-ending="log"]').click();
+  await page.waitForFunction(() => window.oceanDiveSummary?.isOpen, null, {timeout:30000});
+  assert.equal(await page.evaluate(() => window.oceanEnding.shown), false, 'the full log takes over from the card');
+  await page.evaluate(() => window.oceanDiveSummary.close(true));
+  await page.waitForFunction(() => !window.oceanDiveSummary.isOpen, null, {timeout:30000});
+  assert.equal(await visible('.portfolio-actions .ds-open'), true, 'afterwards the Dive log button is the way back');
   assert.deepEqual(errors, [], 'no script errors');
-  console.log('PASS the ending card offers the work and the ways to get in touch');
+  console.log('PASS the dive log comes up in small at the surface and opens the full log');
 } catch (error) { failed = true; console.error('FAIL', error.message); }
 finally { await browser.close(); server.close(); }
 if (failed) process.exit(1);

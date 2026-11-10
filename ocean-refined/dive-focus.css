@@ -33,69 +33,80 @@ html body[data-submerged="true"]:not([data-computer-open="true"]) .reef-map[data
   html body[data-submerged="true"] :is(.heading-indicator,.reef-map,.archive-toggle,.quiet-ui-toggle,.look-hint){transition:none}
 }
 
-/* The card back at the surface after a dive (surface-ending.js), in the hero's palette like the diver's profile card
-   (diver-profile.css): pale by day, deep at night (tokens.css). Beside the hero where the hero leaves room (it is 58vw wide above 900px, surface.css);
-   under it, as a sheet along the bottom, on a narrow screen. No backdrop blur over the moving sea. */
-.surface-ending{position:fixed;right:var(--pad,24px);top:clamp(96px,15vh,150px);z-index:20;box-sizing:border-box;width:min(380px,calc(42vw - 2*var(--pad,24px) - 16px));max-height:calc(100vh - clamp(96px,15vh,150px) - 16px);overflow:auto;padding:20px 20px 16px;
+/* The card back at the surface after a dive (surface-ending.js): the dive log in small, in the hero's palette like the
+   diver's profile card (diver-profile.css): pale by day, deep at night (tokens.css). Beside the hero where the hero
+   leaves room (it is 58vw wide above 900px, surface.css); bottom right on a narrower screen; a sheet along the bottom
+   on a phone. No backdrop blur over the moving sea. While it is up, or on its way, it stands in for the hero's Dive
+   log button. */
+html body:is([data-ending="pending"],[data-ending="true"]) .portfolio-actions .ds-open{display:none}
+.surface-ending{position:fixed;right:var(--pad,24px);top:clamp(96px,15vh,150px);z-index:20;box-sizing:border-box;width:min(380px,calc(42vw - 2*var(--pad,24px) - 16px));max-height:calc(100vh - clamp(96px,15vh,150px) - 16px);overflow:auto;padding:20px 20px 12px;
   border:1px solid color-mix(in srgb,var(--o-ink) 12%,transparent);border-radius:18px;background:color-mix(in srgb,var(--o-surface-0) 95%,transparent);color:var(--o-ink);font-family:var(--o-display);
   box-shadow:0 1px 0 #ffffff80 inset,0 24px 50px -22px #052c3a73,0 4px 14px -6px #052c3a33;animation:surface-ending-in 420ms var(--ui-ease,cubic-bezier(.2,.7,.2,1)) both}
 .surface-ending[hidden]{display:none}
 @keyframes surface-ending-in{from{opacity:0;translate:0 14px}}
-.surface-ending :is(p,h2,ul){margin:0;padding:0}
+.surface-ending :is(p,h2,ul,dl,dd){margin:0;padding:0}
 .surface-ending-close{position:absolute;top:8px;right:8px;display:grid;place-items:center;width:40px;height:40px;padding:0;border:0;border-radius:50%;background:none;color:var(--o-ink-2);cursor:pointer}
 .surface-ending-close:hover{background:color-mix(in srgb,var(--o-ink) 7%,transparent);color:var(--o-ink)}
 .surface-ending-close svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
-.surface-ending-kicker{padding-right:36px!important;font-size:12.5px;line-height:1.3;color:var(--o-ink-2);font-variant-numeric:tabular-nums}
+.surface-ending-kicker{padding-right:36px;font-size:12.5px;line-height:1.3;color:var(--o-ink-2);font-variant-numeric:tabular-nums}
 .surface-ending h2{margin-top:6px;font:500 26px/1.15 var(--o-display);letter-spacing:-.02em;color:var(--o-ink)}
-.surface-ending-line{margin-top:6px!important;font-size:14.5px;line-height:1.45;color:var(--o-ink-2)}
-.surface-ending-work{list-style:none;display:grid;gap:6px;margin-top:14px!important}
-.surface-ending-work button{display:grid;grid-template-columns:72px minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;padding:6px 10px 6px 6px;border:1px solid color-mix(in srgb,var(--o-ink) 10%,transparent);border-radius:12px;background:color-mix(in srgb,var(--o-ink) 3%,transparent);color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background 160ms var(--ui-ease,ease),border-color 160ms var(--ui-ease,ease)}
-.surface-ending-work button:hover{background:color-mix(in srgb,var(--o-ink) 8%,transparent);border-color:color-mix(in srgb,var(--o-ink) 24%,transparent)}
-.surface-ending-work img{display:block;width:72px;height:46px;border-radius:7px;object-fit:cover;object-position:50% 0;background:var(--o-surface-2)}
-.surface-ending-work b{display:block;font-weight:500;font-size:15px;line-height:1.25}
-.surface-ending-work small{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;line-clamp:1;overflow:hidden;margin-top:1px;font-size:12.5px;line-height:1.35;color:var(--o-ink-2)}
-.surface-ending-work i{font-style:normal;color:var(--o-ink-2)}
+.surface-ending-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:14px}
+.surface-ending-tiles div{display:flex;flex-direction:column;gap:7px;padding:9px 9px 10px;border:1px solid color-mix(in srgb,var(--o-ink) 10%,transparent);border-radius:10px;background:color-mix(in srgb,var(--o-ink) 3%,transparent)}
+.surface-ending-tiles dt{font-size:11px;line-height:1.1;color:var(--o-ink-2);white-space:nowrap}
+.surface-ending-tiles dd{font:500 20px/1 var(--o-display);font-variant-numeric:tabular-nums;letter-spacing:-.01em;white-space:nowrap}
+.surface-ending-tiles dd small{font-size:11px;font-weight:400;color:var(--o-ink-2)}
+.surface-ending-profile{display:block;width:100%;height:56px;margin-top:10px;border-radius:10px;background:color-mix(in srgb,var(--o-sunlit) 8%,transparent)}
+.surface-ending-profile .fill{fill:color-mix(in srgb,var(--o-sunlit) 22%,transparent)}
+.surface-ending-profile .line{fill:none;stroke:var(--o-sunlit);stroke-width:1.6;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.surface-ending-line{margin-top:10px;font-size:14px;line-height:1.4;color:var(--o-ink-2)}
+.surface-ending-faces{list-style:none;display:flex;gap:6px;margin-top:10px}
+.surface-ending-faces[hidden]{display:none}
+.surface-ending-faces li{flex:none;width:44px;height:44px;border-radius:50%;overflow:hidden;background:linear-gradient(#49bcd4,#147090)}
+.surface-ending-faces img{display:block;width:100%;height:100%;object-fit:cover}
+.surface-ending-faces .more{display:grid;place-items:center;background:color-mix(in srgb,var(--o-ink) 7%,transparent);font-size:13px;color:var(--o-ink-2)}
 .surface-ending-actions{display:flex;gap:8px;margin-top:14px}
-.surface-ending-actions :is(a,button){flex:1;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border:1px solid color-mix(in srgb,var(--o-ink) 22%,transparent);border-radius:100px;background:none;color:var(--o-ink);font:500 15px/1 var(--o-display);text-decoration:none;cursor:pointer}
-.surface-ending-actions :is(a,button):hover{background:color-mix(in srgb,var(--o-ink) 7%,transparent)}
+.surface-ending-actions button{flex:1;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border:1px solid color-mix(in srgb,var(--o-ink) 22%,transparent);border-radius:100px;background:none;color:var(--o-ink);font:500 15px/1 var(--o-display);cursor:pointer}
+.surface-ending-actions button:hover{background:color-mix(in srgb,var(--o-ink) 7%,transparent)}
 .surface-ending-actions .surface-ending-primary{border-color:var(--o-ink);background:var(--o-ink);color:var(--o-surface-0)}
 .surface-ending-actions .surface-ending-primary:hover{background:color-mix(in srgb,var(--o-ink) 86%,var(--o-surface-0))}
-.surface-ending-more{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 18px;margin-top:8px!important}
+.surface-ending-more{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 18px;margin-top:4px}
 .surface-ending-more :is(a,button){display:inline-flex;align-items:center;min-height:40px;padding:0;border:0;background:none;color:var(--o-ink-2);font:400 14px/1.3 var(--o-display);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);text-underline-offset:4px;cursor:pointer}
 .surface-ending-more :is(a,button):hover{color:var(--o-ink);text-decoration-color:currentColor}
 .surface-ending :is(a,button):focus-visible{outline:2px solid var(--o-ink);outline-offset:2px}
 /* It keeps out of the way of whatever is opened over the surface, as the hero does. */
 body:is([data-menu="open"],[data-movement-panel="open"],[data-exploring="true"],[data-submerged="true"]) .surface-ending{display:none}
 @media (max-width:1099px){
-  .surface-ending{left:auto;right:12px;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(480px,calc(100vw - 24px));max-height:44vh;overflow:auto;padding:16px 16px 10px}
-  .surface-ending h2{font-size:21px}
-  .surface-ending-line{font-size:13.5px}
-  .surface-ending-work{margin-top:10px!important}
-  .surface-ending-work button{grid-template-columns:52px minmax(0,1fr) auto;padding:5px 10px 5px 5px}
-  .surface-ending-work img{width:52px;height:34px}
-  .surface-ending-actions{margin-top:10px}
+  .surface-ending{left:auto;right:12px;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(420px,calc(100vw - 24px));max-height:calc(100vh - 24px);padding:16px 16px 8px}
+  .surface-ending h2{font-size:22px}
 }
-/* On a phone the hero's own buttons reach well down the screen: the sheet is solid, and only as tall as it must be
-   (the line about the dive and each project's one line are left to the pages they open). */
+/* A phone: a solid sheet along the bottom, under the hero's buttons. */
 @media (max-width:599px){
-  .surface-ending{background:var(--o-surface-0);max-height:42vh;padding:14px 14px 6px}
-  .surface-ending-line,.surface-ending-work small{display:none}
-  .surface-ending-work{gap:5px}
-  .surface-ending-work button{grid-template-columns:44px minmax(0,1fr) auto;padding:4px 10px 4px 4px;border-radius:10px}
-  .surface-ending-work img{width:44px;height:30px;border-radius:6px}
-  .surface-ending-more{margin-top:2px!important}
+  .surface-ending{left:12px;width:auto;background:var(--o-surface-0);padding:14px 14px 4px}
+  .surface-ending-tiles{margin-top:10px}
+  .surface-ending-tiles dd{font-size:18px}
+  .surface-ending-profile{height:44px}
+  .surface-ending-faces li{width:38px;height:38px}
+  .surface-ending-actions{margin-top:12px}
+}
+/* A short phone: the numbers and the way into the log; the chart, the faces and the links the hero already has are
+   left to the log itself, so the sheet stays under the hero. */
+@media (max-width:599px) and (max-height:740px){
+  .surface-ending-profile,.surface-ending-faces,.surface-ending-more{display:none}
+  .surface-ending{padding-bottom:14px}
 }
 /* A phone held sideways: the hero fills the height and its buttons run along the left, so the card stands on the
    right, under the menu button, in its smallest form. */
 @media (max-height:499px){
-  .surface-ending{left:auto;right:calc(12px + env(safe-area-inset-right,0px));top:calc(var(--o-top,12px) + var(--o-bar,44px) + 8px);bottom:auto;translate:none;width:min(320px,40vw);max-height:calc(100vh - var(--o-top,12px) - var(--o-bar,44px) - 20px);background:var(--o-surface-0);padding:12px 12px 4px}
-  @keyframes surface-ending-in{from{opacity:0;translate:0 10px}}
-  .surface-ending h2{font-size:18px}
-  .surface-ending-line,.surface-ending-work small,.surface-ending-work img{display:none}
-  .surface-ending-work{gap:4px;margin-top:8px!important}
-  .surface-ending-work button{grid-template-columns:minmax(0,1fr) auto;min-height:36px;padding:4px 10px;border-radius:10px}
+  .surface-ending{left:auto;right:calc(12px + env(safe-area-inset-right,0px));top:calc(var(--o-top,12px) + var(--o-bar,44px) + 8px);bottom:auto;width:min(340px,42vw);max-height:calc(100vh - var(--o-top,12px) - var(--o-bar,44px) - 20px);background:var(--o-surface-0);padding:12px 12px 4px}
+  /* The hero's lines run the width of the screen there; while the card is up they keep to the left of it. */
+  html body[data-ending="true"]:not([data-submerged="true"]):not([data-exploring="true"]) .hero{right:calc(min(340px,42vw) + 24px + env(safe-area-inset-right,0px));width:auto}
+  .surface-ending h2{font-size:18px;margin-top:2px}
+  .surface-ending-tiles{margin-top:8px;gap:4px}
+  .surface-ending-tiles div{padding:6px 7px 7px;gap:5px}
+  .surface-ending-tiles dd{font-size:16px}
+  .surface-ending-profile,.surface-ending-faces{display:none}
+  .surface-ending-line{margin-top:8px;font-size:13px}
   .surface-ending-actions{margin-top:8px}
-  .surface-ending-actions :is(a,button){min-height:40px;font-size:14px}
-  .surface-ending-more{margin-top:0!important}
+  .surface-ending-actions button{min-height:40px;font-size:14px;padding:0 10px}
 }
 @media (prefers-reduced-motion:reduce){.surface-ending{animation:none}}

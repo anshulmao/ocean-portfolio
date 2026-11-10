@@ -51,7 +51,7 @@ card.className = 'site-card'; card.dataset.anchored = 'true'; card.dataset.show 
 card.innerHTML = `<button type="button" class="site-card-close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   <figure class="site-card-shot"><img alt="" decoding="async" width="800" height="500"></figure>
   <div class="site-card-text"><p class="site-card-kicker"></p><h2 class="site-card-title"></h2><p class="site-card-note"></p>
-    <div class="site-card-work" role="group" aria-label="Projects in the wreck" hidden>${WORK.map((entry, i) => `<button type="button" data-work="${i}">${entry.title}</button>`).join('')}</div></div>
+    <div class="site-card-work" role="group" aria-label="Projects in the wreck" hidden>${WORK.map((entry, i) => `<button type="button" data-work="${i}">${entry.title}</button>`).join('')}<kbd title="Tab turns to the next project">Tab</kbd></div></div>
   <footer class="site-card-actions"><button type="button" data-site="read">Read it <kbd>F</kbd></button><button type="button" data-site="next">Continue <kbd>N</kbd></button></footer>
   <i class="site-card-tail" aria-hidden="true"></i>`;
 document.body.append(card);
@@ -227,13 +227,29 @@ function read() {
   if (window.oceanLandmarks?.openSite) window.oceanLandmarks.openSite(id, window.oceanTour?.opens?.(id) ?? id, entry);
   else window.oceanArchive?.open?.(id, entry);
 }
+// A project picked by hand (its chip, or Tab): the card stays on it, and stops turning.
+function pick(index) {
+  work = (index + WORK.length) % WORK.length; picked = true; workAt = clock; card.setAttribute('aria-live', 'polite'); paintWork();
+  track('project_previewed', { project_id: WORK[work].id });
+}
+// Tab turns the wreck's card to its next project, Shift+Tab to the one before, while the view has the keyboard (the
+// scene, or nothing, is focused: under water that is the usual case). With the focus on a chip, Tab moves along the
+// chips as it does anywhere, and the chip it lands on is picked. Elsewhere on the page Tab is left alone.
+addEventListener('keydown', event => {
+  if (event.key !== 'Tab' || event.ctrlKey || event.metaKey || event.altKey || shown !== 'projects' || card.dataset.show !== 'true' || WORK.length < 2) return;
+  if (document.querySelector('dialog[open]') || document.body.dataset.menu === 'open') return;
+  const focus = document.activeElement;
+  if (focus && focus !== document.body && focus.id !== 'world') return;
+  event.preventDefault(); pick(work + (event.shiftKey ? -1 : 1));
+});
+card.addEventListener('focusin', event => { const chip = event.target.closest?.('[data-work]'); if (chip && Number(chip.dataset.work) !== work) pick(Number(chip.dataset.work)); });
 // The project the wreck's card is showing, for whatever opens the wreck while it is up (its own Open it, the tour's
 // Read it, F): the page opens on that project, and leads on to the rest.
 const entryFor = id => id === 'projects' && shown === 'projects' && WORK.length && (card.dataset.show === 'true' || reading) ? WORK[work].id : null;
 card.addEventListener('click', event => {
   const action = event.target.closest('[data-site],[data-work],.site-card-close');
   if (!action) return;
-  if (action.dataset.work) { work = Number(action.dataset.work); picked = true; workAt = clock; card.setAttribute('aria-live', 'polite'); paintWork(); track('project_previewed', { project_id: WORK[work].id }); return; }
+  if (action.dataset.work) { pick(Number(action.dataset.work)); return; }
   if (action.classList.contains('site-card-close')) { closed = shown; hide(); }
   else if (action.dataset.site === 'read') read();
   else if (action.dataset.site === 'next') { if (action.dataset.act === 'surface') window.oceanTour?.surface?.(); else window.oceanTour?.next?.(); }

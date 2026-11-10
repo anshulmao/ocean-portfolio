@@ -31,12 +31,17 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
 - **The welcome is quiet.** Only the water, the depth card and the guide's card. The compass, the chart and the page
   buttons come in with the first swim (`dive-focus.css`). While the guide leads, the line of keys at the bottom is not
   shown: the tour teaches each key where it is first of use.
-- **The wreck is the peak.** Its card turns through the first four projects that have a picture (`site-cards.js` WORK),
-  six seconds each; a chip picks one. Open it (F, or the sheet's Read it) opens the project shown, whose page leads on
-  to the rest. Reduced motion: no turning.
-- **The ending is at the surface.** After any dive worth the name (40 s, or a site reached) a card meets the diver
-  there (`surface-ending.js`): what the dive was, three projects, Get in touch, the résumé, the dive log and Dive
-  again. It is not a dialog; it goes when closed or when the next dive starts.
+- **The wreck is the peak.** Its card is the larger one, and turns through the first four projects that have a
+  picture (`site-cards.js` WORK), six seconds each. The four chips sit on one line; a chip picks one, and Tab (Shift+Tab)
+  turns to the next while the view has the keyboard. Open it (F, or the sheet's Read it) opens the project shown, whose
+  page leads on to the rest. Reduced motion: no turning.
+- **The ending is the dive log in small.** After any dive worth the name (40 s, or a site reached) a card meets the
+  diver at the surface (`surface-ending.js`) in the Dive log button's place: time, depth, sites and species, the depth
+  profile, what is still down there, the animals met, Open dive log and Dive again. It is not a dialog; it goes when
+  closed, when the full log is opened from it, or when the next dive starts, and the button is then the way back.
+- **The nurse shark stays put.** It lies by the nursery until a diver comes within 3.5 m, lifts off the sand, moves about
+  five metres to a second clear spot and settles; crowded there by a diver who has backed off and come again, it turns
+  and goes home (`user-creatures.js` driveNurse).
 - `npm run test:tour` holds all three.
 
 ## The sequence (round 12)

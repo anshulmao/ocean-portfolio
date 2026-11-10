@@ -572,7 +572,9 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     }
   }
 
-  // The nurse shark by the nursery. It keeps to one smooth circuit of open sand round the nursery, worked out when it
+  // The nurse shark by the nursery. It lies on the sand and only moves when crowded: a short hop to a second spot and,
+  // crowded there, back (see `away` below). Both spots, and the few metres between them, are on one smooth line of open
+  // sand worked out when it
   // loads: points round an oval, each pushed out until a body's width either side of it is clear of the reef, the
   // radii smoothed, and a closed spline through them measured by length. Its resting spots are on the circuit, so it
   // never leaves it: it lies on the sand, breathing, then picks up speed along the circuit, rising a little off the
@@ -618,18 +620,30 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     if (!spots.length) spots.push(0);
     // It starts resting on the spot nearest where it always slept.
     const home = spots.reduce((best, s) => { const p = circuit.at(s), q = circuit.at(best); return Math.hypot(p.x - cfg.near[0], p.z - cfg.near[1]) < Math.hypot(q.x - cfg.near[0], q.z - cfg.near[1]) ? s : best; }, spots[0]);
-    const nurseState = { actor: a, circuit, spots, s: home, stop: home, from: home, v: 0, state: 'rest', timer: rr(...cfg.rest) * .4, pitch: 0, roll: 0, y: null, lastYaw: null };
+    // It stays put (the owner's notes, round 18: the circuit did not suit the ground round the nursery). It lies at home
+    // until a diver comes close, then lifts off the sand, moves `away` to a second clear, level spot a few metres along
+    // (cfg.hop: the nearest and furthest that may be, m) and settles there; crowded again, it turns and goes back home.
+    const [nearest, furthest] = cfg.hop; let away = (home + (nearest + furthest) / 2) % length;
+    for (let d = nearest; d <= furthest; d += .5) {
+      const q = circuit.pose(home + d); if (!clearBody(q.x, q.z, q.yaw, a.L) || blocked(q.x, q.z) || steep(q.x, q.z)) continue;
+      lie(q.x, q.z, q.yaw, a.L, 0); if (Math.abs(LIE.pitch) > .18 || Math.abs(LIE.roll) > .18) continue;
+      away = (home + d) % length; break;
+    }
+    const nurseState = { actor: a, circuit, spots, home, away, s: home, stop: home, from: home, dir: 1, v: 0, t: 0, yaw: circuit.pose(home).yaw, state: 'rest', calm: 0, wary: true, pitch: 0, roll: 0, y: null, lastYaw: null };
     poseNurse(nurseState, 0);
     a.started = true; resting.sleeper = a.pos.toArray();
     return nurseState;
   }
-  // Where the shark is and how it lies, from its place on the circuit and its speed. `lift` (0 resting, 1 cruising)
-  // comes from how far it is from where it set off and from where it will stop, so it rises as it leaves a spot and
-  // sinks as it comes to the next.
+  // Where the shark is and how it lies, from its place on the circuit and its speed. `lift` (0 resting, 1 swimming)
+  // comes from how long it has been off the sand and how far it is from where it will stop, so it rises where it lay
+  // (turning as it does, if the way to go is behind it) and sinks as it comes to the other spot.
   function poseNurse(n, dt) {
     const a = n.actor, cfg = RESIDENTS.sleeper, p = n.circuit.pose(n.s), L = n.circuit.length;
-    const gone = (n.s - n.from + L) % L, left = (n.stop - n.s + L) % L;
-    const k = n.state === 'rest' ? 0 : Math.min(1, Math.min(gone, left) / 4), lift = k * k * (3 - 2 * k);
+    const left = n.dir > 0 ? (n.stop - n.s + L) % L : (n.s - n.stop + L) % L;
+    // Its heading: along the circuit the way it is going, turned to at an easy rate (it starts a hop back facing away).
+    if (n.state !== 'rest' && dt > 0) n.yaw += clamp(turnTo(n.yaw, p.yaw + (n.dir < 0 ? Math.PI : 0)), -1.1 * dt, 1.1 * dt);
+    p.yaw = n.yaw;
+    const k = n.state === 'rest' ? 0 : Math.min(1, n.t / 1.6, left / 1.5), lift = k * k * (3 - 2 * k);
     lie(p.x, p.z, p.yaw, a.L, .45 + (cfg.height - .45) * lift);
     // Cruising, it keeps over whatever stands on the bottom as well as the sand, nose, middle, tail and flanks. Height eases there, so a coral head is a gentle rise, not a step.
     // (The exact map, `ground`, not the smoothed one: that rises metres round the nursery's tall, thin trees.)
@@ -637,7 +651,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     // And the reef a few metres on along the circuit, so it rises before a coral head rather than at it.
     let tallest = Math.max(ground(p.x, p.z), ground(p.x + fx, p.z + fz), ground(p.x - fx, p.z - fz), ground(p.x + sx, p.z + sz), ground(p.x - sx, p.z - sz));
     // (Only as it cruises: lying down or lifting off, what lies ahead is no concern; it fades in with `lift`.)
-    for (const ahead of [2.5, 5]) { const q = n.circuit.at(n.s + a.L * .42 + ahead); tallest = Math.max(tallest, ground(q.x, q.z) - .15 * ahead - (1 - lift) * 4); }
+    for (const ahead of [2.5, 5]) { const q = n.circuit.at(n.s + n.dir * (a.L * .42 + ahead)); tallest = Math.max(tallest, ground(q.x, q.z) - .15 * ahead - (1 - lift) * 4); }
     const over = tallest + .5 * lift;
     const target = Math.max(LIE.y, over);
     // Eased both ways, through the stop too (it used to snap to the resting height on arrival).
@@ -653,22 +667,29 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
   function driveNurse(dt, player) {
     const n = nurse, a = n.actor, cfg = RESIDENTS.sleeper, L = n.circuit.length;
     if (n.state === 'rest') {
-      n.timer -= dt;
-      if (player && a.pos.distanceToSquared(player) < 3.5 * 3.5) n.timer = Math.min(n.timer, 0);
-      if (n.timer <= 0) {
-        // The next spot round the circuit, far enough on for a proper swim (a quarter of the way at least).
-        const ahead = n.spots.map(s => ({ s, d: (s - n.s + L) % L })).filter(q => q.d > L / 4).sort((p, q) => p.d - q.d);
-        n.from = n.s; n.stop = ahead.length ? ahead[0].s : (n.s + L * .5) % L;
-        n.state = 'swim'; n.v = 0; play(a, 'swim', 2.2);
+      // Crowded (a diver within cfg.shy m), once it has lain a few seconds: off to its other spot. Only a diver who
+      // has backed off since it last moved crowds it again, so one hovering between its two spots does not send it
+      // to and fro.
+      n.calm += dt;
+      const gap = player ? a.pos.distanceTo(player) : Infinity;
+      if (gap > cfg.shy + 1.5) n.wary = true;
+      if (n.wary && n.calm > 4 && gap < cfg.shy) {
+        n.wary = false;
+        const home = Math.min((n.s - n.home + L) % L, (n.home - n.s + L) % L) < .5;
+        n.from = n.s; n.stop = home ? n.away : n.home; n.dir = home ? 1 : -1;
+        n.state = 'swim'; n.v = 0; n.t = 0; play(a, 'swim', 1.4);
       }
     } else {
-      // Speed: up gently from rest, a slow cruise, and down to nothing over the last few metres to the spot.
-      const left = (n.stop - n.s + L) % L, want = cfg.speed * Math.min(1, Math.sqrt(left / 5));
-      n.v += clamp(want - n.v, -.3 * dt, .18 * dt); n.v = Math.max(n.v, Math.min(.03, left * 2));
-      n.s = (n.s + Math.min(n.v * dt, left)) % L;
-      a.mixer.timeScale = clamp(.25 + n.v / Math.max(.1, a.stride) * 1.4, .25, 1.2);
+      n.t += dt;
+      // Speed: nothing until it faces the way it is going, then up gently, and down to nothing over the last metres.
+      const left = n.dir > 0 ? (n.stop - n.s + L) % L : (n.s - n.stop + L) % L;
+      const facing = Math.max(0, Math.cos(turnTo(n.yaw, n.circuit.pose(n.s).yaw + (n.dir < 0 ? Math.PI : 0))));
+      const want = cfg.speed * Math.min(1, Math.sqrt(left / 3)) * facing * facing;
+      n.v += clamp(want - n.v, -.5 * dt, .3 * dt); if (facing > .9) n.v = Math.max(n.v, Math.min(.03, left * 2));
+      n.s = (n.s + n.dir * Math.min(n.v * dt, left) + L) % L;
+      a.mixer.timeScale = clamp(.35 + n.v / Math.max(.1, a.stride) * 1.4, .35, 1.2);
       if (left < .6 && a.clip !== 'rest') play(a, 'rest', 2.4);
-      if (left <= .002) { n.v = 0; n.state = 'rest'; n.timer = rr(...cfg.rest); a.mixer.timeScale = 1; }
+      if (left <= .002) { n.v = 0; n.state = 'rest'; n.calm = 0; a.mixer.timeScale = 1; }
     }
     poseNurse(n, dt);
     if (n.state === 'rest') resting.sleeper = a.pos.toArray();
