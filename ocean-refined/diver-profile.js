@@ -34,7 +34,8 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
   // has no tabs. After one, Last dive is the page it opens on, and the tabs turn between the two, so the dive's card
   // and the profile are one card in one place over the diver, never two side by side.
   card.innerHTML = `<button type="button" class="diver-profile-close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-  <div class="diver-profile-tabs" role="tablist" aria-label="Pages" hidden><button type="button" role="tab" id="diver-profile-tab-dive" data-page="dive" aria-controls="diver-profile-page-dive">Last dive</button><button type="button" role="tab" id="diver-profile-tab-about" data-page="about" aria-controls="diver-profile-page-about">About me</button></div>
+  <div class="diver-profile-bar"><div class="diver-profile-tabs" role="tablist" aria-label="Pages" hidden><button type="button" role="tab" id="diver-profile-tab-dive" data-page="dive" aria-controls="diver-profile-page-dive">Last dive</button><button type="button" role="tab" id="diver-profile-tab-about" data-page="about" aria-controls="diver-profile-page-about">About me</button></div>
+  <button type="button" class="diver-profile-theme" role="switch" aria-checked="false" aria-label="Dark mode"><span class="diver-profile-theme-track" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><i></i></span></button></div>
   <div class="diver-profile-page" id="diver-profile-page-dive" role="tabpanel" aria-labelledby="diver-profile-tab-dive" hidden></div>
   <div class="diver-profile-page" id="diver-profile-page-about" role="tabpanel" aria-labelledby="diver-profile-tab-about">
   <header class="diver-profile-head"><img alt="" width="72" height="72" decoding="async"><div><p class="diver-profile-kicker">Hi, I’m</p><h2 id="diver-profile-name"></h2><p class="diver-profile-role"></p><p class="diver-profile-base"></p></div></header>
@@ -58,6 +59,15 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
     hasDive = Boolean(node); pages.dive.replaceChildren(...(node ? [node] : [])); tabs.hidden = !hasDive;
     showPage(hasDive ? 'dive' : 'about');
   }
+  // Light or dark (round 21, the owner's notes): a small sliding switch on the card. A press anywhere on it turns it
+  // over. The interface's palette follows the sky (tokens.css: pale by day, deep at night; world.js paintTheme), so
+  // the switch asks for the day or the night sky through the scene's own preset buttons, and reads the theme back
+  // from the page, whatever else changed it.
+  const themeSwitch = card.querySelector('.diver-profile-theme'), root = document.documentElement;
+  const paintThemeSwitch = () => themeSwitch.setAttribute('aria-checked', String(root.dataset.theme === 'night'));
+  themeSwitch.addEventListener('click', () => { document.getElementById(root.dataset.theme === 'night' ? 'day' : 'night')?.click(); paintThemeSwitch(); wake(); });
+  new MutationObserver(paintThemeSwitch).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+  paintThemeSwitch();
   tabs.addEventListener('click', event => { const tab = event.target.closest('[role="tab"]'); if (tab) showPage(tab.dataset.page); });
   // Left and right turn the page, as on any set of tabs.
   tabs.addEventListener('keydown', event => {
@@ -120,6 +130,8 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
     return hit.applyMatrix4(diver.root.matrixWorld).y > diver.root.position.y - BELOW_WATER;
   }
 
+  // DRIFT: how far (px) the diver may move on screen under the card before it is placed again while it follows.
+  const FOLLOW = 8, STILL = 1.2, DRIFT = 14; let follow = 0, still = 0, placed = { x: 0, y: 0 };
   let clearCheck = 0, fromFreeLook = false, inviting = false, availableFor = 0, ceiling = EDGE, pointer = null, hovered = false, shown = false, amount = 0, lifted = false, time = 0, returnFocus = null;
   const locked = () => document.pointerLockElement === canvas;
   const centre = () => { const rect = canvas.getBoundingClientRect(); return [rect.left + rect.width / 2, rect.top + rect.height / 2]; };
@@ -173,7 +185,7 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
     document.body.dataset.profile = 'open'; document.body.dataset.profilePage = page;
     if (fromFreeLook) keepLooking?.(true);
     setInterfaceOpen(true);
-    place();
+    place(); placed = anchor(); follow = FOLLOW; still = 0;
     card.focus({ preventScroll: true });
     wake();
     return true;
@@ -220,6 +232,15 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
     time += dt;
     const can = available();
     if (shown && !can) close(false);
+    // The card opens over the diver's head and then stays put while the diver bobs under it. Opened as the view is
+    // still coming round to the surface (after a dive it opens by itself, round 21: it stood in the middle of the
+    // screen, where the diver had been a moment before), it keeps to the head until the diver has held still on
+    // screen for STILL seconds, FOLLOW seconds at most, and stays put from then.
+    if (shown && follow > 0) {
+      follow -= dt;
+      const now = anchor(), moved = Math.hypot(now.x - placed.x, now.y - placed.y);
+      if (moved > DRIFT) { placed = now; still = 0; place(); } else if ((still += dt) > STILL) follow = 0;
+    }
     let pointed = false;
     if (can && !shown) {
       if (locked()) pointed = over(...centre());

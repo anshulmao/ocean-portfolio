@@ -70,7 +70,20 @@ html body .interact-prompt.holo:hover{background:color-mix(in srgb,#0d3442 70%,t
 
 /* The Last dive page of the diver's card (surface-ending.js fills it; diver-profile.js owns the card and its tabs):
    the dive log in small, in the card's own palette (pale by day, deep at night, tokens.css). */
-.diver-profile-tabs{display:flex;gap:4px;margin:-4px 44px 14px -4px;padding:3px;border-radius:999px;background:color-mix(in srgb,var(--o-ink) 6%,transparent);width:max-content}
+/* The card's top row: the tabs (after a dive) and the light or dark switch, clear of the close button. */
+.diver-profile-bar{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-height:38px;margin:-6px 40px 12px -4px}
+.diver-profile-tabs{display:flex;gap:4px;margin-right:auto;padding:3px;border-radius:999px;background:color-mix(in srgb,var(--o-ink) 6%,transparent);width:max-content}
+/* The switch: the whole of it is the button, so a press anywhere on it turns it over. Sun at one end, moon at the
+   other, and a knob that slides to the one in force. */
+html body .diver-profile .diver-profile-theme{flex:none;display:grid;place-items:center;min-height:38px;padding:0 2px;border:0;border-radius:999px;background:none;cursor:pointer}
+.diver-profile-theme-track{position:relative;display:flex;align-items:center;justify-content:space-between;box-sizing:border-box;width:52px;height:28px;padding:0 6px;border-radius:999px;background:color-mix(in srgb,var(--o-ink) 10%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--o-ink) 12%,transparent)}
+.diver-profile-theme-track svg{position:relative;z-index:1;width:14px;height:14px;fill:none;stroke:var(--o-ink-2);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:stroke 200ms var(--ui-ease,ease)}
+.diver-profile-theme-track i{position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:var(--o-surface-0);box-shadow:0 1px 3px #052c3a59;transition:translate 220ms var(--ui-ease,cubic-bezier(.2,.7,.2,1))}
+.diver-profile-theme[aria-checked="true"] .diver-profile-theme-track i{translate:24px 0}
+.diver-profile-theme[aria-checked="false"] .diver-profile-theme-track svg:first-of-type,.diver-profile-theme[aria-checked="true"] .diver-profile-theme-track svg:last-of-type{stroke:var(--o-ink)}
+.diver-profile-theme:hover .diver-profile-theme-track{background:color-mix(in srgb,var(--o-ink) 16%,transparent)}
+@media (pointer:coarse),(max-width:599px){html body .diver-profile .diver-profile-theme{min-height:44px;min-width:56px}}
+@media (prefers-reduced-motion:reduce){.diver-profile-theme-track i,.diver-profile-theme-track svg{transition:none}}
 .diver-profile-tabs[hidden]{display:none}
 .diver-profile-tabs button{min-height:32px;padding:0 14px;border:0;border-radius:999px;background:none;color:var(--o-ink-2);font:500 13.5px/1 var(--o-display);cursor:pointer}
 .diver-profile-tabs button:hover{color:var(--o-ink)}
@@ -113,5 +126,5 @@ html body .diver-profile .surface-ending-more :is(a,button){min-height:40px;bord
   .surface-ending-profile,.surface-ending-faces{display:none}
   .surface-ending-actions{margin-top:10px}
   .surface-ending-more{display:none}
-  .diver-profile-tabs{margin-bottom:8px}
+  .diver-profile-bar{margin-bottom:6px}
 }

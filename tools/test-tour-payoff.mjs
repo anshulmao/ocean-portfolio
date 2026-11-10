@@ -106,6 +106,16 @@ try {
   // It is a page of the diver's own card, not a card of its own: one card over the diver, with tabs between the two.
   assert.equal(await page.evaluate(() => window.oceanProfile.isOpen && window.oceanProfile.page), 'dive', 'it is the Last dive page of the diver’s card');
   assert.equal(await page.locator('#diver-profile .surface-ending').count(), 1);
+  // It stands over the diver, not where the diver was while the view was still coming round to the surface.
+  await page.waitForFunction(() => { const r = document.querySelector('#diver-profile').getBoundingClientRect(), [x] = window.oceanProfile.screenPoint(1), left = Math.min(Math.max(12, x - r.width / 2), innerWidth - r.width - 12); return Math.abs(r.left - left) < 30; }, null, {timeout:90000});
+  // The light or dark switch on the card: a press anywhere on it turns the interface over, and again turns it back.
+  const theme = () => page.evaluate(() => document.documentElement.dataset.theme), themeBefore = await theme(), switchBox = await page.locator('.diver-profile-theme').boundingBox();
+  await page.mouse.click(switchBox.x + 4, switchBox.y + switchBox.height / 2);
+  assert.notEqual(await theme(), themeBefore, 'a press on one end of the switch changes the theme');
+  assert.equal(await page.locator('.diver-profile-theme').getAttribute('aria-checked'), String(await theme() === 'night'));
+  await page.mouse.click(switchBox.x + 4, switchBox.y + switchBox.height / 2);
+  assert.equal(await theme(), themeBefore, 'a press on the same end changes it back');
+  assert.equal(await page.evaluate(() => window.oceanProfile.isOpen), true, 'the card stays open through it');
   await page.locator('#diver-profile [role="tab"][data-page="about"]').click();
   assert.equal(await page.locator('#diver-profile .diver-profile-head').isVisible(), true, 'the tabs turn to About me');
   assert.equal(await page.locator('#diver-profile .surface-ending').isVisible(), false);

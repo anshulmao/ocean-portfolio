@@ -72,8 +72,13 @@ function fill(record) {
 function settle(sites) {
   const controls = window.oceanControls, busy = !controls || controls.getMode?.() !== 'surface' || controls.getTransition?.() || document.querySelector('dialog[open]') || document.body.dataset.menu === 'open';
   if (document.body.dataset.submerged === 'true') return;
-  if (busy) { waitedFor += WAIT; if (waitedFor < GIVE_UP) timer = setTimeout(settle, WAIT, sites); return; }
-  if (profile()?.open('dive')) track('ending_shown', { sites, toured: toured ? 'yes' : 'no' });
+  // The card says no while the surface is not ready for it (the diver not yet drawn, a transition still ending): it is
+  // asked again, like the rest, until it opens or GIVE_UP has passed.
+  // Nor does it open before the diver is on screen: the view is still coming round to the surface for a few seconds
+  // after the ascent, and a card opened then stood where the diver was not (round 21, the owner's notes).
+  const [x, y] = profile()?.screenPoint?.(1) ?? [0, 0], onScreen = x > 40 && x < innerWidth - 40 && y > 40 && y < innerHeight - 20;
+  if (busy || !onScreen || !profile()?.open('dive')) { waitedFor += WAIT; if (waitedFor < GIVE_UP) timer = setTimeout(settle, WAIT, sites); else toured = finished = false; return; }
+  track('ending_shown', { sites, toured: toured ? 'yes' : 'no' });
   toured = finished = false;
 }
 addEventListener('oceandivelog', ({ detail }) => {
