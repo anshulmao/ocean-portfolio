@@ -36,7 +36,8 @@ try {
       if (!system.diagnostics.ready || system.diagnostics.failed) throw Error('Creature models did not fully load');
       const matrix = new T.Matrix4(), position = new T.Vector3(), quaternion = new T.Quaternion(), scale = new T.Vector3(), euler = new T.Euler(0, 0, 0, 'YXZ');
       const meshes = new Map();
-      system.root.traverse(node => { if (node.isInstancedMesh) meshes.set(node.name.replace(/^Creature set · | \(\d+\)$/g, ''), node); });
+      // By kind, not species: a species drawn in two poses or levels of detail has a mesh for each.
+      system.root.traverse(node => { if (node.isInstancedMesh) meshes.set(node.userData.kind, node); });
       const initial = system.debug.groups(), cloud = initial.find(group => group.kind === 'cloud');
       if (!cloud) throw Error('No cloud was exercised');
       const diver = new T.Vector3(...cloud.centre), previous = new Map();
@@ -47,11 +48,12 @@ try {
         const packed = new Map();
         for (const [index, group] of system.debug.groups().entries()) {
           if (!group.active || !group.shown) continue;
-          const mesh = meshes.get(group.species), start = packed.get(mesh) || 0;
+          const mesh = meshes.get(group.key), start = packed.get(mesh) || 0;
           packed.set(mesh, start + group.count);
           if (group.kind !== 'cloud') continue;
           for (let i = 0; i < group.count; i++) {
             mesh.getMatrixAt(start + i, matrix); matrix.decompose(position, quaternion, scale); euler.setFromQuaternion(quaternion, 'YXZ');
+            if (!mesh || start + i >= mesh.count) throw Error(`Fish ${i} of ${group.name} is not in its mesh`);
             if (![...position.toArray(), euler.y, euler.z].every(Number.isFinite)) throw Error('Non-finite cloud pose');
             const key = `${index}:${i}`, last = previous.get(key);
             if (last !== undefined) {

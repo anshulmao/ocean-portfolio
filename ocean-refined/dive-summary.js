@@ -77,7 +77,7 @@ dialog.innerHTML = `<div class="ds-inner">
         <article class="ds-place" aria-live="polite"></article>
       </div>
     </div>
-    <div class="ds-story"><p class="holo-label">The dive, in order</p><div class="ds-line-wrap"><ol class="ds-line"></ol></div></div>
+    <div class="ds-story"><p class="holo-label">The dive, in order</p><div class="ds-line-wrap" data-scroll-x tabindex="0" role="group" aria-label="The dive, in order. Scrolls sideways."><ol class="ds-line"></ol></div></div>
   </section>
   <section class="ds-panel ds-step" style="--i:4" aria-labelledby="ds-guide-title">
     <div class="ds-label"><span class="holo-label" id="ds-guide-title">Field guide · what you saw</span><span class="ds-filter" role="group" aria-label="Show"></span></div>
