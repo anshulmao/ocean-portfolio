@@ -293,7 +293,7 @@ async function auditCreatures({seconds, rate, player, spawn, label, until = 0, c
     else s.clipRun = 0;
   }
   // Instanced fish, read back from their meshes in the order the groups were packed.
-  const meshes = new Map(); U.root.traverse(n => { if (n.isInstancedMesh) meshes.set(n.name.replace(/^Creature set · | \(\d+\)$/g, ''), n); });
+  const meshes = new Map(); U.root.traverse(n => { if (n.isInstancedMesh) meshes.set(n.userData.kind, n); });
   const M = new (U.root.matrix.constructor)(), pos = A.V(), quat = new (U.root.quaternion.constructor)(), scl = A.V(), euler = new (U.root.rotation.constructor)(0, 0, 0, 'YXZ');
   for (let frame = 0; frame < frames; frame++) {
     U.update(dt, P, null);
@@ -307,7 +307,7 @@ async function auditCreatures({seconds, rate, player, spawn, label, until = 0, c
     const packed = new Map();
     for (const [index, g] of D.groups().entries()) {
       if (!g.active || !g.shown) continue;
-      const mesh = meshes.get(g.species); if (!mesh) continue;
+      const mesh = meshes.get(g.key); if (!mesh) continue;
       const start = packed.get(mesh) || 0; packed.set(mesh, start + g.count);
       if (g.kind === 'burrows' || (cast && g.kind !== 'encounter')) continue;
       const length = 0; // fish under a metre: the centre is the check
@@ -371,7 +371,7 @@ function auditSchools({seconds, rate}) {
     if (w.stall > (group.startsWith('herd') ? 12 : 1.5)) out.push({check: 'school.stuck', subject: group, where: w.where, detail: `a member stalls for ${round(w.stall)} s (no way on ${round(100 * w.blocked / w.samples)}% of the time)`});
   }
   // The diver in the middle of each group (the first of each species and kind), holding still for a few seconds.
-  const meshes = new Map(); U.root.traverse(n => { if (n.isInstancedMesh) meshes.set(n.name.replace(/^Creature set · | \(\d+\)$/g, ''), n); });
+  const meshes = new Map(); U.root.traverse(n => { if (n.isInstancedMesh) meshes.set(n.userData.kind, n); });
   const M = new (U.root.matrix.constructor)(), v = A.V(), seen = new Set(), diver = {};
   for (const [index, g] of groups.entries()) {
     // Cleaner wrasse come to a diver as they come to a fish waiting at their station: they are left out. So are the
@@ -382,7 +382,7 @@ function auditSchools({seconds, rate}) {
     for (let f = 0; f < 6 * rate; f++) {
       U.update(dt, P, null);
       if (f < rate) continue;   // a second to react
-      const packed = D.groups().slice(0, index).filter(o => o.species === g.species && o.active && o.shown).reduce((n, o) => n + o.count, 0), mesh = meshes.get(g.species);
+      const packed = D.groups().slice(0, index).filter(o => o.key === g.key && o.active && o.shown).reduce((n, o) => n + o.count, 0), mesh = meshes.get(g.key);
       for (let i = 0; i < g.count; i++) { mesh.getMatrixAt(packed + i, M); v.setFromMatrixPosition(M); nearest = Math.min(nearest, v.distanceTo(P)); }
     }
     diver[key] = round(nearest);

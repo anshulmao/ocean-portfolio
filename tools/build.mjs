@@ -58,8 +58,9 @@ const contentPath=path.join(out,'portfolio-content.js');let content=await fs.rea
 // The published scripts lose their comments and whitespace (esbuild: whitespace and syntax only, so every name stays
 // as written and an error in the console still reads): 431 -> 327 KB gzipped, and 40 % less for a phone to parse.
 // After the edits above.
-// esbuild is a devDependency: an install without it (npm install --omit=dev) publishes the scripts as they are.
-let esbuild=null;try{esbuild=await import('esbuild');}catch{console.warn('esbuild not installed: scripts are published unminified');}
+// esbuild is a dependency, not a devDependency: the host installs with --omit=dev, and without esbuild every deploy
+// went out unminified. A build that cannot minify stops here instead of publishing the scripts as they are.
+const esbuild=await import('esbuild').catch(()=>{throw Error('esbuild is not installed: run npm install');});
 if(esbuild){for(const rel of written){if(!rel.endsWith('.js')||rel.endsWith('.min.js'))continue;const file=path.join(out,rel),code=await fs.readFile(file,'utf8');await fs.writeFile(file,(await esbuild.transform(code,{format:'esm',target:'es2022',minifyWhitespace:true,minifySyntax:true,legalComments:'inline',charset:'utf8'})).code);}}
 // The prepared bathymetry charts (ocean-refined/tools/prepare-charts.mjs) name the scripts they were drawn from by
 // SHA-256, and the page draws the charts live when one differs (prepared-charts.js). It checks the published scripts,
