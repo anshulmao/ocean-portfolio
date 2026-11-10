@@ -18,7 +18,7 @@ At the surface, click the ocean or **Look around** to capture the mouse; use the
 - Atlas buttons start an automatic journey and frame the landmark on arrival. WASD or aiming takes over.
 - Back to the surface shows the swimmer ascending from the actual location. Space near the surface also triggers ascent.
 - F or the nearby prompt opens the landmark records. Away from a landmark, F collects a nearby artifact. Finds and score last for the current session.
-- Hold E while swimming for the visible red scooter; Q toggles the longer-range flashlight.
+- Hold E while swimming for the visible red scooter; H toggles the longer-range flashlight.
 - C raises the wrist computer; V switches perspective. Instrument air/pressure readings are simulated demo values.
 - F2 at 3–6 m holds a safety stop, including during automatic ascent. Optional feedback/contact information exports to a local JSON file; nothing is sent to a server.
 - H saves a world-only PNG in underwater first person. This does not include the HUD.

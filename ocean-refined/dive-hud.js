@@ -34,7 +34,7 @@ function paintToggle() {
   if (expanded !== shownExpanded) {
     shownExpanded = expanded;
     toggle.setAttribute('aria-expanded', String(expanded));
-    toggle.setAttribute('aria-label', `${expanded ? 'Lower' : 'Check'} dive computer. Press C.`);
+    toggle.setAttribute('aria-label', `${expanded ? 'Lower' : 'Check'} dive computer. Press Q.`);
   }
   const showSide = Boolean(expanded && state?.submerged && state.cameraMode === 'third' && !state.transition);
   const open = expanded && Boolean(state?.submerged);
@@ -60,7 +60,7 @@ function toggleComputer() {
 }
 toggle.addEventListener('click', toggleComputer);
 addEventListener('keydown', event => {
-  if (event.code !== 'KeyC' || event.repeat || event.target.closest?.('input,textarea,select,[contenteditable="true"]') || ui.dialog || !window.oceanDiagnostics?.submerged) return;
+  if (event.code !== 'KeyQ' || event.repeat || event.target.closest?.('input,textarea,select,[contenteditable="true"]') || ui.dialog || !window.oceanDiagnostics?.submerged) return;
   event.preventDefault(); toggleComputer();
 });
 // Where the diver is, in the computer's words: the landmark in reach, or the scene's own location line in title case.

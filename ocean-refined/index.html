@@ -80,7 +80,7 @@
   <link rel="stylesheet" href="./settings-controls.css">
 </head>
 <body>
-  <canvas id="world" tabindex="0" aria-label="Explore the ocean. Click the ocean to capture the mouse and look around; Escape or semicolon releases it. W and S swim, A and D strafe or turn according to the selected control mode, Space ascends, Shift descends, hold E while swimming for a scooter boost, Q toggles the flashlight, V switches first and third person, U clears or restores the interface and F interacts. The arrow keys also look around. On a touch screen a thumb-stick swims and a drag on the water looks; a gamepad works too."></canvas>
+  <canvas id="world" tabindex="0" aria-label="Explore the ocean. Click the ocean to capture the mouse and look around; Escape or semicolon releases it. W and S swim, A and D strafe or turn according to the selected control mode, Space ascends, Shift descends, hold E while swimming for a scooter boost, H toggles the flashlight, V switches first and third person, U clears or restores the interface and F interacts. The arrow keys also look around. On a touch screen a thumb-stick swims and a drag on the water looks; a gamepad works too."></canvas>
   <div class="scene-shade" aria-hidden="true"></div>
   <div class="underwater-tint" aria-hidden="true"></div>
   <div class="mask-frame" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
@@ -136,7 +136,7 @@
       <button id="motion" class="motion-control" type="button" aria-pressed="false">Pause ocean motion</button>
       <button id="camera-toggle" class="camera-toggle" type="button" aria-pressed="false" hidden>Third-person view <kbd>V</kbd></button>
       <button id="clear-ui-settings" class="motion-control" type="button" aria-pressed="false">Clear screen <kbd>U</kbd></button>
-      <button id="photo-settings" class="motion-control" type="button">Take a photo <kbd>H</kbd></button>
+      <button id="photo-settings" class="motion-control" type="button">Take a photo <kbd>C</kbd></button>
       <button class="motion-control" type="button" data-analytics-toggle hidden>Analytics on · turn off</button>
       <button id="finds-settings" class="motion-control" type="button">Reef finds</button>
       <button id="credits-toggle" class="credits-toggle" type="button">Model credits</button>
@@ -148,7 +148,7 @@
     <details class="settings-group settings-folder" aria-labelledby="settings-keys-title">
       <summary id="settings-keys-title" class="holo-label">Keyboard &amp; touch</summary>
       <div class="settings-group-body">
-      <dl class="key-reference"><div><dt><kbd>W</kbd><kbd>S</kbd></dt><dd>Forward / back</dd></div><div><dt><kbd>A</kbd><kbd>D</kbd></dt><dd id="key-ad-description">Strafe</dd></div><div><dt><kbd>Space</kbd></dt><dd>Rise</dd></div><div><dt><kbd>Shift</kbd></dt><dd>Sink</dd></div><div><dt><kbd>E</kbd></dt><dd>Scooter boost while swimming</dd></div><div><dt><kbd>Q</kbd></dt><dd>Flashlight</dd></div><div><dt><kbd>F</kbd></dt><dd>Interact</dd></div><div><dt><kbd>C</kbd></dt><dd>Dive computer</dd></div><div><dt><kbd>V</kbd></dt><dd>Camera</dd></div><div><dt><kbd>U</kbd></dt><dd>Clear / restore screen</dd></div><div><dt><kbd>H</kbd></dt><dd>Take a photo</dd></div><div><dt><kbd>F</kbd></dt><dd>Safety stop during the 10-second prompt at 3–5 m</dd></div><div><dt><kbd>Esc</kbd><kbd>;</kbd></dt><dd>Release mouse · Esc again opens Settings</dd></div><div><dt>Touch</dt><dd>Thumb-stick swims · drag to look</dd></div><div><dt>Gamepad</dt><dd>Sticks swim and look · triggers rise / sink</dd></div></dl>
+      <dl class="key-reference"><div><dt><kbd>W</kbd><kbd>S</kbd></dt><dd>Forward / back</dd></div><div><dt><kbd>A</kbd><kbd>D</kbd></dt><dd id="key-ad-description">Strafe</dd></div><div><dt><kbd>Space</kbd></dt><dd>Rise</dd></div><div><dt><kbd>Shift</kbd></dt><dd>Sink</dd></div><div><dt><kbd>E</kbd></dt><dd>Scooter boost while swimming</dd></div><div><dt><kbd>H</kbd></dt><dd>Flashlight</dd></div><div><dt><kbd>F</kbd></dt><dd>Interact</dd></div><div><dt><kbd>Q</kbd></dt><dd>Dive computer</dd></div><div><dt><kbd>V</kbd></dt><dd>Camera</dd></div><div><dt><kbd>U</kbd></dt><dd>Clear / restore screen</dd></div><div><dt><kbd>C</kbd></dt><dd>Take a photo</dd></div><div><dt><kbd>F</kbd></dt><dd>Safety stop during the 10-second prompt at 3–5 m</dd></div><div><dt><kbd>Esc</kbd><kbd>;</kbd></dt><dd>Release mouse · Esc again opens Settings</dd></div><div><dt>Touch</dt><dd>Thumb-stick swims · drag to look</dd></div><div><dt>Gamepad</dt><dd>Sticks swim and look · triggers rise / sink</dd></div></dl>
       </div>
     </details>
     </div>
@@ -222,7 +222,7 @@
   </footer>
   <p id="status" class="status holo holo-deep" role="status" aria-live="polite">Preparing your quiet corner of the ocean…</p>
   <button id="archive-toggle" class="archive-toggle" type="button" hidden>Portfolio <span>↗</span></button>
-  <button id="dive-computer-toggle" class="dive-computer-toggle" type="button" aria-expanded="false" aria-controls="dive-computer" hidden><span aria-hidden="true">▦</span> Dive computer <kbd>C</kbd></button>
+  <button id="dive-computer-toggle" class="dive-computer-toggle" type="button" aria-expanded="false" aria-controls="dive-computer" hidden><span aria-hidden="true">▦</span> Dive computer <kbd>Q</kbd></button>
   <aside id="dive-computer" class="dive-computer holo" aria-label="Dive computer" hidden>
     <div class="computer-top"><span><i></i> AIR 21% · SIMULATED</span><span id="computer-mode">DIVE</span></div>
     <div class="computer-readings"><div class="computer-depth"><span>DEPTH</span><strong id="computer-depth">0.0<small>m</small></strong></div><div class="computer-ndl" id="computer-ndl" data-mode="ndl"><span id="computer-ndl-label">NO-DECO LIMIT</span><strong id="computer-ndl-value">99+<small>min</small></strong></div><div class="ascent-bar" id="computer-ascent" aria-hidden="true" data-level="0"><i></i><i></i><i></i><i></i><i></i><em>SLOW</em></div></div>
