@@ -40,7 +40,7 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
   there, the animals met, Open dive log and Dive again. After any dive worth the name (40 s, or a site reached) the
   card opens on that page by itself; its tabs turn to About me and back. It is one card in one place, so the dive's
   card and the profile can never be up side by side. Closed, the hero's Dive log button is there as before.
-- **One row of tools.** Under water on a desktop: Dive computer (C), Photo (H) and Clear screen (U), in a row at the
+- **One row of tools.** Under water on a desktop: Dive computer (Q), Photo (C) and Clear screen (U), in a row at the
   bottom left under the depth card (`dive-focus.js`). The Portfolio button is retired under water.
 - **One thing names a site.** Far off, the Ahead card; in reach, the site's own card, whose Open it is the only one on
   screen (the tour's sheet does not repeat it). The prompt (Open About, F) stands in when the card is not up.

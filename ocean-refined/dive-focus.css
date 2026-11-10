@@ -1,6 +1,6 @@
 /* Less on the screen under water (dive-focus.js), and one look for what is left. The dive's interface had grown to
    nine regions round the view, some from an older design; these rules decide which of them a moment needs. Every
-   control keeps its key, the menu and Instruments (C) still show everything, and Clear screen (U) still hides the lot.
+   control keeps its key, the menu and Instruments (Q) still show everything, and Clear screen (U) still hides the lot.
 
    1. The dive's tools are one row at the bottom left, under the depth card: the dive computer, a photo, Clear screen.
       The Portfolio button that stood with them is retired under water. On a phone the row is not drawn (its buttons
@@ -25,7 +25,7 @@ html body .archive-toggle{display:none}
   /* The depth card stands on the row, and the notices (a photo saved, a find) over the depth card. */
   html body .calm-depth{bottom:68px}
   html body .expedition-notice{bottom:196px}
-  /* With Instruments open (C) the depth is on the scale and the wrist computer; the old line of it along the bottom
+  /* With Instruments open (Q) the depth is on the scale and the wrist computer; the old line of it along the bottom
      edge would sit under the row. */
   html body[data-submerged="true"] .scene-footer .location{display:none}
 }
@@ -43,7 +43,7 @@ html body:is([data-tour="starting"],[data-tour="intro"],[data-tour="travel"],[da
 html body[data-submerged="true"] .look-hint{transition:opacity 600ms var(--ui-ease,ease)}
 html body[data-submerged="true"] .look-hint[data-rested="true"]{opacity:0}
 
-/* 5. The depth card is the depth and where that is. Air and the no-stop limit are on the dive computer (C); here they
+/* 5. The depth card is the depth and where that is. Air and the no-stop limit are on the dive computer (Q); here they
       show only when they need attention (a stop due, a low limit). */
 html body .calm-depth:not([data-alert="true"]) .calm-depth-vitals{display:none}
 html body .calm-depth:not([data-alert="true"]) .calm-depth-gauge{margin-bottom:2px}

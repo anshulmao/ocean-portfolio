@@ -830,6 +830,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     drivePuppets();
   }
 
+  const CLOUD_CLEAR = .9;   // metres a cloud's fish keep from a diver among them, centre to centre
   // --- Schools ----------------------------------------------------------------------------------------------------
   function kindOf(species, { lod = 1, pose = null, clip = 'swim', scale = 1 } = {}) {
     const key = `${species}|${lod}|${pose}|${clip}`;
@@ -911,7 +912,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     // One mesh a species; the groups in sight are packed to its front each frame.
     for (const k of kinds.values()) {
       if (!k.capacity) continue;
-      const mesh = new THREE.InstancedMesh(k.geometry, k.material, k.capacity); mesh.name = `Creature set · ${k.species} (${k.capacity})`;
+      const mesh = new THREE.InstancedMesh(k.geometry, k.material, k.capacity); mesh.name = `Creature set · ${k.species} (${k.capacity})`; mesh.userData.kind = k.key;   // one species can have several meshes (a pose, a level of detail)
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); mesh.frustumCulled = false; mesh.count = 0; mesh.visible = false;
       k.beats = new THREE.InstancedBufferAttribute(new Float32Array(k.capacity), 1); k.beats.setUsage(THREE.DynamicDrawUsage); mesh.geometry.setAttribute('aBeat', k.beats);
       k.mesh = mesh; root.add(mesh); diagnostics.schoolDrawCalls++;
@@ -999,7 +1000,17 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
           const climb = .15 * m.w2 * Math.cos(t * m.w2 + m.p2);
           // Over the coral, never in it: not into a formation's rock when the cloud sinks, nor under a table's plates
           // (the map's nearest cell, and the sand under the fish, which on a slope can lie above that cell).
-          const fx = g.centre.x + m.hx * tight + x, fz = g.centre.z + m.hz * tight + z;
+          let fx = g.centre.x + m.hx * tight + x, fz = g.centre.z + m.hz * tight + z;
+          // Sinking is not enough for a small cloud, or one already low over the coral: a diver stopped in its middle
+          // had fish swimming through the body. Any fish within CLOUD_CLEAR of the diver is moved out sideways to it.
+          if (player && g.fear > 0) {
+            const dx = fx - player.x, dz = fz - player.z, dy = (m.y === undefined ? g.centre.y : m.y) - player.y;
+            const h = Math.hypot(dx, dz), need = Math.sqrt(Math.max(0, CLOUD_CLEAR * CLOUD_CLEAR - dy * dy));
+            if (h < need) {
+              const far = h > 1e-3, ux = far ? dx / h : Math.sin(m.p1), uz = far ? dz / h : Math.cos(m.p1), out = (need - h) * Math.min(1, g.fear * 1.5);
+              fx += ux * out; fz += uz * out;
+            }
+          }
           // As the cloud draws in and sinks the fish face the way they are actually going, not only round their loop.
           const moved = m.at === frame - 1 && dt > 0 ? Math.hypot(fx - m.lx, fz - m.lz) / dt : 0, facing = moved > .05 ? Math.atan2(fx - m.lx, fz - m.lz) : yaw;
           // Avoiding the diver changes the actual heading. Bank into that

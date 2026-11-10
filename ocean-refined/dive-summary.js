@@ -77,7 +77,7 @@ dialog.innerHTML = `<div class="ds-inner">
         <article class="ds-place" aria-live="polite"></article>
       </div>
     </div>
-    <div class="ds-story"><p class="holo-label">The dive, in order</p><div class="ds-line-wrap"><ol class="ds-line"></ol></div></div>
+    <div class="ds-story"><p class="holo-label">The dive, in order</p><div class="ds-line-wrap" data-scroll-x tabindex="0" role="group" aria-label="The dive, in order. Scrolls sideways."><ol class="ds-line"></ol></div></div>
   </section>
   <section class="ds-panel ds-step" style="--i:4" aria-labelledby="ds-guide-title">
     <div class="ds-label"><span class="holo-label" id="ds-guide-title">Field guide · what you saw</span><span class="ds-filter" role="group" aria-label="Show"></span></div>
@@ -276,7 +276,7 @@ function paintPhotos() {
   $('.ds-share', dialog).hidden = true; $('.ds-share-open', dialog).setAttribute('aria-expanded', 'false'); $('.ds-status', dialog).textContent = '';
   if (!photos.length) {
     track.removeAttribute('tabindex');
-    track.innerHTML = '<p class="ds-empty"><span>No photos on this dive.<br>Next time press <kbd>H</kbd> underwater in first-person view, or tap Photo on a touch screen.</span></p>';
+    track.innerHTML = '<p class="ds-empty"><span>No photos on this dive.<br>Next time press <kbd>C</kbd> underwater in first-person view, or tap Photo on a touch screen.</span></p>';
     $('.ds-count', dialog).textContent = ''; $('.ds-dots', dialog).innerHTML = '';
     return;
   }

@@ -168,7 +168,7 @@ const keyup = code => window.dispatchEvent({ type: 'keyup', code, target: { clos
   key('ShiftLeft'); env.tick(1); keyup('ShiftLeft'); env.tick(.6);
   assert.ok(window.oceanTour.tried.includes('updown'), 'sinking counts as up and down');
   env.tick(1);
-  assert.equal(env.state.tour.tip, 'Try it, 3 of 4: Press C to open your dive computer.');
+  assert.equal(env.state.tour.tip, 'Try it, 3 of 4: Press Q to open your dive computer.');
   document.body.dataset.computerOpen = 'true'; env.tick(.1); delete document.body.dataset.computerOpen;
   assert.equal(env.state.tour.tip, '✓ Dive computer', 'a control done is ticked'); env.tick(1.6);
   assert.equal(env.state.tour.tip, 'Try it, 4 of 4: Press V to see yourself in third person.');
@@ -198,11 +198,11 @@ const keyup = code => window.dispatchEvent({ type: 'keyup', code, target: { clos
   assert.notEqual(env.state.tour.sight, 'scooter', 'and once tried, the fly-by goes on');
   // The lamp under the arch, the camera as the whale shark passes; the computer at the nautilus was tried in the welcome.
   until(() => env.state.tour.sight === 'arch');
-  assert.equal(env.state.tour.flyTip, 'It’s dark under the arch. Press Q for your lamp.');
+  assert.equal(env.state.tour.flyTip, 'It’s dark under the arch. Press H for your lamp.');
   until(() => env.state.tour.key === 'experience' && tourStatus() === 'dwell');
   assert.equal(env.state.tour.tip, '', 'the computer was tried in the welcome');
   until(() => env.state.tour.sight === 'whale-shark');
-  assert.equal(env.state.tour.flyTip, 'Press H to take a photo of it.');
+  assert.equal(env.state.tour.flyTip, 'Press C to take a photo of it.');
   window.oceanExpedition = { photos: 1 }; env.tick(.1);
   assert.equal(env.state.tour.flyTip, '', 'a tried control is not taught again');
   window.oceanTour.stop(); env.nav.destroy(); delete window.oceanExpedition; delete window.oceanArchive;

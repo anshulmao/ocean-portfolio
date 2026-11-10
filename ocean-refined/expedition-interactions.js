@@ -18,7 +18,7 @@ ratingStylesheet.rel = 'stylesheet'; ratingStylesheet.href = new URL('./safety-r
 document.head.append(ratingStylesheet);
 const dock = document.createElement('aside'); dock.className = 'expedition-tools'; dock.hidden = true;
 dock.setAttribute('aria-label', 'Expedition tools');
-dock.innerHTML = '<button type="button" data-stop hidden><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2v9m-4-4 4 4 4-4M7 16h18M16 30v-9m-4 4 4-4 4 4"/></svg><span><strong>Safety stop available</strong><small>Hold at 3–5 m · Press <kbd>F</kbd></small></span><output class="stop-offer-time">10s</output><span class="stop-offer-track" aria-hidden="true"><i></i></span></button><button type="button" data-photo hidden>Photo <kbd>H</kbd></button><button type="button" data-inventory hidden>Finds <span data-score>0</span></button>';
+dock.innerHTML = '<button type="button" data-stop hidden><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2v9m-4-4 4 4 4-4M7 16h18M16 30v-9m-4 4 4-4 4 4"/></svg><span><strong>Safety stop available</strong><small>Hold at 3–5 m · Press <kbd>F</kbd></small></span><output class="stop-offer-time">10s</output><span class="stop-offer-track" aria-hidden="true"><i></i></span></button><button type="button" data-photo hidden>Photo <kbd>C</kbd></button><button type="button" data-inventory hidden>Finds <span data-score>0</span></button>';
 const notice = document.createElement('div'); notice.className = 'expedition-notice'; notice.setAttribute('role', 'status'); notice.setAttribute('aria-live', 'polite');
 // The artifact prompt is a button: on touch it is the only way to collect (there is no F key), and with a mouse a click does the same as F.
 const prompt = document.createElement('button'); prompt.type = 'button'; prompt.className = 'artifact-prompt'; prompt.hidden = true;
@@ -35,6 +35,30 @@ const point = new THREE.Vector3(), artifactPoint = new THREE.Vector3();
 const finds = FINDS.map(({name,x,z,line},id)=>({id,name,x,z,line,y:0,collected:false}));
 let reefFinds = null, mesh = null, nearest = null, active = '', previousFocus = null, heldDepth = 0, noticeLeft = 0, elapsed = 0, photos = 0;
 let lastScore = -1, lastPrompt = '', lastSubmerged = null;
+let captureSequence = 0, previewTimer = 0;
+const photoPreview = document.createElement('div');
+photoPreview.className = 'photo-preview'; photoPreview.hidden = true;
+photoPreview.setAttribute('aria-hidden', 'true');
+photoPreview.innerHTML = '<img alt=""><span>Saved to your dive log</span>';
+document.body.append(photoPreview);
+function showPhotoPreview(photo, width, height) {
+  clearTimeout(previewTimer);
+  const image = photoPreview.querySelector('img');
+  image.style.aspectRatio = `${width} / ${height}`;
+  image.src = photo.url; photoPreview.hidden = false;
+  // Named for the animal it is of, when there is one in the frame (dive-log.js subjectInView).
+  photoPreview.querySelector('span').textContent = photo.species ? photo.title : 'Saved to your dive log';
+  photoPreview.getAnimations().forEach(animation => animation.cancel());
+  image.getAnimations().forEach(animation => animation.cancel());
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const rect = image.getBoundingClientRect();
+    image.animate([
+      {transform: `translate(${innerWidth / 2 - (rect.left + rect.width / 2)}px, ${innerHeight / 2 - (rect.top + rect.height / 2)}px) scale(${innerWidth / rect.width}, ${innerHeight / rect.height})`, filter: 'brightness(1.5)'},
+      {transform: 'translate(0, 0) scale(1)', filter: 'brightness(1)', offset: 1}
+    ], {duration: 550, easing: 'cubic-bezier(.2, 0, 0, 1)'});
+  }
+  previewTimer = setTimeout(() => { photoPreview.hidden = true; }, 2000);
+}
 const stopClock = createSafetyStopClock();
 let countdown = null, countdownFill = null, countdownTime = null, completion = null, completionLeft = 0, lastSecond = -1;
 function startStopClock() {
@@ -166,9 +190,13 @@ function takePhoto() {
     share.getContext('2d').drawImage(canvas, 0, 0, share.width, share.height);
     // The animal in the frame, read now: by the time the picture is encoded it may have swum on.
     const subject = subjectInView(controls);
-    photos++; track('reef_photo_taken'); say(subject ? `${subject.name}: photo saved to your dive log.` : 'Photo saved to your dive log.');
+    const sequence = ++captureSequence;
     Promise.all([blobOf(full, .92), blobOf(share, .8).then(blob => blob.size <= 1048576 ? blob : blobOf(share, .6))])
-      .then(([large, small]) => addPhoto(large, small, subject)).catch(() => say('This photo could not be kept. Please try again.'));
+      .then(([large, small]) => {
+        const photo = addPhoto(large, small, subject);
+        photos++; track('reef_photo_taken');
+        if (sequence === captureSequence) { showPhotoPreview(photo, canvas.width, canvas.height); say(subject ? `${subject.name}: photo saved to your dive log.` : 'Photo saved to your dive log.'); }
+      }).catch(() => say('This photo could not be kept. Please try again.'));
   } catch { say('This browser could not take a photo. Please try again after the scene finishes loading.'); }
 }
 const blobOf = (canvas, quality) => new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(Error('photo')), 'image/jpeg', quality));
@@ -251,7 +279,7 @@ onTick(dt=> {
 dock.querySelector('[data-stop]').addEventListener('click',openStop);
 prompt.addEventListener('click',collect);
 dock.querySelector('[data-photo]').addEventListener('click',takePhoto);
-// On touch there is no H: the deck's camera key takes the photo (index.html).
+// On touch there is no C: the deck's camera key takes the photo (index.html).
 deckPhoto?.addEventListener('click',takePhoto);
 dock.querySelector('[data-inventory]').addEventListener('click',openInventory);
 addEventListener('keydown',event=> {
@@ -260,7 +288,7 @@ addEventListener('keydown',event=> {
   if (event.code === 'KeyF' && offerAvailable() && inSafetyStopRange(toDisplayDepth(-window.oceanControls.getPlayerPosition().y))) { event.preventDefault(); event.stopImmediatePropagation(); openStop(); }
   else if(event.code==='KeyF'&&!dialog.open&&!ui.dialog&&window.oceanLandmarks?.interactNearby()){event.preventDefault();event.stopImmediatePropagation();}
   else if(event.target.closest?.('button'))return;
-  else if (event.code === 'KeyH' && !dialog.open && !ui.dialog) { event.preventDefault(); takePhoto(); }
+  else if (event.code === 'KeyC' && !dialog.open && !ui.dialog) { event.preventDefault(); takePhoto(); }
   else if (event.code === 'KeyF' && nearest && !dialog.open && !ui.dialog && !window.oceanDiagnostics?.nearbyLandmark) { event.preventDefault(); event.stopImmediatePropagation(); collect(); }
 }, {capture:true});
 window.oceanExpedition = {openStop,openInventory,takePhoto,collect,get offerRemaining(){return offerLeft;},get safetyStop(){return {remaining:stopClock.remaining,completed:stopClock.completed,active:stopClock.active,paused:stopClock.paused};},get inventory(){return finds.filter(item=>item.collected).map(({id,name})=>({id,name}));},get locations(){return finds.map(({id,name,x,y,z})=>({id,name,x,y,z}));},get score(){return finds.filter(item=>item.collected).length*100;},get photos(){return photos;},get holding(){return active === 'stop';}};

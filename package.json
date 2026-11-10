@@ -37,10 +37,10 @@
     "audit:reef": "node tools/audit-reef.mjs"
   },
   "devDependencies": {
-    "esbuild": "0.25.10",
     "playwright": "1.62.1"
   },
   "dependencies": {
+    "esbuild": "0.25.10",
     "posthog-js": "1.438.21"
   }
 }

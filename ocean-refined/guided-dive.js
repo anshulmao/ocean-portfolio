@@ -36,20 +36,20 @@ const PRELUDE_HOLD = .2, PRELUDE_DIVE = 1.6, REVEAL = 3.2;
 // all if it has been tried. Use is read from what changed (the lamp, the view, the scooter, the computer, a photo, the
 // records), so a key, a touch button and a gamepad all count. Each `try` (the welcome) and `tip` (a beat) is [keyboard, touch].
 const CONTROLS = {
-  computer: { key: 'C', name: 'Dive computer', touch: 'Computer', try: ['Press C to open your dive computer.', 'Tap the computer button.'],
-    tip: ['Press C to check your depth on your dive computer.', 'Tap Dive computer to check your depth.'] },
+  computer: { key: 'Q', name: 'Dive computer', touch: 'Computer', try: ['Press Q to open your dive computer.', 'Tap the computer button.'],
+    tip: ['Press Q to check your depth on your dive computer.', 'Tap Dive computer to check your depth.'] },
   interact: { key: 'F', name: 'Open a site', touch: 'Open it' },
   // Swimming and rising or sinking are noticed by the diver moving under the visitor's own control (notice()).
   swim: { key: 'W A S D', name: 'Swim', touch: 'Stick: swim', try: ['Swim with W A S D. The guide picks up again when you let go.', 'Swim with the stick. The guide picks up again when you let go.'] },
   updown: { key: 'Space · Shift', name: 'Up and down', touch: 'Rise and sink', try: ['Space to rise, Shift to sink.', 'Use the rise and sink buttons.'] },
   scooter: { key: 'E', name: 'Scooter', touch: 'Scooter (hold)', try: ['Hold E to spin up your scooter.', 'Hold the scooter button.'],
     tip: ['Hold E for your scooter: the guide speeds up with you.', 'Hold ⚡ for your scooter: the guide speeds up with you.'] },
-  lamp: { key: 'Q', name: 'Flashlight', touch: 'Lamp', try: ['Press Q to switch your flashlight.', 'Tap the lamp button.'],
-    tip: ['It’s dark under the arch. Press Q for your lamp.', 'It’s dark under the arch. Tap the lamp button.'] },
+  lamp: { key: 'H', name: 'Flashlight', touch: 'Lamp', try: ['Press H to switch your flashlight.', 'Tap the lamp button.'],
+    tip: ['It’s dark under the arch. Press H for your lamp.', 'It’s dark under the arch. Tap the lamp button.'] },
   view: { key: 'V', name: 'Third person view', touch: 'View', try: ['Press V to see yourself in third person.', 'Tap the view button.'],
     tip: ['Press V to see yourself against the reef.', 'Tap the view button to see yourself against the reef.'] },
-  photo: { key: 'H', name: 'Photo', touch: 'Camera',
-    tip: ['Press H to take a photo of it.', 'Tap the camera button to take a photo of it.'] },
+  photo: { key: 'C', name: 'Photo', touch: 'Camera',
+    tip: ['Press C to take a photo of it.', 'Tap the camera button to take a photo of it.'] },
 };
 // F is not among them: there is nothing to open where the welcome is read; it is taught at the helmet, where there is.
 // The rest are taught by the fly-bys that use them: the guide runs the scooter across the reef shelf, the lamp comes in under
