@@ -82,7 +82,7 @@ add('air-gauge', 'Air bar, bottom right', 'index.html', BASE, 'dive-hud.js (sets
 add('scene-footer', 'Bottom line: location, depth and the control hint', 'index.html', BASE, 'world.js', element(html, '<footer class="scene-footer'))
 add('dive-computer', 'Dive computer side panel (third person)', 'index.html', BASE, 'dive-hud.js', element(html, '<aside id="dive-computer"'))
 computer = element(html, '<button id="dive-computer-toggle"').replace('<span aria-hidden="true">▦</span>', '<span aria-hidden="true">%s</span>' % icon('computer'))
-computer = computer.replace('aria-controls="dive-computer" hidden>', 'aria-controls="dive-computer" aria-label="Check dive computer. Press C." hidden>')
+computer = computer.replace('aria-controls="dive-computer" hidden>', 'aria-controls="dive-computer" aria-label="Check dive computer. Press Q." hidden>')
 add('computer-toggle', 'Dive computer button', 'index.html; the icon is set by landmark-interactions.js, the label by dive-hud.js', BASE, 'dive-hud.js, landmark-interactions.js, ui-icons.js', computer)
 archive = element(html, '<button id="archive-toggle"').replace('hidden>Dive records', 'hidden>%sDive records' % icon('resume'))
 add('archive-toggle', 'Dive records button (opens the Dive Explorer)', 'index.html; the icon is added by landmark-interactions.js', BASE, 'landmark-interactions.js, ui-icons.js', archive)

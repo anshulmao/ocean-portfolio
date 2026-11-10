@@ -83,8 +83,11 @@ try{
   await page.locator('.expedition-dialog [type=submit]').click();await page.waitForFunction(()=>!document.querySelector('.expedition-dialog').open);
   assert.equal(submissions[2].body.contact.email,'consented@example.com');
   assert.equal(submissions[2].body.contact.consent,true);
-  await page.evaluate(()=>oceanExpedition.takePhoto());
+  await page.keyboard.press('c');
   await page.waitForFunction(()=>oceanDiveLog.photos.length===1);
+  assert.equal(await page.locator('.photo-preview').isVisible(),true,'A captured photo appears at the edge');
+  assert.match(await page.locator('.photo-preview img').getAttribute('src'),/^blob:/);
+  assert.equal(await page.locator('.photo-preview span').textContent(),'Saved to your dive log');
   assert.equal(submissions.filter(item=>item.kind==='photo').length,0,'Taking a photo must not upload it');
   await page.evaluate(()=>{
     oceanDiagnostics.submerged=false;
