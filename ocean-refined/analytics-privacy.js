@@ -9,6 +9,10 @@ export const EVENT_PROPERTIES = {
   // The guided dive (guided-dive.js): a funnel by step, and how each tour ended.
   tour_started:['from','tour_version'], tour_step:['step','index','tour_version'], tour_taken_over:['step','index','tour_version'], tour_rejoined:['step','index','tour_version'],
   tour_ended:['step','index','how','tour_version'],
+  // How the ocean ran (health-report.js): once each per visit, coarse values only (health-summary.js).
+  world_ready:['quality','gpu_tier','gpu_family','viewport','ready_ms'], world_failed:['quality','gpu_tier','gpu_family','viewport','reason'],
+  world_health:['quality','gpu_tier','gpu_family','viewport','frames','frame_mean_ms','frame_p95_ms','slow_frame_pct','long_tasks','dived','script_errors'],
+  script_error:['file','line'],
 };
 export function eventProperties(event, properties = {}) {
   if (!Object.hasOwn(EVENT_PROPERTIES,event)) return null;
