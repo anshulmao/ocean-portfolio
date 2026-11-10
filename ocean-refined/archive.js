@@ -525,7 +525,7 @@ function renderProject(id) {
     visual,
     visual && screens.length > 1 && (entry.galleryTitle || entry.galleryIntro) && el('p', { class: 'arc-strip-lead' }, entry.galleryTitle && el('b', { text: entry.galleryTitle }), entry.galleryIntro && ` ${entry.galleryIntro}`),
     story ? el('div', { class: 'arc-story' }, [['The problem', story.problem], ['The decision', story.decision], ['What came out of it', story.outcome], ['The takeaway', story.learning]].map(([label, text], step) =>
-      el('section', { class: 'arc-block', 'aria-label': label }, el('h4', {}, el('span', { 'aria-hidden': 'true', text: pad(step + 1) }), label), el('p', { text }))))
+      el('section', { class: 'arc-block', 'aria-label': label }, el('h4', {}, el('span', { 'aria-hidden': 'true', text: pad(step + 1) }), label), [].concat(text).map(line => el('p', { text: line })))))
       : el('div', { class: 'arc-prose arc-prose--lead' }, paragraphs(entry.body)),
     !visual && diagram(entry),
     visual && entry.diagram && el('div', { class: 'arc-case-diagram' }, diagram(entry)),
