@@ -46,7 +46,9 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
   screen (the tour's sheet does not repeat it). The prompt (Open About, F) stands in when the card is not up.
 - **The way back to what the guide is showing.** The view is the visitor's (R1). When they hold it away from a fly-by's
   subject, or from the site the tour waits at, an arrow at the edge of the screen points back to it, with its name, until
-  it is in view again (`big-life.js`, `guided-dive.js` subject). It does not show while the guide's own turn is coming round.
+  it is in view again (`big-life.js`, `guided-dive.js` subject). Back in view, the arrow stands over the subject and bobs
+  down at it (up at it, where there is no room above) for one second, then goes. It does not show while the guide's own
+  turn is coming round, and a new subject starts afresh.
 - **A site's card holds on the tour.** It reaches 10 m from the site (it was 8), and while the tour waits at a site or is
   coming in to it the card stays up at any distance, so the swim round the wreck never loses it.
 - **Escape gives the mouse back to the view.** Closing a portfolio page on a dive takes the mouse straight back to aiming

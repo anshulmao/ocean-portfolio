@@ -12,6 +12,8 @@ const pointed = new Set();
 let marked = null, markedFor = 0, diveFor = 0, metBig = false, calling = null;
 // guiding: the marker is the arrow back to the guided dive's subject.
 let guiding = false;
+// foundFor: time left (s) on the arrow that marks that subject once it is back in view, FOUND seconds in all.
+const FOUND = 1; let foundFor = 0, guideLabel = null;
 
 function guarantee(dt, api, live) {
   diveFor += dt;
@@ -46,14 +48,22 @@ onFrame((dt, api, state, diving) => {
   if (!diving) { diveFor = 0; metBig = false; calling = null; pointed.clear(); if (marked) { pointAt(null); marked = null; } return; }
   const live = api.visitors?.() ?? [];
   guarantee(dt, api, live);
-  if (api.nav?.suspended) { if (marked || guiding) { pointAt(null); marked = null; guiding = false; } return; }
+  if (api.nav?.suspended) { if (marked || guiding || foundFor > 0) { pointAt(null); marked = null; guiding = false; foundFor = 0; } return; }
   // The guided dive's own subject comes first (guided-dive.js `subject`: what a fly-by is showing, or the site it waits
   // at). The view is the visitor's, so they may have looked away from it: then an arrow at the edge of the screen
   // points the way back, with its name, from the moment they hold the view away (nav.lookHeld) until it is in view
   // again. It does not show while the guide's own turn to a new subject is still coming round. In view, the marker is
   // free for an animal passing, as before.
   const guide = window.oceanTour?.subject, camera = api.getCamera?.();
-  if (guide && camera && (api.nav?.lookHeld || guiding) && !inView(camera, guide.point)) { pointAt(camera, guide.point, guide.label); guiding = true; marked = null; return; }
-  if (guiding) { guiding = false; pointAt(camera, null); }
+  // Back in view, the arrow shows where it is: over the subject, pointing down at it, for FOUND seconds, then gone.
+  // A new subject starts afresh: the guide turns the view to it itself, and no arrow is owed until the visitor looks away.
+  if ((guide?.label ?? null) !== guideLabel) { guideLabel = guide?.label ?? null; if (guiding || foundFor > 0) { guiding = false; foundFor = 0; pointAt(camera, null); } }
+  if (guide && camera) {
+    const seen = inView(camera, guide.point);
+    if (!seen && (api.nav?.lookHeld || guiding)) { pointAt(camera, guide.point, guide.label); guiding = true; foundFor = 0; marked = null; return; }
+    if (seen && guiding) { foundFor = FOUND; guiding = false; }
+    if (seen && foundFor > 0) { foundFor -= dt; if (foundFor > 0) { pointAt(camera, guide.point, guide.label, true); marked = null; return; } pointAt(camera, null); }
+  }
+  if (guiding || foundFor > 0) { guiding = false; foundFor = 0; pointAt(camera, null); }
   lookThere(dt, api, state, live);
 });
