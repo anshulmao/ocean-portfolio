@@ -217,11 +217,11 @@ const PROJECT_STORIES = {
       "It then tells the bill as a short story, in ringgit and kWh together. Appliance costs are modelled, so they are shown apart from billed figures, each with a confidence range, and usage the model cannot explain is shown as unexplained."
     ],
     outcome: [
-      "Working web and mobile prototypes. There are no users, no measured savings and no accuracy figure for the bill reading yet.",
+      "Working web and mobile prototypes, with a hosted demo that runs on a sample home. There are no users, no measured savings and no accuracy figure for the bill reading yet.",
       "One thing I changed: the first version animated counting numbers and rotating cards. It was harder to read, so I replaced it with fixed figures and a simple slide between steps."
     ],
     learning: "If a number is an estimate, say so next to the number.",
-    evidence: "Screenshot of the working browser prototype. The research drew on tariff documents and published household studies, not interviews."
+    evidence: "Screens are from the hosted demo and the browser prototype, both showing sample data. The research drew on tariff documents and published household studies, not interviews."
   },
   sage: {
     role: "Solo: scope, design and build",
@@ -271,6 +271,11 @@ for (const entry of PORTFOLIO_CONTENT.projects.entries) {
   entry.caseStudy = PROJECT_STORIES[entry.id];
   entry.role = entry.caseStudy.role;
 }
+Object.assign(PORTFOLIO_CONTENT.projects.entries.find(entry => entry.id === 'wattmana'), {
+  gallery: ['wattmana-home', 'wattmana-story', 'wattmana-bills', 'wattmana-my-use'],
+  galleryTitle: 'From the total to what explains it.',
+  galleryIntro: 'Screens from the hosted demo, which runs on a sample home.'
+});
 PORTFOLIO_CONTENT.projects.entries.find(entry => entry.id === 'reengage').gallery = ['reengage-welcome', 'reengage-languages', 'reengage-plan', 'reengage-plan-details'];
 Object.assign(PORTFOLIO_CONTENT.projects.entries.find(entry => entry.id === 'rae'), {
   gallery: ['rae-chat', 'rae-proposals', 'rae-practice', 'rae-documents'],
@@ -306,6 +311,10 @@ export const PORTFOLIO_MEDIA = {
   'reengage-plan': { src: './assets/portfolio/rae-engage-plan.png', alt: 'Business mobile plan card with its price and key features', caption: 'Explore a plan', kind: 'product', width: 377, height: 515 },
   'reengage-plan-details': { src: './assets/portfolio/rae-engage-plan-details.png', alt: 'Expanded mobile plan card showing contract and roaming details', caption: 'See plan details', kind: 'product', width: 379, height: 517 },
   sage: { src: './assets/portfolio/sage.jpg', alt: 'Sage personal health demo interface', caption: 'Sage · Live demo interface', kind: 'product', width: 1280, height: 720 },
+  'wattmana-home': { src: './assets/portfolio/wattmana-home.png', alt: 'WattMana home screen with the bill total, kWh used and how much of it the devices explain', caption: 'The bill at a glance', description: 'The amount due, the change from last month, and how much use is explained.', kind: 'product', width: 780, height: 1688 },
+  'wattmana-story': { src: './assets/portfolio/wattmana-story.png', alt: 'First step of the bill story showing the amount due, 63% modelled and a 37% gap', caption: 'The bill as a short story', description: 'Each step adds one fact, in ringgit or kWh.', kind: 'product', width: 780, height: 1688 },
+  'wattmana-bills': { src: './assets/portfolio/wattmana-bills.png', alt: 'Bills screen with the latest bill and a six-month chart of amounts due', caption: 'Six months of bills', description: 'Add a bill by scanning it; past bills show the trend.', kind: 'product', width: 780, height: 1688 },
+  'wattmana-my-use': { src: './assets/portfolio/wattmana-my-use.png', alt: 'My Use screen splitting 929 kWh measured into 582 kWh covered by estimates and a 347 kWh gap', caption: 'Measured, covered and the gap', description: 'Device estimates never replace the metered total; the gap is shown.', kind: 'product', width: 780, height: 1688 },
   wattmana: { src: './assets/portfolio/wattmana.png', alt: 'WattMana electricity bill explanation interface', caption: 'WattMana · Working browser prototype', kind: 'product', width: 1440, height: 1000 },
   'portfolio-resume': { src: './assets/portfolio/resume-fdpm-preview.png', alt: 'Preview of the forward deployed product manager résumé', caption: 'Forward deployed AI · October 2026', kind: 'document', width: 850, height: 1100 },
 };
