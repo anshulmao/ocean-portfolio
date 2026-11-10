@@ -130,7 +130,7 @@ export const PORTFOLIO_CONTENT = {
           "I shaped the product and built working web and mobile prototypes on my own."
         ],
         facts: ["React web app and Expo mobile app, TypeScript, Supabase", "Reads the bill as text first, with OCR as the fallback", "Estimates always shown apart from billed figures"],
-        links: []
+        links: [{ label: "WattMana · Live demo", url: "https://wattmana-mobile.vercel.app/" }]
       },
       {
         id: "sage",
