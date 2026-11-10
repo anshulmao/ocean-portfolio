@@ -65,14 +65,14 @@ function interact() {
   if (!controls || !eligible || controls.getMode() !== 'diver' || controls.getTransition() || panel.open || credits.open) return;
   opened = eligible;
   // On the guided dive a site can open another page of the records (the helmet opens At a glance).
-  openArchive(window.oceanTour?.opens?.(opened.id) ?? opened.id,true,null,opened.id);
+  openArchive(window.oceanTour?.opens?.(opened.id) ?? opened.id,true,window.oceanSiteCard?.entryFor?.(opened.id) ?? null,opened.id);
 }
 // The expedition key handler runs in capture phase so it can prioritize a
 // nearby portfolio site over an artifact. Keeping the same eligibility check
 // here avoids depending on which key listener runs first.
 window.oceanLandmarks = { interactNearby() { if (!eligible) return false; interact(); return panel.open || Boolean(lifting); },
   // A site opened from further off than its own prompt reaches (the guided dive's stops): its reveal plays as from close by.
-  openSite(id, page=id) { const site = READABLE.find(item => item.id === id); if (!site) return false; opened = site; if (openArchive(page, true, null, id)) return true; opened = null; return false; } };
+  openSite(id, page=id, entry=null) { const site = READABLE.find(item => item.id === id); if (!site) return false; opened = site; if (openArchive(page, true, entry, id)) return true; opened = null; return false; } };
 
 // A quiet way in for visitors who would rather read than dive (index.html: the hero's links).
 document.getElementById('logbook-link')?.addEventListener('click', () => openArchive('about'));

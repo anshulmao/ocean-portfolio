@@ -142,8 +142,8 @@ export const STEPS = [
   // DESCENT_LINE), and up the line to the résumé's slate at the safety stop. Surface from here: the ascent holds the safety
   // stop beside the line and comes up by the buoy.
   { key: 'descent-line', kind: 'end', at: [27, -9.4, -37.2], approach: 8, site: 'resume', teach: 'view', place: `The descent line · ${depth(-9.5)}`, signal: '#ff9d8a',
-    title: 'Up the line', line: 'My résumé hangs on the slate. Explore the reef on your own, or head up the line when you’re ready.',
-    short: 'My résumé is on the slate. Explore, or head up.',
+    title: 'Up the line', line: 'That’s the tour. My résumé hangs on the slate here. Keep exploring, or head up the line: the work, and how to reach me, are waiting at the surface.',
+    short: 'That’s the tour. My résumé is on the slate; the work is waiting at the surface.',
     via: [[9, -15, -37], [16, -12.5, -37.5]],
     // The slate, the line up to the buoy, and the wreck below.
     pan: [[32.6, -7.9, -37], [33, -1.5, -37], [18, -22, -39], [32.6, -7.9, -37]] },

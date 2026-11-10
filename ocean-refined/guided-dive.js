@@ -272,7 +272,8 @@ function paint() {
   part('[data-tour="pause"]').firstChild.textContent = paused ? 'Resume ' : 'Pause ';
   part('[data-tour="pause"]').setAttribute('aria-pressed', String(paused));
   part('[data-tour="next"]').firstChild.textContent = status === 'travel' ? (wide ? 'Skip travel ' : 'Skip ') : status === 'intro' ? (primerLeft().length ? 'Skip controls ' : 'Start ') : 'Continue ';
-  part('.tour-pace').textContent = status === 'intro' ? (primerLeft().length ? (fingers ? 'Or skip the controls and start the tour.' : 'Or press N to skip the controls and start the tour.') : '')
+  // The welcome's own button says Skip controls (N), so no line under the keys repeats it.
+  part('.tour-pace').textContent = status === 'intro' ? ''
     : status === 'dwell' ? `${step.landmark ? (fingers ? 'Tap Read it to open it. ' : 'Press F to open it. ') : ''}Swim around it if you like; continue when you’re ready.`
     : status === 'travel' ? (routeIssue ? '' : paused ? 'Travel paused. Resume when you’re ready.' : 'You can skip this swim or take the controls at any time.')
     : status === 'done' && step.site ? (fingers ? 'Tap Read it to open it.' : 'Press F to read it.') : '';
@@ -787,7 +788,7 @@ function nearing() {
 function read() {
   const prompt = document.querySelector('#interact-prompt'), step = STEPS[index], site = step.landmark ?? step.site;
   if (prompt && !prompt.hidden) prompt.click();
-  else if (window.oceanLandmarks?.openSite) window.oceanLandmarks.openSite(site, step.opens ?? site);
+  else if (window.oceanLandmarks?.openSite) window.oceanLandmarks.openSite(site, step.opens ?? site, window.oceanSiteCard?.entryFor?.(site) ?? null);
   else window.oceanArchive?.open?.(step.opens ?? site);
 }
 // The tour's own animals (user-creatures.js: the nurse shark, the whale shark) are in, and drawn, once the optional sets

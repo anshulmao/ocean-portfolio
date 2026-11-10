@@ -52,6 +52,7 @@ jobs:
       - run: npm run test:services:browser
       - run: npm run test:banking
       - run: npm run test:ui
+      - run: npm run test:tour
       - uses: actions/upload-artifact@v4
         if: always()
         with:

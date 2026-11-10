@@ -2,6 +2,8 @@ import * as THREE from './vendor/three.module.min.js';
 import { onFrame } from './journey.js';
 import { LANDMARKS, RESUME_SITE } from './reef.js';
 import { toDisplayDepth } from './depth-metrics.js';
+import { PORTFOLIO_CONTENT, PORTFOLIO_MEDIA } from './portfolio-content.js';
+import { track } from './analytics.js';
 
 // A card on the site itself (the owner's notes, round 12), as the surface diver has its profile card over its head
 // (diver-profile.js): a snapshot of the place, its name and depth, what is inside, and the actions. It is a card in the
@@ -34,6 +36,13 @@ function within(id, point, player) {
 // ABOVE: how far over the top of the screen (a share of its height) the anchor may be with the card still up.
 // LOW: the share of lift the anchor keeps when the site is looked straight down on.
 const LINGER = 8, REACH = 45, EDGE = 12, TAIL = 16, SMALLEST = .8, NEAR_SIZE = 16, FIT = .8, ABOVE = .35, LOW = .12;
+// The wreck shows the work itself, not only where it is kept (the tour's peak: a visitor who never opens a page still
+// sees what was built). Its card turns through the first WORK projects that have a picture, TURN seconds each: the
+// picture, the project's name and its one line. A chip picks one and stops the turning; Open reads the one shown, and
+// its page leads on to all of them. Reduced motion: no turning, the chips alone choose.
+const WORK = PORTFOLIO_CONTENT.projects.entries.filter(entry => PORTFOLIO_MEDIA[entry.id]).slice(0, 4), TURN = 6;
+let work = 0, workAt = 0, picked = false;
+const still = matchMedia('(prefers-reduced-motion: reduce)');
 const fingers = () => touch() || innerWidth < 600;
 const touch = () => document.documentElement.dataset.input === 'touch' || (!document.documentElement.dataset.input && matchMedia('(pointer: coarse)').matches);
 
@@ -41,7 +50,8 @@ const card = document.createElement('section');
 card.className = 'site-card'; card.dataset.anchored = 'true'; card.dataset.show = 'false'; card.setAttribute('aria-live', 'polite'); card.inert = true;
 card.innerHTML = `<button type="button" class="site-card-close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   <figure class="site-card-shot"><img alt="" decoding="async" width="800" height="500"></figure>
-  <div class="site-card-text"><p class="site-card-kicker"></p><h2 class="site-card-title"></h2><p class="site-card-note"></p></div>
+  <div class="site-card-text"><p class="site-card-kicker"></p><h2 class="site-card-title"></h2><p class="site-card-note"></p>
+    <div class="site-card-work" role="group" aria-label="Projects in the wreck" hidden>${WORK.map((entry, i) => `<button type="button" data-work="${i}">${entry.title}</button>`).join('')}</div></div>
   <footer class="site-card-actions"><button type="button" data-site="read">Read it <kbd>F</kbd></button><button type="button" data-site="next">Continue <kbd>N</kbd></button></footer>
   <i class="site-card-tail" aria-hidden="true"></i>`;
 document.body.append(card);
@@ -100,11 +110,29 @@ function project(camera, id, point) {
 function fill(id, controls) {
   const site = SITES[id], point = positionOf(controls, id), depth = Math.round(toDisplayDepth(-(point?.[1] ?? 0)));
   card.style.setProperty('--signal', site.signal);
+  const showcase = id === 'projects' && WORK.length > 0;
+  card.dataset.work = String(showcase); part('.site-card-work').hidden = !showcase;
+  // The turning card is not read out each time it turns; a project picked by hand is.
+  card.setAttribute('aria-live', showcase ? 'off' : 'polite');
+  part('[data-site="read"]').firstChild.textContent = showcase ? 'Open it ' : 'Read it ';
+  if (showcase) { siteLine = fingers() ? `${site.section} · ${depth} m` : `${site.name} · ${site.section} · ${depth} m`; workAt = clock; paintWork(); return; }
   image.src = `./assets/portfolio/sites/${id}.jpg`; image.alt = `${site.name}, on the reef`;
   part('.site-card-kicker').textContent = `${site.section} · ${depth} m`;
   part('.site-card-title').textContent = site.name;
   part('.site-card-note').textContent = site.note;
   card.setAttribute('aria-label', `${site.name}. ${site.note}`);
+}
+// The project the wreck's card shows now. The next one's picture is fetched ahead, so the turn does not flash.
+let siteLine = '';
+function paintWork() {
+  const entry = WORK[work], media = PORTFOLIO_MEDIA[entry.id];
+  image.src = media.src; image.alt = media.alt;
+  part('.site-card-kicker').textContent = siteLine;
+  part('.site-card-title').textContent = entry.title;
+  part('.site-card-note').textContent = entry.summary;
+  card.setAttribute('aria-label', `${siteLine}. ${entry.title}: ${entry.summary} Project ${work + 1} of ${WORK.length}.`);
+  for (const chip of card.querySelectorAll('[data-work]')) chip.setAttribute('aria-pressed', String(Number(chip.dataset.work) === work));
+  if (!picked && !still.matches) new Image().src = PORTFOLIO_MEDIA[WORK[(work + 1) % WORK.length].id].src;
 }
 // keep: the card goes, but the page stays as it is with a card up (the prompt, the labels and the tour's sheet stay
 // folded away). That is while the site is being read: the panel it opens comes up over the reef, and dropping the card's
@@ -163,7 +191,9 @@ onFrame((dt, controls, state, diving) => {
     next.dataset.act = status === 'done' ? 'surface' : 'next'; next.firstChild.textContent = status === 'done' ? 'Surface ' : 'Continue ';
     for (const kbd of card.querySelectorAll('kbd')) kbd.hidden = touch();
   }
-  if (card.dataset.show !== 'true') { card.dataset.show = 'true'; card.inert = false; place(camera); }
+  if (card.dataset.show !== 'true') { card.dataset.show = 'true'; card.inert = false; place(camera); workAt = clock; }
+  // The wreck's card turns to its next project, unless one was picked, the card is pointed at or motion is reduced.
+  if (shown === 'projects' && WORK.length > 1 && !picked && !still.matches && clock - workAt > TURN && !card.matches(':hover,:focus-within')) { work = (work + 1) % WORK.length; workAt = clock; paintWork(); }
   if (document.body.dataset.siteCard !== shown) { document.body.dataset.siteCard = shown; dispatchEvent(new CustomEvent('oceansitecard', { detail: shown })); }
   card.dataset.fading = String(clock - hotAt > LINGER - 1.2);
 });
@@ -193,12 +223,17 @@ new ResizeObserver(() => { cardHeight = card.offsetHeight; }).observe(card);
 function read() {
   const id = shown; if (!id) return;
   reading = true;
-  if (window.oceanLandmarks?.openSite) window.oceanLandmarks.openSite(id, window.oceanTour?.opens?.(id) ?? id);
-  else window.oceanArchive?.open?.(id);
+  const entry = entryFor(id);
+  if (window.oceanLandmarks?.openSite) window.oceanLandmarks.openSite(id, window.oceanTour?.opens?.(id) ?? id, entry);
+  else window.oceanArchive?.open?.(id, entry);
 }
+// The project the wreck's card is showing, for whatever opens the wreck while it is up (its own Open it, the tour's
+// Read it, F): the page opens on that project, and leads on to the rest.
+const entryFor = id => id === 'projects' && shown === 'projects' && WORK.length && (card.dataset.show === 'true' || reading) ? WORK[work].id : null;
 card.addEventListener('click', event => {
-  const action = event.target.closest('[data-site],.site-card-close');
+  const action = event.target.closest('[data-site],[data-work],.site-card-close');
   if (!action) return;
+  if (action.dataset.work) { work = Number(action.dataset.work); picked = true; workAt = clock; card.setAttribute('aria-live', 'polite'); paintWork(); track('project_previewed', { project_id: WORK[work].id }); return; }
   if (action.classList.contains('site-card-close')) { closed = shown; hide(); }
   else if (action.dataset.site === 'read') read();
   else if (action.dataset.site === 'next') { if (action.dataset.act === 'surface') window.oceanTour?.surface?.(); else window.oceanTour?.next?.(); }
@@ -211,4 +246,4 @@ addEventListener('keydown', event => {
   if (event.target.closest?.('input,textarea,select,[contenteditable="true"]') || document.querySelector('dialog[open]')) return;
   event.preventDefault(); read();
 });
-window.oceanSiteCard = { get shown() { return card.dataset.show === 'true' || reading ? shown : null; }, get why() { return why; } };
+window.oceanSiteCard = { get shown() { return card.dataset.show === 'true' || reading ? shown : null; }, get why() { return why; }, entryFor, get work() { return WORK.map(entry => entry.id); } };

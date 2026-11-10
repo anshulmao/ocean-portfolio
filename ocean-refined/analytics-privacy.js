@@ -9,6 +9,9 @@ export const EVENT_PROPERTIES = {
   // The guided dive (guided-dive.js): a funnel by step, and how each tour ended.
   tour_started:['from','tour_version'], tour_step:['step','index','tour_version'], tour_taken_over:['step','index','tour_version'], tour_rejoined:['step','index','tour_version'],
   tour_ended:['step','index','how','tour_version'],
+  // The wreck's card (site-cards.js): a project picked on it. The card back at the surface after a dive
+  // (surface-ending.js): that it came up, and what was chosen on it.
+  project_previewed:['project_id'], ending_shown:['sites','toured'], ending_action:['action','project_id'],
 };
 export function eventProperties(event, properties = {}) {
   if (!Object.hasOwn(EVENT_PROPERTIES,event)) return null;

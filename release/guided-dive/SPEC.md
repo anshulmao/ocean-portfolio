@@ -21,10 +21,23 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
 | R2 | When the visitor lets go of the look (1.4 s with no look input), the camera sweeps back, eased in and out, to where the guide is looking: the subject at a stop, a fly-by's subject or the way ahead while swimming. Their own look always wins straight away. |
 | R3 | Movement keys or the touch pad take over the dive. The tour holds and offers **Rejoin (G)**. Nothing is lost. The welcome is the exception: it is free swimming (round 7). |
 | R4 | The tour waits only at the welcome, the three portfolio sites and the ending, and **N** continues from each. Everything else is a **fly-by**: the swim slows and the camera glances, but nothing stops. |
-| R5 | Copy at a stop is small. "This is where you'll find X." No essays and no headline claims. |
+| R5 | Copy at a stop is small. "This is where you'll find X." No essays and no headline claims. One exception, on purpose (round 18): the wreck's card shows the projects themselves, one at a time (picture, name, one line), so a visitor who never opens a page still sees the work. |
 | R6 | Reduced motion: legs become fades between stops, there's no auto-pan, and look indicators stay. |
 | R7 | Touch, phone and keyboard all get equal treatment, and every key hint has a tap equivalent. |
 | R8 | The visitor can always exit, surface or keep exploring. The safety stop is offered, never forced. |
+
+## Start to finish (round 18)
+
+- **The welcome is quiet.** Only the water, the depth card and the guide's card. The compass, the chart and the page
+  buttons come in with the first swim (`dive-focus.css`). While the guide leads, the line of keys at the bottom is not
+  shown: the tour teaches each key where it is first of use.
+- **The wreck is the peak.** Its card turns through the first four projects that have a picture (`site-cards.js` WORK),
+  six seconds each; a chip picks one. Open it (F, or the sheet's Read it) opens the project shown, whose page leads on
+  to the rest. Reduced motion: no turning.
+- **The ending is at the surface.** After any dive worth the name (40 s, or a site reached) a card meets the diver
+  there (`surface-ending.js`): what the dive was, three projects, Get in touch, the résumé, the dive log and Dive
+  again. It is not a dialog; it goes when closed or when the next dive starts.
+- `npm run test:tour` holds all three.
 
 ## The sequence (round 12)
 
