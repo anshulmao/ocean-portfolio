@@ -521,7 +521,7 @@ export function createExploration(canvas, wake, settings=savedSettings) {
       // --- the view ---
       // Under freeLook the visitor's look wins while they are using it and for LOOK_HOLD after; then the guide's look eases back in.
       if(freeLook&&(yawAsk||pitchAsk))lookIdle=0;
-      const leading=autoLook&&!(freeLook&&lookIdle<LOOK_HOLD),handBack=leading&&!wasLeading&&freeLook&&guided;wasLeading=leading;
+      state.lookHeld=freeLook&&lookIdle<LOOK_HOLD;/* the visitor has the view: the arrow back to the guide's subject (big-life.js) */const leading=autoLook&&!(freeLook&&lookIdle<LOOK_HOLD),handBack=leading&&!wasLeading&&freeLook&&guided;wasLeading=leading;
       // Held still by the guide, a new subject (or the view coming back after the visitor's own look) is a sweep, not a chase.
       // Under way, the hand back after the visitor's own look is a sweep too (sweep.back), eased in and out onto where the guide
       // is looking, which may be moving; otherwise the view follows the course as it bends.

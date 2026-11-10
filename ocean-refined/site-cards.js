@@ -22,8 +22,10 @@ const SITES = {
 };
 // How far its card reaches (round 15, the owner's notes): it comes up only within RANGE m of the site itself, measured to
 // the site's own extent round its middle (x and z either way, then below and above, m; the wreck's runs from bow to
-// stern, and from its keel to its rigging), and is gone again beyond it.
-const RANGE = 8;
+// stern, and from its keel to its rigging), and is gone again beyond it. While the guided dive waits at a site, or is
+// coming in to it, its card stays up however far off the swim takes the diver (round 20, the owner's notes: the swim
+// round the wreck goes wider than the range in places, and her card came and went).
+const RANGE = 10;
 const EXTENT = { about: [-1.5, 1.5, -1.5, 1.5, 2, 2], experience: [-2, 2, -2, 2, 2, 2.5], projects: [-6, 11, -11, 9, 5, 9], resume: [-.6, .6, -.6, .6, 1.2, 1.2] };
 function within(id, point, player) {
   const [x0, x1, z0, z1, below, above] = EXTENT[id];
@@ -171,7 +173,7 @@ onFrame((dt, controls, state, diving) => {
   if (lit !== litSite) { litSite = lit; controls.setPieces?.focus?.(lit); }
   const spot = shown && placed[shown];
   if (!shown || !spot || shown === closed || clock - hotAt > LINGER) { hide(); if (shown && clock - hotAt > LINGER) shown = null; return; }
-  if (!close) { hide(); return; }
+  if (!close && waiting !== shown) { hide(); return; }
   // Where the card goes: one place, fixed in the water over the site (lift m above its middle), drawn facing the view
   // (the owner's notes, round 15: it used to choose between several places on screen, and jumped between them). Out of
   // view, it is not there; looked at again while it still lingers, it is back where it was.

@@ -44,6 +44,13 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
   bottom left under the depth card (`dive-focus.js`). The Portfolio button is retired under water.
 - **One thing names a site.** Far off, the Ahead card; in reach, the site's own card, whose Open it is the only one on
   screen (the tour's sheet does not repeat it). The prompt (Open About, F) stands in when the card is not up.
+- **The way back to what the guide is showing.** The view is the visitor's (R1). When they hold it away from a fly-by's
+  subject, or from the site the tour waits at, an arrow at the edge of the screen points back to it, with its name, until
+  it is in view again (`big-life.js`, `guided-dive.js` subject). It does not show while the guide's own turn is coming round.
+- **A site's card holds on the tour.** It reaches 10 m from the site (it was 8), and while the tour waits at a site or is
+  coming in to it the card stays up at any distance, so the swim round the wreck never loses it.
+- **Escape gives the mouse back to the view.** Closing a portfolio page on a dive takes the mouse straight back to aiming
+  (`landmark-interactions.js` aimAgain). Where a browser refuses that without a click, the Click to swim prompt shows.
 - **A photo is named for its animal.** The animal nearest the middle of the frame, if one is near enough to be made
   out, titles the photo and tags it (`dive-log.js` subjectInView); otherwise the place does, as before.
 - **The nurse shark stays put.** It lies by the nursery until a diver comes within 3.5 m, lifts off the sand, moves about

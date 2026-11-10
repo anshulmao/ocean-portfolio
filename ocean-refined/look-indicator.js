@@ -34,6 +34,11 @@ function safeBand() {
   return band = [top, Math.max(top + 40, innerHeight - Math.max(120, innerHeight * .22))];
 }
 
+// Whether `subject` ([x, y, z]) is in view, by the same measure as the marker's: nothing is drawn.
+export function inView(camera, subject) {
+  at.fromArray(subject); local.copy(at).applyMatrix4(camera.matrixWorldInverse); if (local.z > 0) return false;
+  at.project(camera); return Math.abs(at.x) < EDGE_X && Math.abs(at.y) < EDGE_Y;
+}
 // Points at `subject` ([x, y, z]) with `text`, or hides with null. Returns whether the subject is on screen.
 export function pointAt(camera, subject, text = '') {
   if (!subject || !camera) { if (shown) { shown = false; node.dataset.show = 'false'; } return false; }

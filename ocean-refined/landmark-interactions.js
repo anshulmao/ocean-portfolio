@@ -51,6 +51,19 @@ function openArchive(id, fromWaypoint=false, entry=null, site=id) {
   }
   return showRecords(id, entry);
 }
+// Takes the mouse back for the view after the records close on a dive. False where that is not wanted: at the surface,
+// on a touch screen, or with mouse capture switched off in Settings.
+function aimAgain(controls) {
+  const canvas = document.querySelector('#world');
+  if (!controls || !canvas || controls.getMode() !== 'diver' || controls.getTransition() || document.documentElement.dataset.input === 'touch' || controls.settings?.pointerLock === false) return false;
+  if (!controls.recapture?.()) return false;
+  // Refused: back to the prompt that asks for a click, rather than a view that follows nothing.
+  setTimeout(() => {
+    if (document.pointerLockElement === canvas || panel.open || credits.open || controls.getMode() !== 'diver' || controls.nav?.suspended) return;
+    controls.setInterfaceOpen(false); document.querySelector('#capture-hint')?.focus({ preventScroll: true });
+  }, 450);
+  return true;
+}
 function showRecords(id, entry) {
   prompt.hidden = true;panel.showModal();
   // Rendered after the dialog is laid out so the entry can be scrolled into place.
@@ -130,6 +143,11 @@ for (const dialog of [panel, credits]) {
     if (dialog === panel) { opened = null; archive.leave(); }
     if (!panel.open && !credits.open) controls?.setInterfaceOpen(false);
     if (window.oceanDiagnostics && !panel.open) window.oceanDiagnostics.interaction = null;
+    // On a dive the mouse goes straight back to aiming the view (round 20, the owner's notes: after Escape the cursor
+    // stayed free, and the view no longer followed it). A browser gives the mouse back without a click only when the
+    // page itself let it go, which is so when the view was being aimed as the page opened; when it refuses (the mouse
+    // had been freed with Escape before), the Click to swim prompt is there as before.
+    if (dialog === panel && !panel.open && !credits.open && aimAgain(controls)) return;
     // Return to interface mode. Capturing the mouse always needs a fresh click.
     restoreFocus(returnFocus?.isConnected && returnFocus !== document.querySelector('#world') ? returnFocus : document.querySelector('#capture-hint'));
   });

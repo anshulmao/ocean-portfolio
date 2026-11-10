@@ -1,5 +1,5 @@
 import { onFrame } from './journey.js';
-import { pointAt } from './look-indicator.js';
+import { pointAt, inView } from './look-indicator.js';
 
 // The big animals, on every dive (release/guided-dive/SPEC.md, review round 3): whoever is diving, on the guided dive or
 // not, is shown the great visitors as they pass, and meets at least one of them. user-creatures.js brings them in on its own
@@ -10,6 +10,8 @@ const BIG = ['whale-shark', 'whale', 'orcas', 'dolphins'], GUARANTEE = 30, SEEN_
 // pointed: visitors seen on their current pass. marked: the one the marker is on, and how long it has been in view.
 const pointed = new Set();
 let marked = null, markedFor = 0, diveFor = 0, metBig = false, calling = null;
+// guiding: the marker is the arrow back to the guided dive's subject.
+let guiding = false;
 
 function guarantee(dt, api, live) {
   diveFor += dt;
@@ -44,6 +46,14 @@ onFrame((dt, api, state, diving) => {
   if (!diving) { diveFor = 0; metBig = false; calling = null; pointed.clear(); if (marked) { pointAt(null); marked = null; } return; }
   const live = api.visitors?.() ?? [];
   guarantee(dt, api, live);
-  if (api.nav?.suspended) { if (marked) { pointAt(null); marked = null; } return; }
+  if (api.nav?.suspended) { if (marked || guiding) { pointAt(null); marked = null; guiding = false; } return; }
+  // The guided dive's own subject comes first (guided-dive.js `subject`: what a fly-by is showing, or the site it waits
+  // at). The view is the visitor's, so they may have looked away from it: then an arrow at the edge of the screen
+  // points the way back, with its name, from the moment they hold the view away (nav.lookHeld) until it is in view
+  // again. It does not show while the guide's own turn to a new subject is still coming round. In view, the marker is
+  // free for an animal passing, as before.
+  const guide = window.oceanTour?.subject, camera = api.getCamera?.();
+  if (guide && camera && (api.nav?.lookHeld || guiding) && !inView(camera, guide.point)) { pointAt(camera, guide.point, guide.label); guiding = true; marked = null; return; }
+  if (guiding) { guiding = false; pointAt(camera, null); }
   lookThere(dt, api, state, live);
 });

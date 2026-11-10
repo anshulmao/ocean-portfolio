@@ -844,4 +844,12 @@ window.oceanTour = { start: startTour, stop, rejoin, next, surface: () => { if (
   get welcome() { return status === 'off' ? null : WELCOME; },
   opens(id) { const step = STEPS[index]; return status !== 'off' && step.landmark === id ? step.opens ?? null : null; },
   // The site that may be read on the way in to it (nearing), for its card (site-cards.js).
-  get nearSite() { return nearing(); } };
+  get nearSite() { return nearing(); },
+  // What the guide is showing now, for the arrow that points back to it when the visitor has looked away (big-life.js):
+  // a fly-by's subject under its caption's name, or the site the tour waits at. Nothing while paused or on hold.
+  get subject() {
+    if (paused || cut) return null;
+    if (status === 'travel' && sight?.title) { const point = subjectOf(sight.look); return point ? { point, label: sight.title } : null; }
+    if (status === 'dwell') return { point: look, label: STEPS[index].place.split(' · ')[1] ?? STEPS[index].title };
+    return null;
+  } };
