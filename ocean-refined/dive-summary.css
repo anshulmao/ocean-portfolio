@@ -153,7 +153,9 @@ dialog.ds[data-closing="true"]::backdrop{opacity:0;transition:opacity var(--moti
 
 /* The dive in order: one line left to right, a dot at each moment's time, its label above or below on a stem. */
 .ds-story{display:grid;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid var(--holo-faint)}
+/* Meant to scroll sideways on a narrow screen (data-scroll-x, as the archive's carousel is), so it takes the keyboard too. */
 .ds-line-wrap{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding:0 6px}
+.ds-line-wrap:focus-visible{outline:2px solid var(--holo-focus);outline-offset:2px}
 .ds-line{position:relative;min-width:620px;height:204px;margin:0 8px;padding:0;list-style:none}
 .ds-line-axis{position:absolute;left:0;right:0;top:50%;height:2px;translate:0 -50%;border-radius:2px;background:linear-gradient(90deg,var(--holo-mint),#8ff4ff 50%,#ffffff)}
 .ds-line>li:not(.ds-line-axis){position:absolute;left:var(--at);top:50%;width:0;height:0;z-index:1}
