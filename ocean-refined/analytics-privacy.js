@@ -12,6 +12,10 @@ export const EVENT_PROPERTIES = {
   // The wreck's card (site-cards.js): a project picked on it. The card back at the surface after a dive
   // (surface-ending.js): that it came up, and what was chosen on it.
   project_previewed:['project_id'], ending_shown:['sites','toured'], ending_action:['action','project_id'],
+  // How the ocean ran (health-report.js): once each per visit, coarse values only (health-summary.js).
+  world_ready:['quality','gpu_tier','gpu_family','viewport','ready_ms'], world_failed:['quality','gpu_tier','gpu_family','viewport','reason'],
+  world_health:['quality','gpu_tier','gpu_family','viewport','frames','frame_mean_ms','frame_p95_ms','slow_frame_pct','long_tasks','dived','script_errors'],
+  script_error:['file','line'],
 };
 export function eventProperties(event, properties = {}) {
   if (!Object.hasOwn(EVENT_PROPERTIES,event)) return null;

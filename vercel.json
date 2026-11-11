@@ -23,7 +23,7 @@
       ]
     },
     {
-      "source": "/(.*)\\.(js|css|html|json)",
+      "source": "/((?!assets/models/user-sets/v-|site-[0-9a-f]{12}\\.css).*)\\.(js|css|html|json)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -32,11 +32,29 @@
       ]
     },
     {
-      "source": "/assets/(.*)",
+      "source": "/assets/((?!models/user-sets/v-).*)",
       "headers": [
         {
           "key": "Cache-Control",
           "value": "public, max-age=3600, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/assets/models/user-sets/v-(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/site-:hash([0-9a-f]{12}).css",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
         }
       ]
     }

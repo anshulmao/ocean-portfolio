@@ -27,6 +27,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Correctness only (eslint.config.mjs): undefined names and code that cannot run. Unused names are warnings.
+      - run: npm run lint
       - run: npm run test:services
       - run: npm run test:unit
       # test:build owns the clean build, including stale-output regression checks.
