@@ -76,7 +76,7 @@ function begin(title, contents, mode) {
     window.oceanControls?.setSafetyStop?.(true);
   }
   window.oceanControls?.setInterfaceOpen(true);
-  dialog.innerHTML = `<header><div><small>REEF FIELD NOTES</small><h2 id="expedition-title">${title}</h2></div><button type="button" data-close aria-label="Close">×</button></header>${contents}`;
+  dialog.innerHTML = `<header><div><small>REEF FIELD NOTES</small><h2 id="expedition-title">${title}</h2></div><button type="button" data-close aria-label="Close dive notes">×</button></header>${contents}`;
   dialog.querySelector('[data-close]').addEventListener('click',()=>dialog.close());
   dialog.showModal(); dialog.querySelector('[data-close]').focus(); return true;
 }
@@ -97,11 +97,11 @@ function openStop() {
   if (!begin('Safety stop', `<div class="safety-countdown" role="progressbar" aria-label="Safety stop" aria-valuemin="0" aria-valuemax="45" aria-valuenow="0"><div><span>SAFETY STOP</span><strong class="safety-countdown-time">0:45</strong></div><span class="safety-countdown-track"><i class="safety-countdown-fill"></i></span></div>
     <div class="safety-complete" role="status" hidden><span>Safety stop</span><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/><path d="m10 18 6 6 11-12"/></svg><span class="sr-only">complete</span></div>
     <p class="stop-hold"><span aria-hidden="true">⌛</span> 45 seconds to pause at ${heldDepth.toFixed(1)} m</p>
-    <form id="reef-feedback">${safetyRatingMarkup()}
+    <form id="reef-feedback"><p>Choose a rating to add feedback. Sending is optional.</p>${safetyRatingMarkup()}
     <section class="feedback-details" hidden aria-label="Feedback details">
-    <div class="feedback-contact"><label>Name <small>optional</small><input name="name" autocomplete="name" maxlength="100"></label><label>Email <small>optional</small><input name="email" type="email" autocomplete="email" maxlength="254"></label></div>
-    <label>Feedback <small>optional</small><textarea name="feedback" maxlength="2000" rows="3" placeholder="Share anything about your dive…"></textarea></label>
-    </section><p class="feedback-error" role="alert" hidden></p><div class="feedback-actions"><button type="submit" data-submit class="expedition-primary" hidden>Share feedback</button></div></form>`, 'stop')) return;
+    <div class="feedback-contact"><label>Name <small>optional</small><input name="name" autocomplete="name" maxlength="100"></label><label>Email address <small>optional</small><input name="email" type="email" autocomplete="email" maxlength="254"></label></div>
+    <label>Feedback <small>optional</small><textarea name="feedback" maxlength="2000" rows="3" placeholder="What worked well? What could be clearer?"></textarea></label>
+    <p>Your feedback goes to Anshul when you send it. Add your email if you’d like a reply.</p></section><p class="feedback-error" role="alert" hidden></p><div class="feedback-actions"><button type="submit" data-submit class="expedition-primary" hidden>Send feedback</button></div></form>`, 'stop')) return;
   track('feedback_started');
   const form = dialog.querySelector('form');
   offerLeft=0;offerUsed=true;stopButton.hidden=true;
@@ -129,21 +129,21 @@ function openStop() {
     lastPayload=fingerprint;const record={id:submissionId,...payload};
     const submit=form.querySelector('[type=submit]');
     const fields=[...form.querySelectorAll('input,textarea')];
-    form.dataset.sending='true';submit.disabled=true;submit.textContent='Sending…';fields.forEach(field=>field.disabled=true);
+    form.dataset.sending='true';submit.disabled=true;submit.textContent='Sending feedback…';fields.forEach(field=>field.disabled=true);
     try {
       await sendFeedback(record);
-      track('feedback_saved',{rating:record.rating});say('Your field note was sent to Anshul. Thank you.');
+      track('feedback_saved',{rating:record.rating});say('Feedback sent to Anshul. Thank you.');
       if(form.isConnected)dialog.close();
     } catch (failure) {
-      if(form.isConnected){error.textContent=failure.message;error.hidden=false;}
+      if(form.isConnected){error.textContent="Could not send feedback. Try again; your text is still here.";error.hidden=false;}
     } finally {
-      delete form.dataset.sending;submit.disabled=false;submit.textContent='Share feedback';fields.forEach(field=>field.disabled=false);
+      delete form.dataset.sending;submit.disabled=false;submit.textContent='Send feedback';fields.forEach(field=>field.disabled=false);
     }
   });
 }
 function openInventory() {
   const collected = finds.filter(item=>item.collected);
-  begin('Your reef finds', `<p>${collected.length} of ${finds.length} gold keepsakes · ${collected.length*100} discovery points</p><p>${collected.length === finds.length ? 'Every one of them. The ship’s gold is back together.' : 'These are imaginary finds. Enjoy collecting without disturbing the real reef.'}</p><ul class="artifact-list">${collected.length?collected.map(item=>`<li><span>◈</span>${item.name}<small>+100</small><em>${item.line}</em></li>`).join(''):`<li>No finds yet. Look for small gold things hovering over the sand, a compass, a sextant, a medallion, a conch and a pirate’s hat; ${touchInput()?'tap Collect':'press F'} when in reach.</li>`}</ul><p class="feedback-privacy">Inventory lasts for this page session. It does not change your dive or portfolio access.</p>`, 'inventory');
+  begin('Your reef finds', `<p>${collected.length} of ${finds.length} gold keepsakes · ${collected.length*100} discovery points</p><p>${collected.length === finds.length ? 'Every one of them. The ship’s gold is back together.' : 'These are imaginary finds. Enjoy collecting without disturbing the real reef.'}</p><ul class="artifact-list">${collected.length?collected.map(item=>`<li><span>◈</span>${item.name}<small>+100</small><em>${item.line}</em></li>`).join(''):`<li>No keepsakes collected yet. Look for gold objects above the sand; ${touchInput()?'tap Collect':'press F'} when in reach.</li>`}</ul><p class="feedback-privacy">Your keepsakes stay here until you reload or close this tab.</p>`, 'inventory');
 }
 function collect() {
   if (!nearest || !mesh || dialog.open || ui.dialog || ui.panel) return false;
@@ -164,10 +164,10 @@ function takePhoto() {
     const ratio = Math.min(1, 1280 / canvas.width, 720 / canvas.height), share = document.createElement('canvas');
     share.width = Math.max(1, Math.round(canvas.width * ratio)); share.height = Math.max(1, Math.round(canvas.height * ratio));
     share.getContext('2d').drawImage(canvas, 0, 0, share.width, share.height);
-    photos++; track('reef_photo_taken'); say('Photo saved to your dive log.');
+    photos++; track('reef_photo_taken'); say('Saving photo to your dive log…');
     Promise.all([blobOf(full, .92), blobOf(share, .8).then(blob => blob.size <= 1048576 ? blob : blobOf(share, .6))])
-      .then(([large, small]) => addPhoto(large, small)).catch(() => say('This photo could not be kept. Please try again.'));
-  } catch { say('This browser could not take a photo. Please try again after the scene finishes loading.'); }
+      .then(([large, small]) => { addPhoto(large, small); say('Photo saved to your dive log.'); }).catch(() => say('Could not save this photo to your dive log. Try taking it again.'));
+  } catch { say('Could not take a photo. Wait for the reef to load, then try again.'); }
 }
 const blobOf = (canvas, quality) => new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(Error('photo')), 'image/jpeg', quality));
 let building = false;

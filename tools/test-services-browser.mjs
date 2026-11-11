@@ -86,7 +86,7 @@ try{
   await summary.locator('.ds-share-open').click();
   await summary.locator('#ds-note').fill('Synthetic private photo note');
   assert.equal(submissions.filter(item=>item.kind==='photo').length,0,'Opening the share form must not upload it');
-  await summary.getByRole('button',{name:'Send privately',exact:true}).click();
+  await summary.getByRole('button',{name:'Send photo',exact:true}).click();
   await page.waitForFunction(()=>oceanDiveLog.photos[0].shared);
   assert.equal(submissions.filter(item=>item.kind==='photo').length,1,'Explicit confirmation uploads one photo');
   const uploaded=submissions.find(item=>item.kind==='photo');

@@ -29,3 +29,17 @@ The retired wattmana.png image is removed. The current mobile home screen is the
 ## Verification
 
 Build integrity, smoke, and UI checks cover the shared reading and ocean experience. Run node tools/test-project-copy.mjs after building to verify heading order and the four unique current WattMana screens.
+
+
+## UX Writing skill pass
+
+Applied the skill's purposeful, concise, conversational, and clear standards to the interface:
+
+- Explicit actions: Read portfolio, View projects, Send feedback, View photo, Download photo, and Send photo.
+- Loading and fallback messages explain what is happening and how to keep reading or exploring.
+- Feedback instructions explain the rating step, optional submission, and why an email might be useful.
+- Feedback and photo failures offer a retry and make clear that entered text remains available.
+- Controls distinguish changes applied for this visit from settings saved on the device.
+- Photo success appears after the image is added to the dive log. Sending uses consistent photo-specific labels and confirmations.
+
+The simplified project stories and future plans are retained. No production deployment is part of this copy update.

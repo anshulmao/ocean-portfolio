@@ -250,7 +250,7 @@ function renderAbout() {
       el('p', { class: 'arc-chapter-title', text: approach.title }), el('p', { class: 'arc-chapter-strap', text: approach.summary }),
       rules.length > 0 && el('ol', { class: 'arc-focus', 'aria-label': 'Working principles' }, rules.map(rule => el('li', {}, el('strong', { text: rule.title }), rule.text && el('p', { text: rule.text }))))),
     examples.length > 0 && chapter('arc-work', 'In the work',
-      el('p', { class: 'arc-chapter-title', text: 'What that looks like in the work' }),
+      el('p', { class: 'arc-chapter-title', text: 'Examples from my work' }),
       el('ul', { class: 'arc-focus', 'aria-label': 'In the work' }, examples.map(example => {
         const project = PORTFOLIO_CONTENT.projects.entries.find(entry => entry.id === example.project);
         return el('li', {}, el('strong', { text: example.title }), el('p', { text: example.text }), project && el('span', { class: 'arc-chip', text: project.title }));
@@ -498,12 +498,12 @@ function findCard(find) {
       el('span', { class: 'arc-find-kind', text: find.kind }),
       el('strong', { text: find.entry.title }),
       el('span', { class: 'arc-find-line', text: find.entry.summary })),
-    el('span', { class: 'arc-find-foot' }, find.status && el('span', { class: 'arc-chip', text: find.status }), el('span', { class: 'arc-find-open', 'aria-hidden': 'true' }, 'Read', glyph('next')))));
+    el('span', { class: 'arc-find-foot' }, find.status && el('span', { class: 'arc-chip', text: find.status }), el('span', { class: 'arc-find-open', 'aria-hidden': 'true' }, 'View project', glyph('next')))));
 }
 function renderProjects() {
   const section = PORTFOLIO_CONTENT.projects, list = projects();
   return [
-    head(section.title, section.subtitle, el('p', { class: 'arc-count', text: `${list.length} projects · open one to read the story` })),
+    head(section.title, section.subtitle, el('p', { class: 'arc-count', text: `${list.length} projects · choose one to see my work` })),
     el('ul', { class: 'arc-grid', 'aria-label': 'Projects' }, list.map(findCard)),
     foot('projects'),
   ];
@@ -552,7 +552,7 @@ function renderResume() {
         others.length > 0 && el('div', { class: 'arc-versions' },
           el('p', { class: 'arc-versions-label', text: 'Other versions, by role' }),
           el('ul', {}, others.map(link => el('li', {}, anchorFor(link, null, glyph('file'), el('span', { text: link.label }), icon('download')))))),
-        el('button', { type: 'button', class: 'arc-textlink', 'data-print': true }, glyph('print'), 'Print a one-page summary of this portfolio'))),
+        el('button', { type: 'button', class: 'arc-textlink', 'data-print': true }, glyph('print'), 'Print portfolio summary'))),
     foot('resume'),
   ];
 }

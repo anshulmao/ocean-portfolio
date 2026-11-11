@@ -43,7 +43,7 @@ dialog.className = 'ds'; dialog.id = 'dive-summary'; dialog.setAttribute('aria-l
 dialog.innerHTML = `<div class="ds-inner">
   <header class="ds-head ds-step" style="--i:0"><div><p class="holo-label ds-kicker"></p><h2 id="ds-title"></h2><p class="ds-sub"></p></div>
     <div class="ds-head-tools"><details class="ds-more" hidden><summary class="holo-chip">View more logs <span aria-hidden="true">▾</span></summary><ul class="ds-more-list" aria-label="Your dives this visit"></ul></details>
-    <button type="button" class="holo-chip ds-close">Close <kbd>Esc</kbd></button></div></header>
+    <button type="button" class="holo-chip ds-close">Close log <kbd>Esc</kbd></button></div></header>
   <section class="ds-stats ds-step" style="--i:1" aria-label="Dive numbers">
     <dl class="ds-tiles"></dl>
     <figure class="ds-panel ds-profile"><div class="ds-label"><span class="holo-label">Dive profile</span><span class="ds-average"></span></div>
@@ -54,12 +54,12 @@ dialog.innerHTML = `<div class="ds-inner">
       <div class="ds-label"><span class="holo-label" id="ds-photos-title">Postcards from the reef</span><span class="ds-count" aria-live="polite"></span></div>
       <div class="ds-cards" tabindex="0" aria-label="Your photos. Swipe or use the arrow keys; Enter opens the photo to zoom."></div>
       <div class="ds-carousel-bar"><div class="ds-dots"></div><div class="ds-arrows"><button type="button" class="holo-chip" data-step="-1" aria-label="Previous photo">←</button><button type="button" class="holo-chip" data-step="1" aria-label="Next photo">→</button></div></div>
-      <div class="ds-photo-actions"><button type="button" class="holo-chip ds-zoom">Zoom <span aria-hidden="true">⤢</span></button><button type="button" class="holo-chip ds-download">Download <span aria-hidden="true">↓</span></button><button type="button" class="holo-chip holo-chip--go ds-share-open" aria-expanded="false" aria-controls="ds-share">Share with Anshul <span aria-hidden="true">→</span></button></div>
+      <div class="ds-photo-actions"><button type="button" class="holo-chip ds-zoom">View photo <span aria-hidden="true">⤢</span></button><button type="button" class="holo-chip ds-download">Download photo <span aria-hidden="true">↓</span></button><button type="button" class="holo-chip holo-chip--go ds-share-open" aria-expanded="false" aria-controls="ds-share">Send to Anshul <span aria-hidden="true">→</span></button></div>
       <form class="ds-share" id="ds-share" hidden>
         <label for="ds-note">Add a note <small>(optional, up to ${NOTE_WORDS} words)</small></label>
         <textarea id="ds-note" rows="3" maxlength="400" placeholder="A favourite moment from the dive…"></textarea>
-        <div class="meta"><span>Only this photo and your note are sent, privately to Anshul. Your other photos stay on this device and are gone when you close the tab.</span><output for="ds-note">0 / ${NOTE_WORDS}</output></div>
-        <div class="row"><button type="submit" class="holo-chip holo-chip--go">Send privately</button><button type="button" class="holo-chip ds-share-cancel">Cancel</button></div>
+        <div class="meta"><span>Send this photo and your note privately to Anshul. Other photos stay in this tab until you reload or close it.</span><output for="ds-note">0 / ${NOTE_WORDS}</output></div>
+        <div class="row"><button type="submit" class="holo-chip holo-chip--go">Send photo</button><button type="button" class="holo-chip ds-share-cancel">Cancel</button></div>
       </form>
       <p class="ds-status" role="status"></p>
     </section>
@@ -276,13 +276,13 @@ function paintPhotos() {
   $('.ds-share', dialog).hidden = true; $('.ds-share-open', dialog).setAttribute('aria-expanded', 'false'); $('.ds-status', dialog).textContent = '';
   if (!photos.length) {
     track.removeAttribute('tabindex');
-    track.innerHTML = '<p class="ds-empty"><span>No photos on this dive.<br>Next time press <kbd>H</kbd> underwater in first-person view, or tap Photo on a touch screen.</span></p>';
+    track.innerHTML = '<p class="ds-empty"><span>No photos taken on this dive.<br>On your next dive, press <kbd>H</kbd> underwater in first-person view, or tap the camera button on a touch screen.</span></p>';
     $('.ds-count', dialog).textContent = ''; $('.ds-dots', dialog).innerHTML = '';
     return;
   }
   track.tabIndex = 0;
   track.innerHTML = photos.map((photo, i) => `<figure class="postcard" data-current="${i === 0}" role="group" aria-roledescription="slide" aria-label="${i + 1} of ${photos.length}: ${esc(photo.place)}">
-    <img src="${photo.url}" alt="Your photo at ${esc(photo.place)}, ${photo.depth.toFixed(0)} metres down" loading="lazy" decoding="async"><span class="zoom-hint" aria-hidden="true">⤢ Zoom</span>${photo.shared ? '<span class="sent">Shared</span>' : ''}
+    <img src="${photo.url}" alt="Your photo at ${esc(photo.place)}, ${photo.depth.toFixed(0)} metres down" loading="lazy" decoding="async"><span class="zoom-hint" aria-hidden="true">⤢ Zoom</span>${photo.shared ? '<span class="sent">Sent</span>' : ''}
     <figcaption><b>${esc(photo.place)}</b><small>${photo.dive === record.number ? `${clock(photo.t)} into the dive` : `Dive ${two(photo.dive)} · ${clock(photo.t)} in`}</small><span class="stamp"><span>${photo.depth.toFixed(0)} m<br><small>depth</small></span></span></figcaption></figure>`).join('');
   $('.ds-dots', dialog).innerHTML = photos.map((photo, i) => `<button type="button" aria-label="Photo ${i + 1}" aria-current="${i === 0}"></button>`).join('');
   current = 0; settle(true);
@@ -303,7 +303,7 @@ function settle(force = false) {
   [...$('.ds-dots', dialog).children].forEach((dot, i) => dot.setAttribute('aria-current', String(i === best)));
   $('.ds-count', dialog).textContent = `${best + 1} / ${cards.length}`;
   const shared = photos[best]?.shared, open = $('.ds-share-open', dialog);
-  open.disabled = Boolean(shared); open.innerHTML = shared ? 'Shared with Anshul ✓' : 'Share with Anshul <span aria-hidden="true">→</span>';
+  open.disabled = Boolean(shared); open.innerHTML = shared ? 'Sent to Anshul ✓' : 'Send to Anshul <span aria-hidden="true">→</span>';
 }
 $('.ds-cards', dialog).addEventListener('scroll', () => requestAnimationFrame(() => settle()), { passive: true });
 $('.ds-cards', dialog).addEventListener('keydown', event => {
@@ -348,17 +348,17 @@ share.addEventListener('submit', async event => {
   const photo = photos[current]; if (!photo || share.dataset.sending === 'true' || countWords() > NOTE_WORDS) return;
   // A retry of the same photo keeps its id, so the intake can tell it from a new one.
   photo.shareId ||= crypto.randomUUID();
-  share.dataset.sending = 'true'; send.disabled = note.disabled = true; send.textContent = 'Sending…'; delete status.dataset.error; status.textContent = '';
+  share.dataset.sending = 'true'; send.disabled = note.disabled = true; send.textContent = 'Sending photo…'; delete status.dataset.error; status.textContent = '';
   try {
     await sendPhoto(photo.share, note.value, photo.shareId);
     photo.shared = true; track('reef_photo_shared');
-    status.textContent = `Sent privately to Anshul${note.value.trim() ? ', with your note' : ''}. Thank you.`;
+    status.textContent = `Photo sent privately to Anshul${note.value.trim() ? ', with your note' : ''}. Thank you.`;
     share.hidden = true; note.value = ''; openShare.setAttribute('aria-expanded', 'false');
-    $('.ds-cards', dialog).children[current]?.insertAdjacentHTML('beforeend', '<span class="sent">Shared</span>');
+    $('.ds-cards', dialog).children[current]?.insertAdjacentHTML('beforeend', '<span class="sent">Sent</span>');
     settle(true);
   } catch (failure) {
-    status.dataset.error = 'true'; status.textContent = failure.message || 'Could not send it. Please try again.';
-  } finally { delete share.dataset.sending; send.disabled = note.disabled = false; send.textContent = 'Send privately'; countWords(); }
+    status.dataset.error = 'true'; status.textContent = 'Could not send this photo. Try again; your note is still here.';
+  } finally { delete share.dataset.sending; send.disabled = note.disabled = false; send.textContent = 'Send photo'; countWords(); }
 });
 
 // --- Field guide ---------------------------------------------------------------------------------------------------

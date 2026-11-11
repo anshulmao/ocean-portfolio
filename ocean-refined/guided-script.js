@@ -56,8 +56,8 @@ export const STEPS = [
   // The site starts at the surface out over the deep end, west of the reef (exploration.js SURFACE_START). The welcome is
   // read as the guide drifts in toward the reef, and the controls are tried on the way.
   { key: 'welcome', kind: 'intro', at: [-22, -12, -66], place: 'Guided dive', title: 'This is the reef',
-    line: 'This is my portfolio, as a reef. You’re going to have a fun time. Try the controls as we swim in.',
-    short: 'My portfolio, as a reef. Try the controls as we swim in.',
+    line: 'Explore my work through a guided reef tour. Try the controls as we swim in; you can take over at any time.',
+    short: 'Explore my work on a guided reef tour. Try the controls as we swim in.',
     // The reef rising ahead, the barracuda wheel off to the right, the wreck down to the left.
     pan: [[-22, -18, -30], [-36, -20, -44], [18, -21, -39], [-22, -16, -36]] },
   // The scooter first, the reef being a way off. Then on past the barracuda wheel on its reef side, by the pink whipray, to the
