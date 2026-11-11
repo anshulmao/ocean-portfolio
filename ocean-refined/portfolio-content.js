@@ -4,19 +4,19 @@
 export const PORTFOLIO_CONTENT = {
   about: {
     title: "About",
-    subtitle: "A product manager who also builds the fix.",
+    subtitle: "Product judgment, hands-on AI work, and adoption.",
     entries: [
       {
         id: "overview",
         // Structured restatements of this entry's own text, used by the diver profile card.
         name: "Anshul",
         base: "Kuala Lumpur",
-        role: "AI product manager and hands-on builder, forward deployed",
+        role: "AI product manager and hands-on builder",
         title: "I turn customer problems into working AI.",
         tag: "Forward deployed AI",
-        summary: "I work inside the customer’s problem and build part of the answer myself.",
+        summary: "I connect customer discovery, hands-on AI work, and adoption to build products people can use.",
         body: [
-          "At Twimbit I run product for Rae, an AI sales platform used by more than 350 enterprise sales staff at CelcomDigi. I talk to the account managers who use it, read the conversation logs and write the evaluation. Then I change the prompts, routing and retrieval rules in the codebase with Claude Code and Codex, and an engineer reviews my changes before release.",
+          "At Twimbit, I lead product for Rae, an enterprise AI sales platform with 350+ registered users at CelcomDigi. I work with account managers, study usage, and turn what I learn into product priorities. I also build evaluations and improve prompts, routing, and retrieval with Claude Code and Codex, working with engineers on review and validation.",
           "I studied computer science, specialising in data science and AI, at Taylor’s University. I spent a year in consulting research before moving into product.",
           "I became a certified diver at ten, which is why this portfolio is also a reef you can swim through."
         ],
@@ -34,10 +34,10 @@ export const PORTFOLIO_CONTENT = {
         summary: "Four habits I keep on every project.",
         // Each fact is the heading of the paragraph at the same position in body.
         body: [
-          "Weekly sessions with account managers told me where Rae was failing them. Thirty months of usage data told me which complaints were common. I prioritise where the two agree.",
+          "Discovery sessions with account managers show me where the workflow breaks. Thirty months of usage data help me check how widespread those problems are. I use both to set priorities.",
           "Rae’s evaluation is 104 cases in English, Malay and Chinese, picked from logged conversations by how often each kind of question came up. A model scores the answers and a person reviews the scores.",
           "Features we released quietly did not keep their users. Each launch now ships with training and follow-up, and I check who came back.",
-          "For research content, assistants do the gathering and the fact-checking. An analyst still reads every piece before it is published."
+          "Assistants support research, drafting, and verification. An analyst reviews the content before publication."
         ],
         facts: ["Pair what people say with what they do", "Test against logged conversations", "Plan the rollout with the release", "Keep a person where judgment matters"],
         links: []
@@ -54,13 +54,13 @@ export const PORTFOLIO_CONTENT = {
         tag: "Twimbit · Jan 2025 — present",
         // org / start / end restate the tag above for the dive log (end: null means present).
         org: "Twimbit", start: "2025-01", end: null,
-        summary: "I own the roadmap, discovery, evaluation and launches for Rae, and I make changes in the product myself.",
+        summary: "I lead Rae’s roadmap, discovery, analytics, and launches, alongside hands-on work on AI response quality.",
         body: [
-          "Rae has more than 350 registered users at CelcomDigi and 13 live features. Monthly active users grew from 15 to 175 over the recovery I worked on.",
+          "Rae has 350+ registered users at CelcomDigi and 13 live features. I helped recover monthly active usage from 15 to 175 through product improvements, launch activity, and enablement.",
           "I built a 104-case evaluation in three languages, rewrote the system prompts, and worked on retrieval rules and automatic routing in the FastAPI and Weaviate codebase.",
-          "I led delivery of Rae Engage, a customer-facing assistant that produced 219 sales leads between 18 August and 30 October 2026. I also ran weekly sessions with frontline account managers and co-led three training cohorts for more than 150 people."
+          "I owned delivery of Rae Engage across requirements, conversation design, testing, and iteration. The pilot recorded 219 leads from 18 August to 30 October 2026. I also led frontline discovery sessions and co-led or supported three AI training cohorts reaching 150+ participants."
         ],
-        facts: ["350+ users, 13 live features", "Monthly active users 15 → 175", "104-case evaluation in three languages", "Three training cohorts, 150+ people"],
+        facts: ["350+ registered users, 13 live features", "Monthly active users 15 → 175", "104-case evaluation in three languages", "Three training cohorts, 150+ people"],
         links: []
       },
       {
@@ -96,16 +96,16 @@ export const PORTFOLIO_CONTENT = {
   },
   projects: {
     title: "Projects",
-    subtitle: "Two live products at work, and four things I built on my own.",
+    subtitle: "Enterprise AI products, independent builds, and experiments.",
     entries: [
       {
         id: "rae",
         title: "Rae",
         tag: "Enterprise AI · Live product",
-        summary: "An AI sales platform whose default chat was answering badly. I measured why, then helped fix it.",
+        summary: "Enterprise AI for sales teams. I lead product and work hands-on to improve answer quality and adoption.",
         body: [
           "Rae helps CelcomDigi’s enterprise account managers, pre-sales and business development staff answer product questions, research accounts and competitors, and draft proposals.",
-          "Twimbit’s launch write-up credits Rae with a supporting role in RM66.6 million of contract wins. I can’t claim a share of that number, but it is the scale the product works at."
+          "I lead product and contribute directly to response quality, evaluations, launch planning, and adoption."
         ],
         facts: ["350+ registered users", "Monthly active users 15 → 175", "104 test cases in English, Malay and Chinese"],
         links: [{ label: "Rae’s public product story", url: "https://explorae.salesrechargekit.ai/#overview" }, { label: "Twimbit’s Rae 2.0 write-up", url: "https://twimbit.com/blogs/rae-2-0-powering-the-next-chapter-of-enterprise-sales-excellence-with-celcomdigi" }]
@@ -124,7 +124,7 @@ export const PORTFOLIO_CONTENT = {
         id: "wattmana",
         title: "WattMana",
         tag: "Energy · Hackathon build",
-        summary: "An electricity bill that explains itself: what changed, and what probably caused it.",
+        summary: "A clearer view of your electricity bill, with billed usage, device estimates, and unexplained usage shown separately.",
         body: [
           "Built for the Codex Community Hackathon in Kuala Lumpur in July 2026. Malaysian households can see a total and a kWh figure on their bill, but not what changed or which appliance or habit explains it.",
           "I shaped the product and built working web and mobile prototypes on my own."
@@ -164,97 +164,96 @@ export const PORTFOLIO_CONTENT = {
     entries: [{
       id: "portfolio-resume", title: "The work on two pages.", tag: "Résumé · Forward deployed AI",
       format: "PDF", issued: "October 2026",
-      summary: "Two versions, for the two roles I do.",
+      summary: "Two versions, tailored to product and engineering opportunities.",
       body: ["One is written for forward deployed product manager roles and one for forward deployed engineer roles. The history is the same; the emphasis differs."],
       facts: ["Forward deployed AI", "PDF · October 2026"],
-      links: [{label:"Download résumé · Product manager",url:"./assets/portfolio/resume-forward-deployed-pm.pdf",download:true},{label:"Download résumé · Engineer",url:"./assets/portfolio/resume-forward-deployed-engineer.pdf",download:true}],
+      links: [{label:"Download product résumé",url:"./assets/portfolio/resume-forward-deployed-pm.pdf",download:true},{label:"Download engineering résumé",url:"./assets/portfolio/resume-forward-deployed-engineer.pdf",download:true}],
       alternatives: []
     }]
   }
 
 };
 
-// The story of each project: the problem, what was decided and done, what came of it (with the figure, or a plain
-// statement that there is none), one takeaway, and where the evidence comes from. A value may be a list of paragraphs.
+// Shared project sections for the reading page and ocean archive.
+export const PROJECT_SECTIONS = [
+  ['what', 'What it is', 'file'],
+  ['why', 'Why I built it', 'search'],
+  ['role', 'My role', 'users'],
+  ['involvement', 'My involvement', 'build'],
+  ['work', 'Examples of my work', 'build'],
+  ['outcome', 'Outcomes', 'check'],
+  ['future', 'What’s next', 'compass'],
+];
 const PROJECT_STORIES = {
-  rae: {
-    role: "Product manager, with hands-on work on prompts, routing and retrieval",
-    problem: [
-      "Account managers told me Rae’s answers could be wrong or unusable. The conversation logs showed why: most people stayed in the default chat mode, and that mode could answer without checking internal documents or the web.",
-      "The same analysis turned up documents the system could not reach, and sources that were inconsistent or invented."
+  "rae": {
+    "what": "Rae helps CelcomDigi’s enterprise sales teams answer product questions, research accounts and competitors, and draft proposals.",
+    "role": "I lead product across discovery, roadmap, analytics, requirements, launches, and adoption. I also work directly on prompts, routing, retrieval, and evaluations, with engineering review and validation.",
+    "work": [
+      "Used account-manager discovery and 30 months of usage data to prioritise product improvements.",
+      "Built a 104-case evaluation in English, Malay, and Chinese from real conversation patterns. Used it to diagnose response failures and retest changes.",
+      "Improved system prompts, retrieval rules, document access, and automatic routing with Claude Code and Codex. The aim was to get users to the right sources without asking them to choose an AI mode.",
+      "Planned launches, training, and follow-up to help features become part of everyday work."
     ],
-    decision: [
-      "I exported the logged queries from Metabase and grouped them with AI-assisted text analysis. From those I built a 104-case test set in English, Malay and Chinese, scored by a model and reviewed by a person.",
-      "I rewrote the system prompts for tone, structure, uncertainty and use of sources, and worked on retrieval rules and document access with Claude Code and Codex. We replaced manual mode selection with a router that chooses between internal knowledge, web search and general generation. The team also upgraded the web search API and standardised citations. An engineer reviewed my code and we tested it in staging before release."
-    ],
-    outcome: [
-      "Retests improved and early feedback from users was positive. I don’t have a before-and-after score to show for it.",
-      "Over the wider recovery, monthly active users went from 15 to 175."
-    ],
-    learning: "People use the default. If the default is weak, the product is weak, whatever the other modes can do.",
-    evidence: "Screens are from Rae’s public product story. Usage figures are Twimbit and CelcomDigi product metrics."
+    "outcome": [
+      "Helped recover monthly active users from 15 to 175 within a population of 350+ registered users. This reflects the wider product and adoption effort, not a measured effect of routing alone.",
+      "Retests and early user feedback indicated better responses. A comparable before-and-after quality score is not available."
+    ]
   },
-  reengage: {
-    role: "Delivery owner: requirements, conversation design, testing and iteration",
-    problem: "CelcomDigi’s registration-of-interest form collected complaints, general enquiries and small-business sales leads in one place. The sales team had no reliable way to tell which submissions were worth a call.",
-    decision: [
-      "I worked with the sales, customer experience, product, brand and marketing teams to agree what counts as an actionable lead, then scoped a pilot around business mobile plans.",
-      "The assistant asks a few qualifying questions, recommends a plan and passes the lead to Salesforce. After launch on 18 August 2026 I read the conversations and the funnel. We shortened qualification, added a “Recommend for me” option, removed a step between choosing a plan and the form, and on 7 September cut the form from seven fields to three."
+  "reengage": {
+    "what": "A conversational assistant on CelcomDigi’s business website that helps visitors explore mobile plans and captures qualified leads for sales follow-up.",
+    "role": "I owned delivery across requirements, success measures, stakeholder alignment, conversation design, acceptance testing, and iteration, and contributed to the build. My Head of Product set the initial concept and overall scope.",
+    "work": [
+      "Worked with sales, customer experience, product, brand, and marketing teams to define an actionable lead and scope the mobile-plan pilot.",
+      "Designed qualification, plan recommendations, consent, and structured lead capture. The demo build uses FastAPI, streamed responses, plan cards, and background lead scoring.",
+      "Reviewed conversations and the funnel after launch. We shortened qualification, added “Recommend for me”, removed a step before the form, and reduced the form from seven fields to three.",
+      "Checked lead handoff: all 31 verified leads in the 10 September check had reached Salesforce."
     ],
-    outcome: [
-      "Form completion rose from 25% to 46% when the form was shortened. The share of engaged visitors who became leads rose from 7.0% on the first journey to 18.1% on the latest.",
-      "By 30 October the pilot had 16,854 sessions, 1,865 engaged conversations and 219 leads, with an average satisfaction score of 4.4 out of 5. A check on 10 September found that all 31 verified leads had reached Salesforce.",
-      "What we got wrong: the first journey assumed visitors were new businesses shopping for a plan. Many were existing customers with billing and service questions, which it did not serve. We are widening who it can help."
-    ],
-    learning: "A good recommendation is not the end of the job. Count the steps between the recommendation and the form, and remove the ones you can.",
-    evidence: "Figures are from the pilot’s week 11 status report and the journey analysis. They are Twimbit and CelcomDigi pilot metrics. Purchases after a lead are not measured here."
+    "outcome": [
+      "The pilot recorded 16,854 sessions, 1,865 engaged conversations, and 219 leads from 18 August to 30 October 2026.",
+      "Lead rate among engaged visitors rose from 7.0% on the first journey to 18.1% on the latest. Form completion rose from 25% to 46% after the form was shortened. Average satisfaction was 4.4 out of 5.",
+      "These are pilot and journey-analysis figures, not completed purchases. Conversations also exposed a gap: existing customers often needed billing or service help that the first journey did not support."
+    ]
   },
-  wattmana: {
-    role: "Solo: product, design and prototypes",
-    problem: "My bill changed every month and I could not say why. The charges and adjustments are printed, but not explained.",
-    decision: [
-      "The app reads the bill by extracting its printed text, and falls back to OCR through a model when that fails. You confirm the extracted fields before anything is saved.",
-      "It then tells the bill as a short story, in ringgit and kWh together. Appliance costs are modelled, so they are shown apart from billed figures, each with a confidence range, and usage the model cannot explain is shown as unexplained."
-    ],
-    outcome: [
-      "Working web and mobile prototypes, with a hosted demo that runs on a sample home. There are no users, no measured savings and no accuracy figure for the bill reading yet.",
-      "One thing I changed: the first version animated counting numbers and rotating cards. It was harder to read, so I replaced it with fixed figures and a simple slide between steps."
-    ],
-    learning: "If a number is an estimate, say so next to the number.",
-    evidence: "Screens are from the hosted demo and the browser prototype, both showing sample data. The research drew on tariff documents and published household studies, not interviews."
+  "wattmana": {
+    "what": "A web and mobile prototype that turns a Malaysian electricity bill into a short, readable explanation of charges and usage.",
+    "why": "My bill changed each month, but the total did not tell me why. I wanted to understand what changed and how much my appliances and habits might explain.",
+    "future": "I want to speak with potential users, understand their main problems, and improve WattMana’s features, UX, and performance. Then I hope to run a pilot and test whether it meets a real household need, working toward product-market fit.",
+    "involvement": [
+      "I shaped the product, designed the experience, and built the web and Expo mobile prototypes independently, starting with the July 2026 Codex Community Hackathon in Kuala Lumpur.",
+      "The bill reader extracts printed text first and falls back to OCR. Users review extracted fields before saving. Device estimates stay separate from billed figures, and any unexplained usage remains visible.",
+      "I replaced animated counters and rotating cards with stable figures and simple transitions so the bill story is easier to read. The hosted demo uses sample household data; savings and extraction accuracy have not been measured."
+    ]
   },
-  sage: {
-    role: "Solo: scope, design and build",
-    problem: "Health history lives in memory, on paper and in appointment notes. When you need it, for a doctor or for a question, it is not in one place.",
-    decision: [
-      "I made speaking the main way in, because typing a daily health log is the step people skip. You talk, Sage proposes what to record, and nothing is saved until you confirm it.",
-      "The chat answers only from the information you have given it."
-    ],
-    outcome: "A working demo with voice logging, check-ins, reminders, documents, visit capture and a timeline. It reached the Vibeathon final. It has no users beyond the demo, and it organises information; it does not give medical advice.",
-    learning: "The value is in the history, so the product depends on how little effort it takes to add to it.",
-    evidence: "The screenshot is the public demo with no personal health records in it."
+  "sage": {
+    "what": "A voice-first health-history prototype for logging daily updates, keeping documents, and preparing for appointments.",
+    "why": "Friends were managing chronic conditions or recovering from surgery. I was also asking general chatbots health questions without the history they needed. I wanted a simpler way to keep that context together.",
+    "future": "I want to speak with potential users, understand which health-history problems matter most, and improve Sage’s features, UX, and performance. Then I hope to run a pilot, learn from real use, and work toward product-market fit.",
+    "involvement": [
+      "I scoped, designed, and built Sage solo for the Patient Journey Automation track at the Lovable Vibeathon, representing Twimbit. It reached the final.",
+      "I designed voice logging, check-ins, reminders, document handling, visit capture, and a health timeline. Users review proposed records before saving.",
+      "The demo organises personal health information. It has not been validated for clinical use and does not provide medical advice."
+    ]
   },
-  openclaw: {
-    role: "Solo: setup, operation and write-up",
-    problem: "Always-on agents promise memory and good timing. I wanted to know what that costs to run, and when it is worth it.",
-    decision: "I ran one on my own machine with a knowledge base, recurring jobs and Git synchronisation, and kept notes on every failure.",
-    outcome: [
-      "It worked, expensively. One short status request carried about 20,000 additional input tokens of context. Running it on my laptop caused slowdowns and provider timeouts until I moved it to a desktop. I reinstalled or reconfigured it at least seven times, and spent about RM200 on API calls.",
-      "The knowledge base did its job, but every lookup paid the overhead of the always-on agent around it. I published the write-up and a visual breakdown."
+  "openclaw": {
+    "what": "A three-week experiment running an always-on personal agent with a knowledge base, scheduled jobs, and Git sync.",
+    "role": "I set up and operated the environment, wrote its workspace and routing rules, and documented the results.",
+    "work": [
+      "Connected Telegram and the Gemini API, specified a vector knowledge base, and had the agent build it.",
+      "Tested recurring jobs, memory, redaction rules, and Git sync, keeping notes on failures and costs."
     ],
-    learning: "Ask where continuity gives an advantage. If a scheduled script would do the job, use the script.",
-    evidence: "The diagram is my own summary of the workflow. Figures are from my published write-up."
+    "outcome": [
+      "The knowledge base worked, but one short status request carried about 20,000 extra input tokens. I reinstalled or reconfigured the environment at least seven times and spent about RM200 on API calls.",
+      "I published a write-up and visual breakdown covering the tradeoffs of persistence, cost, and reliability."
+    ]
   },
-  'ocean-world': {
-    role: "Direction, design decisions and review of AI-written code",
-    problem: "I wanted people to explore my work, not only read it, without making the work harder to reach.",
-    decision: [
-      "There are two ways in: a reading page for someone with a minute, and the ocean for someone with ten.",
-      "Early on, features kept missing the behaviour and the look I had asked for. I added written instructions to the repository, had one agent maintain the design system and another run a review pipeline, and wired the tests into continuous integration."
+  "ocean-world": {
+    "what": "This portfolio: a Three.js reef to explore, alongside a reading page for quick access to the work.",
+    "role": "I directed the product, design, and iteration with Claude Code and Codex, reviewing AI-written code and the resulting experience.",
+    "work": [
+      "Shaped diver controls, a guided route, a map, and a conventional reading path.",
+      "Added repository instructions, a design system, agent review, and continuous integration to make implementation more consistent."
     ],
-    outcome: "One test run cut first-load transfer from 42.79 MB to 27.91 MB, and repeat-visit transfer from 17.61 MB to 0.11 MB. Those are single measurements, not production figures. I have no visitor numbers yet.",
-    learning: "Agents build what you can check. The written instructions and the tests did more than any single prompt.",
-    evidence: "Everything described here can be tried in the ocean itself."
+    "outcome": "One test run reduced first-load transfer from 42.79 MB to 27.91 MB and repeat-visit transfer from 17.61 MB to 0.11 MB. These are single measurements, not production performance guarantees."
   }
 };
 PORTFOLIO_CONTENT.projects.entries.push({
@@ -269,12 +268,12 @@ const projectOrder = ['rae', 'reengage', 'sage', 'wattmana', 'ocean-world', 'ope
 PORTFOLIO_CONTENT.projects.entries.sort((a, b) => projectOrder.indexOf(a.id) - projectOrder.indexOf(b.id));
 for (const entry of PORTFOLIO_CONTENT.projects.entries) {
   entry.caseStudy = PROJECT_STORIES[entry.id];
-  entry.role = entry.caseStudy.role;
+  entry.role = entry.caseStudy.role ?? 'Solo: product, design and build';
 }
 Object.assign(PORTFOLIO_CONTENT.projects.entries.find(entry => entry.id === 'wattmana'), {
   gallery: ['wattmana-home', 'wattmana-story', 'wattmana-bills', 'wattmana-my-use'],
   galleryTitle: 'From the total to what explains it.',
-  galleryIntro: 'Screens from the hosted demo, which runs on a sample home.'
+  galleryIntro: 'Current mobile UI from the hosted demo, using sample household data.'
 });
 PORTFOLIO_CONTENT.projects.entries.find(entry => entry.id === 'reengage').gallery = ['reengage-welcome', 'reengage-languages', 'reengage-plan', 'reengage-plan-details'];
 Object.assign(PORTFOLIO_CONTENT.projects.entries.find(entry => entry.id === 'rae'), {
@@ -315,7 +314,7 @@ export const PORTFOLIO_MEDIA = {
   'wattmana-story': { src: './assets/portfolio/wattmana-story.png', alt: 'First step of the bill story showing the amount due, 63% modelled and a 37% gap', caption: 'The bill as a short story', description: 'Each step adds one fact, in ringgit or kWh.', kind: 'product', width: 780, height: 1688 },
   'wattmana-bills': { src: './assets/portfolio/wattmana-bills.png', alt: 'Bills screen with the latest bill and a six-month chart of amounts due', caption: 'Six months of bills', description: 'Add a bill by scanning it; past bills show the trend.', kind: 'product', width: 780, height: 1688 },
   'wattmana-my-use': { src: './assets/portfolio/wattmana-my-use.png', alt: 'My Use screen splitting 929 kWh measured into 582 kWh covered by estimates and a 347 kWh gap', caption: 'Measured, covered and the gap', description: 'Device estimates never replace the metered total; the gap is shown.', kind: 'product', width: 780, height: 1688 },
-  wattmana: { src: './assets/portfolio/wattmana.png', alt: 'WattMana electricity bill explanation interface', caption: 'WattMana · Working browser prototype', kind: 'product', width: 1440, height: 1000 },
+  wattmana: { src: './assets/portfolio/wattmana-home.png', alt: 'Current WattMana mobile home with the bill total, metered usage, device estimates and unexplained usage', caption: 'WattMana · Current mobile demo · Sample data', kind: 'product', width: 780, height: 1688 },
   'portfolio-resume': { src: './assets/portfolio/resume-fdpm-preview.png', alt: 'Preview of the forward deployed product manager résumé', caption: 'Forward deployed AI · October 2026', kind: 'document', width: 850, height: 1100 },
 };
 
