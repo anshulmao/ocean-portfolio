@@ -2,12 +2,21 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {gunzipSync} from 'node:zlib';
 import {launchBrowser} from './browser.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const browser=await launchBrowser({headless:true});
 const page=await browser.newPage({acceptDownloads:true,viewport:{width:1280,height:900},userAgent:'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36'});
-const errors=[],submissions=[],analytics=[];let failFeedback=true;
+const errors=[],submissions=[],analytics=[],eventNames=[];let failFeedback=true;
+// The SDK file is held back until released, so the test can act before analytics has loaded.
+let releaseSDK=null;const sdkGate=new Promise(resolve=>{releaseSDK=resolve;});
+function namesIn(buffer){
+  if(!buffer)return [];
+  for(const read of [()=>gunzipSync(buffer).toString(),()=>buffer.toString(),()=>Buffer.from(decodeURIComponent(buffer.toString().replace(/^data=/,'')),'base64').toString()])
+    try{const parsed=JSON.parse(read());return [parsed].flat().flatMap(item=>item?.batch||item).map(item=>item?.event).filter(Boolean);}catch{}
+  return [];
+}
 // No test request may reach a live backend or analytics collector.
 await page.route('**/*',route=>route.abort('blockedbyclient'));
 page.on('pageerror',error=>errors.push(error.message));
@@ -19,7 +28,7 @@ await page.route('https://intake.invalid/functions/**',async route=>{
   return route.fulfill({status:kind==='feedback'&&failFeedback?503:201,headers:cors,contentType:'application/json',body:JSON.stringify(kind==='feedback'&&failFeedback?{error:'Please try again.'}:{saved:true,id:crypto.randomUUID()})});
 });
 await page.route('https://analytics.invalid/**',async route=>{
-  analytics.push(route.request().url());return route.fulfill({status:200,headers:cors,contentType:'application/json',body:'{}'});
+  analytics.push(route.request().url());eventNames.push(...namesIn(route.request().postDataBuffer()));return route.fulfill({status:200,headers:cors,contentType:'application/json',body:'{}'});
 });
 await page.route('http://127.0.0.1:4190/**',async route=>{
   const pathname=new URL(route.request().url()).pathname;
@@ -32,6 +41,7 @@ await page.route('http://127.0.0.1:4190/**',async route=>{
   const file=path.resolve(root,'ocean-refined','.'+pathname);
   if(!file.startsWith(path.join(root,'ocean-refined')+path.sep))return route.abort();
   try{
+    if(pathname==='/vendor/posthog.js')await sdkGate;
     let body=await fs.readFile(file);
     // The SDK normally excludes webdriver/bot traffic. Enable it only in this synthetic test.
     if(pathname==='/analytics.js')body=body.toString().replace('autocapture:false','opt_out_useragent_filter:true, autocapture:false');
@@ -41,6 +51,9 @@ await page.route('http://127.0.0.1:4190/**',async route=>{
 try{
   await page.goto('http://127.0.0.1:4190/test-fixture');
   await page.waitForFunction(()=>window.oceanExpedition && window.oceanDiveSummary && window.oceanDiveLog?.current);
+  // A dive begun and ended before the SDK has arrived is kept and sent after the page view, not dropped.
+  await page.evaluate(()=>{document.body.dataset.submerged='true'});await page.evaluate(()=>{document.body.dataset.submerged='false'});
+  releaseSDK();
   // Analytics are on by default (no stored choice): the SDK loads once the page is idle.
   await page.waitForFunction(()=>document.querySelector('[data-analytics-toggle]')?.textContent.startsWith('Analytics on'));
   await page.waitForTimeout(1200);
@@ -100,6 +113,9 @@ try{
   if(!analytics.some(url=>url.includes('/e/')))await page.waitForRequest(request=>request.url().includes('analytics.invalid')&&request.url().includes('/e/'),{timeout:10000});
   await page.waitForTimeout(100);
   assert.ok(analytics.some(url=>url.includes('/e/')),'Real PostHog SDK should send events by default');
+  await page.waitForTimeout(3500);   // the SDK sends in batches every few seconds
+  const view=eventNames.indexOf('$pageview'),began=eventNames.indexOf('dive_started'),ended=eventNames.indexOf('dive_completed');
+  assert.ok(view>=0&&began>view&&ended>began,`Events before the SDK loaded should follow the page view, in order: ${eventNames.join(', ')}`);
   await page.locator('[data-analytics-toggle]').click();await page.waitForFunction(()=>window.localStorage.getItem('ocean-analytics-consent-v1')==='no');await page.waitForTimeout(500);const before=analytics.length;
   await page.evaluate(()=>{document.body.dataset.submerged='true'});await page.waitForTimeout(500);assert.equal(analytics.length,before,'Turning analytics off must stop capture');
   assert.deepEqual(errors,[]);

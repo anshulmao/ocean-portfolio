@@ -50,8 +50,8 @@ The project's public browser token and US ingestion host are configured in
 plugin supplied these settings in the follow-up session without sharing source
 code with PostHog AI. No event had been ingested before this integration.
 
-Analytics is off until enabled in ocean Settings, the reading-page footer or the
-privacy page. Turning it off stops capture; Do Not Track and Global Privacy Control
+Analytics is on by default and can be turned off in ocean Settings, the reading-page
+footer or the privacy page. Turning it off stops capture; Do Not Track and Global Privacy Control
 take precedence. Session replay, automatic click/form capture, surveys, error
 capture and external SDK dependencies are disabled. Only named events and a small
 property allowlist are emitted. URL query strings/fragments and initial attribution
@@ -59,7 +59,11 @@ fields are removed. No feedback text, contact information or photo content is se
 
 Events: pageview/pageleave, project/section opened, project link clicked, résumé
 clicked, contact clicked, dive started/completed, feedback started/saved, reef photo
-downloaded/shared, artifact collected. Page visits cover both ocean and static
+downloaded/shared, artifact collected. Once per visit the ocean also reports how it ran
+(`ocean-refined/health-report.js`): `world_ready` or `world_failed`, `world_health` when the
+page is left (frame times, slow-frame share, whether the visitor dived) and up to three
+`script_error` events naming the script and line, never the message. Device values are
+coarse: graphics family, quality tier and a width class. Page visits cover both ocean and static
 reading/project pages. Unique visitors are estimates for consented browsers;
 blocked scripts and the SDK's default bot filter reduce coverage.
 
