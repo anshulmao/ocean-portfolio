@@ -276,7 +276,7 @@ function paintPhotos() {
   $('.ds-share', dialog).hidden = true; $('.ds-share-open', dialog).setAttribute('aria-expanded', 'false'); $('.ds-status', dialog).textContent = '';
   if (!photos.length) {
     track.removeAttribute('tabindex');
-    track.innerHTML = '<p class="ds-empty"><span>No photos taken on this dive.<br>On your next dive, press <kbd>H</kbd> underwater in first-person view, or tap the camera button on a touch screen.</span></p>';
+    track.innerHTML = '<p class="ds-empty"><span>No photos taken on this dive.<br>On your next dive, press <kbd>C</kbd> underwater in first-person view, or tap the camera button on a touch screen.</span></p>';
     $('.ds-count', dialog).textContent = ''; $('.ds-dots', dialog).innerHTML = '';
     return;
   }

@@ -8,8 +8,12 @@ let enabled = true, client = null, loading = null;
 try { enabled = localStorage.getItem(CONSENT_KEY) !== 'no'; } catch {}
 if (navigator.globalPrivacyControl === true || navigator.doNotTrack === '1') enabled = false;
 const configured = /^phc_/.test(services.posthogToken) && /^https:\/\//.test(services.posthogHost);
+// The SDK arrives a few seconds after the page (see the end of this file). What a visitor does before then, a résumé
+// opened straight away, a dive begun at once, is kept and sent after the page view instead of being lost.
+const early = [];
 export function track(event, properties = {}) {
-  if (!enabled || !client) return;
+  if (!enabled) return;
+  if (!client) { if (configured && early.length < 20) early.push([event,properties]); return; }
   const clean = eventProperties(event,properties);
   if (clean) try { client.capture(event,clean); } catch { /* Analytics never interrupts the portfolio. */ }
 }
@@ -31,7 +35,7 @@ async function start() {
       advanced_disable_flags:true, capture_performance:false, capture_exceptions:false, enable_heatmaps:false,
       person_profiles:'never', persistence:'localStorage', cross_subdomain_cookie:false, ip:false,
       before_send:event=>enabled?sanitizeEvent(event):null,
-      loaded:sdk=> { client=sdk; if (enabled) { sdk.opt_in_capturing({captureEventName:false}); pageview(); } else sdk.opt_out_capturing(); },
+      loaded:sdk=> { client=sdk; if (enabled) { sdk.opt_in_capturing({captureEventName:false}); pageview(); for (const [event,properties] of early.splice(0)) track(event,properties); } else { early.length=0; sdk.opt_out_capturing(); } },
     });
   })().catch(()=>{}).finally(()=>{loading=null;});
   return loading;
@@ -49,7 +53,7 @@ document.addEventListener('click',event=> {
   if (toggle) {
     if (toggle.disabled) return;
     enabled=!enabled;try { localStorage.setItem(CONSENT_KEY,enabled?'yes':'no'); } catch {}
-    if (enabled) void start(); else client?.opt_out_capturing();
+    if (enabled) void start(); else { early.length=0; client?.opt_out_capturing(); }
     paint();return;
   }
   const anchor=event.target.closest?.('a[href]');if (!anchor) return;

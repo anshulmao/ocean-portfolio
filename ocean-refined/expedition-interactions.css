@@ -94,3 +94,11 @@ html[data-input="touch"] .artifact-prompt{left:auto;right:max(12px,var(--o-safe-
   .expedition-notice{top:var(--o-under-bar);right:auto;bottom:auto;left:calc(var(--o-pad) + var(--o-safe-l));z-index:var(--o-z-announce);max-width:calc(100vw - 2*var(--o-pad) - var(--map-size) - var(--o-gap))}
 }
 @media(pointer:coarse) and (max-height:499px){html[data-input="touch"] .artifact-prompt{max-width:calc(20vw - var(--o-pad))}}
+
+/* A captured frame settles at the edge without interrupting the dive. */
+.photo-preview{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:max(95px,env(safe-area-inset-bottom));width:min(200px,30vw);z-index:105;pointer-events:none;color:#eaf9fc;font:500 12px/1.3 system-ui,sans-serif;text-align:center}
+.photo-preview[hidden]{display:none}
+.photo-preview img{display:block;width:100%;height:auto;object-fit:cover;border:2px solid #e8f8f4;border-radius:6px;box-sizing:border-box;box-shadow:0 12px 32px #00182088;transform-origin:center}
+.photo-preview span{display:inline-block;margin-top:7px;padding:5px 9px;border-radius:6px;background:#0b2b36e8;animation:photo-caption-in .2s .45s both}
+@keyframes photo-caption-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion:reduce){.photo-preview span{animation:none}}
