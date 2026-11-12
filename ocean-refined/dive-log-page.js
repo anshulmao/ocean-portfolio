@@ -40,7 +40,7 @@ function fill(root, number) {
     <section class="dl-block" data-rise><h4 class="holo-label">Animals seen</h4>${seen.length ? `<ul class="dl-species">${seen.slice(0, SHOW_SPECIES).map(item =>
       `<li><img src="${portraitURL(item.id)}" alt="" loading="lazy" decoding="async"><b>${esc(item.name)}</b><span>${record.seen[item.id].depth.toFixed(0)} m · ${esc(record.seen[item.id].place)}</span></li>`).join('')}</ul>${seen.length > SHOW_SPECIES ? `<p class="dl-note">And ${seen.length - SHOW_SPECIES} more in the full log.</p>` : ''}` : '<p class="dl-note">None counted on this dive. Animals count once they have been in view for a moment.</p>'}</section>
     ${photos.length ? `<section class="dl-block" data-rise><h4 class="holo-label">Photos</h4><ul class="dl-photos">${photos.slice(0, SHOW_PHOTOS).map(photo =>
-      `<li><img src="${photo.url}" alt="Your photo at ${esc(photo.place)}, ${photo.depth.toFixed(0)} metres down" loading="lazy" decoding="async"></li>`).join('')}</ul>${photos.length > SHOW_PHOTOS ? `<p class="dl-note">And ${photos.length - SHOW_PHOTOS} more in the full log.</p>` : ''}</section>` : ''}
+      `<li><img src="${photo.url}" alt="Your photo: ${esc(photo.title)}, ${photo.depth.toFixed(0)} metres down" loading="lazy" decoding="async"></li>`).join('')}</ul>${photos.length > SHOW_PHOTOS ? `<p class="dl-note">And ${photos.length - SHOW_PHOTOS} more in the full log.</p>` : ''}</section>` : ''}
     <p class="dl-actions" data-rise><button type="button" class="holo-chip holo-chip--go" data-open-log="${record.number}">Open the full dive log <span aria-hidden="true">→</span></button></p>`;
 }
 

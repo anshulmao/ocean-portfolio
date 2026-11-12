@@ -117,7 +117,8 @@ try {
           profile:[[0,0],[40,9],[90,18.4],[134,0]],track:[[0,8],[-8,-6],[-12,-14],[4,-20]],
           sites:{about:{t:44,depth:9}},features:{},seen:{anthias:{t:50,depth:9,place:'The Anchor',fresh:true}},photos:[],safetyStop:false,found:2
         }})));
-        await page.locator('.ds-open').click();
+        // The dive log in small (surface-ending.js) stands in for the hero's button and opens the full log.
+        await page.locator('.surface-ending [data-ending="log"]').click();
         await page.locator('#dive-summary[open]').waitFor();
         await fit(page, '#dive-summary'); await shot(page, `dive-log-${viewport.width}`);
         await page.keyboard.press('Escape');

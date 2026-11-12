@@ -21,10 +21,48 @@ The guided dive is the main way a first-time visitor meets the portfolio. It sho
 | R2 | When the visitor lets go of the look (1.4 s with no look input), the camera sweeps back, eased in and out, to where the guide is looking: the subject at a stop, a fly-by's subject or the way ahead while swimming. Their own look always wins straight away. |
 | R3 | Movement keys or the touch pad take over the dive. The tour holds and offers **Rejoin (G)**. Nothing is lost. The welcome is the exception: it is free swimming (round 7). |
 | R4 | The tour waits only at the welcome, the three portfolio sites and the ending, and **N** continues from each. Everything else is a **fly-by**: the swim slows and the camera glances, but nothing stops. |
-| R5 | Copy at a stop is small. "This is where you'll find X." No essays and no headline claims. |
+| R5 | Copy at a stop is small. "This is where you'll find X." No essays and no headline claims. One exception, on purpose (round 18): the wreck's card shows the projects themselves, one at a time (picture, name, one line), so a visitor who never opens a page still sees the work. |
 | R6 | Reduced motion: legs become fades between stops, there's no auto-pan, and look indicators stay. |
 | R7 | Touch, phone and keyboard all get equal treatment, and every key hint has a tap equivalent. |
 | R8 | The visitor can always exit, surface or keep exploring. The safety stop is offered, never forced. |
+
+## Start to finish (round 18)
+
+- **The welcome is quiet.** Only the water, the depth card and the guide's card. The compass, the chart and the page
+  buttons come in with the first swim (`dive-focus.css`). While the guide leads, the line of keys at the bottom is not
+  shown: the tour teaches each key where it is first of use.
+- **The wreck is the peak.** Its card is the larger one, and turns through the first four projects that have a
+  picture (`site-cards.js` WORK), six seconds each. The four chips sit on one line; a chip picks one, and Tab (Shift+Tab)
+  turns to the next while the view has the keyboard. Open it (F, or the sheet's Read it) opens the project shown, whose
+  page leads on to the rest. Reduced motion: no turning.
+- **The ending is a page of the diver's card.** When a dive ends, the card over the surface diver (`diver-profile.js`)
+  gains a Last dive page (`surface-ending.js`): time, depth, sites and species, the depth profile, what is still down
+  there, the animals met, Open dive log and Dive again. After any dive worth the name (40 s, or a site reached) the
+  card opens on that page by itself; its tabs turn to About me and back. It is one card in one place, so the dive's
+  card and the profile can never be up side by side. Closed, the hero's Dive log button is there as before.
+- **The card finds the diver, and has the light or dark switch.** After a dive the card waits until the diver is on
+  screen, then keeps to the diver's head until the view has settled, and stays put from then. A small sliding switch on
+  the card turns the interface light or dark with a press anywhere on it. The palette follows the sky (`tokens.css`), so
+  the switch asks for the day or the night sky.
+- **One row of tools.** Under water on a desktop: Dive computer (Q), Photo (C) and Clear screen (U), in a row at the
+  bottom left under the depth card (`dive-focus.js`). The Portfolio button is retired under water.
+- **One thing names a site.** Far off, the Ahead card; in reach, the site's own card, whose Open it is the only one on
+  screen (the tour's sheet does not repeat it). The prompt (Open About, F) stands in when the card is not up.
+- **The way back to what the guide is showing.** The view is the visitor's (R1). When they hold it away from a fly-by's
+  subject, or from the site the tour waits at, an arrow at the edge of the screen points back to it, with its name, until
+  it is in view again (`big-life.js`, `guided-dive.js` subject). Back in view, the arrow stands over the subject and bobs
+  down at it (up at it, where there is no room above) for one second, then goes. It does not show while the guide's own
+  turn is coming round, and a new subject starts afresh.
+- **A site's card holds on the tour.** It reaches 10 m from the site (it was 8), and while the tour waits at a site or is
+  coming in to it the card stays up at any distance, so the swim round the wreck never loses it.
+- **Escape gives the mouse back to the view.** Closing a portfolio page on a dive takes the mouse straight back to aiming
+  (`landmark-interactions.js` aimAgain). Where a browser refuses that without a click, the Click to swim prompt shows.
+- **A photo is named for its animal.** The animal nearest the middle of the frame, if one is near enough to be made
+  out, titles the photo and tags it (`dive-log.js` subjectInView); otherwise the place does, as before.
+- **The nurse shark stays put.** It lies by the nursery until a diver comes within 3.5 m, lifts off the sand, moves about
+  five metres to a second clear spot and settles; crowded there by a diver who has backed off and come again, it turns
+  and goes home (`user-creatures.js` driveNurse).
+- `npm run test:tour` holds all three.
 
 ## The sequence (round 12)
 

@@ -34,9 +34,18 @@ function safeBand() {
   return band = [top, Math.max(top + 40, innerHeight - Math.max(120, innerHeight * .22))];
 }
 
+// Whether `subject` ([x, y, z]) is in view, by the same measure as the marker's: nothing is drawn.
+export function inView(camera, subject) {
+  at.fromArray(subject); local.copy(at).applyMatrix4(camera.matrixWorldInverse); if (local.z > 0) return false;
+  at.project(camera); return Math.abs(at.x) < EDGE_X && Math.abs(at.y) < EDGE_Y;
+}
 // Points at `subject` ([x, y, z]) with `text`, or hides with null. Returns whether the subject is on screen.
-export function pointAt(camera, subject, text = '') {
-  if (!subject || !camera) { if (shown) { shown = false; node.dataset.show = 'false'; } return false; }
+// found: the subject has just come back into view after being looked away from: in view, the marker is an arrow
+// standing just over it and pointing down at it (under it and pointing up, where there is no room above), with a
+// small bob (journey.css), in place of the ring.
+const OVER = 34;
+export function pointAt(camera, subject, text = '', found = false) {
+  if (!subject || !camera) { if (shown) { shown = false; node.dataset.show = 'false'; delete node.dataset.found; } return false; }
   at.fromArray(subject);
   local.copy(at).applyMatrix4(camera.matrixWorldInverse);
   const behind = local.z > 0;
@@ -46,6 +55,18 @@ export function pointAt(camera, subject, text = '') {
   const onScreen = !behind && Math.abs(x) < EDGE_X && Math.abs(y) < EDGE_Y;
   if (!onScreen) { const reach = Math.max(Math.abs(x) / EDGE_X, Math.abs(y) / EDGE_Y, 1e-6); x /= reach; y /= reach; }
   const [high, low] = safeBand();
+  if (found && onScreen) {
+    const sx = (x * .5 + .5) * innerWidth, sy = (-y * .5 + .5) * innerHeight, above = sy - OVER >= high;
+    const fy = above ? sy - OVER : sy + OVER;
+    node.dataset.edge = 'true'; node.dataset.found = above ? 'down' : 'up'; node.dataset.side = sx > innerWidth * .65 ? 'left' : 'right';
+    if (text !== shownLabel) { shownLabel = text; label.textContent = text; labelWidth = label.offsetWidth || 0; }
+    box[0] = sx - 32 - labelWidth; box[1] = fy - 24; box[2] = sx + 32 + labelWidth; box[3] = fy + 24;
+    node.style.transform = `translate(${sx.toFixed(1)}px, ${fy.toFixed(1)}px)`;
+    node.style.setProperty('--turn', above ? '135deg' : '-45deg');
+    if (!shown) { shown = true; node.dataset.show = 'true'; }
+    return true;
+  }
+  if (node.dataset.found) delete node.dataset.found;
   let left = (x * .5 + .5) * innerWidth;
   let top = Math.min(low, Math.max(high, (-y * .5 + .5) * innerHeight));
   node.dataset.edge = String(!onScreen); node.dataset.side = x > .3 ? 'left' : 'right';

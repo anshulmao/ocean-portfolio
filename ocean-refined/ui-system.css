@@ -315,6 +315,20 @@ html body .site-card-text{padding:10px 4px 0}
 html body .site-card-kicker{margin:0;font-size:12.5px;line-height:1.3;color:var(--signal,#9adbd5)}
 html body .site-card-title{margin:2px 0 4px;font:500 19px/1.2 var(--o-display);letter-spacing:-.01em;color:var(--ui-foam)}
 html body .site-card-note{margin:0;font-size:13.5px;line-height:1.45;color:#dcecea}
+/* The wreck's card shows the projects themselves (site-cards.js WORK), so it is the larger card: the picture is a
+   screenshot, read from its top, big enough to make out; the chips under the line pick a project, all on one line,
+   and Tab turns to the next. */
+html body .site-card[data-work="true"]{width:min(400px,calc(100vw - 24px));padding:10px 10px 12px}
+html body .site-card[data-work="true"] .site-card-shot{aspect-ratio:16/9;border-radius:9px}
+html body .site-card[data-work="true"] .site-card-shot img{object-position:50% 0}
+html body .site-card[data-work="true"] .site-card-title{font-size:21px}
+html body .site-card[data-work="true"] .site-card-note{font-size:14.5px}
+html body .site-card-work{display:flex;flex-wrap:nowrap;align-items:center;gap:5px;margin-top:10px}
+html body .site-card-work[hidden]{display:none}
+html body .site-card-work button{flex:0 1 auto;min-width:0;min-height:30px;padding:0 11px;border:1px solid var(--tour-line);border-radius:999px;background:none;color:#dcecea;font:500 13px/1 var(--o-display);white-space:nowrap;cursor:pointer}
+html body .site-card-work button:hover{background:#ffffff1a}
+html body .site-card-work button[aria-pressed="true"]{border-color:color-mix(in srgb,var(--signal,#9adbd5) 70%,transparent);background:color-mix(in srgb,var(--signal,#9adbd5) 18%,transparent);color:var(--ui-foam)}
+html body .site-card-work kbd{margin-left:auto}
 html body .site-card-actions{display:flex;gap:6px;margin-top:10px;padding:0 4px}
 html body .site-card-actions button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:0 12px;border:1px solid var(--tour-line);border-radius:5px;background:#ffffff12;color:var(--ui-foam);font:500 13.5px/1 var(--o-display);cursor:pointer}
 html body .site-card-actions button:hover{background:#ffffff24;border-color:#d6f2f066}
@@ -336,6 +350,8 @@ html body:is([data-clear-ui="true"],[data-safety-stop="true"]) .site-card{visibi
   html body .site-card-kicker{font-size:12px}
   html body .site-card-title{margin:1px 0 2px;font-size:16px}
   html body .site-card-note{font-size:12.5px;line-height:1.35;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+  html body .site-card-work{display:none}
+  html body .site-card[data-work="true"] .site-card-shot{aspect-ratio:4/3}
   html body .site-card-actions{grid-area:actions;margin-top:8px;padding:0}
   html body .site-card-actions button{min-height:40px;flex:1}
   html body .site-card-close{top:2px;right:2px;width:40px;height:40px;background:none}

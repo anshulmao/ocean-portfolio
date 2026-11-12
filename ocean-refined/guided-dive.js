@@ -38,7 +38,7 @@ const PRELUDE_HOLD = .2, PRELUDE_DIVE = 1.6, REVEAL = 3.2;
 const CONTROLS = {
   computer: { key: 'Q', name: 'Dive computer', touch: 'Computer', try: ['Press Q to open your dive computer.', 'Tap the computer button.'],
     tip: ['Press Q to check your depth on your dive computer.', 'Tap Dive computer to check your depth.'] },
-  interact: { key: 'F', name: 'Open a site', touch: 'Read it' },
+  interact: { key: 'F', name: 'Open a site', touch: 'Open it' },
   // Swimming and rising or sinking are noticed by the diver moving under the visitor's own control (notice()).
   swim: { key: 'W A S D', name: 'Swim', touch: 'Stick: swim', try: ['Swim with W A S D. The guide picks up again when you let go.', 'Swim with the stick. The guide picks up again when you let go.'] },
   updown: { key: 'Space · Shift', name: 'Up and down', touch: 'Rise and sink', try: ['Space to rise, Shift to sink.', 'Use the rise and sink buttons.'] },
@@ -101,7 +101,7 @@ card.className = 'tour-card holo holo--reading'; card.setAttribute('aria-label',
 card.innerHTML = '<div class="tour-progress" aria-hidden="true"><i></i></div>'
   + '<button type="button" class="tour-head" data-tour="toggle" aria-expanded="false"><span class="holo-label tour-kicker"></span><span class="holo-value tour-count"></span><i class="tour-chevron" aria-hidden="true"></i></button>'
   + '<h2 class="tour-title"></h2><div class="tour-body"><p class="tour-lines" aria-live="polite"></p><button type="button" class="tour-more" data-tour="more" aria-expanded="false"><span>More</span></button><ul class="tour-keys" aria-label="Controls to try" hidden></ul><p class="tour-teach" hidden></p></div><p class="tour-pace"></p>'
-  + '<footer><button type="button" data-tour="pause">Pause <kbd>P</kbd></button><button type="button" data-tour="read">Read it <kbd>F</kbd></button><button type="button" data-tour="next">Next <kbd>N</kbd></button><button type="button" data-tour="rejoin">Rejoin <kbd>G</kbd></button><button type="button" data-tour="surface">Surface <kbd>N</kbd></button><button type="button" data-tour="explore">Keep exploring</button><button type="button" data-tour="exit">Exit tour</button></footer>';
+  + '<footer><button type="button" data-tour="pause">Pause <kbd>P</kbd></button><button type="button" data-tour="read">Open it <kbd>F</kbd></button><button type="button" data-tour="next">Next <kbd>N</kbd></button><button type="button" data-tour="rejoin">Rejoin <kbd>G</kbd></button><button type="button" data-tour="surface">Surface <kbd>N</kbd></button><button type="button" data-tour="explore">Keep exploring</button><button type="button" data-tour="exit">Exit tour</button></footer>';
 fade.className = 'tour-fade'; fade.setAttribute('aria-hidden', 'true');
 // A fly-by's caption: a title and a line over the water, no card. On a phone it sits under the depth chip, clear of the
 // subject and the controls; the sheet itself stays folded while the tour swims.
@@ -268,14 +268,20 @@ function paint() {
   const primary = status === 'dwell' ? (step.landmark ? 'read' : 'next') : status === 'free' ? 'rejoin' : status === 'done' ? 'surface' : 'next';
   const show = { pause: status === 'travel', read: readable(), next: touring(), rejoin: status === 'free', surface: status === 'done', explore: status === 'done', exit: touring() || status === 'free' };
   const near = status === 'travel' && show.read;
-  for (const button of card.querySelectorAll('footer [data-tour]')) { const action = button.dataset.tour; button.hidden = wide ? !show[action] : !(action === primary || near && action === 'read'); }
+  // One place for a site's actions: while its card is up over it (site-cards.js: Open it, and Continue or Surface),
+  // the sheet does not offer them again. Folded, it is then the progress row alone; with the card closed or out of
+  // view the sheet offers them as before.
+  const carded = Boolean(window.oceanSiteCard?.shown) && window.oceanSiteCard.shown === (step.landmark ?? step.site);
+  if (carded) { show.read = false; if (!wide) show.next = show.surface = false; }
+  for (const button of card.querySelectorAll('footer [data-tour]')) { const action = button.dataset.tour; button.hidden = wide ? !show[action] : !show[action] || !(action === primary || near && action === 'read'); }
   part('[data-tour="pause"]').firstChild.textContent = paused ? 'Resume ' : 'Pause ';
   part('[data-tour="pause"]').setAttribute('aria-pressed', String(paused));
   part('[data-tour="next"]').firstChild.textContent = status === 'travel' ? (wide ? 'Skip travel ' : 'Skip ') : status === 'intro' ? (primerLeft().length ? 'Skip controls ' : 'Start ') : 'Continue ';
-  part('.tour-pace').textContent = status === 'intro' ? (primerLeft().length ? (fingers ? 'Or skip the controls and start the tour.' : 'Or press N to skip the controls and start the tour.') : '')
-    : status === 'dwell' ? `${step.landmark ? (fingers ? 'Tap Read it to open it. ' : 'Press F to open it. ') : ''}Swim around it if you like; continue when you’re ready.`
+  // The welcome's own button says Skip controls (N), so no line under the keys repeats it.
+  part('.tour-pace').textContent = status === 'intro' ? ''
+    : status === 'dwell' ? `${step.landmark ? (fingers ? 'Tap Open it to read it. ' : 'Press F to open it. ') : ''}Swim around it if you like; continue when you’re ready.`
     : status === 'travel' ? (routeIssue ? '' : paused ? 'Travel paused. Resume when you’re ready.' : 'You can skip this swim or take the controls at any time.')
-    : status === 'done' && step.site ? (fingers ? 'Tap Read it to open it.' : 'Press F to read it.') : '';
+    : status === 'done' && step.site ? (fingers ? 'Tap Open it to read it.' : 'Press F to open it.') : '';
   setQuiet(touring() || status === 'starting');
   setBar(status === 'done' ? 1 : (index + (arrived === index ? 1 : 0)) / STEPS.length);
   const flyTip = paintCaption(fingers);
@@ -768,7 +774,7 @@ card.addEventListener('click', event => {
 });
 // The card on a site coming up or going changes what the sheet needs to carry at a stop (cardUp: as last painted).
 let cardUp = false, nearShown = null;
-addEventListener('oceansitecard', () => { if (status === 'dwell') paint(); });
+addEventListener('oceansitecard', () => { if (status === 'dwell' || status === 'travel' || status === 'done') paint(); });
 // A phone turned on its side, or a window narrowed past the phone width, changes the copy the sheet carries.
 compact.addEventListener?.('change', () => { if (status !== 'off') paint(); });
 // Something to read here: a site's landmark at its stop, or the ending's own (the résumé on the descent line).
@@ -787,7 +793,7 @@ function nearing() {
 function read() {
   const prompt = document.querySelector('#interact-prompt'), step = STEPS[index], site = step.landmark ?? step.site;
   if (prompt && !prompt.hidden) prompt.click();
-  else if (window.oceanLandmarks?.openSite) window.oceanLandmarks.openSite(site, step.opens ?? site);
+  else if (window.oceanLandmarks?.openSite) window.oceanLandmarks.openSite(site, step.opens ?? site, window.oceanSiteCard?.entryFor?.(site) ?? null);
   else window.oceanArchive?.open?.(step.opens ?? site);
 }
 // The tour's own animals (user-creatures.js: the nurse shark, the whale shark) are in, and drawn, once the optional sets
@@ -838,4 +844,12 @@ window.oceanTour = { start: startTour, stop, rejoin, next, surface: () => { if (
   get welcome() { return status === 'off' ? null : WELCOME; },
   opens(id) { const step = STEPS[index]; return status !== 'off' && step.landmark === id ? step.opens ?? null : null; },
   // The site that may be read on the way in to it (nearing), for its card (site-cards.js).
-  get nearSite() { return nearing(); } };
+  get nearSite() { return nearing(); },
+  // What the guide is showing now, for the arrow that points back to it when the visitor has looked away (big-life.js):
+  // a fly-by's subject under its caption's name, or the site the tour waits at. Nothing while paused or on hold.
+  get subject() {
+    if (paused || cut) return null;
+    if (status === 'travel' && sight?.title) { const point = subjectOf(sight.look); return point ? { point, label: sight.title } : null; }
+    if (status === 'dwell') return { point: look, label: STEPS[index].place.split(' · ')[1] ?? STEPS[index].title };
+    return null;
+  } };
