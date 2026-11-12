@@ -4,7 +4,7 @@ import { onTick, ui } from './ui-ticker.js';
 import { safetyRatingMarkup } from './safety-rating.js';
 import { createSafetyStopClock, SAFETY_STOP_SECONDS, inSafetyStopRange } from './safety-stop-clock.js';
 import {sendFeedback} from './submissions.js';
-import {addPhoto} from './dive-log.js';
+import {addPhoto, subjectInView} from './dive-log.js';
 import {track} from './analytics.js';
 import {FINDS, createReefFindsInSteps} from './reef-finds.js';
 import {seabedHeightAt} from './reef.js';
@@ -46,6 +46,8 @@ function showPhotoPreview(photo, width, height) {
   const image = photoPreview.querySelector('img');
   image.style.aspectRatio = `${width} / ${height}`;
   image.src = photo.url; photoPreview.hidden = false;
+  // Named for the animal it is of, when there is one in the frame (dive-log.js subjectInView).
+  photoPreview.querySelector('span').textContent = photo.species ? photo.title : 'Saved to your dive log';
   photoPreview.getAnimations().forEach(animation => animation.cancel());
   image.getAnimations().forEach(animation => animation.cancel());
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -186,12 +188,14 @@ function takePhoto() {
     const ratio = Math.min(1, 1280 / canvas.width, 720 / canvas.height), share = document.createElement('canvas');
     share.width = Math.max(1, Math.round(canvas.width * ratio)); share.height = Math.max(1, Math.round(canvas.height * ratio));
     share.getContext('2d').drawImage(canvas, 0, 0, share.width, share.height);
+    // The animal in the frame, read now: by the time the picture is encoded it may have swum on.
+    const subject = subjectInView(controls);
     const sequence = ++captureSequence;
     Promise.all([blobOf(full, .92), blobOf(share, .8).then(blob => blob.size <= 1048576 ? blob : blobOf(share, .6))])
       .then(([large, small]) => {
-        const photo = addPhoto(large, small);
+        const photo = addPhoto(large, small, subject);
         photos++; track('reef_photo_taken');
-        if (sequence === captureSequence) { showPhotoPreview(photo, canvas.width, canvas.height); say('Photo saved to your dive log.'); }
+        if (sequence === captureSequence) { showPhotoPreview(photo, canvas.width, canvas.height); say(subject ? `${subject.name}: photo saved to your dive log.` : 'Photo saved to your dive log.'); }
       }).catch(() => say('This photo could not be kept. Please try again.'));
   } catch { say('This browser could not take a photo. Please try again after the scene finishes loading.'); }
 }

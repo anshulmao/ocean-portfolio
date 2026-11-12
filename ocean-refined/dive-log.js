@@ -1,7 +1,8 @@
 import { onFrame, SITES } from './journey.js';
 import { toDisplayDepth } from './depth-metrics.js';
 import { LANDMARKS } from './reef.js';
-import { SPECIES_OF_MODEL } from './field-guide.js';
+import { SPECIES, SPECIES_OF_MODEL } from './field-guide.js';
+import { Vector3 } from './vendor/three.module.min.js';
 
 // The dive log behind the dive summary (dive-summary.js): while a dive lasts it keeps the depth over time, the path
 // swum, the sites and reef features passed, the species seen and the photos taken; when the diver surfaces it hands
@@ -108,10 +109,32 @@ addEventListener('oceandiveend', ({ detail }) => {
   dispatchEvent(new CustomEvent('oceandivelog', { detail: record }));
 });
 
-// A photo taken underwater: `full` is the image as taken, `share` the copy small enough to send (both JPEG blobs).
-export function addPhoto(full, share) {
-  const player = window.oceanDiagnostics?.playerPosition || [0, 0, 0], depth = toDisplayDepth(-player[1]);
-  const photo = { id: crypto.randomUUID(), full, share, url: URL.createObjectURL(share), dive: dive?.number ?? number, t: Math.round(dive?.time ?? 0), depth: +depth.toFixed(1), place: placeAt(player[0], player[2], depth), shared: false };
+// The animal a photo is of, if there is one in the frame: of the animals near enough to be made out (as look() counts
+// them seen), the one nearest the middle of the picture, where a big or close animal may sit further off it. Read in
+// the frame the photo is taken in. It does not know what stands in front of an animal: one behind the reef can be named.
+//   FRAME: how far from the middle (the picture's half-width and half-height are 1) an animal's middle may be.
+const FRAME = .62, spot = new Vector3();
+export function subjectInView(controls) {
+  const list = controls?.creatures?.sites?.(), camera = controls?.getCamera?.(); if (!list || !camera) return null;
+  let best = null, least = Infinity;
+  for (const item of list) {
+    const species = SPECIES_OF_MODEL[item.species]; if (!item.seen || !species) continue;
+    const distance = camera.position.distanceTo(spot.fromArray(item.position));
+    if (distance > (item.kind === 'animal' ? Math.min(40, Math.max(8, item.length * 6)) : item.length + 12)) continue;
+    spot.project(camera); if (spot.z > 1) continue;
+    const size = Math.min(.5, item.length / Math.max(distance, 1)), off = Math.hypot(spot.x, spot.y) - size;
+    if (off < FRAME && off < least) { least = off; best = species; }
+  }
+  const found = best && SPECIES.find(item => item.id === best);
+  return found ? { id: found.id, name: found.name } : null;
+}
+// A photo taken underwater: `full` is the image as taken, `share` the copy small enough to send (both JPEG blobs);
+// `subject` the animal it is of (subjectInView), if any. `title` is what the photo is called wherever it is shown: the
+// animal, or else the place it was taken (`place`, kept either way). An animal photographed counts as seen.
+export function addPhoto(full, share, subject = null) {
+  const player = window.oceanDiagnostics?.playerPosition || [0, 0, 0], depth = toDisplayDepth(-player[1]), place = placeAt(player[0], player[2], depth);
+  const photo = { id: crypto.randomUUID(), full, share, url: URL.createObjectURL(share), dive: dive?.number ?? number, t: Math.round(dive?.time ?? 0), depth: +depth.toFixed(1), place, species: subject?.id ?? null, title: subject?.name ?? place, shared: false };
+  if (subject && dive && !dive.seen[subject.id]) { dive.seen[subject.id] = { t: photo.t, depth: photo.depth, place, fresh: !everSeen.has(subject.id) }; everSeen.add(subject.id); keep('ocean-seen', [...everSeen]); }
   photos.push(photo); dive?.photos.push(photo.id);
   while (photos.length > KEEP_PHOTOS) URL.revokeObjectURL(photos.shift().url);
   return photo;

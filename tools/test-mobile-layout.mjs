@@ -163,7 +163,9 @@ async function run(profileName) {
   await step('surface-summary', async () => {
     await page.evaluate(() => dispatchEvent(new CustomEvent('oceandivelog', {detail: {number: 1, started: Date.now() - 140000, ended: Date.now(), time: 134, maxDepth: 18.4, averageDepth: 9.2,
       profile: [[0, 0], [40, 9], [90, 18.4], [134, 0]], track: [[0, 8], [-8, -6], [-12, -14], [4, -20]], sites: {about: {t: 44, depth: 9}}, features: {}, seen: {anthias: {t: 50, depth: 9, place: 'The Anchor', fresh: true}}, photos: [], safetyStop: false, found: 2}})));
-    await press(page.locator('.ds-open'));
+    // The dive log in small (surface-ending.js) comes up in the button's place; its own button opens the full log.
+    await page.locator('.surface-ending [data-ending="log"]').waitFor({state: 'visible', timeout: 10000}); await state('surface-ending');
+    await press(page.locator('.surface-ending [data-ending="log"]'));
     await page.waitForFunction(() => document.querySelector('#dive-summary').open, null, {timeout: 5000});
     await state('surface-summary');
     await page.keyboard.press('Escape');

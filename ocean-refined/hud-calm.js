@@ -1,6 +1,6 @@
 import { onTick } from './ui-ticker.js';
 import { DISPLAY_MAX_DEPTH } from './depth-metrics.js';
-import { currentZone, touchInput } from './journey.js';
+import { currentZone } from './journey.js';
 
 // The calm dive HUD (design/ui-overhaul/depth.html, screen 02): one depth card bottom left and one
 // "ahead" card bottom right, as hologram panels. It owns no instrument logic. It mirrors readings that
@@ -15,8 +15,6 @@ const SITES = {
   'The Wreck': 'Work · six projects across the AI product loop',
   'The Slate': 'Résumé · one page, to read or take with you'
 };
-const NAMES = { about: 'The Helmet', experience: 'The Nautilus', projects: 'The Wreck', resume: 'The Slate' };
-const SIGNALS = { about: '#7ff0cf', experience: '#ffcf7a', projects: '#c9a2ff', resume: '#f4e3b5' };
 const card = (className, label, html) => {
   const node = document.createElement('section');
   node.className = `calm-card holo holo-deep ${className}`; node.setAttribute('aria-label', label); node.innerHTML = html;
@@ -28,7 +26,7 @@ aheadCard.setAttribute('aria-live', 'polite');
 
 const source = {
   depth: $('#console-depth'), air: $('#air-value'), ndl: $('#console-ndl'), ndlLabel: $('#console-ndl-label'), ndlValue: $('#console-ndl-value'),
-  waypoint: () => $('.waypoint'), prompt: $('#interact-prompt')
+  waypoint: () => $('.waypoint')
 };
 const out = {
   depth: depthCard.querySelector('.calm-depth-number span'), zone: depthCard.querySelector('.calm-depth-zone span'), place: depthCard.querySelector('.calm-depth-zone b'),
@@ -59,25 +57,22 @@ function paint() {
   write(out.vitals, `AIR ${air || '—'} BAR · ${limit}`);
   set(depthCard, 'alert', String(mode !== 'ndl' && mode !== 'done'));
 
-  // Ahead: the waypoint names the nearest unfound light and its distance. Within reach the waypoint
-  // hides and the interact prompt appears, so the card keeps the last site and offers F.
-  const waypoint = source.waypoint(), near = source.prompt && !source.prompt.hidden;
-  const pointing = waypoint?.dataset.show === 'true';
-  // Within reach, the landmark in range names the card (the waypoint may still point at another light).
-  const nearby = near ? window.oceanDiagnostics?.nearbyLandmark : null;
-  if (nearby && NAMES[nearby]) { lastSite = NAMES[nearby]; lastSignal = SIGNALS[nearby]; }
-  else if (pointing) {
+  // Ahead: the waypoint names the nearest unfound light and its distance, and this card says where that is. It only
+  // points the way. In reach of a site, that site's own card (site-cards.js), or the prompt when the card is not up,
+  // carries the action, so nothing here says it a second time.
+  const waypoint = source.waypoint(), pointing = waypoint?.dataset.show === 'true';
+  if (pointing) {
     lastSite = waypoint.querySelector('span')?.textContent || lastSite;
     lastSignal = waypoint.style.getPropertyValue('--signal') || lastSignal;
   }
-  const visible = Boolean(lastSite && (pointing || near));
+  const visible = Boolean(lastSite && pointing);
   set(aheadCard, 'show', String(visible));
   if (!visible) return;
-  write(out.kicker, near ? 'Here' : `Ahead · ${waypoint.querySelector('b')?.textContent || ''}`);
+  write(out.kicker, `Ahead · ${waypoint.querySelector('b')?.textContent || ''}`);
   write(out.title, lastSite);
   write(out.note, SITES[lastSite] || '');
-  write(out.action, near ? (touchInput() ? 'Tap Read to open the log' : 'Press F to open the log') : 'Follow the light');
-  set(aheadCard, 'near', String(near));
+  write(out.action, 'Follow the light');
+  set(aheadCard, 'near', 'false');
   if (lastSignal && aheadCard.style.getPropertyValue('--signal') !== lastSignal) aheadCard.style.setProperty('--signal', lastSignal);
 }
 onTick(paint, 5);

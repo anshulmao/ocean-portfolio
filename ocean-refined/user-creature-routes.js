@@ -55,10 +55,11 @@ export const RESIDENTS = {
   whipray: { species: 'pink-whipray', loop: [-41, -16, 8, 5], height: 1.4, speed: 1.1 },
   // Bluespotted rays lie on open sand and scoot away when crowded.
   bluespots: { species: 'bluespotted-ray', spots: [[8, 6], [-16, 2], [26, -14]], lean: 2 },
-  // The nurse shark rests on the open sand beside the coral nursery (reef.js NURSERY_SITE, at -5, 4), then swims slowly
-  // round it on one circuit (loop: centre x, z and radii of the oval it is fitted round) a little over the sand (height,
-  // m, at cruise; .45 lying) at speed (m/s), and settles on the next resting spot: rest is how long it lies there (s).
-  sleeper: { species: 'nurse-shark', near: [-6, 9.5], loop: [-3, 5, 9.5, 9], height: .95, speed: .45, rest: [18, 34] },
+  // The nurse shark lies on the open sand beside the coral nursery (reef.js NURSERY_SITE, at -5, 4) and stays there.
+  // A diver within shy m makes it lift off the sand (height, m, at its highest; .45 lying), move a few metres (hop: the
+  // nearest and furthest its other spot may be, m) along a line of clear sand (loop: centre x, z and radii of the oval
+  // that line is fitted round) at speed (m/s) and settle again; crowded there, it goes back.
+  sleeper: { species: 'nurse-shark', near: [-6, 9.5], loop: [-3, 5, 9.5, 9], height: 1.25, speed: .7, shy: 3.5, hop: [3.5, 7] },
   // The barracuda that patrols a slow oval off the wreck's bow (patrol: x and z radii, m; speed m/s), pauses to hang
   // and watch a diver, and bolts if crowded. It used to patrol east of the wreck, where the descent line now hangs.
   sentinel: { species: 'great-barracuda', landmark: 'projects', offset: [-12, 8, -14], patrol: [7, 4.5], speed: .8 },
