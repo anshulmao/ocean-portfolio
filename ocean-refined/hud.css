@@ -382,7 +382,20 @@ body[data-movement-panel="open"] .capture-hint{display:none}
 .separator{opacity:.4}
 .look-hint{position:absolute;left:50%;margin:0;transform:translateX(-50%);font:400 11px/1 var(--holo-font);letter-spacing:.04em;opacity:.82;white-space:nowrap}
 .status{position:absolute;left:50%;bottom:50px;z-index:6;width:max-content;max-width:min(360px,calc(100vw - 48px));margin:0;padding:9px 16px;transform:translateX(-50%);font:400 12px/1.45 var(--holo-font);text-align:center;pointer-events:none;--holo-tint:#04202f9e}
-.status:empty{opacity:0}
+.status:has(#status-text:empty){opacity:0}
+/* The loader: a waterline and a fish that leaps over it, shown while the ocean (first load) or the reef (the pause after
+   Dive) is prepared. 96 x 40 px above the line of text; still, at the top of its leap, when motion is reduced. */
+.fish-loader{display:none;position:relative;width:96px;height:40px;margin:2px auto 6px;color:var(--holo-strong)}
+:is(body:not([data-ready="true"],[data-fallback="true"]),body[data-loading="true"]) .fish-loader{display:block}
+.fish-air{position:absolute;inset:0 0 11px;overflow:hidden}
+.fish-across,.fish-up{position:absolute;left:0;top:0;width:22px;height:11px}
+.fish-across{translate:37px 0}.fish-up{translate:0 4px}
+.fish{display:block;width:22px;height:11px;fill:currentColor}.fish circle{fill:#04202f}
+.fish-water{position:absolute;left:0;bottom:8px;width:144px;height:6px;fill:none;stroke:var(--holo);stroke-width:1.2;stroke-linecap:round;opacity:.75;clip-path:inset(0 48px 0 0)}
+.fish-ring,.fish-drops{position:absolute;bottom:9px;opacity:0}
+.fish-ring{width:16px;height:5px;margin-left:-8px;border:1px solid var(--holo);border-radius:50%}
+.fish-drops{width:2px;height:2px;margin-left:-1px;border-radius:50%;background:currentColor;box-shadow:-5px 3px 0 currentColor,5px 2px 0 currentColor}
+.fish-ring-out,.fish-drops-out{left:23px}.fish-ring-in,.fish-drops-in{left:73px}
 /* At the surface the line stands above the pre-dive board. */
 @media(min-width:601px) and (min-height:551px){body[data-ready="true"]:not([data-submerged="true"]) .status{bottom:146px}}
 .view-controls{position:absolute;left:var(--pad);bottom:84px;z-index:5;display:none;gap:7px}

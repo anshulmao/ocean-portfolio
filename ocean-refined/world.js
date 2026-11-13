@@ -39,7 +39,7 @@ import { refreshRate, drawStride, windowPace, windowHitch, workBudget, createSca
 // one; the values written are the same.
 const intoFloats=(array,offset,e)=>{for(let i=0;i<16;i++)array[offset+i]=e[i];return array;},matrixToArray=THREE.Matrix4.prototype.toArray;
 THREE.Matrix4.prototype.toArray=function(array=[],offset=0){return array instanceof Float32Array?intoFloats(array,offset,this.elements):matrixToArray.call(this,array,offset);};
-const $=s=>document.querySelector(s), canvas=$('#world'), status=$('#status');
+const $=s=>document.querySelector(s), canvas=$('#world'), status=$('#status-text');
 const themeMedia=matchMedia('(prefers-color-scheme: dark)'), motionMedia=matchMedia('(prefers-reduced-motion: reduce)');
 let selectedNight=false;
 // Respect the system by default, but let a visitor explicitly resume the ocean.
@@ -66,7 +66,7 @@ let largeMarine=null,extraLife=null,distantScenery=null,birds=null,modelScene=nu
 // The surface is on screen first; the world under the water is built behind it, in steps (see buildUnderwater).
 // built: every part exists. underReady: its shaders have linked as well, so a dive can go under without waiting on one.
 let built=false,underReady=false,buildSteps=null,buildStage='reef',modelsWanted=false,diveHeldFor=0,holdNoted=false;
-const DIVE_HOLD=.2,HOLD_NOTE='Preparing the reef…';
+const DIVE_HOLD=.2,HOLD_NOTE='Loading the reef…';
 let running=false,raf=0,lastFrame=0,elapsed=0,focused=!document.hidden;
 let phase=selectedNight?Math.PI:0,phaseTarget=null;
 const cycleSeconds=1200;
@@ -485,7 +485,7 @@ function beginModels(){
   // Three pipelines parse, bake and compile for a few seconds; the frame-rate windows wait for all of them (see frame()).
   const busy=promise=>{modelsBusy++;return promise.finally(()=>{modelsBusy--;scaler.state.settling=1;});};
   const landmarksLoad=busy(import('./model-scene.js').then(({createModelScene})=>{
-    if(!reef)return;modelScene=createModelScene({reef,terrainHeightAt:reef.userData.terrainHeightAt,collisions,economy:quality==='economy',onStatus:value=>{if(value.status==='loading')diagnostic.modelLoading=true;diagnostic.modelsLoaded=value.loaded??diagnostic.modelsLoaded??0;diagnostic.modelsFailed=value.failed??diagnostic.modelsFailed??0;if(value.status==='fallback'&&value.message&&!exploration.state.transition)status.textContent='Some optional ocean models could not load.';}});
+    if(!reef)return;modelScene=createModelScene({reef,terrainHeightAt:reef.userData.terrainHeightAt,collisions,economy:quality==='economy',onStatus:value=>{if(value.status==='loading')diagnostic.modelLoading=true;diagnostic.modelsLoaded=value.loaded??diagnostic.modelsLoaded??0;diagnostic.modelsFailed=value.failed??diagnostic.modelsFailed??0;if(value.status==='fallback'&&value.message&&!exploration.state.transition)status.textContent='Some reef details could not load. You can keep exploring.';}});
     scene.add(modelScene.root);if(modelScene.surface)scene.add(modelScene.surface);interactionTargets=modelScene.landmarks||[];
     return modelScene.load().then(async result=>{stylizeImported(modelScene.root,{glow:'near'});if(modelScene.surface)stylizeImported(modelScene.surface);const ready=prepare(modelScene.root,true);
       await worldBuilt;for(const box of deferred)reef.userData.collisions.addBox(...box);deferred.length=0;
@@ -902,8 +902,8 @@ function updateWorld(dt,clockDt=dt){
   // still above the surface, while the rest is built with most of every frame's time (see afterFrame); the status line
   // says so if that takes more than a moment. The first draws get up to two and a half seconds of it as well (of the
   // page's clock as well as the scene's: on a slow device frames come so far apart that the scene's ran at half speed).
-  if(diveTarget===1&&(!underReady||!diagnostic.landmarksSettled||warmQueue.length&&diveHeldFor>0&&diveHeldFor<2.5&&performance.now()-startup.heldFrom<2500)){if(!diveHeldFor)startup.heldFrom=Math.round(performance.now());if(!buildSteps)startUnderwater();modelsWanted=true;if(built)beginModels();dive=Math.min(dive,DIVE_HOLD);diveHeldFor+=Math.max(dt,1e-4);hurry=2;if(diveHeldFor>.7&&(!underReady||!diagnostic.landmarksSettled)&&!holdNoted){holdNoted=true;status.textContent=HOLD_NOTE;}}
-  else if(diveHeldFor){diveHeldFor=0;hurry=1;startup.heldMs=Math.round(performance.now())-startup.heldFrom;if(holdNoted){holdNoted=false;if(status.textContent===HOLD_NOTE)status.textContent='';}if(reducedMotion&&diveTarget===1)dive=diveTarget;}
+  if(diveTarget===1&&(!underReady||!diagnostic.landmarksSettled||warmQueue.length&&diveHeldFor>0&&diveHeldFor<2.5&&performance.now()-startup.heldFrom<2500)){if(!diveHeldFor)startup.heldFrom=Math.round(performance.now());if(!buildSteps)startUnderwater();modelsWanted=true;if(built)beginModels();dive=Math.min(dive,DIVE_HOLD);diveHeldFor+=Math.max(dt,1e-4);hurry=2;if(diveHeldFor>.7&&(!underReady||!diagnostic.landmarksSettled)&&!holdNoted){holdNoted=true;status.textContent=HOLD_NOTE;document.body.dataset.loading='true';}}
+  else if(diveHeldFor){diveHeldFor=0;hurry=1;startup.heldMs=Math.round(performance.now())-startup.heldFrom;if(holdNoted){holdNoted=false;delete document.body.dataset.loading;if(status.textContent===HOLD_NOTE)status.textContent='';}if(reducedMotion&&diveTarget===1)dive=diveTarget;}
   let easedDive=THREE.MathUtils.smoothstep(dive,0,1);let underwater=THREE.MathUtils.smoothstep(easedDive,.13,.27);
   uniforms.uTime.value=elapsed;uniforms.uNight.value=night;uniforms.uDive.value=underwater;
   let turningSurface=false;
@@ -1268,7 +1268,7 @@ function frame(now){
   raf=requestAnimationFrame(frame);
 }
 function wake(){if(!running&&renderer&&focused&&started&&!diagnostic.error){running=true;lastFrame=0;raf=requestAnimationFrame(frame);}}
-function fail(error){console.error('Ocean scene:',error);diagnostic.error=error.message;diagnostic.ready=false;document.body.dataset.fallback='true';canvas.style.display='none';$('#dive-label').textContent='Ocean unavailable';$('#dive').disabled=true;status.textContent='The 3D ocean needs WebGL 2. Try a browser with hardware acceleration enabled.';}
+function fail(error){console.error('Ocean scene:',error);diagnostic.error=error.message;diagnostic.ready=false;document.body.dataset.fallback='true';canvas.style.display='none';$('#dive-label').textContent='Ocean unavailable';$('#dive').disabled=true;status.textContent='The 3D ocean could not start. Choose Read portfolio to see the work, or reload to try again.';}
 paintTheme(selectedNight);updateMotionUI();
 // Start-up. Only what the surface shows is built before the first frame: the renderer, the sky, the sea and what floats
 // on and over it, and the diver. Each stage ends its task, so none of them is long, and hands its shader sources to the

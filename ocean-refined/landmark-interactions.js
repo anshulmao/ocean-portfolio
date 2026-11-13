@@ -181,7 +181,7 @@ document.querySelector('#credits-toggle').addEventListener('click', async () => 
       entry.append(link, creator);if(item.metadata.license){const license=document.createElement('small');license.textContent=item.metadata.license;entry.append(license);} container.append(entry);
     }
     creditsLoaded = true;
-  } catch { container.textContent = 'Credits could not load. Please try again.'; }
+  } catch { container.textContent = 'Could not load model credits. Close this panel and open it to try again.'; }
 });
 
 // The proximity check runs eight times a second on the interface clock (ui-ticker.js). It reuses its

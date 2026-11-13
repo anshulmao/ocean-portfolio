@@ -5,7 +5,7 @@
 // project on either side. Every value shown comes from PORTFOLIO_CONTENT; the few derived figures (time in a
 // role, the career track) are computed here from the dates stored with each entry. Nothing runs while the dialog
 // is closed: a page is built when it is shown, and entry motion is CSS on the shared tokens in motion.css.
-import { PORTFOLIO_CONTENT, PORTFOLIO_MEDIA } from './portfolio-content.js';
+import { PORTFOLIO_CONTENT, PORTFOLIO_MEDIA, PROJECT_SECTIONS } from './portfolio-content.js';
 import { icon } from './ui-icons.js';
 import { openLightbox, closeLightbox, lightboxOpen } from './archive-lightbox.js';
 import { track as trackEvent } from './analytics.js';
@@ -250,7 +250,7 @@ function renderAbout() {
       el('p', { class: 'arc-chapter-title', text: approach.title }), el('p', { class: 'arc-chapter-strap', text: approach.summary }),
       rules.length > 0 && el('ol', { class: 'arc-focus', 'aria-label': 'Working principles' }, rules.map(rule => el('li', {}, el('strong', { text: rule.title }), rule.text && el('p', { text: rule.text }))))),
     examples.length > 0 && chapter('arc-work', 'In the work',
-      el('p', { class: 'arc-chapter-title', text: 'What that looks like in the work' }),
+      el('p', { class: 'arc-chapter-title', text: 'Examples from my work' }),
       el('ul', { class: 'arc-focus', 'aria-label': 'In the work' }, examples.map(example => {
         const project = PORTFOLIO_CONTENT.projects.entries.find(entry => entry.id === example.project);
         return el('li', {}, el('strong', { text: example.title }), el('p', { text: example.text }), project && el('span', { class: 'arc-chip', text: project.title }));
@@ -498,20 +498,20 @@ function findCard(find) {
       el('span', { class: 'arc-find-kind', text: find.kind }),
       el('strong', { text: find.entry.title }),
       el('span', { class: 'arc-find-line', text: find.entry.summary })),
-    el('span', { class: 'arc-find-foot' }, find.status && el('span', { class: 'arc-chip', text: find.status }), el('span', { class: 'arc-find-open', 'aria-hidden': 'true' }, 'Read', glyph('next')))));
+    el('span', { class: 'arc-find-foot' }, find.status && el('span', { class: 'arc-chip', text: find.status }), el('span', { class: 'arc-find-open', 'aria-hidden': 'true' }, 'View project', glyph('next')))));
 }
 function renderProjects() {
   const section = PORTFOLIO_CONTENT.projects, list = projects();
   return [
-    head(section.title, section.subtitle, el('p', { class: 'arc-count', text: `${list.length} projects · open one to read the story` })),
+    head(section.title, section.subtitle, el('p', { class: 'arc-count', text: `${list.length} projects · choose one to see my work` })),
     el('ul', { class: 'arc-grid', 'aria-label': 'Projects' }, list.map(findCard)),
     foot('projects'),
   ];
 }
-// One case study: what it is, my part, the screens, then the problem, the decision, what came of it and the takeaway.
+// Each project uses the same concise sections as its reading page.
 function renderProject(id) {
   const list = projects(), index = Math.max(0, list.findIndex(item => item.entry.id === id)), find = list[index], entry = find.entry, story = entry.caseStudy;
-  const screens = [entry.id, ...(entry.gallery || [])].filter(id => media[id]);
+  const screens = [entry.id, ...(entry.gallery || [])].filter((id, index, ids) => media[id] && ids.findIndex(other => media[other]?.src === media[id].src) === index);
   const visual = carousel(screens, `${entry.title} screens`), neighbours = [[list[index - 1], -1, 'Previous'], [list[index + 1], 1, 'Next']].filter(([target]) => target);
   return [
     el('nav', { class: 'arc-crumb', 'aria-label': 'Projects' },
@@ -520,20 +520,15 @@ function renderProject(id) {
     el('header', { class: 'arc-head arc-head--case' },
       el('p', { class: 'arc-kind' }, el('span', { text: find.kind }), find.status && el('span', { class: 'arc-chip', text: find.status })),
       el('h3', { id: 'archive-entry-title', text: entry.title }),
-      el('p', { class: 'arc-strap arc-strap--case', text: entry.summary }),
-      story && el('p', { class: 'arc-role-line' }, el('span', { text: 'My role' }), el('b', { text: story.role }))),
+      el('p', { class: 'arc-strap arc-strap--case', text: entry.summary })),
     visual,
     visual && screens.length > 1 && (entry.galleryTitle || entry.galleryIntro) && el('p', { class: 'arc-strip-lead' }, entry.galleryTitle && el('b', { text: entry.galleryTitle }), entry.galleryIntro && ` ${entry.galleryIntro}`),
-    story ? el('div', { class: 'arc-story' }, [['The problem', story.problem], ['The decision', story.decision], ['What came out of it', story.outcome], ['The takeaway', story.learning]].map(([label, text], step) =>
-      el('section', { class: 'arc-block', 'aria-label': label }, el('h4', {}, el('span', { 'aria-hidden': 'true', text: pad(step + 1) }), label), el('p', { text }))))
+    story ? el('div', { class: 'arc-story' }, PROJECT_SECTIONS.filter(([key]) => story[key]).map(([key, label], step) =>
+      el('section', { class: 'arc-block', 'aria-label': label }, el('h4', {}, el('span', { 'aria-hidden': 'true', text: pad(step + 1) }), label), [].concat(story[key]).map(line => el('p', { text: line })))))
       : el('div', { class: 'arc-prose arc-prose--lead' }, paragraphs(entry.body)),
     !visual && diagram(entry),
     visual && entry.diagram && el('div', { class: 'arc-case-diagram' }, diagram(entry)),
-    (entry.body.length > 0 || entry.facts.length > 0) && story && el('div', { class: 'arc-more' },
-      el('div', { class: 'arc-prose' }, paragraphs(entry.body)),
-      entry.facts.length > 0 && el('ul', { class: 'arc-facts' }, entry.facts.map(text => el('li', {}, glyph('check'), el('span', { text }))))),
-    pills(entry.links, `${entry.title} links`),
-    story?.evidence && el('p', { class: 'arc-evidence' }, el('b', { text: 'About the evidence. ' }), story.evidence),
+    entry.links.length > 0 && el('section', { class: 'arc-block', 'aria-label': 'Links' }, el('h4', { text: 'Links' }), pills(entry.links, `${entry.title} links`)),
     neighbours.length > 0 && el('nav', { class: 'arc-turner', 'aria-label': 'Other projects' }, neighbours.map(([target, direction, word]) =>
       el('button', { type: 'button', class: `arc-turn arc-turn--${direction < 0 ? 'prev' : 'next'}`, 'data-go': `finds/${target.entry.id}`, 'data-turn': direction },
         el('span', { class: 'arc-turn-art', 'aria-hidden': 'true' }, thumb(target)),
@@ -557,7 +552,7 @@ function renderResume() {
         others.length > 0 && el('div', { class: 'arc-versions' },
           el('p', { class: 'arc-versions-label', text: 'Other versions, by role' }),
           el('ul', {}, others.map(link => el('li', {}, anchorFor(link, null, glyph('file'), el('span', { text: link.label }), icon('download')))))),
-        el('button', { type: 'button', class: 'arc-textlink', 'data-print': true }, glyph('print'), 'Print a one-page summary of this portfolio'))),
+        el('button', { type: 'button', class: 'arc-textlink', 'data-print': true }, glyph('print'), 'Print portfolio summary'))),
     foot('resume'),
   ];
 }

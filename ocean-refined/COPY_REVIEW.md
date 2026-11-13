@@ -1,42 +1,45 @@
-# Ocean portfolio copy review
+# Portfolio copy review · PR #55
 
-## Existing baseline
+Updated 11 November 2026 at Anshul's request, using his experience bank, positioning framework, writing instructions, and the UX Writing skill.
 
-`PORTFOLIO_CONTENT` adapts existing copy from `../index.html` into ocean panel data. Existing copy is the baseline; inclusion here does not establish new user approval or confirm public deployment. Some headings combine existing career chapters, and facts shorten existing phrases for scanning.
+## Voice
 
-- About: hero, operating principles, capabilities, contact, and footer.
-- Experience: three chapters covering Product Manager, Product Content Manager, and consulting foundations. The last chapter combines Consultant Analyst and Advisory Maverick while retaining both titles and dates.
-- Projects: existing Rae, WattMana, Sage, and OpenClaw cards and detail dialogs.
-- Private corroboration: `../../../career/context/experience-master.md` (repository path `career/context/experience-master.md`), professional overview, Twimbit role scope, Sage, and OpenClaw sections.
-- Scope: `../site-scope.md`. Existing interaction wording was inspected in `../script.js`; interview reflections are excluded from this content export.
+First person, direct, thoughtful, and specific. Connect technical work to the user problem. Distinguish product ownership, direct implementation, and team contributions. Keep registered users separate from monthly active users, and observed pilot results separate from targets and future plans.
 
-The export excludes client identities, client artifacts, adoption figures, platform commercial outcomes, internal pilot targets, private career evidence, and source-file paths. It retains qualitative ownership wording already present in the website. WattMana remains a prototype story with modeled device estimates. Sage remains a health-organization product with the existing clinical-judgment boundary.
+## Project structure
 
-Links reuse existing website destinations. GitHub profile links are labeled as profiles, not project repositories. No Sage demo or repository destination is invented. The Rae destination is an existing public-story link; its availability was not checked in this content-only task.
+- Rae and Rae Engage: What it is, My role, Examples of my work, Outcomes, Links.
+- WattMana and Sage: What it is, Why I built it, My involvement, What's next, Links.
+- Ocean World and OpenClaw use the professional project structure.
 
-## Proposed variants — awaiting user approval
+Both the reading pages and ocean archive use PROJECT_SECTIONS and the same story data. Duplicate narrative, takeaway, and evidence sections are removed. Relevant limitations remain alongside the claims they qualify.
 
-`COPY_VARIANTS` contains **new drafts**, separate from the existing baseline. Each style proposes one short introduction per section; it does not rewrite entry claims.
+## Claims and plans
 
-| Style | Intended emphasis |
-| --- | --- |
-| Concise | Fast overview of role, progression, and project range |
-| Story | Human workflow, learning, and product reasoning |
-| Technical | Discovery linked to retrieval, evaluation, system behavior, and enablement |
+- Rae's 350+ figure means registered users. The 15 to 175 monthly-active-user change belongs to the broader product and adoption effort.
+- Rae Engage's existing PR figures retain their period, denominators, and pilot scope. Leads are not completed purchases.
+- WattMana and Sage remain prototypes. Their next steps reflect Anshul's stated intentions: potential-user conversations, clearer needs, feature and UX improvements, performance work, and a pilot to test product-market fit.
+- The unrelated commercial contract figure is removed from the Rae introduction.
+- Private source documents are not included in the public build.
 
-Review the exact introductions in `portfolio-content.js` before accepting a style. Selection in a local preview is a review choice, not approval to publish.
+## Media
 
-## Data API and validation
+The retired wattmana.png image is removed. The current mobile home screen is the cover; the story, bills, and My Use screens complete the set. Duplicate image sources are excluded from the reading page and archive carousel. Screens show sample household data.
 
-- Named ES-module export `PORTFOLIO_CONTENT`: keys `about`, `experience`, `projects`; each has `title`, `subtitle`, and `entries`.
-- Every entry: `id`, `title`, `tag`, `summary`, `body` (paragraph strings), `facts` (strings), `links` (objects containing `label`, `url`).
-- Named export `COPY_VARIANTS`: keys `concise`, `story`, `technical`; each has `label`, `about`, `experience`, and `projects` strings.
-- This change supplies data only. It does not edit interface files or claim browser, mobile, or physical-device acceptance.
+## Verification
 
-## Resume and project media additions
+Build integrity, smoke, and UI checks cover the shared reading and ocean experience. Run node tools/test-project-copy.mjs after building to verify heading order and the four unique current WattMana screens.
 
-The Resume section uses the exact PDF already bundled in the existing portfolio (`assets/Anshul_Ramprasad_AI_PM_Resume_20260709_v2.pdf`), copied as `assets/portfolio/portfolio-resume.pdf`. Its July 2026 version is shown explicitly; the preview is rendered from that same PDF. The private Agent Strategist source is used to locate work-sample links, not copied into the client bundle.
 
-Added the verified live Sage and Rae Engage destinations and browser captures; see `assets/portfolio/PROJECT_MEDIA.md`. The Rae image is specifically the Rae Engage public widget, not the enterprise Rae platform. The Sage screenshot is an empty Ramble composer, without existing health records. Existing copy and draft styles retain their approval boundaries.
+## UX Writing skill pass
 
-Rae Engage now has its own entry, distinct from the enterprise Rae platform. Its new short summary is grounded in the experience bank’s Rae Engage pilot ownership and direct build contribution; it remains a draft for user review. It makes no conversion or adoption result claim. The selector’s default is labeled Baseline copy rather than approved copy.
+Applied the skill's purposeful, concise, conversational, and clear standards to the interface:
+
+- Explicit actions: Read portfolio, View projects, Send feedback, View photo, Download photo, and Send photo.
+- Loading and fallback messages explain what is happening and how to keep reading or exploring.
+- Feedback instructions explain the rating step, optional submission, and why an email might be useful.
+- Feedback and photo failures offer a retry and make clear that entered text remains available.
+- Controls distinguish changes applied for this visit from settings saved on the device.
+- Photo success appears after the image is added to the dive log. Sending uses consistent photo-specific labels and confirmations.
+
+The simplified project stories and future plans are retained. No production deployment is part of this copy update.

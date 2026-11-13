@@ -110,7 +110,7 @@ export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
       refresh(source === input && item.type === 'number');
       refreshPreset();
       refreshKeymap();
-      notice.textContent = persistSettings() ? 'Saved on this device · changes apply live' : 'Changes apply live · browser storage unavailable';
+      notice.textContent = persistSettings() ? 'Controls saved on this device' : 'Controls updated for this visit. Your browser could not save them.';
       onChange(item.key,settings[item.key],settings);
       window.dispatchEvent(new CustomEvent('oceanmovementchange',{detail:{key:item.key}}));
     };
@@ -157,6 +157,6 @@ export function createMovementPanel(onChange = () => {}, onOpen = () => {}) {
     setTimeout(() => URL.revokeObjectURL(url),1000);
     notice.textContent = 'Settings exported as JSON';
   });
-  notice.textContent = persistSettings() ? 'Saved on this device · changes apply live' : 'Changes apply live · browser storage unavailable';
+  notice.textContent = persistSettings() ? 'Controls saved on this device' : 'Controls updated for this visit. Your browser could not save them.';
   return {open:show,close,refresh,get isOpen(){ return open; },destroy(){ close(); for (const remove of removers) remove(); content.replaceChildren(); }};
 }
