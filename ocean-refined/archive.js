@@ -245,7 +245,8 @@ function renderAbout() {
   const examples = approach?.examples || [];
   const chapters = [
     chapter('arc-short', 'In short',
-      el('p', { class: 'arc-lead', text: card.summary }), el('div', { class: 'arc-spoken' }, card.body.map(spoken))),
+      el('p', { class: 'arc-lead', text: card.summary }), el('div', { class: 'arc-spoken' }, card.body.map(spoken)),
+      el('button', { type: 'button', class: 'arc-pill arc-pill--primary arc-dive', 'data-start-dive': '', hidden: submerged(), disabled: document.querySelector('#dive')?.disabled }, el('span', { text: document.querySelector('#dive')?.disabled ? 'Preparing the ocean…' : 'Dive in and explore' }), icon('arrow'))),
     approach && chapter('arc-how', approach.tag || 'How I work',
       el('p', { class: 'arc-chapter-title', text: approach.title }), el('p', { class: 'arc-chapter-strap', text: approach.summary }),
       rules.length > 0 && el('ol', { class: 'arc-focus', 'aria-label': 'Working principles' }, rules.map(rule => el('li', {}, el('strong', { text: rule.title }), rule.text && el('p', { text: rule.text }))))),
@@ -386,8 +387,8 @@ function careerTrack(list) {
   const now = list[0];
   // Sticky: it stays at the top while the roles scroll under it, lights the role being read, and jumps to any role.
   return el('div', { class: 'arc-track', role: 'group', 'aria-label': `Career track, ${monthLabel(dated[0].start)} to ${ongoing ? 'present' : monthLabel(dated.at(-1).end)}` },
-    el('div', { class: 'arc-track-bar' }, el('i', { class: 'arc-track-lens', 'aria-hidden': 'true' }), dated.map(entry =>
-      el('button', { type: 'button', class: 'arc-track-seg', 'data-role': entry.id, 'data-now': !entry.end, 'data-active': entry === now, style: `left:${at(monthIndex(entry.start))};width:${((roleEnd(entry) - monthIndex(entry.start)) / span * 100).toFixed(2)}%`,
+    el('div', { class: 'arc-track-bar' }, dated.map(entry =>
+      el('button', { type: 'button', class: 'arc-track-seg', 'data-role': entry.id, 'data-now': !entry.end, 'data-active': entry === now, style: `left:${at(monthIndex(entry.start))}`,
         'aria-label': `${entry.title}, ${monthLabel(entry.start)} to ${entry.end ? monthLabel(entry.end) : 'present'}` }, el('span', { text: entry.title })))),
     el('div', { class: 'arc-track-axis', 'aria-hidden': 'true' },
       el('span', { 'data-edge': 'start', text: monthLabel(dated[0].start) }),
@@ -440,7 +441,7 @@ function armExperience() {
   exp.io?.disconnect(); exp.io = null; exp.el = page.querySelector('.arc-roles'); exp.active = null;
   if (!exp.el) return;
   exp.roles = [...exp.el.querySelectorAll('.arc-role')]; exp.segs = [...page.querySelectorAll('.arc-track-seg')];
-  exp.track = page.querySelector('.arc-track'); exp.fill = exp.el.querySelector('.arc-roles-fill'); exp.lens = exp.track.querySelector('.arc-track-lens');
+  exp.track = page.querySelector('.arc-track'); exp.fill = exp.el.querySelector('.arc-roles-fill');
   if (!calm.matches && 'IntersectionObserver' in window) {
     exp.io = new IntersectionObserver(entries => { for (const entry of entries) if (entry.isIntersecting) { entry.target.dataset.rise = 'in'; exp.io.unobserve(entry.target); } }, { root: page, threshold: .12 });
     const edge = page.getBoundingClientRect().bottom - 80;
@@ -451,27 +452,17 @@ function armExperience() {
 }
 function paintExperience() {
   if (!exp.el?.isConnected) return;
-  const line = exp.track.getBoundingClientRect().bottom + 28;
+  const line = exp.track.getBoundingClientRect().bottom + 100;
   let active = exp.roles[0];
   for (const role of exp.roles) if (role.getBoundingClientRect().top <= line) active = role;
   const box = exp.el.getBoundingClientRect(), from = 40, to = Math.max(from + 1, box.height - 40);
   exp.fill.style.transform = `scaleY(${clamp01((line - box.top - from) / (to - from)).toFixed(3)})`;
   if (active === exp.active) return;
   exp.active = active;
-  placeLens();
   for (const role of exp.roles) role.dataset.active = String(role === active);
   for (const seg of exp.segs) seg.dataset.active = String(seg.dataset.role === active.dataset.role);
   const now = exp.track.querySelector('.arc-track-now');
   now.querySelector('b').textContent = active.querySelector('h4').textContent; now.querySelector('span').textContent = active.querySelector('.arc-role-when b').textContent;
-}
-// The lens sits over the segment of the role being read; moving from one role to the next it glides and resizes. The first
-// placement is not animated.
-function placeLens() {
-  const seg = exp.segs.find(item => item.dataset.role === exp.active?.dataset.role);
-  if (!seg || !exp.lens || !seg.offsetWidth) return;
-  // The lens covers exactly the coloured part of the segment (inside its 1.5px side gaps), so nothing shows around it.
-  exp.lens.style.setProperty('--x', `${seg.offsetLeft + 1.5}px`); exp.lens.style.setProperty('--w', `${Math.max(0, seg.offsetWidth - 3)}px`);
-  if (!exp.lens.dataset.ready) requestAnimationFrame(() => { exp.lens.dataset.ready = 'true'; });
 }
 // Scrolls a role to just under the track.
 function gotoRole(id, smooth = true) {
@@ -572,6 +563,7 @@ function paint(stop) {
   const meta = SECTIONS[stop.section];
   title.textContent = meta.label; place.textContent = meta.site;
   panel.dataset.section = stop.section; panel.dataset.entry = stop.id; panel.dataset.mode = submerged() ? 'dive' : 'surface';
+  syncArchiveDive();
   for (const tab of tabs.querySelectorAll('button')) { if (tab.dataset.section === stop.section) tab.setAttribute('aria-current', 'page'); else tab.removeAttribute('aria-current'); }
   placeTabPill();
   if (!panel.open) return;
@@ -680,7 +672,22 @@ addEventListener('beforeprint', () => { if (panel.open) preparePrint(); });
 addEventListener('afterprint', clearPrint);
 
 // --- Listeners -------------------------------------------------------------------------------------------------------
+const surfaceDive = document.querySelector('#dive');
+function syncArchiveDive() {
+  const button = page.querySelector('[data-start-dive]');
+  if (!button || !surfaceDive) return;
+  button.hidden = submerged();
+  button.disabled = surfaceDive.disabled;
+  button.querySelector('span').textContent = surfaceDive.disabled ? (document.body.dataset.fallback === 'true' ? 'Ocean unavailable' : 'Preparing the ocean…') : 'Dive in and explore';
+}
+if (surfaceDive && 'MutationObserver' in window) new MutationObserver(syncArchiveDive).observe(surfaceDive, { attributes: true, attributeFilter: ['disabled'] });
 page.addEventListener('click', event => {
+  if (event.target.closest?.('[data-start-dive]')) {
+    if (!surfaceDive || surfaceDive.disabled || submerged()) return;
+    panel.addEventListener('close', () => surfaceDive.click(), { once: true });
+    panel.close();
+    return;
+  }
   const seg = event.target.closest?.('.arc-track-seg');
   if (seg) { gotoRole(seg.dataset.role); return; }
   const stop = event.target.closest?.('.arc-rail-stop');
@@ -720,5 +727,5 @@ tabs.addEventListener('click', event => { const tab = event.target.closest('[dat
 page.addEventListener('scroll', () => { storyScrolled(); if ((!story.on && !exp.el) || story.raf) return; story.raf = requestAnimationFrame(() => { story.raf = 0; paintStory(); paintExperience(); }); }, { passive: true });
 page.addEventListener('touchstart', () => { story.touching = true; }, { passive: true });
 for (const type of ['touchend', 'touchcancel']) page.addEventListener(type, () => { story.touching = false; }, { passive: true });
-if ('ResizeObserver' in window) new ResizeObserver(() => { if (story.el?.isConnected) { measureStory(); } if (exp.el?.isConnected) { placeLens(); placeTabPill(); } }).observe(page);
+if ('ResizeObserver' in window) new ResizeObserver(() => { if (story.el?.isConnected) { measureStory(); } if (exp.el?.isConnected) { placeTabPill(); } }).observe(page);
 calm.addEventListener?.('change', () => { if (story.el?.isConnected) measureStory(); });
