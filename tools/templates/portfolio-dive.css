@@ -437,6 +437,14 @@ a.dv-chip:hover .reading-icon{translate:3px 0}
   }
 }
 
+/* Keep the depth readout useful when scroll-driven CSS is unavailable or motion is reduced. */
+@media(min-width:1280px){
+  .dv-scroll-fallback .dv-gauge{position:fixed;z-index:30;right:20px;top:50%;display:grid;justify-items:end;gap:14px;translate:0 -50%;pointer-events:none}
+  .dv-scroll-fallback .dv-gauge-read{animation:none;counter-reset:none}
+  .dv-scroll-fallback .dv-gauge-value::after{content:none}
+  .dv-scroll-fallback .dv-gauge-rail i{animation:none;transform:scaleY(var(--gauge-progress,0))}
+}
+
 /* 16. Narrower screens -------------------------------------------------------------------------------------------- */
 @media(max-width:1100px){
   .dv-nav{gap:10px}
