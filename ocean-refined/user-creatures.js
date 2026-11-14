@@ -7,6 +7,7 @@ import { ENCOUNTERS, RESIDENTS, SCHOOLS, SEABED, WRECK_HEIGHT } from './user-cre
 import { DESCENT_LINE } from './return-route.js';
 import { fishNavigator } from './fish-navigation.js';
 import { createMorayDenMotion, updateMorayDenMotion } from './moray-resident.js';
+import { whaleCruise } from './whale-cruise.js';
 import { terrainHeightAt as reefTerrain, seabedHeightAt } from './reef.js';
 
 // The creature set at home in the ocean (see user-creature-routes.js for the numbers).
@@ -372,6 +373,7 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
     // Low over the reef inside the swim area; out beyond it (outside the seabed map) in mid-water at the pass's depth.
     const out = smoothstep(Math.max(Math.abs(x) - 54, -100 - z, 0), 0, 10);
     let y = e.low ? THREE.MathUtils.lerp(Math.min(e.depth[1], cover(x, z) + 3.2), e.y0, out) : e.y0 + Math.sin(clock * .11 + phase) * 1.2;
+    if (e.id === 'whale') y = e.y0 + whaleCruise(clock, phase, e.speed, e.cruise ??= {}).heave;
     if (e.porpoise) y = e.y0 + e.porpoise * Math.sin(clock * .95 + phase);
     return Math.min(-1.8, Math.max(y, cover(x, z) + e.clearance));
   }
@@ -389,9 +391,11 @@ export function createUserCreatures({ terrainHeightAt = () => -40, collisions = 
       const reach = a.L * .45;
       want.y = Math.max(bandHeight(e, want.x, want.z, c.phase), cover(want.x + T.x * reach, want.z + T.z * reach) + e.clearance, cover(want.x - T.x * reach, want.z - T.z * reach) + e.clearance);
       if (player) { C.copy(want).sub(player); const d = C.length(), room = 4 + a.L * .5; if (d < room && d > .01) { C.y *= .3; want.addScaledVector(C, (room - d) * .5 / d); } }
-      const yaw = Math.atan2(T.x, T.z) + (c.lean ? Math.sin(clock * .7 + c.phase) * .08 : 0), climb = e.porpoise ? Math.cos(clock * .95 + c.phase) * .25 : 0;
-      a.ease = e.porpoise ? 2.6 : 1.2; place(a, want, yaw, climb, Math.sin(clock * .3 + c.phase) * .03, dt);
+      const cruise = e.id === 'whale' ? whaleCruise(clock, c.phase, e.speed, c.cruise ??= {}) : null;
+      const yaw = Math.atan2(T.x, T.z) + (c.lean ? Math.sin(clock * .7 + c.phase) * .08 : 0), climb = cruise?.pitch ?? (e.porpoise ? Math.cos(clock * .95 + c.phase) * .25 : 0);
+      a.ease = e.porpoise ? 2.6 : 1.2; place(a, want, yaw, climb, cruise?.roll ?? Math.sin(clock * .3 + c.phase) * .03, dt);
       a.mixer.timeScale = clamp(e.speed / a.stride, .4, 2.2);
+      if (cruise) play(a, cruise.clip, 2);
       const near = player ? a.pos.distanceTo(player) : 1e9;
       if (e.id === 'orcas') play(a, near < 30 ? 'fast' : 'swim', 1.2);
       if (e.id === 'blacktips' && near < 7 && a.clip !== 'burst') play(a, 'burst', .2, true);
