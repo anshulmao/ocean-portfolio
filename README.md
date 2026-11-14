@@ -28,6 +28,10 @@ Direct upload is the fallback when the git integration cannot be used: authentic
 
 After deploying, run `npm run smoke -- https://anshul-portfolio-rho.vercel.app/` and update `release/live-site.json` only once it passes; if it fails, roll back to the previous deployment recorded there. `release/live-site.json` records the production deployment and previous deployment for rollback. It was last updated on 26 October 2026 and does not follow deployments made by the git integration; Vercel's deployment list is the current record. Git push alone does not establish that Vercel has deployed a new revision; verify hosting separately.
 
+### Phones get the readable portfolio
+
+A request from a phone for `/` or `/index.html` is redirected (307) to `/profile.html`, decided on the server from the User-Agent so a phone never starts the ocean's downloads. Desktops, tablets, a phone asking for the desktop site and link-preview bots get the ocean. The links from the reading pages into the ocean carry `?world=1`, which skips the redirect, so "Take a dive" still works on a phone. The rule is in `tools/phone-redirect.mjs` and is written into `vercel.json` by the build; `npm run test:unit` checks it against real browser strings and `npm run test:build` checks the links.
+
 ## Checks and limitations
 
 Every pull request runs `.github/workflows/ci.yml`: build integrity, services and unit tests, browser smoke and submission privacy checks, three independent layout profiles, and the quick reef audit. Run the fast checks with `npm run check`; run layout with `npm run test:layout` and reef with `npm run audit:reef -- --quick`. `test:build` performs its own clean build, so it needs no preceding build command. Browser scripts use Playwright's Chromium (`npx playwright install chromium`); set `PLAYWRIGHT_CHROMIUM_PATH` or `PLAYWRIGHT_CHANNEL=chrome` to use another browser. See [the test audit and suite inventory](release/TESTING.md) for what each check protects, historical scripts, and remaining gaps.

@@ -39,7 +39,10 @@ on the next submission after two days. Hosting/provider logs are separate.
 
 Allowed origins currently include the existing Vercel site and localhost port 4190.
 Add the purchased domain to DEFAULT_ORIGINS and redeploy the function when ready.
-Free-tier inactivity pausing still applies; no keepalive automation is installed.
+Free-tier inactivity pausing (after a week) is prevented by `.github/workflows/supabase-keepalive.yml`: every three days it reads one
+row through the REST API with the public key (`tools/supabase-keepalive.mjs`, no secrets) and fails, so GitHub emails the owner, if Supabase
+answers with a 5xx or not at all. It cannot wake a project that is already paused: restore that in the Supabase dashboard. It runs only
+from `main`; after merging, try it once from Actions → Supabase keepalive → Run workflow.
 
 ## PostHog
 

@@ -121,11 +121,19 @@ try {
   // It stands over the diver, not where the diver was while the view was still coming round to the surface.
   await page.waitForFunction(() => { const r = document.querySelector('#diver-profile').getBoundingClientRect(), [x] = window.oceanProfile.screenPoint(1), left = Math.min(Math.max(12, x - r.width / 2), innerWidth - r.width - 12); return Math.abs(r.left - left) < 30; }, null, {timeout:90000});
   // The light or dark switch on the card: a press anywhere on it turns the interface over, and again turns it back.
-  const theme = () => page.evaluate(() => document.documentElement.dataset.theme), themeBefore = await theme(), switchBox = await page.locator('.diver-profile-theme').boundingBox();
-  await page.mouse.click(switchBox.x + 4, switchBox.y + switchBox.height / 2);
+  // The card keeps gliding to its resting place while the view settles, on a slow machine for a second or more: press the
+  // switch where it is when it has stopped, not where it was measured.
+  const theme = () => page.evaluate(() => document.documentElement.dataset.theme), themeBefore = await theme();
+  const pressSwitch = async () => {
+    const find = () => page.locator('.diver-profile-theme').boundingBox();
+    let box = await find();
+    for (let i = 0; i < 40; i += 1) { await page.waitForTimeout(150); const next = await find(); if (Math.abs(next.y - box.y) < .5 && Math.abs(next.x - box.x) < .5) { box = next; break; } box = next; }
+    await page.mouse.click(box.x + 4, box.y + box.height / 2);
+  };
+  await pressSwitch();
   assert.notEqual(await theme(), themeBefore, 'a press on one end of the switch changes the theme');
   assert.equal(await page.locator('.diver-profile-theme').getAttribute('aria-checked'), String(await theme() === 'night'));
-  await page.mouse.click(switchBox.x + 4, switchBox.y + switchBox.height / 2);
+  await pressSwitch();
   assert.equal(await theme(), themeBefore, 'a press on the same end changes it back');
   assert.equal(await page.evaluate(() => window.oceanProfile.isOpen), true, 'the card stays open through it');
   await page.locator('#diver-profile [role="tab"][data-page="about"]').click();
