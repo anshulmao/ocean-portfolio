@@ -425,16 +425,26 @@ a.dv-chip:hover .reading-icon{translate:3px 0}
 
 /* 15. Wide screens: the depth gauge ----------------------------------------------------------------------------- */
 @media(min-width:1280px){
+  .dv-gauge{position:fixed;z-index:30;right:20px;top:50%;display:grid;justify-items:end;gap:14px;translate:0 -50%;pointer-events:none}
+  .dv-gauge-read{display:flex;align-items:baseline;gap:4px;padding:8px 12px;border-radius:var(--r-el);background:#0b1630cc;box-shadow:inset 0 0 0 1px var(--ring);font:400 20px/1 var(--mono);color:#fff;font-variant-numeric:tabular-nums;counter-reset:depth var(--depth)}
+  .dv-gauge-value::after{content:counter(depth,decimal-leading-zero)}
+  .dv-gauge-read small{font:400 11px/1 var(--mono);color:var(--muted)}
+  .dv-gauge-rail{position:relative;width:2px;height:240px;margin-right:16px;border-radius:2px;background:#ffffff1f}
+  .dv-gauge-rail i{position:absolute;inset:0;border-radius:2px;background:linear-gradient(#8ff4ff,#7ff0cf 20%,#ffcf7a 40%,#c9a2ff 65%,#ff9d8a 85%,#8ff4ff);transform-origin:top;transform:scaleY(var(--gauge-progress,1))}
+  .dv-gauge-rail span{position:absolute;right:10px;top:calc(var(--at) * 100%);translate:0 -50%;font:400 10px/1 var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+  .dv-gauge-rail span::after{content:"";position:absolute;right:-13px;top:50%;width:6px;height:6px;border-radius:50%;translate:0 -50%;background:var(--tint);box-shadow:0 0 0 3px #0b1630}
   @supports(animation-timeline:scroll()){
-    .dv-gauge{position:fixed;z-index:30;right:20px;top:50%;display:grid;justify-items:end;gap:14px;translate:0 -50%;pointer-events:none}
-    .dv-gauge-read{display:flex;align-items:baseline;gap:4px;padding:8px 12px;border-radius:var(--r-el);background:#0b1630cc;box-shadow:inset 0 0 0 1px var(--ring);font:400 20px/1 var(--mono);color:#fff;font-variant-numeric:tabular-nums;animation:dv-depth auto linear both;animation-timeline:scroll(root);animation-duration:auto;counter-reset:depth var(--depth)}
-    .dv-gauge-value::after{content:counter(depth,decimal-leading-zero)}
-    .dv-gauge-read small{font:400 11px/1 var(--mono);color:var(--muted)}
-    .dv-gauge-rail{position:relative;width:2px;height:240px;margin-right:16px;border-radius:2px;background:#ffffff1f}
-    .dv-gauge-rail i{position:absolute;inset:0;border-radius:2px;background:linear-gradient(#8ff4ff,#7ff0cf 20%,#ffcf7a 40%,#c9a2ff 65%,#ff9d8a 85%,#8ff4ff);transform-origin:top;animation:dv-fill-y auto linear both;animation-timeline:scroll(root)}
-    .dv-gauge-rail span{position:absolute;right:10px;top:calc(var(--at) * 100%);translate:0 -50%;font:400 10px/1 var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
-    .dv-gauge-rail span::after{content:"";position:absolute;right:-13px;top:50%;width:6px;height:6px;border-radius:50%;translate:0 -50%;background:var(--tint);box-shadow:0 0 0 3px #0b1630}
+    .dv-gauge-read{animation:dv-depth auto linear both;animation-timeline:scroll(root);animation-duration:auto}
+    .dv-gauge-rail i{animation:dv-fill-y auto linear both;animation-timeline:scroll(root)}
   }
+}
+
+/* Keep the depth readout useful when scroll-driven CSS is unavailable or motion is reduced. */
+@media(min-width:1280px){
+  .dv-scroll-fallback .dv-gauge{position:fixed;z-index:30;right:20px;top:50%;display:grid;justify-items:end;gap:14px;translate:0 -50%;pointer-events:none}
+  .dv-scroll-fallback .dv-gauge-read{animation:none;counter-reset:none}
+  .dv-scroll-fallback .dv-gauge-value::after{content:none}
+  .dv-scroll-fallback .dv-gauge-rail i{animation:none;transform:scaleY(var(--gauge-progress,0))}
 }
 
 /* 16. Narrower screens -------------------------------------------------------------------------------------------- */

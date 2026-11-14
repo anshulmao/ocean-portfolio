@@ -2,8 +2,9 @@
 // the same order (About, Experience, Projects, Résumé), the same night palette with one light per section, and the same
 // pieces (the portrait hero, the career track, the project finds, the case-study blocks, the résumé and its versions).
 // The page reads as a dive: it starts at the surface and the water darkens with the scroll, a depth gauge counts down to
-// 40 m, and each section rises in as it is reached. All of it is markup and CSS (portfolio-dive.css); there is no script,
-// so every link, anchor and disclosure works without JavaScript and the motion is skipped where it is not supported.
+// 40 m, and each section rises in as it is reached. The page is markup and CSS (portfolio-dive.css), with a small optional
+// depth-gauge fallback for browsers without scroll timelines or visitors who request reduced motion. Links, anchors and
+// disclosures work without JavaScript.
 import {readingIcon as icon} from './reading-icons.mjs';
 import {PROJECT_SECTIONS} from '../ocean-refined/portfolio-content.js';
 
