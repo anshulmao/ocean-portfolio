@@ -26,6 +26,12 @@ const code=await fs.readFile(path.join(root,'dist/user-creatures.js'),'utf8');co
 assert.ok((await fs.readFile(path.join(root,'dist/school-fish.js'),'utf8')).includes(`assets/models/user-sets/${version}/sets/creature-set/`),'school-fish.js does not point at the versioned creature set');
 // The published page links one bundled stylesheet (print apart) that holds every sheet of the source page, in order, and
 // preloads every module its entry scripts import statically.
+// A phone is sent from the ocean to the reading pages (tools/phone-redirect.mjs); the way back into the ocean from them must
+// carry ?world=1 or the redirect sends it straight back.
+for(const file of ['profile.html',...(await fs.readdir(path.join(root,'dist/projects'))).map(name=>`projects/${name}/index.html`)]){
+  const html=await fs.readFile(path.join(root,'dist',file),'utf8');
+  for(const [,href] of html.matchAll(/href="((?:\.\.?\/)+index\.html[^"]*)"/g))assert.match(href,/\?world=1/,`${file}: a link into the ocean would bounce a phone back (${href})`);
+}
 const page=await fs.readFile(path.join(root,'dist/index.html'),'utf8'),source=await fs.readFile(path.join(root,'ocean-refined/index.html'),'utf8');
 const linked=[...page.matchAll(/<link rel="stylesheet" href="\.\/([^"]+)">/g)].map(m=>m[1]);assert.equal(linked.length,1,'the page should link exactly one bundled stylesheet');
 const bundle=await fs.readFile(path.join(root,'dist',linked[0]),'utf8'),uncomment=css=>css.replace(/("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*')|\/\*[\s\S]*?\*\//g,(match,string)=>string||'').replace(/\s+/g,' ').trim();

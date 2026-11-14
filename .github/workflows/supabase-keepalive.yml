@@ -1,0 +1,25 @@
+# The free Supabase project pauses after a week without activity, and the feedback form and photo sharing stop working.
+# This reads one row through its API every three days (tools/supabase-keepalive.mjs). No secrets: it uses the public URL and
+# key from ocean-refined/services-config.js. A run takes seconds; a failure means GitHub emails the repository's owner.
+# Scheduled workflows run only from the default branch, and "Run workflow" below tries it by hand.
+name: Supabase keepalive
+
+on:
+  schedule:
+    - cron: '17 5 */3 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    name: Ping Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/supabase-keepalive.mjs

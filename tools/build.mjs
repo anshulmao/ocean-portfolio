@@ -1,3 +1,4 @@
+import {redirects} from './phone-redirect.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
@@ -128,6 +129,6 @@ const headers=[{source:'/(.*)',headers:[{key:'X-Content-Type-Options',value:'nos
   // bundled stylesheet (bundleHead). A change gives them a new address, so a browser may keep them for good and a second
   // visit asks for none of the 5 MB of models again. The sources above leave these two out: no path matches two rules.
   {source:'/assets/models/user-sets/v-(.*)',headers:[{key:'Cache-Control',value:IMMUTABLE}]},{source:'/site-:hash([0-9a-f]{12}).css',headers:[{key:'Cache-Control',value:IMMUTABLE}]}];
-await fs.writeFile(path.join(launch,'vercel.json'),JSON.stringify({$schema:'https://openapi.vercel.sh/vercel.json',framework:null,buildCommand:'npm run build',installCommand:'npm install --omit=dev',outputDirectory:'dist',headers},null,2));
+await fs.writeFile(path.join(launch,'vercel.json'),JSON.stringify({$schema:'https://openapi.vercel.sh/vercel.json',framework:null,buildCommand:'npm run build',installCommand:'npm install --omit=dev',outputDirectory:'dist',redirects,headers},null,2));
 const files=[];async function inventory(dir){for(const item of await fs.readdir(dir,{withFileTypes:true})){const f=path.join(dir,item.name);if(item.isDirectory())await inventory(f);else files.push({file:path.relative(out,f).replaceAll('\\','/'),bytes:(await fs.stat(f)).size});}}await inventory(out);
 await fs.writeFile(path.join(launch,'build-report.json'),JSON.stringify({generatedAt:new Date().toISOString(),files:files.length,bytes:files.reduce((n,f)=>n+f.bytes,0),largest:files.sort((a,b)=>b.bytes-a.bytes).slice(0,10)},null,2));console.log(JSON.stringify({files:files.length,MB:files.reduce((n,f)=>n+f.bytes,0)/1e6}));

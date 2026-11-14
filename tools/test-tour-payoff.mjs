@@ -95,9 +95,21 @@ try {
   assert.equal(await page.evaluate(() => window.oceanEnding.shown), false, 'no ending card under water');
   await page.evaluate(() => window.oceanTour.surface());
   // The safety stop is offered on the way up (it may be skipped, as Esc does for a visitor).
-  for (let i = 0; i < 90 && !(await page.evaluate(() => window.oceanEnding.shown)); i += 1) {
-    await page.evaluate(() => document.querySelector('dialog[open] [data-close]')?.click());
-    await page.keyboard.press('Escape'); await page.waitForTimeout(1000);
+  // Escape only while the stop is on offer or being made. Pressed on every pass it also landed just after the card had
+  // opened, on a slow machine, and closed it (Escape closes the diver's card), and at the surface it opened Settings,
+  // which the card waits behind.
+  for (let i = 0; i < 90; i += 1) {
+    const state = await page.evaluate(() => {
+      if (window.oceanEnding.shown) return 'shown';
+      document.querySelector('dialog[open] [data-close]')?.click();
+      // An Escape that arrives after the stop has passed opens Settings, which holds the ascent: the next one closes it.
+      // The card cannot open while Settings is, so that Escape never reaches the card.
+      if (document.body.dataset.menu === 'open') return 'menu';
+      return ['offer', 'stop'].includes(window.oceanControls.nav.returnPhase) ? 'stop' : 'wait';
+    });
+    if (state === 'shown') break;
+    if (state === 'stop' || state === 'menu') await page.keyboard.press('Escape');
+    await page.waitForTimeout(1000);
   }
   assert.equal(await page.evaluate(() => window.oceanEnding.shown), true, 'the ending card meets the diver at the surface');
   assert.equal(await page.locator('.surface-ending h2').textContent(), 'That’s the whole reef.');
@@ -109,11 +121,19 @@ try {
   // It stands over the diver, not where the diver was while the view was still coming round to the surface.
   await page.waitForFunction(() => { const r = document.querySelector('#diver-profile').getBoundingClientRect(), [x] = window.oceanProfile.screenPoint(1), left = Math.min(Math.max(12, x - r.width / 2), innerWidth - r.width - 12); return Math.abs(r.left - left) < 30; }, null, {timeout:90000});
   // The light or dark switch on the card: a press anywhere on it turns the interface over, and again turns it back.
-  const theme = () => page.evaluate(() => document.documentElement.dataset.theme), themeBefore = await theme(), switchBox = await page.locator('.diver-profile-theme').boundingBox();
-  await page.mouse.click(switchBox.x + 4, switchBox.y + switchBox.height / 2);
+  // The card keeps gliding to its resting place while the view settles, on a slow machine for a second or more: press the
+  // switch where it is when it has stopped, not where it was measured.
+  const theme = () => page.evaluate(() => document.documentElement.dataset.theme), themeBefore = await theme();
+  const pressSwitch = async () => {
+    const find = () => page.locator('.diver-profile-theme').boundingBox();
+    let box = await find();
+    for (let i = 0; i < 40; i += 1) { await page.waitForTimeout(150); const next = await find(); if (Math.abs(next.y - box.y) < .5 && Math.abs(next.x - box.x) < .5) { box = next; break; } box = next; }
+    await page.mouse.click(box.x + 4, box.y + box.height / 2);
+  };
+  await pressSwitch();
   assert.notEqual(await theme(), themeBefore, 'a press on one end of the switch changes the theme');
   assert.equal(await page.locator('.diver-profile-theme').getAttribute('aria-checked'), String(await theme() === 'night'));
-  await page.mouse.click(switchBox.x + 4, switchBox.y + switchBox.height / 2);
+  await pressSwitch();
   assert.equal(await theme(), themeBefore, 'a press on the same end changes it back');
   assert.equal(await page.evaluate(() => window.oceanProfile.isOpen), true, 'the card stays open through it');
   await page.locator('#diver-profile [role="tab"][data-page="about"]').click();

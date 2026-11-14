@@ -43,6 +43,9 @@ try {
         try {
           await page.goto(base + 'profile.html');
           await page.evaluate(() => document.fonts.ready);
+          // The headline's own face, asked for by name: fonts.ready can settle before a face has been requested, and
+          // measured in the fallback face the headline runs to a third line.
+          await page.evaluate(() => { const style = getComputedStyle(document.querySelector('h1')); return document.fonts.load(`${style.fontWeight} ${style.fontSize} Outfit`); });
           await page.locator('img').evaluateAll(images => Promise.all(images.map(image => { image.loading='eager'; return image.decode().catch(() => {}); })));
           await fit(page);
           for (const selector of ['#experience','#resume','#contact']) {

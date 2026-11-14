@@ -4,6 +4,44 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install --omit=dev",
   "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(iPhone|iPod|Android.*Mobile|Windows Phone|IEMobile|BlackBerry|Opera Mini).*"
+        }
+      ],
+      "missing": [
+        {
+          "type": "query",
+          "key": "world"
+        }
+      ],
+      "destination": "/profile.html",
+      "permanent": false
+    },
+    {
+      "source": "/index.html",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(iPhone|iPod|Android.*Mobile|Windows Phone|IEMobile|BlackBerry|Opera Mini).*"
+        }
+      ],
+      "missing": [
+        {
+          "type": "query",
+          "key": "world"
+        }
+      ],
+      "destination": "/profile.html",
+      "permanent": false
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
