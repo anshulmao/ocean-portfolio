@@ -51,5 +51,8 @@ body:is([data-menu="open"],[data-profile="open"],[data-summary="true"],[data-exp
 body[data-profile="open"] :is(#sky-labels,#reef-labels){visibility:hidden}
 /* The profile gets the frame to itself at every screen size. */
 body[data-profile="open"] .hero{opacity:0;visibility:hidden;pointer-events:none}
+/* On a phone held sideways the card stands over the top right corner, on top of the Settings button: the button steps
+   aside while the card is open (closing the card, or Escape, brings it back). */
+@media(max-height:499px){body[data-profile="open"] .masthead .menu-toggle{visibility:hidden}}
 body:is([data-submerged="true"],[data-clear-ui="true"]) :is(.diver-profile,.diver-profile-hint,.diver-profile-ping){display:none}
 @media(prefers-reduced-motion:reduce){.diver-profile,.diver-profile-hint,.diver-profile-ping::before,.diver-profile-ping::after{animation:none}.diver-profile-ping::before{opacity:.8;scale:1}.diver-profile-ping::after{display:none}.diver-profile-actions button:hover{translate:none}}

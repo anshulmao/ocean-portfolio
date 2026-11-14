@@ -363,7 +363,8 @@ html[data-input="touch"] #landmark-dialog kbd{display:none}
   #landmark-dialog .arc-welcome{margin-top:14px}
   #landmark-dialog .arc-actions{margin-top:14px;gap:8px}
   #landmark-dialog .arc-actions .arc-pill{min-height:40px;padding:0 14px;font-size:13px}
-  #landmark-dialog .arc-actions .arc-pill--contact{width:40px;padding:0;justify-content:center}
+  /* flex:none: in a tight row the icon-only links were squeezed a fraction under their 40 px, below a touch target. */
+  #landmark-dialog .arc-actions .arc-pill--contact{flex:none;width:40px;padding:0;justify-content:center}
   #landmark-dialog .arc-actions .arc-pill--contact span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
   /* The story on a phone: the rail runs along the top of the stage, and the chapters are set in smaller type. */
   #landmark-dialog .arc-tale{margin-top:32px}

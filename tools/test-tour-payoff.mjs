@@ -95,9 +95,21 @@ try {
   assert.equal(await page.evaluate(() => window.oceanEnding.shown), false, 'no ending card under water');
   await page.evaluate(() => window.oceanTour.surface());
   // The safety stop is offered on the way up (it may be skipped, as Esc does for a visitor).
-  for (let i = 0; i < 90 && !(await page.evaluate(() => window.oceanEnding.shown)); i += 1) {
-    await page.evaluate(() => document.querySelector('dialog[open] [data-close]')?.click());
-    await page.keyboard.press('Escape'); await page.waitForTimeout(1000);
+  // Escape only while the stop is on offer or being made. Pressed on every pass it also landed just after the card had
+  // opened, on a slow machine, and closed it (Escape closes the diver's card), and at the surface it opened Settings,
+  // which the card waits behind.
+  for (let i = 0; i < 90; i += 1) {
+    const state = await page.evaluate(() => {
+      if (window.oceanEnding.shown) return 'shown';
+      document.querySelector('dialog[open] [data-close]')?.click();
+      // An Escape that arrives after the stop has passed opens Settings, which holds the ascent: the next one closes it.
+      // The card cannot open while Settings is, so that Escape never reaches the card.
+      if (document.body.dataset.menu === 'open') return 'menu';
+      return ['offer', 'stop'].includes(window.oceanControls.nav.returnPhase) ? 'stop' : 'wait';
+    });
+    if (state === 'shown') break;
+    if (state === 'stop' || state === 'menu') await page.keyboard.press('Escape');
+    await page.waitForTimeout(1000);
   }
   assert.equal(await page.evaluate(() => window.oceanEnding.shown), true, 'the ending card meets the diver at the surface');
   assert.equal(await page.locator('.surface-ending h2').textContent(), 'That’s the whole reef.');
