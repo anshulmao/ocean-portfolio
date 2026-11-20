@@ -94,12 +94,11 @@ try {
   assert.equal(await status(), 'done');
   assert.equal(await page.evaluate(() => window.oceanEnding.shown), false, 'no ending card under water');
   await page.evaluate(() => window.oceanTour.surface());
-  // The safety stop is offered on the way up (it may be skipped, as Esc does for a visitor).
-  for (let i = 0; i < 90 && !(await page.evaluate(() => window.oceanEnding.shown)); i += 1) {
-    await page.evaluate(() => document.querySelector('dialog[open] [data-close]')?.click());
-    await page.keyboard.press('Escape'); await page.waitForTimeout(1000);
-  }
-  assert.equal(await page.evaluate(() => window.oceanEnding.shown), true, 'the ending card meets the diver at the surface');
+  // Close only the safety stop on the way up. Escape can also dismiss the ending card as it arrives.
+  await page.waitForFunction(() => {
+    document.querySelector('dialog.safety-feedback[open] [data-close]')?.click();
+    return window.oceanEnding.shown;
+  }, null, {timeout:90000});
   assert.equal(await page.locator('.surface-ending h2').textContent(), 'That’s the whole reef.');
   assert.equal(await page.locator('.surface-ending-tiles div').count(), 4, 'time, depth, sites and species');
   assert.match(await page.locator('.surface-ending-profile .line').getAttribute('d'), /^M[\d.,L-]+$/, 'the depth profile is drawn');
