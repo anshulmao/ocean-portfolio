@@ -98,7 +98,7 @@ a.dv-chip:hover .reading-icon{translate:3px 0}
 /* 6. The surface: the headline, the way in, and a porthole on the ocean --------------------------------------------- */
 .dv-hero{position:relative;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);align-items:center;gap:40px 72px;min-height:calc(100svh - 84px);padding:56px var(--band) 96px}
 .dv-hero-copy{container-type:inline-size}
-.dv-hero h1{margin-top:24px;font:300 28px/1 var(--font);font-size:clamp(28px,10.2cqi,104px);letter-spacing:-.05em;color:#fff}
+.dv-hero h1{margin-top:24px;font:300 28px/1 var(--font);font-size:clamp(28px,9.25cqi,104px);letter-spacing:-.05em;color:#fff}
 .dv-word{display:inline-block}
 .dv-hero h1 .dv-word:nth-child(n+3){background:linear-gradient(100deg,#fff 10%,#bff8ec 45%,#8ff4ff 80%);-webkit-background-clip:text;background-clip:text;color:transparent}
 .dv-lead{max-width:34ch;margin-top:26px;font:300 clamp(19px,1.8vw,23px)/1.45 var(--font);color:var(--text-2)}
