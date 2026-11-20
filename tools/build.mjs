@@ -22,6 +22,9 @@ while(pending.length){const rel=pending.pop();if(seen.has(rel))continue;seen.add
  const refs=rel.endsWith('.html')?[...text.matchAll(/(?:src|href)=["'](\.\/[^"']+\.(?:js|css))["']/g)].map(m=>m[1]):rel.endsWith('.js')?[...text.matchAll(/(?:from\s*|import\s*\(\s*|import\s*)["'](\.\.?\/[^"']+\.js)["']/g)].map(m=>m[1]):[];
  for(const ref of refs)pending.push(path.normalize(path.join(path.dirname(rel),ref)));
 }
+// The reading profile is rendered after the 3D landing page's dependency graph. Its optional scroll fallback is an
+// entry module on that secondary static page, so include it explicitly in the published files.
+await copy('dive-scroll.js');
 // A module that fails to parse silently takes every module importing it down in the
 // browser (a duplicate `track` in archive.js once disabled all portfolio access), so
 // the build refuses to ship any reachable script that does not parse.

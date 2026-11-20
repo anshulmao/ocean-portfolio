@@ -3,6 +3,9 @@
    diver bobs under it. No backdrop blur over the moving scene. */
 .diver-profile{position:fixed;left:0;top:0;z-index:20;width:min(340px,calc(100vw - 24px));padding:18px 18px 16px;border:1px solid color-mix(in srgb,var(--o-ink) 12%,transparent);border-radius:18px;background:color-mix(in srgb,var(--o-surface-0) 94%,transparent);color:var(--o-ink);font-family:var(--o-display);box-shadow:0 1px 0 #ffffff80 inset,0 24px 50px -22px #052c3a73,0 4px 14px -6px #052c3a33;pointer-events:auto;outline:none;transform-origin:var(--tail,50%) 100%;animation:profile-in 260ms var(--ease,cubic-bezier(.2,.7,.2,1)) both}
 .diver-profile[hidden]{display:none}
+.diver-profile{display:flex;flex-direction:column;box-sizing:border-box}
+.diver-profile-bar{flex:none}
+.diver-profile-page{overflow-y:auto}
 @keyframes profile-in{from{opacity:0;scale:.96}}
 .diver-profile-close{position:absolute;top:8px;right:8px;display:grid;place-items:center;width:36px;height:36px;border:0;border-radius:50%;background:none;color:var(--o-ink-2);cursor:pointer}
 .diver-profile-close:hover{background:color-mix(in srgb,var(--o-ink) 7%,transparent);color:var(--o-ink)}

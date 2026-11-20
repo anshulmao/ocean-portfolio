@@ -27,6 +27,7 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
   const links = about.links || [];
 
   const card = document.createElement('section');
+  const masthead = document.querySelector('.masthead');
   card.id = 'diver-profile'; card.className = 'diver-profile'; card.hidden = true; card.tabIndex = -1;
   card.setAttribute('role', 'dialog'); card.setAttribute('aria-labelledby', 'diver-profile-name');
   // Two pages (round 19, the owner's notes): About me, as ever, and Last dive, the dive log in small, which
@@ -132,7 +133,7 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
 
   // DRIFT: how far (px) the diver may move on screen under the card before it is placed again while it follows.
   const FOLLOW = 8, STILL = 1.2, DRIFT = 14; let follow = 0, still = 0, placed = { x: 0, y: 0 };
-  let clearCheck = 0, fromFreeLook = false, inviting = false, availableFor = 0, ceiling = EDGE, pointer = null, hovered = false, shown = false, amount = 0, lifted = false, time = 0, returnFocus = null;
+  let clearCheck = 0, fromFreeLook = false, inviting = false, availableFor = 0, pointer = null, hovered = false, shown = false, amount = 0, lifted = false, time = 0, returnFocus = null;
   const locked = () => document.pointerLockElement === canvas;
   const centre = () => { const rect = canvas.getBoundingClientRect(); return [rect.left + rect.width / 2, rect.top + rect.height / 2]; };
   // The hit test runs in update(): with the ocean paused the frames stop, so a move or a leave asks for one.
@@ -179,8 +180,6 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
     // Remember drag/touch free look as well as pointer lock before opening the card
     // suspends navigation. The hero stays hidden until a separate Escape leaves free look.
     fromFreeLook = locked() || Boolean(isExploring?.());
-    // Under the masthead where there is room for it there (it stays over the diver's head otherwise).
-    ceiling = Math.max(EDGE, (document.querySelector('.masthead')?.getBoundingClientRect().bottom ?? 0) + 8);
     shown = true; card.hidden = false; hint.hidden = true;
     document.body.dataset.profile = 'open'; document.body.dataset.profilePage = page;
     if (fromFreeLook) keepLooking?.(true);
@@ -219,6 +218,9 @@ export function createDiverProfile({ diver, camera, canvas, glow, available, set
     return { x: rect.left + (ndc.x + 1) / 2 * rect.width, y: rect.top + (1 - ndc.y) / 2 * rect.height, behind: ndc.z > 1 };
   }
   function place() {
+    // Keep the card below the masthead on short screens and let its content scroll.
+    const ceiling = Math.max(EDGE, Math.ceil((masthead?.getBoundingClientRect().bottom ?? 0) + 8));
+    card.style.maxHeight = `${innerHeight - ceiling - EDGE}px`;
     const { x, y } = anchor(), width = card.offsetWidth, height = card.offsetHeight;
     const left = Math.min(Math.max(EDGE, x - width / 2), innerWidth - width - EDGE);
     const top = Math.min(Math.max(ceiling, y - LIFT - height), innerHeight - height - EDGE);
