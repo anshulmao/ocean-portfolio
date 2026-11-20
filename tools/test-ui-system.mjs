@@ -73,8 +73,8 @@ try {
       const page = await context.newPage(); await page.goto(base + 'profile.html');
       await page.getByRole('link',{name:/Explore my work/}).click();
       await page.locator('a[href="./projects/rae/index.html"]').first().click();
-      await page.locator('h1').waitFor(); await fit(page);
-      assert.match(await page.locator('h1').innerText(), /Rae/i);
+      await page.getByRole('heading', {level:1}).waitFor(); await fit(page);
+      assert.equal(await page.locator('.dv-case-head .dv-case-name').innerText(), 'Rae');
     } finally { await context.close(); }
   });
   for (const viewport of [{width:390,height:844},{width:768,height:1024},{width:1440,height:900},{width:844,height:390}]) {
