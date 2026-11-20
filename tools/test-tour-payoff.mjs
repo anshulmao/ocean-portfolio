@@ -23,9 +23,10 @@ const server = http.createServer(async (req, res) => {
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const browser = await launchBrowser({args:['--enable-unsafe-swiftshader']});
-let failed = false;
+let failed = false, page;
 try {
-  const page = await browser.newPage({viewport:{width:1280,height:800}}), errors = [];
+  page = await browser.newPage({viewport:{width:1280,height:800}});
+  const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(`http://127.0.0.1:${server.address().port}/`);
   await page.waitForFunction(() => window.oceanDiagnostics?.ready && window.oceanTour, null, {timeout:90000});
@@ -93,6 +94,11 @@ try {
   await hop();
   assert.equal(await status(), 'done');
   assert.equal(await page.evaluate(() => window.oceanEnding.shown), false, 'no ending card under water');
+  // Skipping the swims can leave the log too short for an automatic ending on slow renderers.
+  await page.waitForFunction(() => {
+    const dive = window.oceanDiveLog.current;
+    return dive && (dive.time >= 40 || Object.keys(dive.sites).length > 0);
+  }, null, {timeout:90000});
   await page.evaluate(() => window.oceanTour.surface());
   // Close only the safety stop on the way up. Escape can also dismiss the ending card as it arrives.
   await page.waitForFunction(() => {
@@ -108,11 +114,13 @@ try {
   // It stands over the diver, not where the diver was while the view was still coming round to the surface.
   await page.waitForFunction(() => { const r = document.querySelector('#diver-profile').getBoundingClientRect(), [x] = window.oceanProfile.screenPoint(1), left = Math.min(Math.max(12, x - r.width / 2), innerWidth - r.width - 12); return Math.abs(r.left - left) < 30; }, null, {timeout:90000});
   // The light or dark switch on the card: a press anywhere on it turns the interface over, and again turns it back.
-  const theme = () => page.evaluate(() => document.documentElement.dataset.theme), themeBefore = await theme(), switchBox = await page.locator('.diver-profile-theme').boundingBox();
-  await page.mouse.click(switchBox.x + 4, switchBox.y + switchBox.height / 2);
+  const theme = () => page.evaluate(() => document.documentElement.dataset.theme), themeBefore = await theme();
+  const themeSwitch = page.getByRole('switch', {name:'Dark mode'});
+  const switchEdge = {x:4, y:20};
+  await themeSwitch.click({position:switchEdge});
   assert.notEqual(await theme(), themeBefore, 'a press on one end of the switch changes the theme');
   assert.equal(await page.locator('.diver-profile-theme').getAttribute('aria-checked'), String(await theme() === 'night'));
-  await page.mouse.click(switchBox.x + 4, switchBox.y + switchBox.height / 2);
+  await themeSwitch.click({position:switchEdge});
   assert.equal(await theme(), themeBefore, 'a press on the same end changes it back');
   assert.equal(await page.evaluate(() => window.oceanProfile.isOpen), true, 'the card stays open through it');
   await page.locator('#diver-profile [role="tab"][data-page="about"]').click();
@@ -128,7 +136,22 @@ try {
   assert.equal(await visible('.portfolio-actions .ds-open'), true, 'afterwards the Dive log button is the way back');
   assert.deepEqual(errors, [], 'no script errors');
   console.log('PASS the dive log comes up in small at the surface and opens the full log');
-} catch (error) { failed = true; console.error('FAIL', error.stack ?? error.message); }
+} catch (error) {
+  failed = true;
+  console.error('FAIL', error.stack ?? error.message);
+  if (page) console.error('Tour state:', await page.evaluate(() => {
+    const nav = window.oceanControls?.nav, log = window.oceanDiveLog;
+    const dive = log?.last ?? log?.current;
+    return {
+      tour: window.oceanTour?.status, mode: window.oceanControls?.getMode(),
+      returnPhase: nav?.returnPhase, ascentBlocked: nav?.ascentBlocked, suspended: nav?.suspended,
+      position: window.oceanDiagnostics?.playerPosition, profileAnchor: window.oceanProfile?.screenPoint(1),
+      openDialog: document.querySelector('dialog[open]')?.id, menu: document.body.dataset.menu,
+      log: log?.last ? 'complete' : log?.current ? 'active' : 'missing',
+      time: dive?.time, sites: Object.keys(dive?.sites ?? {}),
+    };
+  }).catch(() => null));
+}
 finally { await browser.close(); server.close(); }
 if (failed) process.exit(1);
 console.log('Tour payoff checks passed.');
