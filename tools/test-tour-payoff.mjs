@@ -57,10 +57,10 @@ try {
   await page.waitForFunction(() => window.oceanTour.status === 'dwell', null, {timeout:150000});
   await hop(); await hop();
   assert.equal(await page.evaluate(() => window.oceanDiagnostics.tour.key), 'projects');
-  await page.waitForFunction(() => window.oceanSiteCard?.shown === 'projects' && document.querySelector('.site-card')?.dataset.show === 'true', null, {timeout:90000});
+  // The card can be marked shown before the draw callback projects it into view.
+  await page.locator('.site-card[data-show="true"][data-work="true"] [data-site="read"]').waitFor({state:'visible', timeout:90000});
   // One Open it on screen: while the site's card is up, the tour's sheet does not offer it again.
   assert.equal(await page.locator('.tour-card [data-tour="read"]').isVisible(), false, 'the sheet leaves Open it to the site’s card');
-  assert.equal(await page.locator('.site-card [data-site="read"]').isVisible(), true);
   const work = await page.evaluate(() => window.oceanSiteCard.work);
   assert.ok(work.length >= 3, 'the wreck has projects to show');
   // Tab turns to the next project while the view has the keyboard, Shift+Tab to the one before.
@@ -129,7 +129,7 @@ try {
   assert.equal(await visible('.portfolio-actions .ds-open'), true, 'afterwards the Dive log button is the way back');
   assert.deepEqual(errors, [], 'no script errors');
   console.log('PASS the dive log comes up in small at the surface and opens the full log');
-} catch (error) { failed = true; console.error('FAIL', error.message); }
+} catch (error) { failed = true; console.error('FAIL', error.stack ?? error.message); }
 finally { await browser.close(); server.close(); }
 if (failed) process.exit(1);
 console.log('Tour payoff checks passed.');
