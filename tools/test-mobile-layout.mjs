@@ -5,7 +5,7 @@
 //   scroll    the page or a dialog scrolling sideways
 //   view      in a dive, how much of the screen is left for the ocean, and how much of its middle is covered
 // Screenshots and a JSON report go to $LAYOUT_OUT (default: a temp folder).
-//   node tools/test-mobile-layout.mjs [url] [--only=phone|landscape|desktop]
+//   node tools/test-mobile-layout.mjs [url] [--only=phone|landscape|tablet|tablet-landscape|desktop]
 // Run `npm run build` first when no url is given: it serves dist/ itself, like tools/smoke.mjs.
 import http from 'node:http';
 import fs from 'node:fs/promises';
@@ -34,6 +34,8 @@ const base = target ? new URL(target).href : `http://127.0.0.1:${server.address(
 const PROFILES = {
   phone: {viewport: {width: 390, height: 844}, isMobile: true, hasTouch: true, deviceScaleFactor: 2, phone: true},
   landscape: {viewport: {width: 844, height: 390}, isMobile: true, hasTouch: true, deviceScaleFactor: 2, phone: true},
+  tablet: {viewport: {width: 768, height: 1024}, isMobile: true, hasTouch: true, deviceScaleFactor: 1, phone: true},
+  'tablet-landscape': {viewport: {width: 1024, height: 768}, isMobile: true, hasTouch: true, deviceScaleFactor: 1, phone: true},
   desktop: {viewport: {width: 1440, height: 900}, isMobile: false, hasTouch: false, deviceScaleFactor: 1, phone: false},
 };
 if (only && !Object.hasOwn(PROFILES, only)) throw Error(`Unknown layout profile: ${only}`);

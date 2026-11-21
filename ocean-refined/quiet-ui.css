@@ -21,7 +21,7 @@ body[data-menu="open"] .quiet-ui-toggle,body[data-safety-stop="true"] .quiet-ui-
 @media(prefers-reduced-motion:reduce){.lamp-notice{transition:none;transform:none}}
 /* Phones: Clear screen is a row in the menu (hud.js), so the top half of the view keeps no button of its own; the
    restore pair stands in the controls zone, where the hidden keys were. */
-@media(max-width:599px),(pointer:coarse) and (max-height:499px){
+@media(max-width:599px),(pointer:coarse){
   .quiet-ui-toggle{display:none!important}
   .quiet-ui-restore{bottom:var(--keys-bottom)}
   .quiet-ui-computer{bottom:calc(var(--keys-bottom) + var(--o-tap) + var(--o-gap))}

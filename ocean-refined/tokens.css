@@ -43,7 +43,7 @@
   --o-z-labels:5;--o-z-hud:10;--o-z-announce:20;--o-z-sheet:30;--o-z-controls:40;--o-z-menu:60;--o-z-toast:70;
 }
 /* Phones: portrait under 600px wide, or a touch screen under 500px tall (landscape). */
-@media (max-width:599px),(pointer:coarse) and (max-height:499px){:root{
+@media (max-width:599px),(pointer:coarse){:root{
   --o-pad:12px;--o-gap:8px;--o-bar:44px;--o-controls:132px;--o-sheet-max:34vh;
 }}
 @media (pointer:coarse) and (max-height:499px){:root{--o-controls:0px;--o-sheet-max:46vh}}
